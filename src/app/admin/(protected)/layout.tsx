@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { LayoutDashboard, Package, Tags, Inbox, LogOut } from "lucide-react";
 import { logoutAction } from "@/lib/actions/auth";
+import { requireAdminPage } from "@/lib/auth";
 
 const navItems = [
   { href: "/admin", label: "Tổng quan", icon: LayoutDashboard },
@@ -9,7 +10,9 @@ const navItems = [
   { href: "/admin/leads", label: "Yêu cầu liên hệ", icon: Inbox },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  await requireAdminPage();
+
   return (
     <div className="mx-auto flex max-w-7xl gap-6 px-4 py-8">
       <aside className="w-56 shrink-0">

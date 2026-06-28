@@ -176,11 +176,19 @@ const products: Array<{
 ];
 
 async function main() {
-  const url = process.env.DATABASE_URL;
-  if (!url) {
+  const rawUrl = process.env.DATABASE_URL;
+  if (!rawUrl) {
     throw new Error("DATABASE_URL chưa được thiết lập trong .env");
   }
-  const conn = await mysql.createConnection(url);
+
+  const parsed = new URL(rawUrl);
+  const sslMode = parsed.searchParams.get("ssl-mode");
+  parsed.searchParams.delete("ssl-mode");
+
+  const conn = await mysql.createConnection({
+    uri: parsed.toString(),
+    ssl: sslMode && sslMode.toUpperCase() !== "DISABLED" ? { rejectUnauthorized: false } : undefined,
+  });
 
   console.log("Seeding categories...");
   const categoryIds = new Map<string, number>();

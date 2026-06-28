@@ -1,4 +1,6 @@
 import jwt from "jsonwebtoken";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 
 export const ADMIN_COOKIE = "admin_token";
 
@@ -24,4 +26,28 @@ export function verifyAdminToken(token: string): AdminTokenPayload | null {
   } catch {
     return null;
   }
+}
+
+export async function getAdminSession(): Promise<AdminTokenPayload | null> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(ADMIN_COOKIE)?.value;
+  return token ? verifyAdminToken(token) : null;
+}
+
+/** Use in protected admin pages/layouts. Redirects to login if not authenticated. */
+export async function requireAdminPage(): Promise<AdminTokenPayload> {
+  const session = await getAdminSession();
+  if (!session) {
+    redirect("/admin/login");
+  }
+  return session;
+}
+
+/** Use in server actions / route handlers. Throws if not authenticated. */
+export async function requireAdminAction(): Promise<AdminTokenPayload> {
+  const session = await getAdminSession();
+  if (!session) {
+    throw new Error("Unauthorized");
+  }
+  return session;
 }

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { query } from "@/lib/db";
 import { slugify } from "@/lib/slugify";
+import { requireAdminAction } from "@/lib/auth";
 
 function parseImages(raw: string): string[] {
   return raw
@@ -13,6 +14,8 @@ function parseImages(raw: string): string[] {
 }
 
 export async function createProduct(formData: FormData) {
+  await requireAdminAction();
+
   const name = String(formData.get("name") ?? "").trim();
   const brand = String(formData.get("brand") ?? "").trim();
   const price = Number(formData.get("price") ?? 0);
@@ -52,6 +55,8 @@ export async function createProduct(formData: FormData) {
 }
 
 export async function updateProduct(productId: number, formData: FormData) {
+  await requireAdminAction();
+
   const name = String(formData.get("name") ?? "").trim();
   const brand = String(formData.get("brand") ?? "").trim();
   const price = Number(formData.get("price") ?? 0);
@@ -86,6 +91,7 @@ export async function updateProduct(productId: number, formData: FormData) {
 }
 
 export async function deleteProduct(productId: number) {
+  await requireAdminAction();
   await query("DELETE FROM products WHERE id = ?", [productId]);
   revalidatePath("/admin/products");
 }
