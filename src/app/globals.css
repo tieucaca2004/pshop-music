@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0f0f23;
+  --foreground: #f8fafc;
+  --color-primary: #1e1b4b;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #312e81;
+  --color-accent: #f97316;
+  --color-accent-foreground: #0f0f23;
+  --color-card: #1b1b30;
+  --color-card-foreground: #f8fafc;
+  --color-muted: #27273b;
+  --color-muted-foreground: #94a3b8;
+  --color-border: #34336a;
+  --color-destructive: #ef4444;
+  --color-ring: #f97316;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--color-primary);
+  --color-primary-foreground: var(--color-primary-foreground);
+  --color-secondary: var(--color-secondary);
+  --color-accent: var(--color-accent);
+  --color-accent-foreground: var(--color-accent-foreground);
+  --color-card: var(--color-card);
+  --color-card-foreground: var(--color-card-foreground);
+  --color-muted: var(--color-muted);
+  --color-muted-foreground: var(--color-muted-foreground);
+  --color-border: var(--color-border);
+  --color-destructive: var(--color-destructive);
+  --color-ring: var(--color-ring);
+  --font-sans: var(--font-nunito);
+  --font-heading: var(--font-rubik);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-accent-foreground);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+@layer components {
+  .form-input {
+    @apply mt-1.5 w-full rounded-lg border border-border bg-background px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-accent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
