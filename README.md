@@ -47,6 +47,7 @@ npm run build
 npm run start    # chạy server.js, đọc PORT từ biến môi trường
 ```
 
-## Deploy lên Hostinger
+## Deploy
 
-Xem hướng dẫn chi tiết tại [`DEPLOY.md`](DEPLOY.md).
+- **Hostinger** (Node.js App + MySQL): xem [`DEPLOY.md`](DEPLOY.md)
+- **Netlify** (đang chạy tại [pshop-music.netlify.app](https://pshop-music.netlify.app)): xem [`NETLIFY.md`](NETLIFY.md)
