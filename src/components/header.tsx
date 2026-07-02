@@ -17,11 +17,11 @@ export async function Header() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 text-xs text-white/80 sm:text-sm">
           <span>Thiết bị DJ &amp; âm thanh chính hãng cho DJ, producer, phòng thu</span>
           <a
-            href="tel:0900000000"
+            href="tel:0901952999"
             className="hidden cursor-pointer items-center gap-1.5 font-semibold text-white hover:text-accent transition-colors duration-200 sm:flex"
           >
             <Phone size={14} />
-            0900 000 000
+            0901 952 999
           </a>
         </div>
       </div>

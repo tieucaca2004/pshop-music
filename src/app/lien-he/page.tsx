@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Phone, Mail, MapPin, Clock } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, Facebook } from "lucide-react";
 import { ContactOrderForm } from "@/components/contact-order-form";
 
 export const metadata: Metadata = {
@@ -26,8 +26,8 @@ export default function ContactPage() {
             <Phone className="mt-1 shrink-0 text-accent" size={20} />
             <div>
               <p className="font-semibold text-foreground">Hotline</p>
-              <a href="tel:0900000000" className="cursor-pointer text-muted-foreground hover:text-accent transition-colors duration-200">
-                0900 000 000
+              <a href="tel:0901952999" className="cursor-pointer text-muted-foreground hover:text-accent transition-colors duration-200">
+                0901 952 999
               </a>
             </div>
           </div>
@@ -44,7 +44,21 @@ export default function ContactPage() {
             <MapPin className="mt-1 shrink-0 text-accent" size={20} />
             <div>
               <p className="font-semibold text-foreground">Showroom</p>
-              <p className="text-muted-foreground">123 Đường Âm Nhạc, Quận 1, TP. Hồ Chí Minh</p>
+              <p className="text-muted-foreground">86 Lạc Long Quân, Phường Phước Hải, Nha Trang</p>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Facebook className="mt-1 shrink-0 text-accent" size={20} />
+            <div>
+              <p className="font-semibold text-foreground">Facebook</p>
+              <a
+                href="https://www.facebook.com/ChoThueThietBiDJ/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="cursor-pointer text-muted-foreground hover:text-accent transition-colors duration-200"
+              >
+                facebook.com/ChoThueThietBiDJ
+              </a>
             </div>
           </div>
           <div className="flex items-start gap-3">
@@ -58,7 +72,7 @@ export default function ContactPage() {
           <div className="overflow-hidden rounded-xl border border-border">
             <iframe
               title="Bản đồ Pshop Music"
-              src="https://www.google.com/maps?q=Ho+Chi+Minh+City&output=embed"
+              src="https://maps.google.com/maps?q=86+Lac+Long+Quan+Nha+Trang&output=embed"
               className="h-64 w-full"
               loading="lazy"
             />

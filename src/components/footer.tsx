@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Phone, Mail, MapPin } from "lucide-react";
+import { Phone, Mail, MapPin, Facebook } from "lucide-react";
 
 export function Footer() {
   return (
@@ -49,7 +49,7 @@ export function Footer() {
           <ul className="mt-3 space-y-3 text-sm text-muted-foreground">
             <li className="flex items-center gap-2">
               <Phone size={16} className="text-accent shrink-0" />
-              <a href="tel:0900000000" className="cursor-pointer hover:text-accent transition-colors duration-200">0900 000 000</a>
+              <a href="tel:0901952999" className="cursor-pointer hover:text-accent transition-colors duration-200">0901 952 999</a>
             </li>
             <li className="flex items-center gap-2">
               <Mail size={16} className="text-accent shrink-0" />
@@ -57,7 +57,11 @@ export function Footer() {
             </li>
             <li className="flex items-start gap-2">
               <MapPin size={16} className="mt-0.5 text-accent shrink-0" />
-              <span>123 Đường Âm Nhạc, Quận 1, TP. Hồ Chí Minh</span>
+              <span>86 Lạc Long Quân, Phường Phước Hải, Nha Trang</span>
+            </li>
+            <li className="flex items-center gap-2">
+              <Facebook size={16} className="text-accent shrink-0" />
+              <a href="https://www.facebook.com/ChoThueThietBiDJ/" target="_blank" rel="noopener noreferrer" className="cursor-pointer hover:text-accent transition-colors duration-200">Facebook fanpage</a>
             </li>
           </ul>
         </div>
