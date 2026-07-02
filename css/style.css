@@ -1,0 +1,152 @@
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--black:#0a0a0a;--surface:#1a1a1a;--surface2:#181818;--surface3:#1f1f1f;--gold:#c9a84c;--gold2:#e8c875;--gold3:rgba(201,168,76,0.12);--text:#e0e0e0;--muted:#888;--muted2:#777;--border:#2a2a2a;--border2:#2e2e2e}
+html{scroll-behavior:smooth}
+body{background:var(--black);color:var(--text);font-family:'Be Vietnam Pro',sans-serif;font-weight:300;line-height:1.8;overflow-x:hidden;font-size:15px}
+a{color:inherit;text-decoration:none}
+.container{max-width:1120px;margin:0 auto;padding:0 2rem}
+nav{position:sticky;top:0;z-index:200;background:rgba(10,10,10,0.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+.nav-inner{display:flex;align-items:center;justify-content:space-between;padding:1rem 0}
+.logo{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:600;letter-spacing:0.1em;color:#fff;white-space:nowrap}
+.logo span{color:var(--gold)}
+.nav-links{display:flex;gap:2rem;align-items:center}
+.nav-links a{font-size:0.82rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted2);transition:color 0.2s}
+.nav-links a:hover{color:var(--gold)}
+.nav-cta{background:var(--gold);color:#000;padding:0.55rem 1.4rem;font-size:0.82rem;letter-spacing:0.1em;text-transform:uppercase;font-weight:500;border:none;cursor:pointer;transition:background 0.2s;white-space:nowrap}
+.nav-cta:hover{background:var(--gold2)}
+.nav-toggle{display:none;background:none;border:none;color:var(--text);cursor:pointer;font-size:1.3rem;padding:0.2rem}
+.mobile-nav{display:none;position:fixed;inset:0;top:60px;background:var(--black);z-index:190;padding:2rem;flex-direction:column;gap:1.5rem}
+.mobile-nav.open{display:flex}
+.mobile-nav a{font-size:1rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted2);padding:0.5rem 0;border-bottom:1px solid var(--border)}
+.hero{padding:6rem 0 4rem;text-align:center;position:relative}
+.hero-tag{display:inline-flex;align-items:center;gap:0.6rem;font-size:0.78rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--gold);margin-bottom:1.5rem}
+.hero-tag::before,.hero-tag::after{content:'';width:24px;height:1px;background:var(--gold);opacity:0.5}
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:clamp(2.8rem,6vw,5rem);font-weight:300;line-height:1.05;color:#fff;letter-spacing:0.01em;margin-bottom:1.5rem}
+.hero h1 em{font-style:italic;color:var(--gold)}
+.hero-sub{font-size:1.05rem;color:var(--muted2);max-width:500px;margin:0 auto 2.5rem;line-height:1.8}
+.hero-btns{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+.btn-gold{background:var(--gold);color:#000;padding:0.85rem 2.2rem;font-size:0.85rem;letter-spacing:0.12em;text-transform:uppercase;font-weight:500;border:none;cursor:pointer;transition:background 0.2s}
+.btn-gold:hover{background:var(--gold2)}
+.btn-ghost{background:transparent;color:var(--text);padding:0.85rem 2.2rem;font-size:0.85rem;letter-spacing:0.12em;text-transform:uppercase;border:1px solid var(--border2);cursor:pointer;transition:all 0.2s;display:inline-block}
+.btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+.hero-stats{display:flex;justify-content:center;gap:3rem;margin-top:4rem;padding-top:2.5rem;border-top:1px solid var(--border);flex-wrap:wrap}
+.stat-item{text-align:center}
+.stat-num{font-family:'Cormorant Garamond',serif;font-size:2rem;font-weight:300;color:#fff;line-height:1}
+.stat-label{font-size:0.78rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted2);margin-top:0.3rem}
+.brands{padding:1.5rem 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.brands-inner{display:flex;gap:3rem;justify-content:center;flex-wrap:wrap;align-items:center}
+.brand-name{font-size:0.8rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--border2);font-weight:500;transition:color 0.3s;cursor:default}
+.brand-name:hover{color:var(--gold)}
+.section{padding:5rem 0}
+.sec-eyebrow{font-size:0.78rem;letter-spacing:0.22em;text-transform:uppercase;color:var(--gold);margin-bottom:0.8rem}
+.sec-title{font-family:'Cormorant Garamond',serif;font-size:clamp(1.8rem,3.5vw,2.8rem);font-weight:300;color:#fff;line-height:1.15;margin-bottom:0.8rem}
+.sec-desc{color:var(--muted2);font-size:1rem;max-width:440px;line-height:1.8}
+
+.toolbar{display:flex;gap:1rem;flex-wrap:wrap;align-items:center;justify-content:space-between;margin:2.5rem 0 1.5rem}
+.search-box{position:relative;flex:1;min-width:220px;max-width:340px}
+.search-box input{width:100%;background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:0.65rem 1rem 0.65rem 2.4rem;font-family:'Be Vietnam Pro',sans-serif;font-size:0.85rem;outline:none;transition:border-color 0.2s}
+.search-box input:focus{border-color:var(--gold)}
+.search-box .icon{position:absolute;left:0.9rem;top:50%;transform:translateY(-50%);color:var(--muted2);font-size:0.85rem}
+.filter-bar{display:flex;gap:0.5rem;flex-wrap:wrap}
+.filter-btn{padding:0.5rem 1.2rem;font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;border:1px solid var(--border2);background:transparent;color:var(--muted2);cursor:pointer;transition:all 0.2s;font-family:'Be Vietnam Pro',sans-serif}
+.filter-btn:hover,.filter-btn.active{background:var(--gold3);border-color:var(--gold);color:var(--gold)}
+.result-count{font-size:0.82rem;color:var(--muted2);margin-bottom:1rem}
+
+.products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1px;background:var(--border)}
+.product-card{background:var(--surface);padding:1.75rem 1.5rem;transition:background 0.2s;display:flex;flex-direction:column;gap:0.6rem;cursor:pointer}
+.product-card:hover{background:var(--surface2)}
+.product-card.hidden{display:none}
+.prod-cat{font-size:0.75rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--gold);opacity:0.7}
+.prod-name{font-size:1rem;font-weight:400;color:#fff;line-height:1.4;flex:1}
+.prod-brand{font-size:0.82rem;color:var(--muted2)}
+.prod-badge{display:inline-block;font-size:0.72rem;letter-spacing:0.12em;text-transform:uppercase;padding:0.25rem 0.6rem;border:1px solid;margin-top:0.3rem;width:fit-content}
+.badge-new{color:var(--gold);border-color:var(--gold);background:var(--gold3)}
+.badge-used{color:#888;border-color:#333;background:transparent}
+.prod-price{font-size:1.1rem;font-weight:600;color:var(--gold);margin-top:0.3rem}
+.prod-contact{margin-top:auto;font-size:0.82rem;color:var(--muted2);padding-top:0.8rem;border-top:1px solid var(--border)}
+.empty-state{grid-column:1/-1;text-align:center;padding:3rem 1rem;color:var(--muted2);background:var(--surface)}
+.load-more-wrap{text-align:center;padding:2rem 0 0}
+
+.shopee-link{text-align:center;padding:2.5rem 0 0}
+.services-section{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.services-grid{display:grid;grid-template-columns:1fr 1fr;gap:5rem;align-items:start;margin-top:3.5rem}
+.svc-list{display:flex;flex-direction:column}
+.svc-item{padding:1.5rem 0;border-bottom:1px solid var(--border);display:flex;gap:1.5rem}
+.svc-item:last-child{border-bottom:none}
+.svc-num{font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--gold);opacity:0.4;min-width:22px;margin-top:0.15rem}
+.svc-body h4{font-size:1rem;font-weight:500;color:#fff;margin-bottom:0.3rem}
+.svc-body p{font-size:0.9rem;color:var(--muted2);line-height:1.7}
+.info-box{background:var(--surface2);border:1px solid var(--border2);padding:2rem}
+.info-box h4{font-size:0.8rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold);margin-bottom:1.5rem}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:0.75rem 0;border-bottom:1px solid var(--border);font-size:0.92rem}
+.info-row:last-child{border-bottom:none}
+.info-row span:first-child{color:var(--muted2)}
+.info-row span:last-child{color:#fff}
+.info-note{font-size:0.85rem;color:var(--muted2);line-height:1.7;margin-top:1rem}
+.contact-section{background:var(--surface)}
+.contact-grid{display:grid;grid-template-columns:1fr 1.2fr;gap:5rem;align-items:start;margin-top:3rem}
+.contact-items{display:flex;flex-direction:column;gap:2rem;margin-top:1rem}
+.contact-item{display:flex;gap:1rem;align-items:flex-start}
+.c-icon{color:var(--gold);min-width:20px;margin-top:0.1rem}
+.c-label{font-size:0.76rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted2);margin-bottom:0.25rem}
+.c-val{font-size:1rem;color:#fff}
+.c-val a:hover{color:var(--gold)}
+.map-box{margin-top:2.5rem;border:1px solid var(--border)}
+.map-box iframe{display:block;width:100%;height:220px;border:none;filter:grayscale(0.6) contrast(1.1)}
+.contact-form{display:flex;flex-direction:column;gap:1rem}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.form-group{display:flex;flex-direction:column;gap:0.4rem}
+.form-group label{font-size:0.78rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted2)}
+.form-group input,.form-group select,.form-group textarea{background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:0.75rem 1rem;font-family:'Be Vietnam Pro',sans-serif;font-size:0.85rem;font-weight:300;outline:none;transition:border-color 0.2s;resize:none;-webkit-appearance:none;appearance:none}
+.form-group input::placeholder,.form-group textarea::placeholder{color:var(--muted2);opacity:0.6}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--gold)}
+.form-group select option{background:var(--surface2);color:var(--text)}
+.submit-btn{background:var(--gold);color:#000;padding:0.9rem 2rem;font-size:0.82rem;letter-spacing:0.12em;text-transform:uppercase;font-weight:500;border:none;cursor:pointer;transition:background 0.2s;align-self:flex-start;margin-top:0.3rem}
+.submit-btn:hover{background:var(--gold2)}
+.submit-btn:disabled{opacity:0.6;cursor:default}
+.form-success{display:none;background:rgba(201,168,76,0.1);border:1px solid var(--gold);padding:1rem 1.25rem;font-size:0.85rem;color:var(--gold)}
+.form-note{font-size:0.85rem;color:var(--muted2);line-height:1.6}
+footer{padding:2rem 0;border-top:1px solid var(--border)}
+.footer-inner{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem}
+.footer-logo{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;color:var(--muted2);letter-spacing:0.1em}
+.footer-logo span{color:var(--gold)}
+.footer-links{display:flex;gap:1.5rem}
+.footer-links a{font-size:0.82rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--border2);transition:color 0.2s}
+.footer-links a:hover{color:var(--gold)}
+.footer-copy{font-size:0.8rem;color:var(--border2);width:100%;text-align:center;padding-top:0.5rem;border-top:1px solid var(--border);margin-top:0.5rem}
+
+.prod-img-wrap{background:var(--surface3);width:100%;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;margin-bottom:0.8rem;overflow:hidden}
+.prod-img-wrap img{width:100%;height:100%;object-fit:contain;padding:0.8rem;transition:transform 0.3s}
+.product-card:hover .prod-img-wrap img{transform:scale(1.04)}
+.prod-noimg{width:100%;aspect-ratio:1/1;background:var(--surface3);display:flex;align-items:center;justify-content:center;margin-bottom:0.8rem;color:var(--border2);font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase}
+.prod-desc{font-size:0.85rem;color:var(--muted2);line-height:1.7;margin-top:0.5rem;display:none}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:500;align-items:center;justify-content:center;padding:1rem}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--surface);border:1px solid var(--border2);max-width:860px;width:100%;max-height:90vh;overflow-y:auto;position:relative;display:grid;grid-template-columns:1fr 1fr;gap:0}
+.modal-img-side{background:var(--surface3);display:flex;align-items:center;justify-content:center;min-height:320px;padding:2rem}
+.modal-img-side img{width:100%;max-height:380px;object-fit:contain}
+.modal-img-side .no-img{color:var(--border2);font-size:0.75rem;letter-spacing:0.15em;text-transform:uppercase;text-align:center}
+.modal-info-side{padding:2.5rem;display:flex;flex-direction:column;gap:1rem;border-left:1px solid var(--border)}
+.modal-cat{font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold)}
+.modal-name{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:400;color:#fff;line-height:1.2}
+.modal-brand{font-size:0.85rem;color:var(--muted2)}
+.modal-price{font-size:1.3rem;font-weight:600;color:var(--gold)}
+.modal-desc{font-size:0.92rem;color:var(--text);line-height:1.8;border-top:1px solid var(--border);padding-top:1rem}
+.modal-badge{display:inline-block;font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;padding:0.3rem 0.8rem;border:1px solid;width:fit-content}
+.modal-actions{margin-top:auto;display:flex;flex-direction:column;gap:0.75rem;padding-top:1rem;border-top:1px solid var(--border)}
+.modal-phone,.modal-zalo{background:var(--gold);color:#000;padding:0.8rem 1.5rem;font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;font-weight:500;border:none;cursor:pointer;text-align:center;display:block;text-decoration:none}
+.modal-zalo{background:transparent;color:var(--gold);border:1px solid var(--gold)}
+.modal-shopee{background:transparent;color:var(--muted2);padding:0.7rem 1.5rem;font-size:0.8rem;letter-spacing:0.1em;text-transform:uppercase;border:1px solid var(--border2);cursor:pointer;text-align:center;display:block;text-decoration:none;transition:all 0.2s}
+.modal-shopee:hover{border-color:var(--gold);color:var(--gold)}
+.modal-close{position:absolute;top:1rem;right:1rem;background:none;border:none;color:var(--muted2);font-size:1.5rem;cursor:pointer;z-index:10;width:32px;height:32px;display:flex;align-items:center;justify-content:center;transition:color 0.2s}
+.modal-close:hover{color:#fff}
+
+@media(max-width:900px){.services-grid,.contact-grid{grid-template-columns:1fr;gap:3rem}.nav-links,.nav-cta{display:none}.nav-toggle{display:block}.hero{padding:4rem 0 3rem}.hero-stats{gap:2rem}}
+@media(max-width:700px){
+  .modal-box{grid-template-columns:1fr;max-height:85vh}
+  .modal-img-side{min-height:220px}
+  .modal-info-side{border-left:none;border-top:1px solid var(--border);padding:1.5rem}
+}
+@media(max-width:600px){.form-row{grid-template-columns:1fr}.hero h1{font-size:2.5rem}.footer-links{display:none}.products-grid{grid-template-columns:1fr 1fr}.toolbar{flex-direction:column;align-items:stretch}.search-box{max-width:none}}
+@media(max-width:400px){.products-grid{grid-template-columns:1fr}.container{padding:0 1.2rem}}

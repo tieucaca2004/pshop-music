@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản trị sản phẩm - Pshop Music</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <h2>P<span style="color:var(--gold)">·</span>SHOP MUSIC ADMIN</h2>
+    <p>Đăng nhập để quản lý sản phẩm.</p>
+    <div class="form-group">
+      <label>MẬT KHẨU</label>
+      <input type="password" id="loginPassword" placeholder="Nhập mật khẩu quản trị">
+    </div>
+    <button class="submit-btn" style="width:100%;margin-top:1rem" onclick="AdminApp.login()">ĐĂNG NHẬP</button>
+    <p class="login-error" id="loginError">Sai mật khẩu. Vui lòng thử lại.</p>
+    <p class="small-muted">Mật khẩu mặc định dùng cho phát triển — đổi trong js/admin.js trước khi triển khai thật. Đây là bảo vệ phía trình duyệt, không thay thế xác thực máy chủ.</p>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" style="display:none">
+  <div class="admin-topbar">
+    <div class="admin-title">P<span>·</span>SHOP <span>ADMIN</span></div>
+    <div style="display:flex;gap:0.75rem;align-items:center">
+      <a href="index.html" class="btn-secondary" style="text-decoration:none;display:inline-block">XEM WEBSITE</a>
+      <button class="btn-secondary" onclick="AdminApp.logout()">ĐĂNG XUẤT</button>
+    </div>
+  </div>
+
+  <div class="admin-wrap">
+
+    <div class="panel" id="formPanel">
+      <h3 id="formTitle">THÊM SẢN PHẨM MỚI</h3>
+      <input type="hidden" id="pId">
+      <div class="field-grid">
+        <div class="form-group full">
+          <label>TÊN SẢN PHẨM</label>
+          <input type="text" id="pName" placeholder="VD: Pioneer XDJ-RX3 All-in-One DJ System">
+        </div>
+        <div class="form-group">
+          <label>DANH MỤC</label>
+          <select id="pCategory">
+            <option value="dj">Máy DJ</option>
+            <option value="loa">Loa kiểm âm</option>
+            <option value="tainghe">Tai nghe</option>
+            <option value="soundcard">Soundcard</option>
+            <option value="phukien">Phụ kiện</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>TÌNH TRẠNG</label>
+          <select id="pStatus">
+            <option value="New">Mới / Chính hãng</option>
+            <option value="Used">Qua sử dụng</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>THƯƠNG HIỆU</label>
+          <input type="text" id="pBrand" placeholder="VD: Pioneer DJ">
+        </div>
+        <div class="form-group">
+          <label>GIÁ (để trống nếu "liên hệ báo giá")</label>
+          <input type="text" id="pPrice" placeholder="VD: 1.200.000 ₫">
+        </div>
+        <div class="form-group full">
+          <label>THÔNG SỐ / DÒNG PHỤ (hiển thị dưới tên sản phẩm)</label>
+          <input type="text" id="pSpecs" placeholder="VD: Pioneer DJ · AlphaTheta · 10.1&quot; Touch · Rekordbox / Serato">
+        </div>
+        <div class="form-group full">
+          <label>NHÃN (badge)</label>
+          <input type="text" id="pBadgeText" placeholder="VD: Chính hãng · BH 12th">
+        </div>
+        <div class="form-group full">
+          <label>MÔ TẢ CHI TIẾT</label>
+          <textarea id="pDescription" rows="4" placeholder="Mô tả đầy đủ hiển thị trong popup chi tiết sản phẩm"></textarea>
+        </div>
+        <div class="form-group full">
+          <label>URL ẢNH SẢN PHẨM (Cloudinary hoặc link ảnh bất kỳ)</label>
+          <input type="text" id="pImage" placeholder="https://...">
+        </div>
+      </div>
+      <div class="admin-actions">
+        <button class="submit-btn" onclick="AdminApp.saveProduct()" id="saveBtn">LƯU SẢN PHẨM</button>
+        <button class="btn-secondary" onclick="AdminApp.resetForm()">HỦY / LÀM MỚI FORM</button>
+      </div>
+      <p class="status-msg" id="formStatus"></p>
+    </div>
+
+    <div class="panel">
+      <div class="toolbar-row">
+        <h3 style="margin:0">DANH SÁCH SẢN PHẨM (<span id="productTotal">0</span>)</h3>
+        <div class="admin-actions" style="margin:0">
+          <input type="text" id="adminSearch" placeholder="Tìm sản phẩm..." style="background:var(--surface2);border:1px solid var(--border2);color:var(--text);padding:0.55rem 0.8rem;font-size:0.82rem">
+          <button class="btn-secondary" onclick="AdminApp.exportJson()">XUẤT JSON</button>
+          <button class="btn-secondary" onclick="document.getElementById('importFile').click()">NHẬP JSON</button>
+          <input type="file" id="importFile" accept="application/json" style="display:none">
+          <button class="btn-danger" onclick="AdminApp.resetToSeed()">KHÔI PHỤC DỮ LIỆU GỐC</button>
+        </div>
+      </div>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Ảnh</th><th>Tên sản phẩm</th><th>Danh mục</th><th>Giá</th><th>Tình trạng</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="productTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/products-seed.js"></script>
+<script src="js/db.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>
