@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Phone, Mail, MapPin, Facebook } from "lucide-react";
+import { Phone, Mail, MapPin, ExternalLink } from "lucide-react";
 
 export function Footer() {
   return (
@@ -60,7 +60,7 @@ export function Footer() {
               <span>86 Lạc Long Quân, Phường Phước Hải, Nha Trang</span>
             </li>
             <li className="flex items-center gap-2">
-              <Facebook size={16} className="text-accent shrink-0" />
+              <ExternalLink size={16} className="text-accent shrink-0" />
               <a href="https://www.facebook.com/ChoThueThietBiDJ/" target="_blank" rel="noopener noreferrer" className="cursor-pointer hover:text-accent transition-colors duration-200">Facebook fanpage</a>
             </li>
           </ul>

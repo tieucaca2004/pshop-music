@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Phone, Mail, MapPin, Clock, Facebook } from "lucide-react";
+import { Phone, Mail, MapPin, Clock, ExternalLink } from "lucide-react";
 import { ContactOrderForm } from "@/components/contact-order-form";
 
 export const metadata: Metadata = {
@@ -48,7 +48,7 @@ export default function ContactPage() {
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <Facebook className="mt-1 shrink-0 text-accent" size={20} />
+            <ExternalLink className="mt-1 shrink-0 text-accent" size={20} />
             <div>
               <p className="font-semibold text-foreground">Facebook</p>
               <a

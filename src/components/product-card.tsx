@@ -10,7 +10,7 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <Link
       href={`/san-pham/${product.slug}`}
-      className="group block cursor-pointer overflow-hidden rounded-xl border border-border bg-card transition-colors duration-200 hover:border-accent"
+      className="group block cursor-pointer overflow-hidden rounded-xl border border-border bg-card transition-all duration-200 hover:border-accent hover:shadow-[0_0_24px_color-mix(in_srgb,var(--color-accent)_25%,transparent)]"
     >
       <div className="relative aspect-square overflow-hidden bg-muted">
         {image ? (

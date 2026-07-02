@@ -13,8 +13,8 @@ export async function Header() {
 
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-sm">
-      <div className="border-b border-border bg-primary">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 text-xs text-white/80 sm:text-sm">
+      <div className="border-b border-border bg-primary/90">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 text-xs text-white/70 sm:text-sm">
           <span>Thiết bị DJ &amp; âm thanh chính hãng cho DJ, producer, phòng thu</span>
           <a
             href="tel:0901952999"

@@ -1,20 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0f0f23;
-  --foreground: #f8fafc;
-  --color-primary: #1e1b4b;
+  --background: #080810;
+  --foreground: #f1f5f9;
+  --color-primary: #0d0d1a;
   --color-primary-foreground: #ffffff;
-  --color-secondary: #312e81;
-  --color-accent: #f97316;
-  --color-accent-foreground: #0f0f23;
-  --color-card: #1b1b30;
-  --color-card-foreground: #f8fafc;
-  --color-muted: #27273b;
-  --color-muted-foreground: #94a3b8;
-  --color-border: #34336a;
+  --color-secondary: #1a1a2e;
+  --color-accent: #ff6b00;
+  --color-accent-foreground: #ffffff;
+  --color-neon: #00e5ff;
+  --color-card: #111120;
+  --color-card-foreground: #f1f5f9;
+  --color-muted: #1c1c2e;
+  --color-muted-foreground: #7c7c9a;
+  --color-border: #1e1e3a;
   --color-destructive: #ef4444;
-  --color-ring: #f97316;
+  --color-ring: #ff6b00;
 }
 
 @theme inline {
@@ -25,6 +26,7 @@
   --color-secondary: var(--color-secondary);
   --color-accent: var(--color-accent);
   --color-accent-foreground: var(--color-accent-foreground);
+  --color-neon: var(--color-neon);
   --color-card: var(--color-card);
   --color-card-foreground: var(--color-card-foreground);
   --color-muted: var(--color-muted);
@@ -48,12 +50,67 @@ body {
 
 ::selection {
   background: var(--color-accent);
-  color: var(--color-accent-foreground);
+  color: #fff;
 }
 
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+/* Neon glow utilities */
+.glow-accent {
+  box-shadow: 0 0 20px color-mix(in srgb, var(--color-accent) 40%, transparent),
+              0 0 60px color-mix(in srgb, var(--color-accent) 15%, transparent);
+}
+.glow-neon {
+  box-shadow: 0 0 20px color-mix(in srgb, var(--color-neon) 50%, transparent),
+              0 0 60px color-mix(in srgb, var(--color-neon) 20%, transparent);
+}
+.text-glow-accent {
+  text-shadow: 0 0 20px color-mix(in srgb, var(--color-accent) 60%, transparent),
+               0 0 40px color-mix(in srgb, var(--color-accent) 30%, transparent);
+}
+
+/* Animated equalizer bars */
+@keyframes eq1 { 0%,100%{height:8px} 50%{height:32px} }
+@keyframes eq2 { 0%,100%{height:20px} 30%{height:8px} 70%{height:40px} }
+@keyframes eq3 { 0%,100%{height:28px} 40%{height:10px} }
+@keyframes eq4 { 0%,100%{height:14px} 60%{height:36px} }
+@keyframes eq5 { 0%,100%{height:32px} 20%{height:10px} 80%{height:20px} }
+@keyframes eq6 { 0%,100%{height:18px} 45%{height:38px} }
+@keyframes eq7 { 0%,100%{height:10px} 55%{height:28px} }
+@keyframes eq8 { 0%,100%{height:24px} 35%{height:12px} }
+
+.eq-bar { border-radius: 2px; animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+.eq-bar:nth-child(1) { animation: eq1 0.8s infinite; }
+.eq-bar:nth-child(2) { animation: eq2 0.9s infinite; }
+.eq-bar:nth-child(3) { animation: eq3 0.7s infinite; }
+.eq-bar:nth-child(4) { animation: eq4 1.1s infinite; }
+.eq-bar:nth-child(5) { animation: eq5 0.85s infinite; }
+.eq-bar:nth-child(6) { animation: eq6 0.95s infinite; }
+.eq-bar:nth-child(7) { animation: eq7 0.75s infinite; }
+.eq-bar:nth-child(8) { animation: eq8 1.0s infinite; }
+
+/* Dot grid background */
+.bg-dot-grid {
+  background-image: radial-gradient(circle, #ffffff08 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+/* Scanline overlay */
+.scanlines::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
 }
 
 @layer components {
