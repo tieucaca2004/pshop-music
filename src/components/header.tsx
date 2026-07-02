@@ -3,6 +3,12 @@ import { Phone } from "lucide-react";
 import { getCategories } from "@/lib/products";
 import { MobileNav } from "@/components/mobile-nav";
 
+const BRANDS = [
+  "Pioneer DJ", "AlphaTheta", "KRK", "Monkey Banana", "Sennheiser",
+  "Adam Audio", "JBL", "Native Instruments", "Audient", "Technics",
+  "Bose", "Denon DJ", "Numark", "Roland", "Focusrite",
+];
+
 export async function Header() {
   let categories: Awaited<ReturnType<typeof getCategories>> = [];
   try {
@@ -12,52 +18,63 @@ export async function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur-sm">
-      <div className="border-b border-border bg-primary/90">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-2 text-xs text-white/70 sm:text-sm">
-          <span>Thiết bị DJ &amp; âm thanh chính hãng cho DJ, producer, phòng thu</span>
-          <a
-            href="tel:0901952999"
-            className="hidden cursor-pointer items-center gap-1.5 font-semibold text-white hover:text-accent transition-colors duration-200 sm:flex"
-          >
-            <Phone size={14} />
-            0901 952 999
-          </a>
-        </div>
-      </div>
-
-      <div className="relative mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
-        <Link href="/" className="flex items-center gap-2 shrink-0">
-          <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent font-heading text-lg font-extrabold text-accent-foreground">
-            P
-          </span>
-          <span className="font-heading text-xl font-bold tracking-tight">
-            Pshop<span className="text-accent">Music</span>
+    <header className="sticky top-0 z-40 border-b border-border bg-background">
+      {/* Main nav */}
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-4">
+        {/* Logo */}
+        <Link href="/" className="shrink-0">
+          <span className="font-heading text-lg font-extrabold tracking-widest text-white">
+            P<span className="text-accent">·</span>SHOP MUSIC
           </span>
         </Link>
 
-        <nav className="hidden items-center gap-1 md:flex">
-          {categories.map((cat) => (
+        {/* Desktop nav */}
+        <nav className="hidden items-center gap-8 md:flex">
+          <Link href="/" className="text-xs font-bold uppercase tracking-widest text-white/70 transition-colors hover:text-accent">
+            Trang chủ
+          </Link>
+          {categories.slice(0, 4).map((cat) => (
             <Link
               key={cat.id}
               href={`/danh-muc/${cat.slug}`}
-              className="cursor-pointer rounded-lg px-3 py-2 text-sm font-medium text-foreground/90 hover:bg-card hover:text-accent transition-colors duration-200"
+              className="text-xs font-bold uppercase tracking-widest text-white/70 transition-colors hover:text-accent"
             >
               {cat.name}
             </Link>
           ))}
+          <Link href="/lien-he" className="text-xs font-bold uppercase tracking-widest text-white/70 transition-colors hover:text-accent">
+            Liên hệ
+          </Link>
         </nav>
 
-        <div className="hidden shrink-0 md:block">
-          <Link
-            href="/lien-he"
-            className="cursor-pointer rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-foreground hover:bg-accent/90 transition-colors duration-200"
-          >
-            Liên hệ đặt hàng
+        {/* CTA */}
+        <div className="hidden shrink-0 items-center gap-4 md:flex">
+          <a href="tel:0901952999" className="flex items-center gap-2 text-xs text-white/60 transition-colors hover:text-accent">
+            <Phone size={13} />
+            0901 952 999
+          </a>
+          <Link href="/lien-he" className="btn-gold">
+            Tư vấn ngay
           </Link>
         </div>
 
         <MobileNav categories={categories} />
+      </div>
+
+      {/* Brand bar */}
+      <div className="border-t border-border">
+        <div className="mx-auto max-w-7xl overflow-x-auto px-4 py-2.5">
+          <div className="flex items-center gap-8 whitespace-nowrap">
+            {BRANDS.map((brand) => (
+              <span
+                key={brand}
+                className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/25 transition-colors hover:text-white/60 cursor-default"
+              >
+                {brand}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
     </header>
   );
