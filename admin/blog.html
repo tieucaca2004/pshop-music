@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản lý Blog - Pshop Music Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/admin.css">
+<link rel="stylesheet" href="https://cdn.quilljs.com/1.3.7/quill.snow.css">
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="adminSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-wrap">
+
+      <div class="panel" id="blogFormPanel">
+        <h3 id="blogFormTitle">THÊM BÀI VIẾT MỚI</h3>
+        <div class="field-grid">
+          <div class="form-group full">
+            <label>TIÊU ĐỀ BÀI VIẾT</label>
+            <input type="text" id="postTitle" placeholder="VD: Cách chọn loa kiểm âm cho phòng thu tại nhà">
+          </div>
+          <div class="form-group full">
+            <label>SLUG (đường dẫn URL) — tự tạo từ tiêu đề, có thể sửa</label>
+            <input type="text" id="postSlug" placeholder="cach-chon-loa-kiem-am-cho-phong-thu-tai-nha">
+            <p class="small-muted">URL bài viết sẽ là: /blog-post.html?slug=...</p>
+          </div>
+          <div class="form-group">
+            <label>TÁC GIẢ</label>
+            <input type="text" id="postAuthor" value="Pshop Music">
+          </div>
+          <div class="form-group">
+            <label>TRẠNG THÁI</label>
+            <select id="postStatus">
+              <option value="draft">Bản nháp (chưa hiển thị)</option>
+              <option value="published">Đã đăng (hiển thị công khai)</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label>TAGS (phân tách bằng dấu phẩy)</label>
+            <input type="text" id="postTags" placeholder="loa kiểm âm, phòng thu, hướng dẫn">
+          </div>
+          <div class="form-group full">
+            <label>ẢNH BÌA</label>
+            <input type="text" id="postCover" placeholder="https://...">
+            <div class="upload-row">
+              <button type="button" class="upload-btn" onclick="document.getElementById('postCoverUpload').click()">&#128247; Upload ảnh từ máy</button>
+              <input type="file" id="postCoverUpload" accept="image/*" style="display:none">
+              <span class="upload-status" id="postCoverUploadStatus"></span>
+            </div>
+          </div>
+          <div class="form-group full">
+            <label>MÔ TẢ NGẮN (hiển thị ở danh sách blog)</label>
+            <textarea id="postExcerpt" rows="2"></textarea>
+          </div>
+          <div class="form-group full">
+            <label>NỘI DUNG BÀI VIẾT</label>
+            <div id="postContentEditor" style="background:var(--bg-alt);color:var(--ink)"></div>
+          </div>
+          <div class="form-group full">
+            <label>SEO — TIÊU ĐỀ (để trống dùng tiêu đề bài viết)</label>
+            <input type="text" id="postSeoTitle">
+          </div>
+          <div class="form-group full">
+            <label>SEO — MÔ TẢ (để trống dùng mô tả ngắn)</label>
+            <textarea id="postSeoDescription" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="admin-actions">
+          <button class="submit-btn" id="blogSaveBtn">LƯU BÀI VIẾT</button>
+          <button class="btn-secondary" id="blogResetBtn">HỦY / LÀM MỚI FORM</button>
+        </div>
+        <p class="status-msg" id="blogStatus"></p>
+      </div>
+
+      <div class="panel">
+        <h3 style="margin:0 0 1rem">DANH SÁCH BÀI VIẾT (<span id="blogTotal">0</span>)</h3>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead><tr><th>Ảnh bìa</th><th>Tiêu đề</th><th>Tác giả</th><th>Trạng thái</th><th></th></tr></thead>
+            <tbody id="blogTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/site-content-seed.js"></script>
+<script src="../js/cms-db.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script src="../js/storage-upload.js"></script>
+<script src="../js/admin-blog.js"></script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản lý Slider - Pshop Music Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="adminSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-wrap">
+      <div class="toolbar-row" style="margin-bottom:1rem">
+        <h3 style="margin:0">SLIDE BANNER TRANG CHỦ (HERO SLIDESHOW)</h3>
+        <button class="submit-btn" id="addSlideBtn">+ THÊM SLIDE</button>
+      </div>
+      <div id="slideList"></div>
+      <div class="admin-actions">
+        <button class="submit-btn" id="saveSlidesBtn">LƯU TẤT CẢ SLIDE</button>
+      </div>
+      <p class="status-msg" id="sliderStatus"></p>
+      <span class="upload-status" id="slideUploadStatus"></span>
+      <input type="file" id="slideImageUpload" accept="image/*" style="display:none">
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/site-content-seed.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/cms-db.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script src="../js/storage-upload.js"></script>
+<script src="../js/admin-sliders.js"></script>
+</body>
+</html>

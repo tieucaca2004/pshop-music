@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản lý Video - Pshop Music Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="adminSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-wrap">
+
+      <div class="panel" id="videoFormPanel">
+        <h3 id="videoFormTitle">THÊM VIDEO MỚI</h3>
+        <div class="field-grid">
+          <div class="form-group full">
+            <label>TIÊU ĐỀ VIDEO</label>
+            <input type="text" id="vTitle" placeholder="VD: Setup dàn âm thanh quán Café Nha Trang">
+          </div>
+          <div class="form-group full">
+            <label>LINK YOUTUBE HOẶC VIMEO</label>
+            <input type="text" id="vUrl" placeholder="https://www.youtube.com/watch?v=...">
+          </div>
+          <div class="form-group full">
+            <label>MÔ TẢ NGẮN</label>
+            <textarea id="vDescription" rows="2"></textarea>
+          </div>
+          <div class="form-group">
+            <label>THỨ TỰ (số nhỏ hiện trước)</label>
+            <input type="number" id="vOrder" value="0">
+          </div>
+          <div class="form-group">
+            <label class="cms-toggle" style="margin-top:1.5rem"><input type="checkbox" id="vActive" checked> Hiển thị trên site</label>
+          </div>
+        </div>
+        <div class="admin-actions">
+          <button class="submit-btn" id="videoSaveBtn">LƯU VIDEO</button>
+          <button class="btn-secondary" id="videoResetBtn">HỦY / LÀM MỚI FORM</button>
+        </div>
+        <p class="status-msg" id="videoStatus"></p>
+      </div>
+
+      <div class="panel">
+        <h3 style="margin:0 0 1rem">DANH SÁCH VIDEO (<span id="videoTotal">0</span>)</h3>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead><tr><th>Thumbnail</th><th>Tiêu đề</th><th>Nền tảng</th><th>Trạng thái</th><th></th></tr></thead>
+            <tbody id="videoTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/site-content-seed.js"></script>
+<script src="../js/cms-db.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script src="../js/video-utils.js"></script>
+<script src="../js/admin-videos.js"></script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cài đặt chung - Pshop Music Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="adminSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-wrap">
+
+      <div class="panel">
+        <h3>THÔNG TIN CHUNG &amp; LIÊN HỆ</h3>
+        <div class="field-grid">
+          <div class="form-group">
+            <label>TÊN CỬA HÀNG</label>
+            <input type="text" id="setSiteName">
+          </div>
+          <div class="form-group">
+            <label>LOGO CHỮ (hiển thị góc trái nav)</label>
+            <input type="text" id="setLogoText">
+          </div>
+          <div class="form-group">
+            <label>SỐ ĐIỆN THOẠI (dùng cho link tel:)</label>
+            <input type="text" id="setPhone" placeholder="0901952999">
+          </div>
+          <div class="form-group">
+            <label>SỐ ĐIỆN THOẠI HIỂN THỊ</label>
+            <input type="text" id="setPhoneDisplay" placeholder="0901 952 999">
+          </div>
+          <div class="form-group full">
+            <label>ĐỊA CHỈ</label>
+            <input type="text" id="setAddress">
+          </div>
+          <div class="form-group full">
+            <label>LINK GOOGLE MAPS</label>
+            <input type="text" id="setMapLink" placeholder="https://maps.app.goo.gl/...">
+          </div>
+          <div class="form-group full">
+            <label>GIỜ HOẠT ĐỘNG</label>
+            <input type="text" id="setOpeningHours" placeholder="8:00 – 21:00 · Cả tuần">
+          </div>
+          <div class="form-group full">
+            <label>LINK FACEBOOK</label>
+            <input type="text" id="setFacebook">
+          </div>
+          <div class="form-group full">
+            <label>LINK ZALO</label>
+            <input type="text" id="setZalo">
+          </div>
+          <div class="form-group full">
+            <label>LINK SHOPEE</label>
+            <input type="text" id="setShopee">
+          </div>
+        </div>
+        <div class="admin-actions">
+          <button class="submit-btn" id="saveSettingsBtn">LƯU THÔNG TIN CHUNG</button>
+        </div>
+        <p class="status-msg" id="settingsStatus"></p>
+      </div>
+
+      <div class="panel">
+        <h3>NỘI DUNG MỤC "DỊCH VỤ" (TRANG CHỦ)</h3>
+        <div class="field-grid">
+          <div class="form-group full">
+            <label>GIỚI THIỆU DỊCH VỤ (câu mô tả ngắn)</label>
+            <textarea id="svcIntro" rows="2"></textarea>
+          </div>
+          <div class="form-group full">
+            <label>DANH SÁCH DỊCH VỤ — mỗi dòng: Tiêu đề | Mô tả</label>
+            <textarea id="svcItems" rows="6"></textarea>
+          </div>
+          <div class="form-group full">
+            <label>BẢNG THÔNG TIN CHO THUÊ — mỗi dòng: Nhãn | Giá trị</label>
+            <textarea id="svcInfoRows" rows="5"></textarea>
+          </div>
+        </div>
+        <div class="admin-actions">
+          <button class="submit-btn" id="saveServicesBtn">LƯU NỘI DUNG DỊCH VỤ</button>
+        </div>
+        <p class="status-msg" id="servicesStatus"></p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/site-content-seed.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/cms-db.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script src="../js/admin-settings.js"></script>
+</body>
+</html>

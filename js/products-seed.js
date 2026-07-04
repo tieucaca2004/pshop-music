@@ -573,5 +573,19 @@ const SEED_PRODUCTS = [
     "status": "New",
     "badgeText": "Chính hãng · BH 12th",
     "createdAt": 1783005737684
+  },
+  {
+    "id": "42",
+    "name": "TAI NGHE SOL REPUBLIC",
+    "category": "tainghe",
+    "categoryLabel": "Tai nghe",
+    "brand": "Sol Republic",
+    "specs": "Sol Republic · On-ear · Driver bass mạnh · Thiết kế thể thao năng động",
+    "description": "Tai nghe Sol Republic nổi bật với driver bass mạnh mẽ, âm thanh sôi động phù hợp nhạc điện tử, hip-hop, EDM. Thiết kế thể thao năng động, khung bền chắc linh hoạt, đệm tai êm ái đeo thoải mái trong thời gian dài. Dây tai nghe có thể tháo rời dễ dàng thay thế khi cần (dùng chung driver thay thế Sol Republic V8/V10 mà shop đang có sẵn). Phù hợp cho DJ, người yêu nhạc và sử dụng hàng ngày.",
+    "price": "",
+    "image": "",
+    "status": "New",
+    "badgeText": "Chính hãng",
+    "createdAt": 1783009706448
   }
 ];

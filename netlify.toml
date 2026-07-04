@@ -1,8 +1,16 @@
 [build]
   publish = "."
 
+[build.processing.html]
+  pretty_urls = false
+
 [[headers]]
   for = "/admin.html"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+  for = "/admin/*"
   [headers.values]
     X-Robots-Tag = "noindex, nofollow"
 

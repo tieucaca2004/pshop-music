@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Người dùng & Phân quyền - Pshop Music Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="adminSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-wrap">
+
+      <div class="panel">
+        <h3>THÊM NGƯỜI DÙNG MỚI</h3>
+        <div class="field-grid">
+          <div class="form-group">
+            <label>HỌ TÊN</label>
+            <input type="text" id="newUserName">
+          </div>
+          <div class="form-group">
+            <label>VAI TRÒ</label>
+            <select id="newUserRole">
+              <option value="editor">Editor (không vào được Menu/Footer/SEO/Cài đặt/Người dùng)</option>
+              <option value="admin">Admin (toàn quyền)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>EMAIL</label>
+            <input type="email" id="newUserEmail">
+          </div>
+          <div class="form-group">
+            <label>MẬT KHẨU (tối thiểu 6 ký tự)</label>
+            <input type="password" id="newUserPassword">
+          </div>
+        </div>
+        <div class="admin-actions">
+          <button class="submit-btn" id="createUserBtn">TẠO TÀI KHOẢN</button>
+        </div>
+        <p class="status-msg" id="userStatus"></p>
+      </div>
+
+      <div class="panel">
+        <h3 style="margin:0 0 1rem">DANH SÁCH NGƯỜI DÙNG (<span id="userTotal">0</span>)</h3>
+        <p class="small-muted">Thu hồi quyền chỉ chặn đăng nhập vào CMS — tài khoản Firebase Auth vẫn tồn tại. Muốn xóa hẳn, vào Firebase Console → Authentication.</p>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead><tr><th>Họ tên</th><th>Email</th><th>Vai trò</th><th></th></tr></thead>
+            <tbody id="userTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/site-content-seed.js"></script>
+<script src="../js/cms-db.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script src="../js/admin-users.js"></script>
+</body>
+</html>

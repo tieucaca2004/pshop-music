@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plugin Manager - Pshop Music Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/admin.css">
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="adminSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-wrap">
+      <div class="panel">
+        <h3 style="margin:0 0 1rem">QUẢN LÝ PLUGIN AI</h3>
+        <p class="small-muted">Chỉ plugin "Đang bật" mới hiện trên Dashboard và chạy được. Plugin "Sắp ra mắt" giữ nguyên code, sẽ kích hoạt ở sprint sau — không xóa, không mất dữ liệu.</p>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead><tr><th>Plugin</th><th>Version</th><th>AI Provider</th><th>Trạng thái</th><th>Bật/Tắt</th><th></th></tr></thead>
+            <tbody id="pluginTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../../js/firebase-config.js"></script>
+<script src="../../js/products-seed.js"></script>
+<script src="../../js/site-content-seed.js"></script>
+<script src="../../js/db.js"></script>
+<script src="../../js/cms-db.js"></script>
+<script src="../../js/admin-auth.js"></script>
+
+<script src="../../js/ai/provider-interface.js"></script>
+<script src="../../js/ai/provider-registry.js"></script>
+<script src="../../js/ai/ai-db.js"></script>
+<script src="../../js/ai/plugin-db.js"></script>
+<script src="../../js/ai/providers/openai.js"></script>
+<script src="../../js/ai/providers/claude.js"></script>
+<script src="../../js/ai/providers/gemini.js"></script>
+<script src="../../js/ai/providers/deepseek.js"></script>
+<script src="../../js/ai/module-registry.js"></script>
+<script src="../../js/ai/modules/blog-writer.js"></script>
+<script src="../../js/ai/modules/product-description-writer.js"></script>
+<script src="../../js/ai/modules/seo-generator.js"></script>
+<script src="../../js/ai/modules/faq-generator.js"></script>
+<script src="../../js/ai/modules/facebook-post-generator.js"></script>
+<script src="../../js/ai/modules/image-prompt-generator.js"></script>
+<script src="../../js/ai/modules/slider-generator.js"></script>
+<script src="../../js/ai/modules/banner-generator.js"></script>
+<script src="../../js/admin-ai-plugins.js"></script>
+</body>
+</html>

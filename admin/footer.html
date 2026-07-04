@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản lý Footer - Pshop Music Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="adminSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-wrap">
+
+      <div class="toolbar-row" style="margin-bottom:1rem">
+        <h3 style="margin:0">CỘT FOOTER</h3>
+        <button class="submit-btn" id="addColumnBtn">+ THÊM CỘT</button>
+      </div>
+      <div id="footerColumns"></div>
+
+      <div class="panel">
+        <div class="toolbar-row">
+          <h3 style="margin:0">MẠNG XÃ HỘI</h3>
+          <button class="submit-btn" id="addSocialBtn">+ THÊM</button>
+        </div>
+        <div id="socialList" style="margin-top:1rem"></div>
+      </div>
+
+      <div class="panel">
+        <h3>DÒNG BẢN QUYỀN CUỐI TRANG</h3>
+        <div class="form-group full">
+          <input type="text" id="footerCopyText" placeholder="© 2026 Pshop Music · ...">
+        </div>
+      </div>
+
+      <div class="admin-actions">
+        <button class="submit-btn" id="saveFooterBtn">LƯU FOOTER</button>
+      </div>
+      <p class="status-msg" id="footerStatus"></p>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/site-content-seed.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/cms-db.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script src="../js/admin-footer.js"></script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản lý danh mục - Pshop Music Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="adminSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-wrap">
+      <div class="panel">
+        <div class="toolbar-row">
+          <h3 style="margin:0">DANH MỤC SẢN PHẨM</h3>
+          <button class="submit-btn" id="addCategoryBtn">+ THÊM DANH MỤC</button>
+        </div>
+        <p class="small-muted">Đây là danh sách danh mục gốc — dùng cho dropdown Danh mục trong Sản phẩm và các tab lọc trên trang danh mục. Mã (code) nên là chữ thường không dấu, không trùng nhau (vd: dj, loa, tainghe).</p>
+        <div id="categoryList" style="margin-top:1rem"></div>
+        <p class="status-msg" id="categoryStatus"></p>
+      </div>
+
+      <div class="panel">
+        <div class="toolbar-row">
+          <h3 style="margin:0">Ô DANH MỤC HIỂN THỊ TRANG CHỦ</h3>
+          <button class="submit-btn" id="addTileBtn">+ THÊM Ô</button>
+        </div>
+        <p class="small-muted">Các ô hiển thị trong lưới danh mục ở trang chủ. Có thể tạo 2 ô cùng danh mục với tên khác nhau (VD "Máy DJ" và "Controller" cùng trỏ tới mã dj).</p>
+        <div id="tileList" style="margin-top:1rem"></div>
+        <div class="admin-actions">
+          <button class="submit-btn" id="saveTilesBtn">LƯU Ô DANH MỤC</button>
+        </div>
+        <p class="status-msg" id="tileStatus"></p>
+        <span class="upload-status" id="tileUploadStatus"></span>
+        <input type="file" id="tileImageUpload" accept="image/*" style="display:none">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/site-content-seed.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/cms-db.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script src="../js/storage-upload.js"></script>
+<script src="../js/admin-categories.js"></script>
+</body>
+</html>

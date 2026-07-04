@@ -1,20 +1,34 @@
 (function () {
   const PAGE_SIZE = 12;
-  const CONTACT = {
-    phone: '0901952999',
-    phoneDisplay: '0901 952 999',
-    zalo: 'https://zalo.me/0901952999',
-    facebook: 'https://www.facebook.com/ChoThueThietBiDJ',
-    shopee: 'https://shopee.vn/music_store_79'
-  };
+  const DATA = window.PSHOP_DATA || { products: [], contact: {} };
+  const CONTACT = DATA.contact;
 
-  let allProducts = [];
+  let allProducts = DATA.products || [];
   let state = { category: 'all', query: '', visibleCount: PAGE_SIZE };
 
   const grid = document.getElementById('productGrid');
   const resultCount = document.getElementById('resultCount');
   const loadMoreWrap = document.getElementById('loadMoreWrap');
   const searchInput = document.getElementById('searchInput');
+
+  window.pshopImgFail = function (img) {
+    const wrap = img.parentElement;
+    const name = img.alt || '';
+    const tile = document.createElement('div');
+    tile.className = 'prod-noimg-tile';
+    const span = document.createElement('span');
+    span.className = 'tile-name';
+    span.textContent = name;
+    tile.appendChild(span);
+    wrap.replaceWith(tile);
+  };
+
+  window.jumpToCategory = function (cat) {
+    const btn = Array.from(document.querySelectorAll('.filter-btn'))
+      .find(b => b.getAttribute('onclick') && b.getAttribute('onclick').includes(`'${cat}'`));
+    if (btn) filterP(cat, btn);
+    document.getElementById('products').scrollIntoView({ behavior: 'smooth' });
+  };
 
   function escapeHtml(str) {
     return String(str || '').replace(/[&<>"']/g, c => ({
@@ -37,8 +51,8 @@
 
   function cardHtml(p) {
     const imgHtml = p.image
-      ? `<div class="prod-img-wrap"><img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" loading="lazy" onerror="this.parentElement.style.display='none'"></div>`
-      : '';
+      ? `<div class="prod-img-wrap"><img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" loading="lazy" onerror="window.pshopImgFail(this)"></div>`
+      : `<div class="prod-noimg-tile"><span class="tile-name">${escapeHtml(p.name)}</span></div>`;
     const priceHtml = p.price ? `<div class="prod-price">${escapeHtml(p.price)}</div>` : '';
     const badgeClass = p.status === 'Used' ? 'badge-used' : 'badge-new';
     return `
@@ -72,13 +86,35 @@
     loadMoreWrap.style.display = filtered.length > state.visibleCount ? 'block' : 'none';
   }
 
-  window.filterP = function (cat, btn) {
+  const VALID_CATEGORIES = ['dj', 'loa', 'tainghe', 'soundcard', 'phukien'];
+
+  function findFilterBtn(cat) {
+    return Array.from(document.querySelectorAll('.filter-btn'))
+      .find(b => b.getAttribute('onclick') && b.getAttribute('onclick').includes(`'${cat}'`));
+  }
+
+  function pushCategoryUrl(cat) {
+    const newHash = cat === 'all' ? '' : ('#' + cat);
+    if (location.hash === newHash) return;
+    const newUrl = location.pathname + location.search + newHash;
+    history.pushState({ cat: cat }, '', newUrl);
+  }
+
+  window.filterP = function (cat, btn, opts) {
     state.category = cat;
     state.visibleCount = PAGE_SIZE;
     document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     render();
+    if (!opts || !opts.skipUrlUpdate) pushCategoryUrl(cat);
   };
+
+  window.addEventListener('popstate', () => {
+    const cat = location.hash.replace('#', '');
+    const target = VALID_CATEGORIES.includes(cat) ? cat : 'all';
+    const btn = findFilterBtn(target) || document.querySelector('.filter-btn');
+    filterP(target, btn, { skipUrlUpdate: true });
+  });
 
   function openModal(p) {
     const imgSide = document.getElementById('modalImgSide');
@@ -86,6 +122,7 @@
     const oldImg = imgSide.querySelector('img');
     if (oldImg) oldImg.remove();
 
+    noImg.textContent = p.name;
     if (p.image) {
       noImg.style.display = 'none';
       const img = document.createElement('img');
@@ -173,8 +210,48 @@
     }, 800);
   };
 
-  DB.getAll().then(products => {
-    allProducts = products;
-    render();
-  });
+  (function applyInitialHash() {
+    const hashCat = location.hash.replace('#', '');
+    if (VALID_CATEGORIES.includes(hashCat)) {
+      const btn = findFilterBtn(hashCat);
+      if (btn) {
+        state.category = hashCat;
+        document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      }
+    }
+  })();
+  render();
+
+  (function initHeroSlideshow() {
+    const slidesWrap = document.getElementById('heroSlides');
+    const dotsWrap = document.getElementById('heroDots');
+    if (!slidesWrap) return;
+    const slides = Array.from(slidesWrap.children);
+    if (slides.length < 2) return;
+
+    dotsWrap.innerHTML = slides.map((_, i) => `<button aria-label="Slide ${i + 1}"${i === 0 ? ' class="active"' : ''}></button>`).join('');
+    const dots = Array.from(dotsWrap.children);
+
+    let current = 0;
+    let timer;
+
+    function goTo(index) {
+      slides[current].classList.remove('active');
+      dots[current].classList.remove('active');
+      current = index;
+      slides[current].classList.add('active');
+      dots[current].classList.add('active');
+    }
+
+    function next() { goTo((current + 1) % slides.length); }
+
+    function restart() {
+      clearInterval(timer);
+      timer = setInterval(next, 4500);
+    }
+
+    dots.forEach((dot, i) => dot.addEventListener('click', () => { goTo(i); restart(); }));
+    restart();
+  })();
 })();

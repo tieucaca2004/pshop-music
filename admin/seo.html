@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản lý SEO - Pshop Music Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="adminSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-wrap">
+      <div class="panel">
+        <h3>CÀI ĐẶT SEO TỔNG THỂ</h3>
+        <div class="field-grid">
+          <div class="form-group full">
+            <label>TIÊU ĐỀ MẶC ĐỊNH (dự phòng cho trang không có tiêu đề riêng)</label>
+            <input type="text" id="seoDefaultTitle">
+          </div>
+          <div class="form-group full">
+            <label>MÔ TẢ MẶC ĐỊNH</label>
+            <textarea id="seoDefaultDescription" rows="2"></textarea>
+          </div>
+          <div class="form-group full">
+            <label>ẢNH OG MẶC ĐỊNH (hiển thị khi chia sẻ link lên Facebook/Zalo)</label>
+            <input type="text" id="seoOgImage" placeholder="https://...">
+          </div>
+          <div class="form-group full">
+            <label>GOOGLE ANALYTICS ID (VD: G-XXXXXXXXXX)</label>
+            <input type="text" id="seoGaId" placeholder="G-XXXXXXXXXX">
+          </div>
+          <div class="form-group full">
+            <label>MÃ XÁC MINH GOOGLE SEARCH CONSOLE</label>
+            <input type="text" id="seoSearchConsoleTag" placeholder="Nội dung thẻ meta google-site-verification">
+          </div>
+          <div class="form-group full">
+            <label>ROBOTS.TXT — GHI CHÚ THÊM (tham khảo, chỉnh sửa thật trong file robots.txt)</label>
+            <textarea id="seoRobotsExtra" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="admin-actions">
+          <button class="submit-btn" id="seoSaveBtn">LƯU CÀI ĐẶT SEO</button>
+        </div>
+        <p class="status-msg" id="seoStatus"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/site-content-seed.js"></script>
+<script src="../js/cms-db.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script src="../js/admin-seo.js"></script>
+</body>
+</html>

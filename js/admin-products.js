@@ -1,17 +1,21 @@
 /*
- * Dev-grade client-side password gate. This runs entirely in the browser,
- * so anyone can read ADMIN_PASSWORD from source — it only deters casual
- * access, not a determined attacker. Change the password below before
- * deploying, and see README.md for upgrading to real Firebase Auth.
+ * Product Manager (admin/products.html) — same fields/behavior as the old
+ * password-gated admin.html, just running inside the new CMS shell with
+ * Firebase Auth (js/admin-auth.js) instead of a hardcoded password, and an
+ * "Upload ảnh" button (js/storage-upload.js) alongside the URL textarea.
+ * Category list now comes from CategoryDB (js/cms-db.js) instead of a
+ * hardcoded object, so Category Manager edits show up here automatically.
  */
-const ADMIN_PASSWORD = 'pshop2024';
-const SESSION_KEY = 'pshop_admin_auth';
-
 const AdminApp = (function () {
   let products = [];
+  let categories = [];
   let editingId = null;
+  let quill = null;
 
-  const catLabels = { dj: 'Máy DJ', loa: 'Loa kiểm âm', tainghe: 'Tai nghe', soundcard: 'Soundcard', phukien: 'Phụ kiện' };
+  function catLabel(code) {
+    const c = categories.find(x => x.code === code);
+    return c ? c.label : code;
+  }
 
   function escapeHtml(str) {
     return String(str || '').replace(/[&<>"']/g, c => ({
@@ -19,36 +23,29 @@ const AdminApp = (function () {
     }[c]));
   }
 
-  function showLogin() {
-    document.getElementById('loginScreen').style.display = 'flex';
-    document.getElementById('dashboard').style.display = 'none';
+  function withTimeout(promise, ms) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('Hết thời gian chờ kết nối database')), ms))
+    ]);
   }
 
-  function showDashboard() {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'block';
-    loadProducts();
-  }
-
-  function login() {
-    const val = document.getElementById('loginPassword').value;
-    if (val === ADMIN_PASSWORD) {
-      sessionStorage.setItem(SESSION_KEY, 'true');
-      showDashboard();
-    } else {
-      document.getElementById('loginError').style.display = 'block';
-    }
-  }
-
-  function logout() {
-    sessionStorage.removeItem(SESSION_KEY);
-    showLogin();
+  function loadCategories() {
+    return withTimeout(CategoryDB.getAll(), 10000).then(list => {
+      categories = list.filter(c => c.active !== false);
+      const select = document.getElementById('pCategory');
+      select.innerHTML = categories.map(c => `<option value="${escapeHtml(c.code)}">${escapeHtml(c.label)}</option>`).join('');
+    });
   }
 
   function loadProducts(filter) {
-    DB.getAll().then(list => {
+    withTimeout(DB.getAll(), 10000).then(list => {
       products = list;
       renderTable(filter || '');
+    }).catch(err => {
+      console.error('Không tải được dữ liệu sản phẩm:', err);
+      document.getElementById('productTableBody').innerHTML =
+        '<tr><td colspan="7" style="color:#c0392b;text-align:center;padding:2rem">Không kết nối được database.</td></tr>';
     });
   }
 
@@ -59,7 +56,7 @@ const AdminApp = (function () {
 
     const body = document.getElementById('productTableBody');
     if (filtered.length === 0) {
-      body.innerHTML = '<tr><td colspan="6" style="color:var(--muted2);text-align:center;padding:2rem">Không có sản phẩm.</td></tr>';
+      body.innerHTML = '<tr><td colspan="7" style="color:var(--muted2);text-align:center;padding:2rem">Không có sản phẩm.</td></tr>';
       return;
     }
 
@@ -67,9 +64,10 @@ const AdminApp = (function () {
       <tr>
         <td>${p.image ? `<img src="${escapeHtml(p.image)}" onerror="this.style.display='none'">` : '—'}</td>
         <td>${escapeHtml(p.name)}</td>
-        <td>${catLabels[p.category] || p.category}</td>
+        <td>${escapeHtml(catLabel(p.category))}</td>
         <td>${p.price ? escapeHtml(p.price) : '<span style="color:var(--muted2)">Liên hệ</span>'}</td>
         <td>${p.status === 'Used' ? 'Qua sử dụng' : 'Mới'}</td>
+        <td>${p.stockStatus === 'outofstock' ? '<span style="color:#c0392b;font-weight:600">Hết hàng</span>' : 'Còn hàng'}</td>
         <td>
           <div class="row-actions">
             <button class="link-btn" onclick="AdminApp.editProduct('${p.id}')">Sửa</button>
@@ -79,20 +77,50 @@ const AdminApp = (function () {
       </tr>`).join('');
   }
 
+  function setBrandValue(brand) {
+    const select = document.getElementById('pBrand');
+    const custom = document.getElementById('pBrandCustom');
+    const options = Array.from(select.options).map(o => o.value);
+    if (brand && options.includes(brand)) {
+      select.value = brand;
+      custom.style.display = 'none';
+      custom.value = '';
+    } else {
+      select.value = '__other__';
+      custom.style.display = 'block';
+      custom.value = brand || '';
+    }
+  }
+
+  function toggleCustomBrand() {
+    const select = document.getElementById('pBrand');
+    const custom = document.getElementById('pBrandCustom');
+    custom.style.display = select.value === '__other__' ? 'block' : 'none';
+  }
+
+  function getBrandValue() {
+    const select = document.getElementById('pBrand');
+    if (select.value === '__other__') return document.getElementById('pBrandCustom').value.trim();
+    return select.value;
+  }
+
   function editProduct(id) {
     const p = products.find(x => x.id === id);
     if (!p) return;
     editingId = id;
     document.getElementById('pId').value = p.id;
     document.getElementById('pName').value = p.name || '';
-    document.getElementById('pCategory').value = p.category || 'dj';
+    document.getElementById('pCategory').value = p.category || (categories[0] && categories[0].code) || '';
     document.getElementById('pStatus').value = p.status || 'New';
-    document.getElementById('pBrand').value = p.brand || '';
+    document.getElementById('pStockStatus').value = p.stockStatus || 'instock';
+    setBrandValue(p.brand || '');
     document.getElementById('pPrice').value = p.price || '';
+    document.getElementById('pOldPrice').value = p.oldPrice || '';
     document.getElementById('pSpecs').value = p.specs || '';
     document.getElementById('pBadgeText').value = p.badgeText || '';
-    document.getElementById('pDescription').value = p.description || '';
-    document.getElementById('pImage').value = p.image || '';
+    if (quill) quill.root.innerHTML = p.description || '';
+    const images = Array.isArray(p.images) && p.images.length ? p.images : (p.image ? [p.image] : []);
+    document.getElementById('pImages').value = images.join('\n');
     document.getElementById('formTitle').textContent = 'SỬA SẢN PHẨM';
     document.getElementById('saveBtn').textContent = 'CẬP NHẬT SẢN PHẨM';
     document.getElementById('formPanel').scrollIntoView({ behavior: 'smooth' });
@@ -111,11 +139,14 @@ const AdminApp = (function () {
   function resetForm() {
     editingId = null;
     document.getElementById('pId').value = '';
-    ['pName', 'pBrand', 'pPrice', 'pSpecs', 'pBadgeText', 'pDescription', 'pImage'].forEach(id => {
+    ['pName', 'pPrice', 'pOldPrice', 'pSpecs', 'pBadgeText', 'pImages'].forEach(id => {
       document.getElementById(id).value = '';
     });
-    document.getElementById('pCategory').value = 'dj';
+    if (quill) quill.setText('');
+    if (categories[0]) document.getElementById('pCategory').value = categories[0].code;
     document.getElementById('pStatus').value = 'New';
+    document.getElementById('pStockStatus').value = 'instock';
+    setBrandValue('');
     document.getElementById('formTitle').textContent = 'THÊM SẢN PHẨM MỚI';
     document.getElementById('saveBtn').textContent = 'LƯU SẢN PHẨM';
   }
@@ -125,17 +156,21 @@ const AdminApp = (function () {
     if (!name) { alert('Vui lòng nhập tên sản phẩm.'); return; }
 
     const category = document.getElementById('pCategory').value;
+    const images = document.getElementById('pImages').value.split(/[\n,;]/).map(url => url.trim()).filter(Boolean);
     const data = {
       name,
       category,
-      categoryLabel: catLabels[category],
+      categoryLabel: catLabel(category),
       status: document.getElementById('pStatus').value,
-      brand: document.getElementById('pBrand').value.trim(),
+      stockStatus: document.getElementById('pStockStatus').value,
+      brand: getBrandValue(),
       price: document.getElementById('pPrice').value.trim(),
+      oldPrice: document.getElementById('pOldPrice').value.trim(),
       specs: document.getElementById('pSpecs').value.trim(),
       badgeText: document.getElementById('pBadgeText').value.trim(),
-      description: document.getElementById('pDescription').value.trim(),
-      image: document.getElementById('pImage').value.trim()
+      description: quill && quill.getText().trim() ? quill.root.innerHTML : '',
+      images: images,
+      image: images[0] || ''
     };
 
     const action = editingId ? DB.update(editingId, data) : DB.add(data);
@@ -192,12 +227,27 @@ const AdminApp = (function () {
   }
 
   document.addEventListener('DOMContentLoaded', () => {
-    if (sessionStorage.getItem(SESSION_KEY) === 'true') showDashboard();
-    else showLogin();
-
-    document.getElementById('loginPassword').addEventListener('keydown', e => {
-      if (e.key === 'Enter') login();
+    AdminAuth.init({ page: 'products', title: 'QUẢN LÝ SẢN PHẨM' }).then(() => {
+      loadCategories().then(() => loadProducts());
     });
+
+    if (typeof Quill !== 'undefined') {
+      quill = new Quill('#pDescriptionEditor', {
+        theme: 'snow',
+        placeholder: 'Mô tả đầy đủ hiển thị trong popup chi tiết sản phẩm...',
+        modules: {
+          toolbar: [
+            [{ header: [2, 3, false] }],
+            ['bold', 'italic', 'underline'],
+            [{ color: [] }, { background: [] }],
+            [{ align: [] }],
+            [{ list: 'ordered' }, { list: 'bullet' }],
+            ['image', 'link'],
+            ['clean']
+          ]
+        }
+      });
+    }
 
     let debounce;
     document.getElementById('adminSearch').addEventListener('input', e => {
@@ -209,7 +259,14 @@ const AdminApp = (function () {
       if (e.target.files[0]) importJson(e.target.files[0]);
       e.target.value = '';
     });
+
+    const uploadInput = document.getElementById('pImageUpload');
+    const uploadStatus = document.getElementById('pImageUploadStatus');
+    StorageUpload.attachUploadInput(uploadInput, uploadStatus, 'products', url => {
+      const field = document.getElementById('pImages');
+      field.value = field.value.trim() ? field.value.trim() + '\n' + url : url;
+    });
   });
 
-  return { login, logout, editProduct, deleteProduct, saveProduct, resetForm, exportJson, resetToSeed };
+  return { editProduct, deleteProduct, saveProduct, resetForm, exportJson, resetToSeed, toggleCustomBrand };
 })();

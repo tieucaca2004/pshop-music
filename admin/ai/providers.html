@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nhà cung cấp AI - Pshop Music Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/admin.css">
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="adminSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-wrap">
+      <div class="panel">
+        <h3>NHÀ CUNG CẤP AI</h3>
+        <p class="small-muted">Trang này chỉ chuẩn bị cấu trúc — CHƯA nhập được API key thật ở giai đoạn này. Việc lưu key an toàn (qua proxy phía server) thuộc Roadmap V2, xem README.md.</p>
+        <div class="form-group full" style="margin-top:1rem">
+          <label>NHÀ CUNG CẤP ĐANG SỬ DỤNG (ACTIVE)</label>
+          <select id="activeProvider">
+            <option value="none">Chưa chọn (mọi module sẽ báo lỗi khi chạy)</option>
+            <option value="openai">OpenAI</option>
+            <option value="claude">Claude</option>
+            <option value="gemini">Gemini</option>
+            <option value="deepseek">DeepSeek</option>
+          </select>
+        </div>
+
+        <div class="field-grid" style="margin-top:1.5rem">
+          <div class="form-group">
+            <label class="cms-toggle"><input type="checkbox" id="enabled-openai"> Bật OpenAI</label>
+            <input type="text" id="model-openai" placeholder="Model (vd: gpt-4o) — chưa dùng thật">
+          </div>
+          <div class="form-group">
+            <label class="cms-toggle"><input type="checkbox" id="enabled-claude"> Bật Claude</label>
+            <input type="text" id="model-claude" placeholder="Model (vd: claude-sonnet) — chưa dùng thật">
+          </div>
+          <div class="form-group">
+            <label class="cms-toggle"><input type="checkbox" id="enabled-gemini"> Bật Gemini</label>
+            <input type="text" id="model-gemini" placeholder="Model (vd: gemini-pro) — chưa dùng thật">
+          </div>
+          <div class="form-group">
+            <label class="cms-toggle"><input type="checkbox" id="enabled-deepseek"> Bật DeepSeek</label>
+            <input type="text" id="model-deepseek" placeholder="Model — chưa dùng thật">
+          </div>
+        </div>
+
+        <div class="admin-actions">
+          <button class="submit-btn" id="saveProvidersBtn">LƯU CẤU HÌNH</button>
+        </div>
+        <p class="status-msg" id="providerStatus"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../../js/firebase-config.js"></script>
+<script src="../../js/site-content-seed.js"></script>
+<script src="../../js/db.js"></script>
+<script src="../../js/cms-db.js"></script>
+<script src="../../js/admin-auth.js"></script>
+<script src="../../js/ai/ai-db.js"></script>
+<script src="../../js/admin-ai-providers.js"></script>
+</body>
+</html>

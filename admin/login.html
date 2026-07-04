@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đăng nhập quản trị - Pshop Music</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+
+<div class="login-screen">
+  <div class="login-box" id="loginForm" style="display:none">
+    <h2>P<span style="color:var(--gold)">·</span>SHOP MUSIC ADMIN</h2>
+    <p>Đăng nhập để quản lý website.</p>
+    <p class="login-error" id="rulesWarning" style="display:none">Chưa kết nối được hệ thống phân quyền — có thể do Firebase Authentication/Database Rules chưa được cấu hình xong. Xem hướng dẫn trong README.md trước khi đăng nhập.</p>
+    <div class="form-group">
+      <label>EMAIL</label>
+      <input type="email" id="loginEmail" placeholder="ban@pshopmusic.com">
+    </div>
+    <div class="form-group" style="margin-top:0.75rem">
+      <label>MẬT KHẨU</label>
+      <input type="password" id="loginPassword" placeholder="Nhập mật khẩu">
+    </div>
+    <button class="submit-btn" style="width:100%;margin-top:1rem" id="loginBtn">ĐĂNG NHẬP</button>
+    <p class="login-error" id="loginError"></p>
+  </div>
+
+  <div class="login-box" id="bootstrapForm" style="display:none">
+    <h2>KHỞI TẠO TÀI KHOẢN ADMIN ĐẦU TIÊN</h2>
+    <p>Chưa có tài khoản quản trị nào — tạo tài khoản Admin đầu tiên để bắt đầu. Sau khi tạo, mọi tài khoản khác phải được thêm qua mục "Người dùng" trong CMS.</p>
+    <div class="form-group">
+      <label>HỌ TÊN</label>
+      <input type="text" id="bsName" placeholder="Tên hiển thị">
+    </div>
+    <div class="form-group" style="margin-top:0.75rem">
+      <label>EMAIL</label>
+      <input type="email" id="bsEmail" placeholder="ban@pshopmusic.com">
+    </div>
+    <div class="form-group" style="margin-top:0.75rem">
+      <label>MẬT KHẨU (tối thiểu 6 ký tự)</label>
+      <input type="password" id="bsPassword" placeholder="Nhập mật khẩu">
+    </div>
+    <button class="submit-btn" style="width:100%;margin-top:1rem" id="bootstrapBtn">TẠO TÀI KHOẢN ADMIN</button>
+    <p class="login-error" id="bootstrapError"></p>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/admin-login.js"></script>
+</body>
+</html>

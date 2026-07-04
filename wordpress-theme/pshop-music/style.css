@@ -1,3 +1,14 @@
+/*
+Theme Name: Pshop Music
+Theme URI: https://pshopmusic.com
+Author: Pshop Music
+Description: Theme WordPress cho Pshop Music - thiết bị DJ & âm thanh chuyên nghiệp. Chuyển đổi từ bản site tĩnh, giữ nguyên giao diện và chức năng (hero slideshow, danh mục dạng banner, lưới sản phẩm có tìm kiếm/lọc, popup chi tiết sản phẩm, form liên hệ, footer nhiều cột).
+Version: 1.0.0
+Requires at least: 6.0
+Requires PHP: 7.4
+Text Domain: pshop-music
+*/
+
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#ffffff;--bg-alt:#f5f4f2;--bg-alt2:#eeece7;
@@ -9,6 +20,7 @@
 html{scroll-behavior:smooth}
 body{background:var(--bg);color:var(--ink);font-family:'Be Vietnam Pro',sans-serif;font-weight:300;line-height:1.7;overflow-x:hidden;font-size:15px}
 a{color:inherit;text-decoration:none}
+img{max-width:100%}
 .container{max-width:1240px;margin:0 auto;padding:0 2rem}
 
 nav{position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
@@ -46,57 +58,26 @@ nav{position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop
 .btn-ghost:hover{border-color:#fff;background:rgba(255,255,255,0.1)}
 .hero-stats{display:none}
 
-/* BANNER ZONE — populated by Banner Manager; renders nothing (0 height) when no active banner is assigned. */
-.banner-zone{display:none}
-.banner-zone.has-banners{display:block;max-width:1400px;margin:1.5rem auto 0;padding:0 1.5rem}
-.banner-zone .banner-item{display:block;margin-bottom:1rem}
-.banner-zone .banner-item img{width:100%;height:auto;display:block;border-radius:8px}
-.banner-zone .banner-item:last-child{margin-bottom:0}
+/* CATEGORY BANNERS — wide banners with decorative gradient background per category */
+.cat-banners{padding:1.5rem 0 1rem}
+.cat-banner-list{display:flex;flex-direction:column;gap:0.9rem}
+.cat-banner{position:relative;height:230px;border:none;border-radius:20px;cursor:pointer;overflow:hidden;display:flex;align-items:center;padding:0 3rem;text-align:left;width:100%}
+.cat-banner-label{position:relative;z-index:2;font-size:clamp(1.8rem,4.2vw,3.2rem);font-weight:800;letter-spacing:-0.01em;line-height:1}
+.cat-banner-img{position:absolute;right:2.5rem;top:50%;transform:translateY(-50%);height:78%;max-height:210px;object-fit:contain;transition:transform 0.5s cubic-bezier(.22,1,.36,1);z-index:1;pointer-events:none}
+.cat-banner:hover .cat-banner-img{transform:translateY(-50%) scale(1.08)}
+.cat-banner:hover .cat-banner-label{letter-spacing:0}
 
-/* CATEGORY TILES — Pioneer-DJ-store style: big bold label on top, product image floating on a gradient. */
-.cat-tiles-section{padding:4rem 0 1rem}
-.cat-tile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem}
-.cat-tile{
-  position:relative;aspect-ratio:1/1;border-radius:16px;overflow:hidden;display:flex;
-  align-items:flex-start;justify-content:center;text-decoration:none;
-  background:radial-gradient(ellipse 90% 70% at 50% 15%,#2a2a2a 0%,transparent 60%),linear-gradient(160deg,#171717 0%,#000 100%)
-}
-.cat-tile img{
-  position:absolute;left:50%;top:56%;transform:translate(-50%,-50%);
-  width:82%;height:60%;object-fit:contain;transition:transform 0.5s cubic-bezier(.22,1,.36,1);z-index:1
-}
-.cat-tile:hover img{transform:translate(-50%,-50%) scale(1.07)}
-.cat-tile-label{
-  position:relative;z-index:2;margin-top:1rem;padding:0 0.8rem;text-align:center;color:#fff;
-  font-size:clamp(1.4rem,3.5vw,2.4rem);font-weight:800;letter-spacing:-0.01em;line-height:1.05;text-transform:uppercase
-}
-/* Wide banners span the full row, like the CONTROLLERS / ALL-IN-ONE rows */
-.cat-tile.wide{grid-column:1 / -1;aspect-ratio:auto;height:230px}
-.cat-tile.wide img{width:44%;height:88%;left:auto;right:6%;top:50%;transform:translateY(-50%)}
-.cat-tile.wide:hover img{transform:translateY(-50%) scale(1.06)}
-.cat-tile.wide .cat-tile-label{position:absolute;left:3rem;top:50%;transform:translateY(-50%);margin:0;text-align:left;font-size:clamp(1.8rem,4.5vw,3.4rem)}
-/* Light-skinned tiles (for products that look better on a bright background) */
-.cat-tile.skin-light{background:radial-gradient(ellipse 90% 70% at 50% 20%,#fff 0%,transparent 60%),linear-gradient(160deg,#f2f1ee 0%,#d6d2c8 100%)}
-.cat-tile.skin-light .cat-tile-label{color:#111}
-/* No-photo fallback keeps the label centered */
-.cat-tile.no-photo{align-items:center}
-.cat-tile.no-photo .cat-tile-label{margin-top:0}
-.cat-tile.wide.no-photo .cat-tile-label{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center}
+.skin-light{background:radial-gradient(ellipse 80% 70% at 22% 15%,#ffffff 0%,transparent 60%),linear-gradient(160deg,#f2f1ee 0%,#d9d5cb 100%)}
+.skin-light .cat-banner-label{color:#111}
 
-/* CATEGORY PAGE HEADER — banner using the tile's image, shown at top of category.html */
-.category-header{position:relative;height:260px;display:flex;align-items:flex-end;background:#111 center/cover no-repeat;overflow:hidden}
-.category-header::before{content:'';position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0.3) 60%,rgba(0,0,0,0.15) 100%)}
-.category-header .container{position:relative;z-index:2;padding-bottom:2rem}
-.category-header .breadcrumb{font-size:0.78rem;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.75);margin-bottom:0.5rem}
-.category-header .breadcrumb a:hover{color:var(--gold)}
+.skin-dark{background:radial-gradient(ellipse 70% 90% at 78% 30%,rgba(255,255,255,0.08),transparent 60%),linear-gradient(150deg,#0a0a0a 0%,#242424 100%)}
+.skin-dark .cat-banner-label{color:#fff}
 
-/* CATEGORY PAGE HEADER — banner using the tile's image, shown at top of category.html */
-.category-header{position:relative;height:260px;display:flex;align-items:flex-end;background:#111 center/cover no-repeat;overflow:hidden}
-.category-header::before{content:'';position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0.3) 60%,rgba(0,0,0,0.15) 100%)}
-.category-header .container{position:relative;z-index:2;padding-bottom:2rem}
-.category-header .breadcrumb{font-size:0.78rem;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.75);margin-bottom:0.5rem}
-.category-header .breadcrumb a:hover{color:var(--gold)}
-.category-header h1{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;color:#fff;letter-spacing:-0.01em}
+.skin-gold{background:radial-gradient(ellipse 65% 85% at 78% 30%,rgba(201,168,76,0.45),transparent 60%),radial-gradient(ellipse 70% 60% at 12% 78%,rgba(201,168,76,0.22),transparent 55%),linear-gradient(135deg,#0d0d0d 0%,#1d1710 55%,#0d0d0d 100%)}
+.skin-gold .cat-banner-label{color:#fff}
+
+.skin-cream{background:radial-gradient(ellipse 75% 70% at 78% 20%,#fff 0%,transparent 55%),linear-gradient(150deg,#efece3 0%,#d7d0bd 100%)}
+.skin-cream .cat-banner-label{color:#111}
 
 .section{padding:5rem 0}
 .sec-eyebrow{font-size:0.75rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold-ink);margin-bottom:0.7rem;font-weight:700}
@@ -127,42 +108,7 @@ nav{position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop
 .prod-badge{display:inline-block;font-size:0.68rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:700;color:var(--gold-ink);width:fit-content}
 .badge-used{color:var(--ink-mute)}
 .prod-price{font-size:1rem;font-weight:700;color:var(--black);margin-top:0.1rem}
-.prod-price-old{font-size:0.85rem;font-weight:500;color:var(--ink-mute);text-decoration:line-through}
-.prod-oos-badge{display:inline-block;font-size:0.68rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:700;color:#fff;background:#8a1f1f;padding:0.2rem 0.55rem;width:fit-content}
-.product-card.out-of-stock .prod-img-wrap img{opacity:0.5;filter:grayscale(0.4)}
-.modal-price .prod-price-old{font-size:1rem}
 .prod-contact{margin-top:0.3rem;font-size:0.78rem;color:var(--ink-mute)}
-
-/* BLOG — list + post page, reuses .category-header banner and .container/.sec- tokens */
-.blog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:2.5rem 2rem}
-.blog-card{background:transparent;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:0.6rem}
-.blog-card-img{background:var(--bg-alt);width:100%;aspect-ratio:16/10;overflow:hidden}
-.blog-card-img img{width:100%;height:100%;object-fit:cover;transition:transform 0.4s ease}
-.blog-card:hover .blog-card-img img{transform:scale(1.05)}
-.blog-card-tags{font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--gold-ink);font-weight:700}
-.blog-card-title{font-size:1.05rem;font-weight:700;color:var(--black);line-height:1.35}
-.blog-card-excerpt{font-size:0.85rem;color:var(--ink-soft);line-height:1.6}
-.blog-card-meta{font-size:0.76rem;color:var(--ink-mute)}
-.blog-post-wrap{max-width:760px;margin:0 auto}
-.blog-post-meta{font-size:0.8rem;color:var(--ink-mute);margin-bottom:1.5rem}
-.blog-post-content{font-size:1rem;line-height:1.85;color:var(--ink-soft)}
-.blog-post-content h2{font-size:1.5rem;font-weight:700;color:var(--black);margin:2rem 0 1rem}
-.blog-post-content h3{font-size:1.2rem;font-weight:700;color:var(--black);margin:1.5rem 0 0.75rem}
-.blog-post-content img{max-width:100%;height:auto;margin:1.5rem 0}
-.blog-post-content p{margin-bottom:1.2rem}
-.blog-post-tags{margin-top:2rem;display:flex;gap:0.5rem;flex-wrap:wrap}
-.blog-tag{font-size:0.72rem;letter-spacing:0.04em;text-transform:uppercase;color:var(--gold-ink);background:var(--gold-soft);padding:0.3rem 0.7rem}
-
-/* VIDEO GALLERY — click-to-play thumbnails, iframe only loads after a click (keeps initial page load light) */
-.video-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:2rem}
-.video-card{display:flex;flex-direction:column;gap:0.6rem}
-.video-thumb{position:relative;width:100%;aspect-ratio:16/9;background:#000;cursor:pointer;overflow:hidden}
-.video-thumb img{width:100%;height:100%;object-fit:cover;opacity:0.85}
-.video-thumb .video-play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
-.video-thumb .video-play span{width:56px;height:56px;border-radius:50%;background:rgba(0,0,0,0.6);color:#fff;display:flex;align-items:center;justify-content:center;font-size:1.3rem;border:2px solid #fff}
-.video-thumb iframe{width:100%;height:100%;border:0}
-.video-card-title{font-size:0.95rem;font-weight:600;color:var(--black)}
-.video-card-desc{font-size:0.82rem;color:var(--ink-mute)}
 .prod-contact a{color:var(--gold-ink);font-weight:600}
 .empty-state{grid-column:1/-1;text-align:center;padding:4rem 1rem;color:var(--ink-mute);background:var(--bg-alt)}
 .load-more-wrap{text-align:center;padding:3rem 0 0}
@@ -226,14 +172,7 @@ footer{background:#0a0a0a;padding:4rem 0 1.5rem;margin-top:2rem}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(20,18,15,0.7);z-index:500;align-items:center;justify-content:center;padding:1rem}
 .modal-overlay.open{display:flex}
 .modal-box{background:var(--bg);border:1px solid var(--line);max-width:1180px;width:100%;max-height:92vh;overflow:hidden;position:relative;display:grid;grid-template-columns:1.25fr 1fr;gap:0}
-.modal-img-side{background:var(--bg-alt);display:flex;align-items:center;justify-content:center;min-height:480px;padding:3rem;overflow:hidden;position:relative}
-.modal-gallery-nav{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;background:#fff;border:1px solid var(--line);color:var(--ink);font-size:1.3rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;z-index:3}
-.modal-gallery-nav:hover{background:var(--black);color:#fff;border-color:var(--black)}
-.modal-gallery-prev{left:1rem}
-.modal-gallery-next{right:1rem}
-.modal-gallery-dots{position:absolute;bottom:1rem;left:50%;transform:translateX(-50%);display:flex;gap:0.4rem;z-index:3}
-.modal-gallery-dots button{width:7px;height:7px;border-radius:50%;border:1px solid var(--ink-mute);background:transparent;padding:0;cursor:pointer;transition:all 0.2s}
-.modal-gallery-dots button.active{background:var(--gold);border-color:var(--gold);width:18px;border-radius:4px}
+.modal-img-side{background:var(--bg-alt);display:flex;align-items:center;justify-content:center;min-height:480px;padding:3rem;overflow:hidden}
 .modal-img-side img{width:100%;max-height:600px;object-fit:contain}
 .modal-img-side .no-img{color:var(--black);font-size:1.6rem;font-weight:700;text-align:center;letter-spacing:-0.01em;line-height:1.3}
 .modal-info-side{padding:3rem;display:flex;flex-direction:column;gap:1.1rem;border-left:1px solid var(--line);overflow-y:auto;max-height:92vh}
@@ -242,12 +181,6 @@ footer{background:#0a0a0a;padding:4rem 0 1.5rem;margin-top:2rem}
 .modal-brand{font-size:0.85rem;color:var(--ink-mute)}
 .modal-price{font-size:1.3rem;font-weight:700;color:var(--black)}
 .modal-desc{font-size:1rem;color:var(--ink-soft);line-height:1.9;border-top:1px solid var(--line);padding-top:1.1rem;white-space:pre-line}
-.modal-desc p{margin-bottom:0.8rem}
-.modal-desc h2{font-size:1.25rem;font-weight:700;color:var(--black);margin:1rem 0 0.5rem}
-.modal-desc h3{font-size:1.05rem;font-weight:700;color:var(--black);margin:0.9rem 0 0.4rem}
-.modal-desc ul,.modal-desc ol{margin:0.5rem 0 0.8rem 1.4rem}
-.modal-desc img{max-width:100%;margin:0.8rem 0}
-.modal-desc a{color:var(--gold-ink);text-decoration:underline}
 .modal-badge{display:inline-block;font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;font-weight:700;color:var(--gold-ink);width:fit-content}
 .modal-badge.badge-used{color:var(--ink-mute)}
 .modal-actions{margin-top:auto;display:flex;flex-direction:column;gap:0.7rem;padding-top:1.2rem;border-top:1px solid var(--line)}
@@ -260,32 +193,16 @@ footer{background:#0a0a0a;padding:4rem 0 1.5rem;margin-top:2rem}
 .modal-close:hover{background:var(--black);color:#fff;border-color:var(--black)}
 
 @media(max-width:900px){.services-grid,.contact-grid{grid-template-columns:1fr;gap:3rem}.nav-links,.nav-cta{display:none}.nav-toggle{display:block}.footer-grid{grid-template-columns:repeat(2,1fr);gap:2rem 1.5rem}}
+@media(max-width:640px){.cat-banner{height:170px;padding:0 1.5rem;border-radius:14px}.cat-banner-img{right:1.2rem;height:65%;max-height:150px}}
 @media(max-width:700px){
   .modal-box{grid-template-columns:1fr;max-height:85vh;overflow-y:auto}
   .modal-img-side{min-height:240px;padding:1.5rem}
   .modal-info-side{border-left:none;border-top:1px solid var(--line);padding:1.5rem;overflow-y:visible;max-height:none}
-  .hero{min-height:58vh}
-  .hero .container{padding-top:5.5rem;padding-bottom:2.5rem}
+  .hero{min-height:78vh}
 }
-@media(max-width:600px){
-  .form-row{grid-template-columns:1fr}
-  .products-grid{grid-template-columns:1fr 1fr;gap:1.5rem 1rem}
-  .toolbar{flex-direction:column;align-items:stretch}
-  .search-box{max-width:none}
-  .section{padding:2.75rem 0}
-  .cat-tiles-section{padding:2rem 0 0.5rem}
-  .cat-tile-grid{grid-template-columns:repeat(2,1fr);gap:0.8rem}
-  .cat-tile.wide{height:150px}
-  .cat-tile.wide .cat-tile-label{left:1.4rem;font-size:1.6rem}
-  .cat-tile.wide img{width:42%;right:5%}
-  .category-header{height:190px}
-
-  .filter-bar{
-    flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
-    margin:0 -1.2rem;padding:0 1.2rem 0.3rem
-  }
-  .filter-bar::-webkit-scrollbar{display:none}
-  .filter-btn{white-space:nowrap;flex:0 0 auto}
-  .filter-btn:hover,.filter-btn.active{background:var(--gold);border-color:var(--gold);color:#000}
-}
+@media(max-width:600px){.form-row{grid-template-columns:1fr}.products-grid{grid-template-columns:1fr 1fr;gap:1.5rem 1rem}.toolbar{flex-direction:column;align-items:stretch}.search-box{max-width:none}}
 @media(max-width:400px){.container{padding:0 1.2rem}}
+
+/* WordPress admin bar / editor compatibility */
+.admin-bar nav{top:32px}
+@media(max-width:782px){.admin-bar nav{top:46px}}

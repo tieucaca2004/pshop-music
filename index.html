@@ -46,7 +46,7 @@
   <div class="container nav-inner">
     <div class="logo">P<span>·</span>SHOP MUSIC</div>
     <div class="nav-links">
-      <a href="#products">SẢN PHẨM</a>
+      <a href="#categories">SẢN PHẨM</a>
       <a href="#services">DỊCH VỤ</a>
       <a href="#contact">LIÊN HỆ</a>
       <a href="https://shopee.vn/music_store_79" target="_blank">Shopee</a>
@@ -57,7 +57,7 @@
 </nav>
 
 <div class="mobile-nav" id="mobileNav">
-  <a href="#products" onclick="this.closest('.mobile-nav').classList.remove('open')">SẢN PHẨM</a>
+  <a href="#categories" onclick="this.closest('.mobile-nav').classList.remove('open')">SẢN PHẨM</a>
   <a href="#services" onclick="this.closest('.mobile-nav').classList.remove('open')">DỊCH VỤ</a>
   <a href="#contact" onclick="this.closest('.mobile-nav').classList.remove('open')">LIÊN HỆ</a>
   <a href="https://shopee.vn/music_store_79" target="_blank">SHOPEE SHOP</a>
@@ -65,75 +65,30 @@
   <a href="tel:0901952999" style="color:var(--gold);font-size:1.1rem">0901 952 999</a>
 </div>
 
-<section class="hero">
+<section class="hero" id="heroSection">
+  <div class="hero-slides" id="heroSlides">
+    <div class="hero-slide active" style="background-image:url('https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg')"></div>
+  </div>
+  <div class="hero-dots" id="heroDots"></div>
   <div class="container">
     <p class="hero-tag">Nha Trang · Khánh Hòa</p>
-    <h1>THIẾT BỊ DJ<br><em>&amp; ÂM THANH</em><br>CHUYÊN NGHIỆP</h1>
-    <p class="hero-sub">Mua bán, cho thuê thiết bị DJ, loa kiểm âm, soundcard, tai nghe chính hãng. Tư vấn setup âm thanh bar, café, lounge toàn quốc.</p>
+    <h1 id="heroTitle">THIẾT BỊ DJ<br><em>&amp; ÂM THANH</em><br>CHUYÊN NGHIỆP</h1>
+    <p class="hero-sub" id="heroSubtitle">Mua bán, cho thuê thiết bị DJ, loa kiểm âm, soundcard, tai nghe chính hãng. Tư vấn setup âm thanh bar, café, lounge toàn quốc.</p>
     <div class="hero-btns">
-      <button class="btn-gold" onclick="document.getElementById('products').scrollIntoView({behavior:'smooth'})">XEM SẢN PHẨM</button>
+      <button class="btn-gold" id="heroCta" onclick="handleHeroCta()">XEM SẢN PHẨM</button>
       <button class="btn-ghost" onclick="document.getElementById('services').scrollIntoView({behavior:'smooth'})">DỊCH VỤ CHO THUÊ</button>
-    </div>
-    <div class="hero-stats">
-      <div class="stat-item"><div class="stat-num">40+</div><div class="stat-label">SẢN PHẨM</div></div>
-      <div class="stat-item"><div class="stat-num">5+</div><div class="stat-label">NĂM KINH NGHIỆM</div></div>
-      <div class="stat-item"><div class="stat-num">PIONEER · KRK</div><div class="stat-label">THƯƠNG HIỆU HÀNG ĐẦU</div></div>
-      <div class="stat-item"><div class="stat-num">TOÀN QUỐC</div><div class="stat-label">GIAO HÀNG</div></div>
     </div>
   </div>
 </section>
 
-<div class="brands">
-  <div class="container">
-    <div class="brands-inner">
-      <span class="brand-name">Pioneer DJ</span>
-      <span class="brand-name">AlphaTheta</span>
-      <span class="brand-name">KRK</span>
-      <span class="brand-name">Monkey Banana</span>
-      <span class="brand-name">Sennheiser</span>
-      <span class="brand-name">ADAM Audio</span>
-      <span class="brand-name">JBL</span>
-      <span class="brand-name">Native Instruments</span>
-      <span class="brand-name">Audient</span>
-      <span class="brand-name">Technics</span>
-      <span class="brand-name">Bose</span>
-      <span class="brand-name">AIAIAI</span>
-    </div>
-  </div>
-</div>
+<div class="banner-zone" id="bannerZoneHomeTop"></div>
 
-<section class="section" id="products">
+<section class="section cat-tiles-section" id="categories">
   <div class="container">
     <p class="sec-eyebrow">DANH MỤC SẢN PHẨM</p>
-    <h2 class="sec-title">ĐẦY ĐỦ THIẾT BỊ<br>DJ &amp; ÂM THANH</h2>
+    <h2 class="sec-title">CHỌN DANH MỤC ĐỂ XEM<br>ĐẦY ĐỦ SẢN PHẨM</h2>
     <p class="sec-desc">Hàng chính hãng, mới và qua sử dụng, bảo hành rõ ràng. Giao hàng toàn quốc.</p>
-
-    <div class="toolbar">
-      <div class="search-box">
-        <span class="icon">&#128269;</span>
-        <input type="text" id="searchInput" placeholder="Tìm sản phẩm, thương hiệu...">
-      </div>
-      <div class="filter-bar">
-        <button class="filter-btn active" onclick="filterP('all',this)">Tất cả</button>
-        <button class="filter-btn" onclick="filterP('dj',this)">Máy DJ</button>
-        <button class="filter-btn" onclick="filterP('loa',this)">Loa kiểm âm</button>
-        <button class="filter-btn" onclick="filterP('tainghe',this)">Tai nghe</button>
-        <button class="filter-btn" onclick="filterP('soundcard',this)">Soundcard</button>
-        <button class="filter-btn" onclick="filterP('phukien',this)">Phụ kiện</button>
-      </div>
-    </div>
-    <div class="result-count" id="resultCount"></div>
-
-    <div class="products-grid" id="productGrid"></div>
-
-    <div class="load-more-wrap" id="loadMoreWrap" style="display:none">
-      <button class="btn-ghost" id="loadMoreBtn">XEM THÊM SẢN PHẨM</button>
-    </div>
-
-    <div class="shopee-link">
-      <p style="font-size:0.8rem;color:var(--muted2);margin-bottom:1rem">XEM TOÀN BỘ SẢN PHẨM TRÊN SHOPEE SHOP</p>
-      <a href="https://shopee.vn/music_store_79" target="_blank" class="btn-ghost">XEM TRÊN SHOPEE →</a>
-    </div>
+    <div class="cat-tile-grid" id="catTileGrid" style="margin-top:2.5rem"></div>
   </div>
 </section>
 
@@ -143,26 +98,26 @@
     <h2 class="sec-title">CHO THUÊ &amp; TƯ VẤN<br>SETUP CHUYÊN NGHIỆP</h2>
     <div class="services-grid">
       <div>
-        <p class="sec-desc">Không chỉ mua bán — Pshop Music đồng hành từ setup đến vận hành cho bar, café, lounge, club.</p>
-        <div class="svc-list">
+        <p class="sec-desc" id="servicesIntro">Không chỉ mua bán — Pshop Music đồng hành từ setup đến vận hành cho bar, café, lounge, club.</p>
+        <div class="svc-list" id="svcList">
           <div class="svc-item"><span class="svc-num">01</span><div class="svc-body"><h4>CHO THUÊ LOA KIỂM ÂM</h4><p>Loa active theo ngày / tuần / tháng. Phù hợp sự kiện, phòng thu tạm thời, triển lãm, thu âm dự án.</p></div></div>
-          <div class="svc-item"><span class="svc-num">02</span><div class="svc-body"><h4>CHO THUÊ MÁY DJ</h4><p>CDJ, DDJ, XDJ theo set đầy đủ. Giao nhận tận nơi toàn quốc, hỗ trợ setup kỹ thuật tại chỗ nếu cần.</p></div></div>
+          <div class="svc-item"><span class="svc-num">02</span><div class="svc-body"><h4>CHO THUÊ MÁY DJ</h4><p>CDJ, DDJ, XDJ theo set đầy đủ. Phục vụ khu vực Nha Trang - Khánh Hòa, hỗ trợ setup kỹ thuật tại chỗ.</p></div></div>
           <div class="svc-item"><span class="svc-num">03</span><div class="svc-body"><h4>TƯ VẤN SETUP ÂM THANH BAR, CAFÉ, LOUNGE</h4><p>Khảo sát không gian thực tế, thiết kế hệ thống phù hợp ngân sách, thi công và tinh chỉnh EQ sau lắp đặt.</p></div></div>
           <div class="svc-item"><span class="svc-num">04</span><div class="svc-body"><h4>BẢO TRÌ &amp; KIỂM TRA THIẾT BỊ</h4><p>Bảo dưỡng định kỳ, kiểm tra driver loa, thay linh kiện chính hãng. Hỗ trợ cả thiết bị mua nơi khác.</p></div></div>
+          <div class="svc-item"><span class="svc-num">05</span><div class="svc-body"><h4>BẢO HÀNH &amp; SỬA CHỮA ÂM THANH, ÁNH SÁNG CLUB / BAR / CAFÉ</h4><p>Sửa chữa, bảo hành hệ thống âm thanh và ánh sáng cho club, bar, café.</p></div></div>
         </div>
       </div>
       <div>
         <div class="info-box">
           <h4>THÔNG TIN DỊCH VỤ CHO THUÊ</h4>
+          <div id="infoBoxRows">
           <div class="info-row"><span>Loa kiểm âm active (cặp)</span><span>Liên hệ báo giá</span></div>
-          <div class="info-row"><span>Pioneer CDJ-2000NXS2 (đôi)</span><span>Liên hệ báo giá</span></div>
-          <div class="info-row"><span>Pioneer DJM-900NXS2</span><span>Liên hệ báo giá</span></div>
-          <div class="info-row"><span>Full DJ Booth Set</span><span>Liên hệ báo giá</span></div>
           <div class="info-row"><span>Setup âm thanh Bar / Café</span><span>Theo dự án</span></div>
-          <div class="info-row"><span>Khu vực phục vụ</span><span>TOÀN QUỐC</span></div>
+          <div class="info-row"><span>Khu vực phục vụ</span><span>Nha Trang - Khánh Hòa</span></div>
           <div class="info-row"><span>Bảo hành SP mua tại shop</span><span>6 - 24 tháng</span></div>
+          </div>
         </div>
-        <p class="info-note">Giá thuê phụ thuộc vào thời gian và địa điểm. Nhắn Zalo <a href="tel:0901952999" style="color:var(--gold)">0901 952 999</a> để được báo giá nhanh nhất.</p>
+        <p class="info-note">Giá thuê phụ thuộc vào thời gian và địa điểm. Nhắn Zalo <a href="tel:0901952999" style="color:var(--gold)">0901 952 999</a> hoặc nhắn <a href="https://www.facebook.com/ChoThueThietBiDJ" target="_blank" style="color:var(--gold)">Facebook</a> để được báo giá nhanh nhất.</p>
       </div>
     </div>
   </div>
@@ -178,11 +133,11 @@
         <div class="contact-items">
           <div class="contact-item">
             <div class="c-icon">&#128222;</div>
-            <div><div class="c-label">ĐIỆN THOẠI / ZALO</div><div class="c-val"><a href="tel:0901952999">0901 952 999</a></div></div>
+            <div><div class="c-label">ĐIỆN THOẠI / ZALO</div><div class="c-val"><a href="tel:0901952999" id="contactPhone">0901 952 999</a></div></div>
           </div>
           <div class="contact-item">
             <div class="c-icon">&#128205;</div>
-            <div><div class="c-label">ĐỊA CHỈ</div><div class="c-val"><a href="https://maps.app.goo.gl/ihv9EZhZCNfwP9um6" target="_blank">86 Lạc Long Quân, Nha Trang, Khánh Hòa</a></div></div>
+            <div><div class="c-label">ĐỊA CHỈ</div><div class="c-val"><a href="https://maps.app.goo.gl/ihv9EZhZCNfwP9um6" target="_blank" id="contactAddress">86 Lạc Long Quân, Nha Trang, Khánh Hòa</a></div></div>
           </div>
           <div class="contact-item">
             <div class="c-icon">&#128722;</div>
@@ -194,7 +149,7 @@
           </div>
           <div class="contact-item">
             <div class="c-icon">&#128336;</div>
-            <div><div class="c-label">GIỜ HOẠT ĐỘNG</div><div class="c-val">8:00 – 21:00 · Cả tuần</div></div>
+            <div><div class="c-label">GIỜ HOẠT ĐỘNG</div><div class="c-val" id="contactHours">8:00 – 21:00 · Cả tuần</div></div>
           </div>
         </div>
         <div class="map-box">
@@ -235,45 +190,56 @@
 
 <footer>
   <div class="container">
-    <div class="footer-inner">
-      <div class="footer-logo">P<span>&#183;</span>SHOP MUSIC</div>
-      <div class="footer-links">
-        <a href="#products">SẢN PHẨM</a>
-        <a href="#services">DỊCH VỤ</a>
-        <a href="https://shopee.vn/music_store_79" target="_blank">Shopee</a>
-        <a href="https://www.facebook.com/ChoThueThietBiDJ" target="_blank">Facebook</a>
-        <a href="tel:0901952999">0901 952 999</a>
+    <div class="footer-grid">
+      <div class="footer-col">
+        <h5>Hỗ Trợ</h5>
+        <a href="#contact">Liên hệ tư vấn</a>
+        <a href="#contact">Hướng dẫn mua hàng</a>
+        <a href="#services">Chính sách bảo hành</a>
+      </div>
+      <div class="footer-col">
+        <h5>Sản Phẩm</h5>
+        <a href="category.html?cat=dj">Máy DJ &amp; Controller</a>
+        <a href="category.html?cat=loa">Loa kiểm âm</a>
+        <a href="category.html?cat=tainghe">Tai nghe</a>
+        <a href="category.html?cat=phukien">Phụ kiện</a>
+      </div>
+      <div class="footer-col">
+        <h5>Về Chúng Tôi</h5>
+        <a href="#heroSection">Giới thiệu Pshop Music</a>
+        <a href="#services">Dịch vụ cho thuê</a>
+        <a href="#contact">Tìm cửa hàng</a>
+      </div>
+      <div class="footer-col footer-col-news">
+        <h5>Kết Nối</h5>
+        <div class="footer-social">
+          <a href="https://www.facebook.com/ChoThueThietBiDJ" target="_blank" aria-label="Facebook" class="social-btn social-fb">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 9.9V8.6c0-.6.4-.8.9-.8H16V4.9h-2.3c-2.5 0-3.7 1.5-3.7 3.7v1.3H8.3V13H10v8h3.5v-8h2.4l.4-3.1h-2.8z"/></svg>
+          </a>
+          <a href="https://m.me/ChoThueThietBiDJ" target="_blank" aria-label="Nhắn tin Messenger" class="social-btn social-messenger">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.1 2 11.2c0 2.9 1.5 5.5 3.9 7.2V22l3.5-1.9c.9.3 1.9.4 2.9.4 5.5 0 10-4.1 10-9.3S17.5 2 12 2zm1 12.4l-2.5-2.7-5 2.7 5.5-5.8 2.6 2.7 4.9-2.7-5.5 5.8z"/></svg>
+          </a>
+          <a href="https://zalo.me/0901952999" target="_blank" aria-label="Kết bạn Zalo" class="social-btn social-zalo">Z</a>
+          <a href="https://shopee.vn/music_store_79" target="_blank" aria-label="Shopee" class="social-btn social-shopee">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.5 8h-2.3a4.2 4.2 0 00-8.4 0H5.5c-.6 0-1 .4-1.1 1L3 20c-.1.6.4 1.1 1 1.1h16c.6 0 1.1-.5 1-1.1l-1.4-11c-.1-.6-.5-1-1.1-1zM12 5.5c1.2 0 2.2.9 2.3 2.1H9.7c.1-1.2 1.1-2.1 2.3-2.1zM9.5 11a2.5 2.5 0 005 0v-1.4h1.4v1.4a3.9 3.9 0 01-7.8 0v-1.4h1.4V11z"/></svg>
+          </a>
+        </div>
+        <a href="#contact">Điều khoản sử dụng</a>
+        <a href="#contact">Chính sách bảo mật</a>
+        <a href="admin.html">Quản trị</a>
       </div>
     </div>
-    <p class="footer-copy">&#169; 2026 Pshop Music &middot; 86 Lạc Long Quân, Nha Trang, Khánh Hòa &middot; pshopmusic.com &middot; <a href="admin.html" style="color:inherit">Admin</a></p>
+    <p class="footer-copy">&#169; 2026 Pshop Music &middot; 86 Lạc Long Quân, Nha Trang, Khánh Hòa &middot; pshopmusic.com</p>
   </div>
 </footer>
 
-<!-- MODAL -->
-<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
-  <div class="modal-box">
-    <button class="modal-close" onclick="closeModal()">&#10005;</button>
-    <div class="modal-img-side" id="modalImgSide">
-      <div class="no-img" id="modalNoImg">PSHOP MUSIC</div>
-    </div>
-    <div class="modal-info-side">
-      <div class="modal-cat" id="modalCat"></div>
-      <div class="modal-name" id="modalName"></div>
-      <div class="modal-brand" id="modalBrand"></div>
-      <div class="modal-price" id="modalPrice" style="display:none"></div>
-      <span class="modal-badge" id="modalBadge"></span>
-      <div class="modal-desc" id="modalDesc"></div>
-      <div class="modal-actions">
-        <a href="tel:0901952999" class="modal-phone">&#128222; GỌI TƯ VẤN NGAY: 0901 952 999</a>
-        <a href="#" target="_blank" class="modal-zalo" id="modalZalo">&#128172; NHẮN ZALO</a>
-        <a href="#" target="_blank" class="modal-shopee" id="modalSecondBtn">XEM TRÊN SHOPEE &#8594;</a>
-      </div>
-    </div>
-  </div>
-</div>
-
-<script src="js/products-seed.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/site-content-seed.js"></script>
 <script src="js/db.js"></script>
-<script src="js/main.js"></script>
+<script src="js/cms-db.js"></script>
+<script src="js/site-chrome.js"></script>
+<script src="js/home.js"></script>
 </body>
 </html>

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard - Pshop Music Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="adminSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-wrap">
+      <div class="dash-stats" id="dashStats">
+        <div class="dash-card"><div class="dash-num">…</div><div class="dash-label">Sản phẩm</div></div>
+        <div class="dash-card"><div class="dash-num">…</div><div class="dash-label">Danh mục</div></div>
+        <div class="dash-card"><div class="dash-num">…</div><div class="dash-label">Bài viết Blog</div></div>
+        <div class="dash-card"><div class="dash-num">…</div><div class="dash-label">Video</div></div>
+        <div class="dash-card"><div class="dash-num">…</div><div class="dash-label">Banner đang chạy</div></div>
+        <div class="dash-card"><div class="dash-num">…</div><div class="dash-label">Slide trang chủ</div></div>
+      </div>
+
+      <div class="panel">
+        <h3>TRUY CẬP NHANH</h3>
+        <div class="dash-quicklinks">
+          <a class="dash-quicklink" href="products.html">&#127925; Quản lý Sản phẩm</a>
+          <a class="dash-quicklink" href="categories.html">&#128193; Quản lý Danh mục</a>
+          <a class="dash-quicklink" href="banners.html">&#128247; Quản lý Banner</a>
+          <a class="dash-quicklink" href="sliders.html">&#127909; Quản lý Slider</a>
+          <a class="dash-quicklink" href="blog.html">&#128221; Quản lý Blog</a>
+          <a class="dash-quicklink" href="videos.html">&#127916; Quản lý Video</a>
+          <a class="dash-quicklink" href="ai/index.html">&#129302; AI Assistant</a>
+          <a class="dash-quicklink" href="menu.html">&#9776; Quản lý Menu</a>
+          <a class="dash-quicklink" href="footer.html">&#11015; Quản lý Footer</a>
+          <a class="dash-quicklink" href="seo.html">&#128269; Quản lý SEO</a>
+          <a class="dash-quicklink" href="settings.html">&#9881; Cài đặt chung</a>
+          <a class="dash-quicklink" href="users.html">&#128100; Người dùng &amp; Phân quyền</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/site-content-seed.js"></script>
+<script src="../js/products-seed.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/cms-db.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script>
+  AdminAuth.init({ page: 'dashboard', title: 'DASHBOARD' }).then(() => {
+    const cards = document.querySelectorAll('#dashStats .dash-num');
+    Promise.all([
+      DB.getAll().catch(() => []),
+      CategoryDB.getAll().catch(() => []),
+      BlogDB.getAll().catch(() => []),
+      VideoDB.getAll().catch(() => []),
+      BannerDB.getAll().catch(() => []),
+      SiteContentDB.get().catch(() => ({}))
+    ]).then(([products, categories, posts, videos, banners, content]) => {
+      cards[0].textContent = products.length;
+      cards[1].textContent = categories.length;
+      cards[2].textContent = posts.length;
+      cards[3].textContent = videos.length;
+      cards[4].textContent = banners.filter(b => b.active).length;
+      cards[5].textContent = (content.heroSlides || []).length;
+    });
+  });
+</script>
+</body>
+</html>
