@@ -77,10 +77,11 @@ const AdminAI = (function () {
 
   function renderModuleCards() {
     const wrap = document.getElementById('moduleCards');
-    // Chỉ hiện plugin đang Enable trong Plugin Manager (admin/ai/plugins.html) —
+    // Chỉ hiện plugin đang Enable — hỏi qua PluginManager.loadPlugins(),
+    // không đọc thẳng PluginDB (PluginManager là điểm gọi Plugin duy nhất).
     // 5 module Sprint 1 khác vẫn còn code, chỉ đang "coming_soon".
-    PluginDB.getAll().then(pluginList => {
-      const enabledIds = pluginList.filter(p => p.enabled).map(p => p.moduleId);
+    PluginManager.loadPlugins().then(plugins => {
+      const enabledIds = plugins.filter(p => p.metadata.enabled).map(p => p.metadata.id);
       const modules = AIModuleRegistry.getAll().filter(m => enabledIds.includes(m.id));
       wrap.innerHTML = modules.map(m => `
         <div class="panel">
@@ -107,11 +108,13 @@ const AdminAI = (function () {
     const module = AIModuleRegistry.get(moduleId);
     if (!module) return;
 
-    // Chặn thực thi nếu plugin đang bị tắt trong Plugin Manager, kể cả khi
-    // hàm này bị gọi trực tiếp (không qua nút bấm trên Dashboard đã lọc sẵn).
-    PluginDB.get(moduleId).then(plugin => {
-      if (!plugin || !plugin.enabled) {
-        showModuleStatus(moduleId, 'Plugin này đang tắt trong Plugin Manager — không thể chạy.');
+    // Gọi Plugin thông qua Interface (PluginManager.loadPlugin().execute()) —
+    // không tự kiểm tra/ghi PluginDB hay gọi AIJobQueue.enqueue() trực tiếp ở
+    // đây. execute() tự chặn nếu plugin đang tắt, và chỉ GỬI job vào Queue —
+    // Queue (AIJobQueue) mới là nơi thực thi.
+    PluginManager.loadPlugin(moduleId).then(plugin => {
+      if (!plugin) {
+        showModuleStatus(moduleId, 'Không tìm thấy plugin.');
         return;
       }
 
@@ -138,7 +141,7 @@ const AdminAI = (function () {
 
       const user = AdminAuth.getUser();
       showModuleStatus(moduleId, `Đã tạo job (${items.length} mục) — đang xử lý...`);
-      AIJobQueue.enqueue(moduleId, items, user.uid, user.email)
+      plugin.execute(items, user.uid, user.email)
         .then(() => AIJobQueue.resume(user.uid, user.email))
         .then(() => showModuleStatus(moduleId, 'Đã xử lý xong job — xem "Nhật ký" để biết kết quả (hiện chưa có nhà cung cấp AI thật nên mọi job sẽ báo lỗi "chưa cấu hình", đúng thiết kế giai đoạn này).'))
         .catch(err => showModuleStatus(moduleId, 'Lỗi: ' + err.message));
@@ -271,7 +274,14 @@ const AdminAI = (function () {
   }
 
   function cancelJob(id) {
-    AIJobQueue.cancel(id).then(loadJobs);
+    // Gọi Plugin thông qua Interface (plugin.cancel()) thay vì gọi thẳng
+    // AIJobQueue.cancel() — plugin.cancel() vẫn ủy quyền cho Queue bên trong.
+    const job = jobs.find(j => j.id === id);
+    if (!job) return;
+    PluginManager.loadPlugin(job.moduleId).then(plugin => {
+      const cancelPromise = plugin ? plugin.cancel(id) : AIJobQueue.cancel(id);
+      return cancelPromise.then(loadJobs);
+    });
   }
 
   /* ============== LOGS (admin/ai/logs.html) ============== */

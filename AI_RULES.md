@@ -59,7 +59,23 @@ Không việc nào trong 2 việc trên yêu cầu sửa Workflow, UI, hay `js/a
 
 Mỗi AI Action là 1 file riêng trong `js/ai/modules/*.js`, tự gọi `AIModuleRegistry.register()`. Thêm/gỡ 1 plugin không được phép ảnh hưởng plugin khác hay phần còn lại của hệ thống. Trạng thái Enable/Disable/Version/Provider của từng plugin quản lý qua **Plugin Manager** (`admin/ai/plugins.html`, node `aiPlugins`) — plugin bị Disable phải:
 - Không hiển thị trên Dashboard (`admin/ai/index.html`).
-- Không thể thực thi kể cả khi bị gọi trực tiếp (guard 2 lớp: ẩn UI + kiểm tra lại trong `AdminAI.runModule()`).
+- Không thể thực thi kể cả khi bị gọi trực tiếp (guard nằm trong `plugin.execute()` của `PluginManager`, xem mục 5b).
+
+## 5b. Plugin Manager — điểm gọi Plugin duy nhất (Sprint 2, Requirement #4)
+
+UI (`js/admin-ai.js`, `js/admin-ai-plugins.js`) **không được** gọi thẳng `AIModuleRegistry`/`PluginDB`/`AIJobQueue` để load/enable/disable/chạy/hủy 1 plugin — bắt buộc đi qua `PluginManager` (`js/ai/plugin-manager.js`):
+
+```
+UI → PluginManager → { AIModuleRegistry (metadata) + PluginDB (trạng thái) + AIJobQueue (thực thi) }
+```
+
+`PluginManager` cung cấp: `loadPlugins()`, `loadPlugin(id)`, `isEnabled(id)`, `enablePlugin(id)`, `disablePlugin(id)`, `setProvider(id, providerId)`. Mỗi plugin trả về qua `loadPlugin()` tuân theo interface **`IAIPlugin`** — chỉ đúng 4 thứ, không thêm phương thức nào khác:
+- `metadata` — `{ id, name, description, version, provider, enabled, status }`
+- `validate(inputParams)` — trả về `{ valid, missingFields }`
+- `execute(items, userId, userEmail)` — **chỉ gửi job vào `AIJobQueue.enqueue()`**, không tự chạy AI; tự chặn nếu plugin đang Disable hoặc thiếu field bắt buộc
+- `cancel(jobId)` — ủy quyền cho `AIJobQueue.cancel()`
+
+`PluginManager` **chỉ quản lý Plugin** — KHÔNG chứa Business Logic (nằm trong từng file `js/ai/modules/*.js`), KHÔNG chứa Prompt, KHÔNG chứa AI Provider (nằm trong `js/ai/provider-registry.js`). Đổi provider (OpenAI/Claude/Gemini/DeepSeek) không bao giờ cần sửa `plugin-manager.js`. Log của mọi lượt `execute()` vẫn ghi qua `LogDB`/`aiLogs` có sẵn bên trong `AIJobQueue` — không xây cơ chế log riêng ở tầng Plugin Manager.
 
 ## 6. Job Queue tuần tự
 

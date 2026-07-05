@@ -4,6 +4,16 @@
 
 ## Sprint 2 — AI Assistant: Plugin Manager, Retry, mở rộng 3 plugin chính thức
 
+### Requirement #4 — Plugin Manager là điểm gọi Plugin duy nhất (bổ sung sau Requirement #3)
+
+- **Thêm** `js/ai/plugin-manager.js` (`PluginManager`): `loadPlugins()`, `loadPlugin(id)`, `isEnabled(id)`, `enablePlugin(id)`, `disablePlugin(id)`, `setProvider(id, providerId)`. Mỗi plugin trả về qua `loadPlugin()` theo interface `IAIPlugin`: `metadata` (`id/name/description/version/provider/enabled/status`), `validate(inputParams)`, `execute(items, userId, userEmail)` (chỉ gửi job vào `AIJobQueue`, không tự chạy AI), `cancel(jobId)` (ủy quyền `AIJobQueue.cancel()`).
+- **Đổi** `js/admin-ai.js`: `renderModuleCards()` dùng `PluginManager.loadPlugins()` thay vì đọc thẳng `PluginDB`; `runModule()` gọi `PluginManager.loadPlugin(id).execute()` thay vì tự kiểm tra `PluginDB` rồi gọi thẳng `AIJobQueue.enqueue()`; `cancelJob()` gọi `plugin.cancel()` thay vì `AIJobQueue.cancel()` trực tiếp.
+- **Đổi** `js/admin-ai-plugins.js` (trang Plugin Manager): Enable/Disable/gán Provider gọi qua `PluginManager.enablePlugin()`/`disablePlugin()`/`setProvider()` thay vì ghi thẳng `PluginDB.update()`.
+- `PluginManager` không chứa Business Logic/Prompt/AI Provider — chỉ điều phối `AIModuleRegistry` (metadata) + `PluginDB` (trạng thái) + `AIJobQueue` (thực thi, đúng Queue hiện có, không xây mới). Log vẫn qua `LogDB`/`aiLogs` có sẵn, không xây cơ chế log mới.
+- Không đổi Database Structure, không đổi CMS Module khác, không đổi giao diện hiển thị (`admin/ai/*.html` chỉ thêm 1 dòng script mỗi trang).
+- Cập nhật `PROJECT_ARCHITECTURE.md` (mục "Plugin Manager Layer"), `AI_RULES.md` (mục 5 mở rộng + mục 5b mới).
+- Chưa triển khai Requirement #5, chưa thêm plugin mới nào ngoài phạm vi.
+
 ### Requirement #3 — Data Provider Layer (bổ sung sau khi Sprint 2 đã push lên GitHub)
 
 - **Thêm** `js/ai/data-provider.js` (`DataProvider`, implement `IDataProvider`): `getProduct/getProducts/getCategories/getBrands/getMedia/getBlogPost/getBlogPosts/getSEO/getSettings` — cổng đọc CMS DUY NHẤT cho AI Plugin, chỉ có hàm đọc, không có hàm ghi.
