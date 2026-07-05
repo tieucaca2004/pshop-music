@@ -4,6 +4,18 @@
 
 ## Sprint 2 — AI Assistant: Plugin Manager, Retry, mở rộng 3 plugin chính thức
 
+### Requirement #8 — Permission & Safety Layer (RBAC) (bổ sung sau Requirement #7)
+
+- **Thêm** `js/ai/permission-service.js` (`PermissionService`) — lớp RBAC mới, đọc vai trò từ node `roles` đã có (không tạo Database/node mới). Định nghĩa quyền `ai.generate.product`, `ai.generate.slider`, `ai.generate.seo`, `ai.manage.providers`, `ai.manage.plugins`; ánh xạ role `admin` (đủ 5 quyền) và `editor` (chỉ 3 quyền `ai.generate.*`).
+- **Đổi** `js/admin-ai.js` `runModule()`: gọi `PermissionService.checkPluginExecution()` TRƯỚC khi gọi `PluginManager.loadPlugin().execute()` — đúng luồng `User → Permission → Queue → AI Provider → Draft`. Từ chối quyền thì dừng ngay, không tạo Job/không vào Queue/không gọi Provider/không tạo Draft.
+- **Cố tình không sửa** `js/ai/job-queue.js` và `js/ai/plugin-manager.js` — đúng yêu cầu giữ nguyên Queue và Plugin Manager ở Requirement #8; permission check đặt ở lớp UI thay vì bên trong 2 module đó.
+- **Sửa lỗ hổng thực sự**: `admin/ai/plugins.html` trước đây thiếu `requiredRole:'admin'` (khác với `admin/ai/providers.html` đã có sẵn từ Sprint 1) — nay bổ sung, đúng yêu cầu "chỉ Admin mới được thay đổi AI Provider và Plugin Settings".
+- **Thêm** trạng thái Log mới `permission_denied` — ghi trực tiếp bởi `PermissionService` (ngoại lệ hợp lý của quy tắc "chỉ Queue ghi Log" ở Requirement #7, vì tại thời điểm từ chối quyền, Queue chưa từng được gọi nên không có Job để tự ghi log).
+- **Đổi** `admin-ai.js` `LOG_STATUS_LABELS`: thêm nhãn hiển thị "Permission Denied".
+- Không đổi Database (tái dùng node `roles` có sẵn), không đổi Workflow/Queue/AI Provider Interface/Plugin Manager, không refactor.
+- Đã test: permission check chặn đúng luồng trước khi chạm Queue, không lỗi console ở Dashboard/Plugin Manager.
+- Cập nhật `PROJECT_ARCHITECTURE.md` (mục "Permission & Safety Layer"), `AI_RULES.md` (mục 8 mới), `docs/SPRINT_2_PROGRESS.md`.
+
 ### Requirement #7 — Log đúng thuật ngữ Completed/Failed/Cancelled, ghi cả khi hủy Job (bổ sung sau Requirement #6)
 
 - **Xác nhận** (không cần đổi code): chỉ `AIJobQueue` ghi vào `LogDB`/`aiLogs`; `js/ai/modules/*.js`, `js/ai/providers/*.js`, `js/ai/plugin-manager.js` không tham chiếu `LogDB`; `js/admin-ai.js` chỉ đọc (`LogDB.getAll()`) — đã đúng kiến trúc từ Sprint 1/Requirement #4, không có gì phải sửa cho các điểm này.

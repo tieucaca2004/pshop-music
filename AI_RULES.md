@@ -118,7 +118,7 @@ User → AI Plugin (PluginManager.execute) → Queue (AIJobQueue) → DataProvid
 
 ## 7. Log bắt buộc cho mọi lượt chạy — chỉ Queue được ghi (Sprint 2, Requirement #7)
 
-**Chỉ `AIJobQueue` (Queue) được ghi Log** vào `LogDB`/`aiLogs` (Logging System đã có từ Sprint 1 — không tạo Database/Collection mới):
+**Chỉ `AIJobQueue` (Queue) và `PermissionService` (Requirement #8, khi từ chối quyền) được ghi Log** vào `LogDB`/`aiLogs` (Logging System đã có từ Sprint 1 — không tạo Database/Collection mới):
 - Plugin (`js/ai/modules/*.js`) **không ghi Log trực tiếp** — chỉ thực hiện nhiệm vụ của mình (`loadContext`/`buildPrompt`/`mapToDraftContent`).
 - AI Provider (`js/ai/providers/*.js`) **không ghi Log trực tiếp** — chỉ trả kết quả cho Queue qua `generate()`.
 - `PluginManager` **không ghi Log trực tiếp** — Queue chịu trách nhiệm ghi Log trong quá trình thực thi Job.
@@ -131,6 +131,28 @@ Không được bỏ qua bất kỳ Job nào: Queue ghi 1 dòng Log cho **mỗi 
 **Trạng thái Log**: `completed`, `failed`, `cancelled` (Queue chủ động ghi cả 3 — đổi từ `success`/`failure` cũ sang đúng thuật ngữ này). `pending`/`running` là trạng thái tạm thời của Job/Item, đã hiển thị real-time qua Job Queue Monitor (`admin/ai/jobs.html`) — **không ghi Log riêng cho 2 trạng thái này**, tránh mở rộng Logging System ngoài phạm vi Sprint.
 
 Log phục vụ: theo dõi tiến trình, debug, audit, kiểm tra lỗi — qua `admin/ai/logs.html`. **Chưa xây Dashboard phân tích Log** ở sprint này.
+
+## 8. Permission & Safety Layer — RBAC bắt buộc trước khi thực thi (Sprint 2, Requirement #8)
+
+Mọi AI Plugin **phải kiểm tra quyền trước khi thực thi**. AI Plugin **không hard-code quyền** — chỉ gọi qua `PermissionService` (`js/ai/permission-service.js`), lớp RBAC (Role-Based Access Control) DUY NHẤT, đọc vai trò từ đúng node `roles` đã có (không tạo Database/node mới).
+
+**Quyền hỗ trợ** (`AI_PERMISSIONS`, không thêm quyền nào ngoài danh sách này):
+- `ai.generate.product` — chạy Product Description Generator
+- `ai.generate.slider` — chạy Slider Generator
+- `ai.generate.seo` — chạy SEO Generator
+- `ai.manage.providers` — đổi AI Provider (`admin/ai/providers.html`)
+- `ai.manage.plugins` — đổi Plugin Settings (`admin/ai/plugins.html`)
+
+**Vai trò → quyền** (`ROLE_PERMISSIONS`): `admin` có toàn bộ 5 quyền; `editor` chỉ có 3 quyền `ai.generate.*` — **không có** `ai.manage.providers`/`ai.manage.plugins`, đúng yêu cầu "chỉ Admin mới được thay đổi AI Provider và Plugin Settings". Thực thi ở cấp trang qua `AdminAuth.init({requiredRole:'admin'})` — đã có sẵn ở `admin/ai/providers.html` từ trước, bổ sung thêm ở `admin/ai/plugins.html` (trước đây thiếu, là 1 lỗ hổng thực sự so với yêu cầu này).
+
+**Luồng bắt buộc**: `User → Permission → Queue → AI Provider → Draft`. Kiểm tra quyền diễn ra ở lớp UI (`js/admin-ai.js`, hàm `runModule()`) **TRƯỚC KHI** gọi `PluginManager.loadPlugin(id).execute()` — cố tình đặt tại đây thay vì sửa `js/ai/job-queue.js` hay `js/ai/plugin-manager.js`, đúng yêu cầu **giữ nguyên Queue và Plugin Manager** ở Requirement #8. Nếu bị từ chối quyền:
+- **Không tạo Job** — `execute()` (dẫn tới `AIJobQueue.enqueue()`) không bao giờ được gọi.
+- **Không đưa vào Queue.**
+- **Không gọi AI Provider.**
+- **Không tạo Draft.**
+- **Ghi Log** `permission_denied` — do `PermissionService` ghi trực tiếp (ngoại lệ hợp lý của quy tắc mục 7 "chỉ Queue ghi Log", vì tại thời điểm từ chối, Queue chưa từng được gọi tới nên không có Job nào để Queue tự ghi log; UI/Plugin/Provider/PluginManager vẫn không ghi log gì).
+
+⚠️ **Giới hạn đã biết**: việc kiểm tra quyền hiện chỉ nằm ở điểm gọi duy nhất (`admin-ai.js`). Nếu sau này có thêm nơi khác gọi `PluginManager.execute()` trực tiếp, nơi đó cũng phải tự gọi `PermissionService.checkPluginExecution()` — không có tầng chặn tự động bên trong `plugin-manager.js`/`job-queue.js` (cố tình, vì Requirement #8 yêu cầu không sửa 2 module đó).
 
 ## 7. Log bắt buộc cho mọi lượt chạy
 

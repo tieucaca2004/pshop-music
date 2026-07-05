@@ -7,7 +7,11 @@
  * (js/ai/plugin-manager.js) — trang này không đọc/ghi thẳng PluginDB.
  */
 document.addEventListener('DOMContentLoaded', () => {
-  AdminAuth.init({ page: 'ai', title: 'AI ASSISTANT — PLUGIN MANAGER' }).then(load);
+  // Sprint 2, Requirement #8: "Chỉ Admin mới được thay đổi AI Provider và
+  // Plugin Settings" — trang này thiếu requiredRole:'admin' từ trước, khác
+  // với admin/ai/providers.html đã có đúng guard này ngay từ đầu. Bổ sung
+  // cho nhất quán, dùng đúng cơ chế AdminAuth.requiredRole đã có sẵn.
+  AdminAuth.init({ page: 'ai', title: 'AI ASSISTANT — PLUGIN MANAGER', requiredRole: 'admin' }).then(load);
 
   let plugins = [];
 

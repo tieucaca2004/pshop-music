@@ -107,44 +107,57 @@ const AdminAI = (function () {
   function runModule(moduleId) {
     const module = AIModuleRegistry.get(moduleId);
     if (!module) return;
+    const user = AdminAuth.getUser();
 
-    // Gọi Plugin thông qua Interface (PluginManager.loadPlugin().execute()) —
-    // không tự kiểm tra/ghi PluginDB hay gọi AIJobQueue.enqueue() trực tiếp ở
-    // đây. execute() tự chặn nếu plugin đang tắt, và chỉ GỬI job vào Queue —
-    // Queue (AIJobQueue) mới là nơi thực thi.
-    PluginManager.loadPlugin(moduleId).then(plugin => {
-      if (!plugin) {
-        showModuleStatus(moduleId, 'Không tìm thấy plugin.');
+    // Permission & Safety Layer (Sprint 2, Requirement #8): User → Permission
+    // → Queue → AI Provider → Draft. Kiểm tra quyền TRƯỚC khi chạm tới
+    // PluginManager/Queue — nếu bị từ chối thì dừng ở đây, không gọi
+    // execute() nên chắc chắn không tạo Job/không vào Queue/không gọi AI
+    // Provider/không tạo Draft. Không sửa plugin-manager.js hay
+    // job-queue.js để thêm bước này (giữ nguyên 2 module đó theo yêu cầu).
+    PermissionService.checkPluginExecution(user.uid, user.email, moduleId).then(check => {
+      if (!check.granted) {
+        showModuleStatus(moduleId, `Không có quyền chạy plugin này (thiếu "${check.permission || 'quyền chưa được gán'}").`);
         return;
       }
 
-      const values = {};
-      let primaryKey = null;
-      let batchLines = null;
-
-      module.inputFields.forEach((field, i) => {
-        const el = document.getElementById(`f-${moduleId}-${field.key}`);
-        if (!el) return;
-        if (i === 0 && field.type === 'text') {
-          primaryKey = field.key;
-          batchLines = el.value.split('\n').map(l => l.trim()).filter(Boolean);
-        } else {
-          values[field.key] = el.value;
+      // Gọi Plugin thông qua Interface (PluginManager.loadPlugin().execute()) —
+      // không tự kiểm tra/ghi PluginDB hay gọi AIJobQueue.enqueue() trực tiếp ở
+      // đây. execute() tự chặn nếu plugin đang tắt, và chỉ GỬI job vào Queue —
+      // Queue (AIJobQueue) mới là nơi thực thi.
+      PluginManager.loadPlugin(moduleId).then(plugin => {
+        if (!plugin) {
+          showModuleStatus(moduleId, 'Không tìm thấy plugin.');
+          return;
         }
-      });
 
-      const items = (batchLines && batchLines.length ? batchLines : [null]).map(line => {
-        const item = Object.assign({}, values);
-        if (primaryKey) item[primaryKey] = line || '';
-        return item;
-      });
+        const values = {};
+        let primaryKey = null;
+        let batchLines = null;
 
-      const user = AdminAuth.getUser();
-      showModuleStatus(moduleId, `Đã tạo job (${items.length} mục) — đang xử lý...`);
-      plugin.execute(items, user.uid, user.email)
-        .then(() => AIJobQueue.resume(user.uid, user.email))
-        .then(() => showModuleStatus(moduleId, 'Đã xử lý xong job — xem "Nhật ký" để biết kết quả (hiện chưa có nhà cung cấp AI thật nên mọi job sẽ báo lỗi "chưa cấu hình", đúng thiết kế giai đoạn này).'))
-        .catch(err => showModuleStatus(moduleId, 'Lỗi: ' + err.message));
+        module.inputFields.forEach((field, i) => {
+          const el = document.getElementById(`f-${moduleId}-${field.key}`);
+          if (!el) return;
+          if (i === 0 && field.type === 'text') {
+            primaryKey = field.key;
+            batchLines = el.value.split('\n').map(l => l.trim()).filter(Boolean);
+          } else {
+            values[field.key] = el.value;
+          }
+        });
+
+        const items = (batchLines && batchLines.length ? batchLines : [null]).map(line => {
+          const item = Object.assign({}, values);
+          if (primaryKey) item[primaryKey] = line || '';
+          return item;
+        });
+
+        showModuleStatus(moduleId, `Đã tạo job (${items.length} mục) — đang xử lý...`);
+        plugin.execute(items, user.uid, user.email)
+          .then(() => AIJobQueue.resume(user.uid, user.email))
+          .then(() => showModuleStatus(moduleId, 'Đã xử lý xong job — xem "Nhật ký" để biết kết quả (hiện chưa có nhà cung cấp AI thật nên mọi job sẽ báo lỗi "chưa cấu hình", đúng thiết kế giai đoạn này).'))
+          .catch(err => showModuleStatus(moduleId, 'Lỗi: ' + err.message));
+      });
     });
   }
 
@@ -306,7 +319,8 @@ const AdminAI = (function () {
   const LOG_STATUS_LABELS = {
     completed: 'Completed',
     failed: '<span style="color:#c0392b">Failed</span>',
-    cancelled: '<span style="color:var(--ink-mute)">Cancelled</span>'
+    cancelled: '<span style="color:var(--ink-mute)">Cancelled</span>',
+    permission_denied: '<span style="color:#c0392b">Permission Denied</span>'
   };
 
   function renderLogs() {
