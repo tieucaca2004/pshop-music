@@ -16,6 +16,7 @@ const ADMIN_NAV = [
   { key: 'sliders', label: 'Slider', href: '/admin/sliders.html', icon: '&#127909;' },
   { key: 'blog', label: 'Blog', href: '/admin/blog.html', icon: '&#128221;' },
   { key: 'videos', label: 'Video', href: '/admin/videos.html', icon: '&#127916;' },
+  { key: 'ai-assistant', label: 'Trợ lý AI', href: '/admin/ai/assistant.html', icon: '&#129302;' },
   { key: 'ai', label: 'AI Assistant', href: '/admin/ai/index.html', icon: '&#129302;' },
   { key: 'menu', label: 'Menu', href: '/admin/menu.html', icon: '&#9776;', role: 'admin' },
   { key: 'footer', label: 'Footer', href: '/admin/footer.html', icon: '&#11015;', role: 'admin' },

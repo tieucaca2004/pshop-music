@@ -215,6 +215,27 @@ Requirement cuối cùng của Sprint 3 — tái xác nhận toàn bộ AI Frame
 - **Security Verification**: xác nhận lại Permission/RBAC/Queue/Draft/API Key đều đúng; riêng Firebase Database Rules KHÔNG version-control trong repo nên không thể xác minh trực tiếp từ môi trường này (ghi Known Limitations).
 - **Kết luận**: Code 100% sẵn sàng Pilot Production. Kích hoạt Pilot Production thật (traffic thật, response OpenAI thật) chờ deploy Cloud Function.
 
+## AI Assistant — Experience Layer + AI Task Router (Sprint 4, Requirement #1)
+
+Sprint 4 thêm 1 lớp MỚI nằm **bên trên** toàn bộ kiến trúc Sprint 2/3 — không sửa `job-queue.js`/`plugin-manager.js`/`provider-registry.js`/`permission-service.js`/`data-provider.js`/`AI_RULES.md`. Về vai trò kiến trúc, lớp này tương đương `js/admin-ai.js` (1 caller mới của `PluginManager`), chỉ khác ở chỗ người dùng gõ yêu cầu tự do thay vì chọn Plugin từ danh sách:
+
+```
+User → AI Assistant (admin/ai/assistant.html, js/admin-ai-assistant.js)
+     → AI Task Router (js/ai/task-router.js)
+     → PermissionService → PluginManager.execute() → Queue → AI Provider
+     → Draft → Human Review → Completed
+```
+
+- **AI Assistant** (`admin/ai/assistant.html` + `js/admin-ai-assistant.js`) — Entry Point DUY NHẤT theo yêu cầu Requirement #1: 1 ô nhập yêu cầu tự do, không có danh sách Plugin để chọn. Tự tải `candidates` (`{products, posts}`) qua đúng `DB.getAll()`/`BlogDB.getAll()` có sẵn — giống hệt cách `js/admin-ai.js` đã tải cho `productSelect`/`blogSelect`, không phải cơ chế đọc dữ liệu mới. Không bao giờ hiển thị tên/id Plugin kỹ thuật cho người dùng — chỉ hiển thị `outcomeLabel` ("Mô tả sản phẩm", "Gói SEO cho bài viết", "Nội dung slide quảng cáo").
+- **AI Task Router** (`js/ai/task-router.js`, `AITaskRouter`) — lớp DUY NHẤT "hiểu yêu cầu + chọn Plugin phù hợp". **Là logic rule-based** (khớp từ khóa cố định + khớp tên thực thể theo substring), **KHÔNG phải mô hình AI/ML thật** — vì Requirement #1 (Sprint 4) cấm rõ Router "gọi OpenAI trực tiếp"/"thêm AI Provider mới"/Multi-Agent, nên không có cách nào dùng AI thật để phân loại ý định mà vẫn đúng ràng buộc này. Ghi rõ ở đây để tránh hiểu lầm tên gọi "AI Task Router".
+  - `route(text, candidates)` — hàm THUẦN, không side-effect, không đọc Firebase, không gọi OpenAI. Trả về `{pluginId, outcomeLabel, confidence, targetId, targetLabel, ambiguous, inputParams, reason}`.
+  - `dispatch(routeResult, userId, userEmail)` — CHỈ được gọi theo đúng thứ tự `PermissionService.checkPluginExecution()` → `PluginManager.loadPlugin(id).execute()` (đã xác nhận qua mô phỏng: không gọi Queue/Provider/Firebase/OpenAI trực tiếp ở bất kỳ nhánh nào).
+  - **Confidence Score** (0–100) = 50% điểm khớp Plugin (tối đa khi ≥2 từ khóa khớp) + 50% điểm khớp đối tượng (100 = khớp đúng 1 mục, 50 = khớp nhiều mục/ambiguous, 0 = không khớp). Ngưỡng tự thực thi **≥95%**; dưới ngưỡng → AI Assistant hiển thị xác nhận "Tôi hiểu yêu cầu như sau..." (Safety Checkpoint, Requirement #5) trước khi gọi `dispatch()`.
+  - **Không tạo Job** khi: không xác định được Plugin, không xác định được đối tượng (kể cả trường hợp khớp nhiều — ambiguous), hoặc Permission bị từ chối — cả 3 trường hợp `dispatch()` dừng lại TRƯỚC khi gọi `PluginManager`.
+- **Quyết định kiến trúc quan trọng — ranh giới Logging**: `AI_RULES.md` mục 7 (Constitution) quy định CHỈ `AIJobQueue` và `PermissionService` (khi từ chối quyền) được ghi vào `LogDB`/`aiLogs`. Trường hợp `permission_denied` tự động có Log nhờ `PermissionService` sẵn có (không cần code mới). Nhưng khi Router không xác định được Plugin/đối tượng, sự việc xảy ra TRƯỚC khi có Plugin nào được xác định — Router **không** tự ghi Log ở đây, vì (1) sẽ vi phạm Constitution "chỉ Queue/PermissionService ghi Log", và (2) sẽ vi phạm Requirement #3 (Router chỉ được gọi `PermissionService`/`PluginManager.execute()`, không liệt kê `LogDB`). Các trường hợp này chỉ hiển thị thông báo ở UI, không ghi vào `aiLogs`. Ý tưởng "mở rộng Constitution cho Router ghi Log" đã đưa vào `ROADMAP.md`, không tự ý quyết định ở Requirement này.
+- **Điều hướng**: thêm 1 mục MỚI trong `ADMIN_NAV` (`js/admin-auth.js`): `{key:'ai-assistant', label:'Trợ lý AI', href:'/admin/ai/assistant.html'}` — thêm thêm, không đổi/xóa mục "AI Assistant" cũ (`admin/ai/index.html`, Plugin Dashboard) — trang cũ vẫn dùng được nguyên vẹn làm nơi chọn Plugin thủ công (fallback khi AI Assistant không hiểu yêu cầu).
+- **Không đổi**: `IAIPlugin`/`IAIProvider`, Queue, Plugin Manager, Provider Manager, Permission Service, Data Provider, Draft Workflow, Human Review, Database Structure/Collection. 3 Plugin Production (Product/SEO/Slider) không có dòng code nào bị sửa.
+
 ## Giới hạn kiến trúc đã biết (không tự ý "vá" bằng cách thêm hạ tầng mới)
 
 - **Job Queue vẫn không có backend riêng (V1)** — `AIJobQueue` xử lý tuần tự phía trình duyệt Admin, không đổi ở Sprint 3. Cloud Function duy nhất hiện có (`openaiProxy`, xem mục "Cloud Function Proxy Layer") chỉ là proxy gọi OpenAI API, KHÔNG phải backend xử lý Queue — nâng Job Queue lên Cloud Functions (Job Queue V2, xem `ROADMAP.md`) vẫn là quyết định kiến trúc cần người phụ trách xác nhận trước, chưa triển khai.
