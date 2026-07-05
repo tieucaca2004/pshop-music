@@ -2,6 +2,21 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 3 — End-to-End Integration Test + Completion Report (Requirement #5, cuối Sprint 3)
+
+- **End-to-End Integration Test**: chạy mô phỏng thực thi mã nguồn sản xuất thật (Node `vm`, không viết lại logic) cho `job-queue.js`, `permission-service.js`, `providers/openai.js` và 3 plugin (Product/SEO/Slider) với Firebase/Cloud Function/OpenAI được thay bằng mock có kiểm soát — do Cloud Function `openaiProxy` chưa deploy nên không thể gọi OpenAI thật. Toàn bộ chi tiết ở `docs/SPRINT_3_PROGRESS.md`. Kết quả: Permission/Queue (Pending/Running/Completed/Failed/Retry/Cancel)/Provider (validate/health/generate)/3 Plugin/Draft/Logging (completed/failed/cancelled/permission_denied) đều đúng hành vi thiết kế.
+- **Bug tìm thấy và đã sửa (chỉ sửa Bug, không refactor, không thêm feature)**:
+  - `js/admin-ai.js` (`runModule`): xóa thông báo lỗi thời khẳng định "chưa có nhà cung cấp AI thật nên mọi job sẽ báo lỗi" — sai kể từ Requirement #1.
+  - `admin/ai/index.html`: sửa dòng giới thiệu Dashboard có cùng khẳng định sai.
+  - `js/ai/provider-interface.js`: sửa comment mô tả `generate()`/`health()` là "luôn stub" — nay ghi rõ OpenAI đã thật, 3 provider còn lại vẫn stub.
+- **Regression Test**: xác nhận qua `git log` — `job-queue.js`, `plugin-manager.js`, `data-provider.js`, `provider-registry.js`, `permission-service.js` không bị sửa code kể từ commit Sprint 2 Requirement #8; không Requirement nào của Sprint 2 bị phá.
+- **Security Verification**: xác nhận lại API Key OpenAI không nằm trong Browser/Firebase Database, chỉ tồn tại trong Cloud Function Environment (Secret Manager) — xem `docs/SPRINT_3_PROGRESS.md` mục 4.
+- **Production Readiness**: code sẵn sàng Production cho cả 3 plugin; còn chặn bởi việc deploy Cloud Function (`firebase login` → set secret → `firebase deploy` → cập nhật `OPENAI_PROXY_URL` thật) — thao tác CLI người phụ trách hạ tầng tự làm.
+- **Ý tưởng phát sinh (không triển khai)**: version-control Firebase Database Rules trong repo; test tự động (CI) cho Queue/Permission/Plugin — đã ghi `ROADMAP.md`.
+- Lập `docs/SPRINT_3_PROGRESS.md` (Sprint 3 Completion Report: Requirement Checklist, Bug Summary, Architecture Verification, Security Verification, Integration Test Result, Production Readiness).
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+- **Sprint 3 hoàn tất (Requirement #1–#5). Không bắt đầu Sprint 4.**
+
 ## Sprint 3 — Slider AI Plugin: Framework → Production (Requirement #4)
 
 - **Không sửa code** — rà soát chuỗi `User → Permission → Queue → Slider AI Plugin → DataProvider → OpenAI Provider → Draft → Completed` cho plugin **Slider Generator** (`js/ai/modules/slider-generator.js`) và xác nhận đã đúng yêu cầu Requirement #4 nhờ hạ tầng có sẵn từ Sprint 2 + Requirement #1/#2/#3, không cần thêm/đổi dòng code nào:

@@ -10,7 +10,9 @@
  *   label: 'OpenAI',
  *
  *   generate({ moduleId, prompt, params, config }) -> Promise<{ text, raw }>
- *     // Gọi AI thật (hiện là stub, luôn reject vì chưa tích hợp API).
+ *     // Gọi AI thật. OpenAI (Sprint 3): đã tích hợp thật qua Cloud Function
+ *     // Proxy — xem js/ai/providers/openai.js. Claude/Gemini/DeepSeek: vẫn
+ *     // là stub, luôn reject vì chưa tích hợp API.
  *
  *   validate(config) -> { valid: boolean, reason: string }
  *     // Kiểm tra provider đã đủ điều kiện dùng chưa (đã bật, đủ cấu hình...)
@@ -18,7 +20,8 @@
  *
  *   health() -> Promise<{ healthy: boolean, message: string }>
  *     // Kiểm tra kết nối/tình trạng provider hiện tại (vd ping thử API).
- *     // Hiện luôn trả healthy:false vì chưa tích hợp API thật.
+ *     // OpenAI: gọi Cloud Function Proxy để kiểm tra thật. Claude/Gemini/
+ *     // DeepSeek: vẫn luôn trả healthy:false vì chưa tích hợp API thật.
  * }
  *
  * AI Plugin (js/ai/modules/*.js) KHÔNG BAO GIỜ gọi thẳng 1 provider cụ thể

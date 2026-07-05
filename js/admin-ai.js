@@ -155,7 +155,7 @@ const AdminAI = (function () {
         showModuleStatus(moduleId, `Đã tạo job (${items.length} mục) — đang xử lý...`);
         plugin.execute(items, user.uid, user.email)
           .then(() => AIJobQueue.resume(user.uid, user.email))
-          .then(() => showModuleStatus(moduleId, 'Đã xử lý xong job — xem "Nhật ký" để biết kết quả (hiện chưa có nhà cung cấp AI thật nên mọi job sẽ báo lỗi "chưa cấu hình", đúng thiết kế giai đoạn này).'))
+          .then(() => showModuleStatus(moduleId, 'Đã xử lý xong job — xem "Nhật ký"/"Job Queue" để biết kết quả (nếu provider chưa cấu hình hoặc gặp lỗi, job sẽ báo lỗi rõ trong Nhật ký).'))
           .catch(err => showModuleStatus(moduleId, 'Lỗi: ' + err.message));
       });
     });

@@ -2,7 +2,7 @@
 
 Mọi mục dưới đây cần được yêu cầu rõ ràng ở 1 sprint sau mới triển khai. Không tự ý code trước khi được giao.
 
-> **Trạng thái hiện tại: Sprint 2 đã hoàn tất. Sprint 3 Requirement #1 (OpenAI qua Cloud Function Proxy), #2 (Product AI Plugin), #3 (SEO AI Plugin) và #4 (Slider AI Plugin sang Production) đã hoàn tất.** Các mục dưới đây vẫn ở dạng ghi nhận, chưa triển khai trừ khi ghi chú khác.
+> **Trạng thái hiện tại: Sprint 2 và Sprint 3 (Requirement #1–#5) đã hoàn tất** — OpenAI qua Cloud Function Proxy, Product/SEO/Slider AI Plugin sang Production, End-to-End Integration Test + Completion Report (xem `docs/SPRINT_3_PROGRESS.md`). Các mục dưới đây vẫn ở dạng ghi nhận, chưa triển khai trừ khi ghi chú khác.
 
 ## AI Assistant
 
@@ -29,6 +29,9 @@ Mọi mục dưới đây cần được yêu cầu rõ ràng ở 1 sprint sau m
 - **AI Video**: chưa có kế hoạch cụ thể.
 - Sửa nội dung Draft bằng rich-text (Quill) thay vì xem JSON thô trong `admin/ai/drafts.html`.
 - Theo dõi chi phí/quota sử dụng theo từng provider.
+
+- **Version-control Firebase Realtime Database Rules** (`database.rules.json`) trong repo thay vì chỉ quản lý trên Firebase Console — giúp review/rollback rules dễ hơn, đặc biệt sau khi Cloud Function `openaiProxy` bắt đầu đọc node `roles`. Phát sinh khi rà soát Requirement #5 (Sprint 3).
+- **Test tự động (CI)** cho `job-queue.js`/`permission-service.js`/3 plugin Production — Sprint 3 Requirement #5 mới kiểm thử thủ công 1 lần (mô phỏng qua Node `vm`, xem `docs/SPRINT_3_PROGRESS.md`), chưa phải bộ test chạy tự động trong CI.
 
 ## CMS / Hạ tầng chung
 
