@@ -205,6 +205,16 @@ Xác nhận toàn bộ AI Framework hoạt động đúng từ đầu đến cu�
 - **Regression Test**: `git log` xác nhận `job-queue.js`/`plugin-manager.js`/`data-provider.js`/`provider-registry.js`/`permission-service.js` không bị sửa code kể từ Sprint 2 Requirement #8 — không Requirement nào của Sprint 2 bị phá.
 - **Chưa kiểm tra được** (phụ thuộc triển khai, không phải lỗi code): Generate/Test Connection thật với response OpenAI thật qua Cloud Function đã deploy.
 
+## Xác nhận sẵn sàng Pilot Production (Sprint 3, Requirement #6 — SPRINT 3 COMPLETED)
+
+Requirement cuối cùng của Sprint 3 — tái xác nhận toàn bộ AI Framework trước khi đóng Sprint. Báo cáo tổng kết đầy đủ (Requirement Summary, Architecture/Security/Production Verification, Known Limitations, Future Roadmap): xem `docs/SPRINT_3_FINAL_REPORT.md`.
+
+- **Architecture Verification (4 điều kiện bất biến)**: (1) `AI_RULES.md` (Constitution) không bị sửa trong suốt Sprint 3 (`git log`); (2) `IAIPlugin`/`IAIProvider`/Workflow không đổi shape; (3) `job-queue.js`/`plugin-manager.js`/`data-provider.js`/`provider-registry.js`/`permission-service.js` (Plugin/Queue/Provider/Permission) không bị sửa code kể từ Sprint 2 Requirement #8, vẫn độc lập, không phụ thuộc vòng; (4) mọi mục kiến trúc Sprint 2 trong file này chỉ được BỔ SUNG, không mục nào bị đổi mô tả.
+- **CMS Console check**: cả 6 trang `admin/ai/{index,drafts,jobs,logs,plugins,providers}.html` load 0 lỗi console qua static server nội bộ.
+- **Production Deployment check**: `firebase functions:list` xác nhận Cloud Function `openaiProxy` **vẫn CHƯA deploy** — không đổi so với Requirement #1, đây là điều kiện DUY NHẤT còn chặn Pilot Production thật (ngoài phạm vi code, cần người phụ trách hạ tầng tự thực hiện).
+- **Security Verification**: xác nhận lại Permission/RBAC/Queue/Draft/API Key đều đúng; riêng Firebase Database Rules KHÔNG version-control trong repo nên không thể xác minh trực tiếp từ môi trường này (ghi Known Limitations).
+- **Kết luận**: Code 100% sẵn sàng Pilot Production. Kích hoạt Pilot Production thật (traffic thật, response OpenAI thật) chờ deploy Cloud Function.
+
 ## Giới hạn kiến trúc đã biết (không tự ý "vá" bằng cách thêm hạ tầng mới)
 
 - **Job Queue vẫn không có backend riêng (V1)** — `AIJobQueue` xử lý tuần tự phía trình duyệt Admin, không đổi ở Sprint 3. Cloud Function duy nhất hiện có (`openaiProxy`, xem mục "Cloud Function Proxy Layer") chỉ là proxy gọi OpenAI API, KHÔNG phải backend xử lý Queue — nâng Job Queue lên Cloud Functions (Job Queue V2, xem `ROADMAP.md`) vẫn là quyết định kiến trúc cần người phụ trách xác nhận trước, chưa triển khai.

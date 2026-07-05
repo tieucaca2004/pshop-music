@@ -2,7 +2,7 @@
 
 Mọi mục dưới đây cần được yêu cầu rõ ràng ở 1 sprint sau mới triển khai. Không tự ý code trước khi được giao.
 
-> **Trạng thái hiện tại: Sprint 2 và Sprint 3 (Requirement #1–#5) đã hoàn tất** — OpenAI qua Cloud Function Proxy, Product/SEO/Slider AI Plugin sang Production, End-to-End Integration Test + Completion Report (xem `docs/SPRINT_3_PROGRESS.md`). Các mục dưới đây vẫn ở dạng ghi nhận, chưa triển khai trừ khi ghi chú khác.
+> **SPRINT 3 COMPLETED (Requirement #1–#6).** Sprint 2 và Sprint 3 đã hoàn tất — OpenAI qua Cloud Function Proxy, Product/SEO/Slider AI Plugin sang Production, End-to-End Integration Test (`docs/SPRINT_3_PROGRESS.md`), xác nhận sẵn sàng Pilot Production (`docs/SPRINT_3_FINAL_REPORT.md`). Code sẵn sàng 100%; kích hoạt Pilot Production thật vẫn chờ deploy Cloud Function (ngoài phạm vi code). Các mục dưới đây vẫn ở dạng ghi nhận, chưa triển khai trừ khi ghi chú khác — chưa bắt đầu Sprint 4.
 
 ## AI Assistant
 

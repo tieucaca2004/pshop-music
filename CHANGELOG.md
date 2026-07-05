@@ -2,6 +2,17 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 3 — Xác nhận sẵn sàng Pilot Production (Requirement #6) — SPRINT 3 COMPLETED
+
+- **Không thêm code/feature** — Requirement #6 chỉ tái xác nhận (re-verify) toàn bộ AI Framework trước khi coi Sprint 3 hoàn tất, dùng lại đúng bộ mô phỏng đã viết ở Requirement #5 (chạy lại `job-queue.js`/`permission-service.js`/`providers/openai.js`/3 plugin qua Node `vm` — tất cả PASS, không đổi kết quả so với Requirement #5) cộng thêm các kiểm tra mới:
+  - **CMS Console check**: mở lại cả 6 trang `admin/ai/{index,drafts,jobs,logs,plugins,providers}.html` qua static server — 0 lỗi console, 0 script 404, mỗi trang chuyển hướng đúng sang `admin/login` (đúng hành vi khi chưa đăng nhập).
+  - **Production Deployment check**: `firebase functions:list` xác nhận Cloud Function `openaiProxy` **vẫn CHƯA deploy** (`Failed to authenticate, have you run firebase login?`) — không đổi so với Requirement #1, vẫn cần người phụ trách hạ tầng tự `firebase login`/set secret/deploy.
+  - **Architecture Verification**: `git log -- AI_RULES.md` xác nhận Constitution của AI Framework không bị sửa lần nào trong suốt Sprint 3 (Requirement #1–#6); `git log` xác nhận Plugin/Queue/Provider/Permission (5 file lõi Sprint 2) vẫn độc lập, không bị sửa code.
+  - **Security Verification**: xác nhận lại đầy đủ theo yêu cầu (Permission/RBAC/Queue/Draft/API Key) — riêng "Firebase Rules" **không thể xác minh trực tiếp** từ môi trường này vì Rules chỉ tồn tại trên Firebase Console, không version-control trong repo (ghi vào Known Limitations, đã có đề xuất version-control trong `ROADMAP.md` từ Requirement #5).
+- Lập `docs/SPRINT_3_FINAL_REPORT.md` (Requirement Summary, Architecture Verification, Security Verification, Production Verification, Known Limitations, Future Roadmap).
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`, `docs/SPRINT_3_PROGRESS.md`.
+- **SPRINT 3 COMPLETED (Requirement #1–#6). Code sẵn sàng Pilot Production; kích hoạt thật vẫn chờ deploy Cloud Function (điều kiện ngoài phạm vi code, xem `docs/SPRINT_3_FINAL_REPORT.md`). Không bắt đầu Sprint 4.**
+
 ## Sprint 3 — End-to-End Integration Test + Completion Report (Requirement #5, cuối Sprint 3)
 
 - **End-to-End Integration Test**: chạy mô phỏng thực thi mã nguồn sản xuất thật (Node `vm`, không viết lại logic) cho `job-queue.js`, `permission-service.js`, `providers/openai.js` và 3 plugin (Product/SEO/Slider) với Firebase/Cloud Function/OpenAI được thay bằng mock có kiểm soát — do Cloud Function `openaiProxy` chưa deploy nên không thể gọi OpenAI thật. Toàn bộ chi tiết ở `docs/SPRINT_3_PROGRESS.md`. Kết quả: Permission/Queue (Pending/Running/Completed/Failed/Retry/Cancel)/Provider (validate/health/generate)/3 Plugin/Draft/Logging (completed/failed/cancelled/permission_denied) đều đúng hành vi thiết kế.

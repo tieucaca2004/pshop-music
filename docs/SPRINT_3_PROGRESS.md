@@ -1,5 +1,7 @@
 # Sprint 3 Completion Report — AI Framework: Framework → Production (OpenAI thật)
 
+> **SPRINT 3 COMPLETED (Requirement #1–#6).** Báo cáo tổng kết cuối cùng: xem `docs/SPRINT_3_FINAL_REPORT.md`.
+
 ## ✅ Requirement #1–#5: HOÀN TẤT — đã commit, đã push lên `feature/cms-ai-sprint2`
 
 **Sprint 4 trở đi: CHƯA bắt đầu.** Không triển khai thêm bất kỳ mục nào trong `ROADMAP.md` cho tới khi được giao rõ ràng ở sprint/requirement kế tiếp. Chưa merge `feature/cms-ai-sprint2` vào `main`.
