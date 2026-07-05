@@ -2,6 +2,24 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 3 — Slider AI Plugin: Framework → Production (Requirement #4)
+
+- **Không sửa code** — rà soát chuỗi `User → Permission → Queue → Slider AI Plugin → DataProvider → OpenAI Provider → Draft → Completed` cho plugin **Slider Generator** (`js/ai/modules/slider-generator.js`) và xác nhận đã đúng yêu cầu Requirement #4 nhờ hạ tầng có sẵn từ Sprint 2 + Requirement #1/#2/#3, không cần thêm/đổi dòng code nào:
+  - **Dữ liệu thật**: `loadContext()` gọi `DataProvider.getProduct(productId)` + `DataProvider.getMedia(productId)` (không gọi thẳng `DB`); `buildPrompt()` dùng `name`/`brand`/`specs` thật của sản phẩm làm chủ đề slide.
+  - **Trường Slider được tạo**: `title` (Headline AI sinh), `subtitle` (Subheadline AI sinh — đóng vai trò Banner Description), `link` (CTA URL — suy ra thật từ `product.category`, hệ thống có hỗ trợ qua `heroCta.dataset.link` ở `js/home.js`), `image` (ảnh có sẵn của sản phẩm, không tự sinh ảnh), `imagePrompt` (gợi ý prompt tiếng Anh để dùng với công cụ tạo ảnh AI khác — không tự động sinh ảnh).
+  - **Provider ẩn danh với Plugin**: Queue chọn qua `AIProviderRegistry.resolveForPlugin('slider-generator')` — giống Requirement #2/#3.
+  - **Draft-only, Human Review giữ nguyên**: `targetCollection:'siteContent.heroSlides'` — publish thật chỉ chạy khi bấm "DUYỆT & PUBLISH" ở `admin/ai/drafts.html` (nối thêm slide vào `SiteContentDB`, không tự động).
+  - **Retry/Failed/Log khi OpenAI lỗi**: dùng nguyên `job-queue.js` đã có, không mất Job.
+  - **Không đổi**: Database, Queue, Provider, Workflow, Plugin Architecture, Permission (`ai.generate.slider` có sẵn từ Requirement #8).
+- **Phát hiện cần ghi nhận rõ (không sửa vì sẽ là Refactor ngoài phạm vi)**: field `ctaText` trong Draft content **không phải do AI sinh** — nó chỉ copy nguyên giá trị Admin đã chọn ở dropdown `ctaStyle` (input có sẵn, không gọi OpenAI). Field này cũng **không được hiển thị ở đâu trên site** — `js/home.js` chỉ đọc `slide.title`/`slide.subtitle`/`slide.link`, nút CTA (`#heroCta`) dùng text cố định trong HTML, không đọc `slide.ctaText`. Đây là hiện trạng có từ Sprint 2 (không phát sinh ở Requirement #4), không sửa vì ngoài phạm vi "chỉ kích hoạt sang Production".
+- **Ý tưởng phát sinh (không triển khai)** — ghi vào `ROADMAP.md`:
+  - Làm `ctaText` có tác dụng thật (đọc trong `js/home.js` để đổi text nút CTA theo từng slide) hoặc bỏ hẳn field này nếu không cần — quyết định nằm ngoài phạm vi Requirement #4.
+  - Cho AI gợi ý luôn nội dung nút CTA (hiện đang là lựa chọn cố định từ dropdown `ctaStyle`, không phải AI-generated).
+  - AI Image Generation thật (dùng `imagePrompt` đã có làm input) — đã ghi từ trước ở `ROADMAP.md`, xác nhận lại khi rà soát Requirement #4.
+  - Prompt Optimization, Prompt Versioning, Cost Tracking — cùng nhóm Future Ideas đã ghi ở Requirement #3, áp dụng chung cho mọi plugin Production.
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+- Chưa triển khai Requirement #5.
+
 ## Sprint 3 — SEO AI Plugin: Framework → Production (Requirement #3)
 
 - **Không sửa code** — rà soát chuỗi `User → Permission → Queue → SEO AI Plugin → DataProvider → OpenAI Provider → Draft → Completed` cho plugin **SEO Generator** (`js/ai/modules/seo-generator.js`) và xác nhận đã đúng yêu cầu Requirement #3 nhờ hạ tầng có sẵn từ Sprint 2 + Requirement #1/#2, không cần thêm/đổi dòng code nào:

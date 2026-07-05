@@ -2,7 +2,7 @@
 
 Mọi mục dưới đây cần được yêu cầu rõ ràng ở 1 sprint sau mới triển khai. Không tự ý code trước khi được giao.
 
-> **Trạng thái hiện tại: Sprint 2 đã hoàn tất. Sprint 3 Requirement #1 (OpenAI qua Cloud Function Proxy), #2 (Product AI Plugin sang Production) và #3 (SEO AI Plugin sang Production) đã hoàn tất.** Các mục dưới đây vẫn ở dạng ghi nhận, chưa triển khai trừ khi ghi chú khác.
+> **Trạng thái hiện tại: Sprint 2 đã hoàn tất. Sprint 3 Requirement #1 (OpenAI qua Cloud Function Proxy), #2 (Product AI Plugin), #3 (SEO AI Plugin) và #4 (Slider AI Plugin sang Production) đã hoàn tất.** Các mục dưới đây vẫn ở dạng ghi nhận, chưa triển khai trừ khi ghi chú khác.
 
 ## AI Assistant
 
@@ -15,6 +15,8 @@ Mọi mục dưới đây cần được yêu cầu rõ ràng ở 1 sprint sau m
 - **Prompt Optimization** cho các plugin đã Production (Product Description Generator, SEO Generator) — prompt hiện là bản cố định từ Sprint 2, chưa qua vòng tối ưu/A-B test thực tế với OpenAI. Phát sinh khi rà soát Requirement #3 (Sprint 3).
 - **Prompt Versioning** — chưa có cơ chế lưu lịch sử thay đổi prompt theo thời gian cho từng plugin. Phát sinh khi rà soát Requirement #3 (Sprint 3).
 - **Cost Tracking** theo provider/plugin — chưa theo dõi chi phí sử dụng OpenAI (token/usage) theo từng lần Generate; xem thêm mục "Theo dõi chi phí/quota" đã ghi ở dưới (cùng ý, gộp lại).
+- **Slider Generator: field `ctaText` hiện không có tác dụng** — Draft content có field này nhưng `js/home.js` không đọc (nút CTA dùng text cố định trong HTML, chỉ đổi `link`). Cần quyết định: làm cho field này có tác dụng thật (đổi text nút CTA theo từng slide) hoặc bỏ hẳn. Phát sinh khi rà soát Requirement #4 (Sprint 3), không sửa vì là Refactor ngoài phạm vi "chỉ kích hoạt sang Production".
+- **Slider Generator: để AI tự gợi ý nội dung nút CTA** — hiện nội dung nút chỉ là lựa chọn cố định từ dropdown `ctaStyle` (Admin chọn tay), không phải do AI sinh ra. Phát sinh khi rà soát Requirement #4 (Sprint 3).
 - **Job Queue V2**: chuyển xử lý `aiJobs` sang Firebase Cloud Functions (trigger theo dữ liệu) — xử lý tuần tự thật sự, không phụ thuộc trình duyệt Admin còn mở hay không.
 - ✅ ~~Bảo mật API key provider~~ — **đã làm cho OpenAI** ở Sprint 3 Requirement #1 qua Cloud Function Proxy (`functions/openaiProxy`, key trong Secret Manager, không lưu Firebase/không lộ client). Xem `ARCHITECTURE_REVIEW_SPRINT3.md`.
 - **Áp dụng lại mẫu Cloud Function Proxy cho Claude/Gemini/DeepSeek** khi các provider này được tích hợp thật ở sprint sau — dùng đúng khuôn mẫu `functions/index.js` đã có, không thiết kế lại (xem `ARCHITECTURE_REVIEW_SPRINT3.md`, phân loại C).
