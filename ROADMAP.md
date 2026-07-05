@@ -2,7 +2,7 @@
 
 Mọi mục dưới đây cần được yêu cầu rõ ràng ở 1 sprint sau mới triển khai. Không tự ý code trước khi được giao.
 
-> **Sprint 3 COMPLETED. Sprint 4 Requirement #1 (AI Assistant Entry Point + AI Task Router) đã hoàn tất** — xem `CHANGELOG.md` mục "Sprint 4". Các mục dưới đây vẫn ở dạng ghi nhận, chưa triển khai trừ khi ghi chú khác — chưa làm Sprint 4 Requirement #2.
+> **Sprint 3 COMPLETED. Sprint 4 Requirement #1 (AI Assistant Entry Point + AI Task Router) và Requirement #2 (theo dõi tiến trình + Draft Preview tại chỗ) đã hoàn tất** — xem `CHANGELOG.md` mục "Sprint 4". Các mục dưới đây vẫn ở dạng ghi nhận, chưa triển khai trừ khi ghi chú khác — chưa làm Sprint 4 Requirement #3.
 
 ## AI Assistant
 
@@ -35,7 +35,7 @@ Mọi mục dưới đây cần được yêu cầu rõ ràng ở 1 sprint sau m
 - **Mở rộng Constitution (`AI_RULES.md`) để `AI Task Router` được ghi Log** khi không xác định được Plugin/đối tượng (`plugin_not_found`/`target_not_found`/`target_ambiguous`) — hiện các trường hợp này CHỈ hiển thị ở UI (`js/admin-ai-assistant.js`), không ghi vào `aiLogs`, vì Constitution hiện chỉ cho phép `AIJobQueue`/`PermissionService` ghi Log (xem `PROJECT_ARCHITECTURE.md` mục "AI Assistant — Experience Layer"). Cần Chief Architect quyết định có nên sửa Constitution hay không — không tự ý mở rộng ở Sprint 4 Requirement #1.
 - **Intent Analysis dùng AI thật thay vì rule-based** — `AI Task Router` hiện chỉ khớp từ khóa/tên thực thể cố định (không gọi OpenAI, không dùng AI Provider nào), theo đúng ràng buộc "không gọi OpenAI trực tiếp/không thêm AI Provider mới" của Sprint 4 Requirement #1. Nếu muốn Router hiểu ý định linh hoạt hơn (câu phức tạp, nhiều cách diễn đạt), cần thiết kế riêng cách Router gọi AI mà vẫn không phá ranh giới kiến trúc hiện tại (vd: có nên xem đây là 1 "Plugin nội bộ" gọi qua đúng Provider Manager, hay cần cơ chế mới) — để ngỏ, không quyết định trước.
 - **Giao diện chọn thủ công khi đối tượng bị "ambiguous"** — hiện AI Assistant chỉ liệt kê tên các mục khớp trong thông báo lỗi, chưa cho bấm chọn trực tiếp 1 trong số đó để tiếp tục (người dùng phải gõ lại yêu cầu rõ hơn). Phát sinh khi rà soát Sprint 4 Requirement #1.
-- **Gộp trạng thái Job/Draft ngay trong AI Assistant** (theo dõi tiến trình + duyệt Draft tại chỗ, không cần mở riêng Job Queue/Drafts) — đã ghi nhận từ Sprint 4 Planning (Revision), chưa triển khai ở Requirement #1 (chỉ làm Entry Point + Router).
+- ✅ ~~Gộp trạng thái Job/Draft ngay trong AI Assistant~~ — **đã làm** ở Sprint 4 Requirement #2 (theo dõi tiến trình + Draft Preview + Publish/Reject tại chỗ qua `publishDraftById()`/`rejectDraftById()`).
 
 ## CMS / Hạ tầng chung
 

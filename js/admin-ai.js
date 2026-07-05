@@ -235,6 +235,24 @@ const AdminAI = (function () {
     DraftDB.update(id, { status: 'rejected' }).then(loadDrafts);
   }
 
+  // publishDraftById/rejectDraftById (Sprint 4, Requirement #2) — tái sử dụng
+  // ĐÚNG cơ chế publish/reject có sẵn (publishToTarget() ở trên, không viết
+  // lại) nhưng không phụ thuộc mảng `drafts` cục bộ của trang Duyệt nội dung
+  // — cho phép AI Assistant (admin/ai/assistant.html) publish/reject 1 Draft
+  // biết trước id mà không cần gọi initDrafts()/loadDrafts() của trang này
+  // trước (tránh gọi trùng AdminAuth.init() giữa 2 trang, giảm coupling).
+  // Không đổi publishDraft()/rejectDraft()/initDrafts() ở trên.
+  function publishDraftById(id) {
+    return DraftDB.get(id).then(draft => {
+      if (!draft) return Promise.reject(new Error('Không tìm thấy nội dung nháp.'));
+      return publishToTarget(draft).then(() => DraftDB.update(id, { status: 'published', publishedAt: Date.now() }));
+    });
+  }
+
+  function rejectDraftById(id) {
+    return DraftDB.update(id, { status: 'rejected' });
+  }
+
   /* ============== JOB QUEUE MONITOR (admin/ai/jobs.html) ============== */
 
   function initJobs() {
@@ -344,5 +362,5 @@ const AdminAI = (function () {
     }).join('');
   }
 
-  return { initDashboard, runModule, initDrafts, publishDraft, rejectDraft, initJobs, cancelJob, retryJob, initLogs };
+  return { initDashboard, runModule, initDrafts, publishDraft, rejectDraft, publishDraftById, rejectDraftById, initJobs, cancelJob, retryJob, initLogs };
 })();

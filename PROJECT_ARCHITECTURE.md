@@ -215,7 +215,7 @@ Requirement cuối cùng của Sprint 3 — tái xác nhận toàn bộ AI Frame
 - **Security Verification**: xác nhận lại Permission/RBAC/Queue/Draft/API Key đều đúng; riêng Firebase Database Rules KHÔNG version-control trong repo nên không thể xác minh trực tiếp từ môi trường này (ghi Known Limitations).
 - **Kết luận**: Code 100% sẵn sàng Pilot Production. Kích hoạt Pilot Production thật (traffic thật, response OpenAI thật) chờ deploy Cloud Function.
 
-## AI Assistant — Experience Layer + AI Task Router (Sprint 4, Requirement #1)
+## AI Assistant — Experience Layer + AI Task Router (Sprint 4, Requirement #1–#2)
 
 Sprint 4 thêm 1 lớp MỚI nằm **bên trên** toàn bộ kiến trúc Sprint 2/3 — không sửa `job-queue.js`/`plugin-manager.js`/`provider-registry.js`/`permission-service.js`/`data-provider.js`/`AI_RULES.md`. Về vai trò kiến trúc, lớp này tương đương `js/admin-ai.js` (1 caller mới của `PluginManager`), chỉ khác ở chỗ người dùng gõ yêu cầu tự do thay vì chọn Plugin từ danh sách:
 
@@ -235,6 +235,24 @@ User → AI Assistant (admin/ai/assistant.html, js/admin-ai-assistant.js)
 - **Quyết định kiến trúc quan trọng — ranh giới Logging**: `AI_RULES.md` mục 7 (Constitution) quy định CHỈ `AIJobQueue` và `PermissionService` (khi từ chối quyền) được ghi vào `LogDB`/`aiLogs`. Trường hợp `permission_denied` tự động có Log nhờ `PermissionService` sẵn có (không cần code mới). Nhưng khi Router không xác định được Plugin/đối tượng, sự việc xảy ra TRƯỚC khi có Plugin nào được xác định — Router **không** tự ghi Log ở đây, vì (1) sẽ vi phạm Constitution "chỉ Queue/PermissionService ghi Log", và (2) sẽ vi phạm Requirement #3 (Router chỉ được gọi `PermissionService`/`PluginManager.execute()`, không liệt kê `LogDB`). Các trường hợp này chỉ hiển thị thông báo ở UI, không ghi vào `aiLogs`. Ý tưởng "mở rộng Constitution cho Router ghi Log" đã đưa vào `ROADMAP.md`, không tự ý quyết định ở Requirement này.
 - **Điều hướng**: thêm 1 mục MỚI trong `ADMIN_NAV` (`js/admin-auth.js`): `{key:'ai-assistant', label:'Trợ lý AI', href:'/admin/ai/assistant.html'}` — thêm thêm, không đổi/xóa mục "AI Assistant" cũ (`admin/ai/index.html`, Plugin Dashboard) — trang cũ vẫn dùng được nguyên vẹn làm nơi chọn Plugin thủ công (fallback khi AI Assistant không hiểu yêu cầu).
 - **Không đổi**: `IAIPlugin`/`IAIProvider`, Queue, Plugin Manager, Provider Manager, Permission Service, Data Provider, Draft Workflow, Human Review, Database Structure/Collection. 3 Plugin Production (Product/SEO/Slider) không có dòng code nào bị sửa.
+
+### Theo dõi tiến trình + Draft Preview tại chỗ (Requirement #2)
+
+AI Assistant hoàn thiện thành 1 Experience Layer trọn vẹn — không chỉ gửi yêu cầu mà còn theo dõi kết quả và xử lý Human Review ngay tại `admin/ai/assistant.html`:
+
+```
+... → PluginManager.execute() → Queue (enqueue)
+    → AI Assistant gọi AIJobQueue.resume() (API công khai có sẵn, không bypass Queue)
+    → AI Assistant theo dõi đúng 1 Job (JobDB.get(jobId), không polling toàn bộ JobDB)
+    → Completed: đọc job.items[0].resultDraftId → DraftDB.get() → Preview
+    → Duyệt & Publish / Từ chối (AdminAI.publishDraftById()/rejectDraftById())
+```
+
+- **Khoảng trống phát hiện + sửa**: sau `dispatch()` (Requirement #1), Job chỉ được `enqueue()` — không có gì gọi `AIJobQueue.resume()` nên Job không bao giờ thực sự chạy cho tới khi ai mở `admin/ai/jobs.html`. `js/admin-ai-assistant.js` nay tự gọi `AIJobQueue.resume(userId, userEmail)` sau khi `dispatch()` thành công — dùng đúng API công khai của Queue, giống hệt cách `js/admin-ai.js` `runModule()` đã làm cho Dashboard cũ, không phải cơ chế mới.
+- **`publishDraftById(id)`/`rejectDraftById(id)`** (mới thêm vào `js/admin-ai.js`) — tái sử dụng đúng hàm `publishToTarget()` private đã có (không sao chép Publish Logic), không phụ thuộc mảng `drafts` cục bộ của trang Duyệt nội dung. Xem Decision Record trong `CHANGELOG.md` mục Sprint 4 Requirement #2 về lý do chọn cách này thay vì gọi lại `publishDraft(id)`/`rejectDraft(id)` cũ trực tiếp.
+- **Theo dõi tiến trình**: chỉ đọc đúng 1 Job (`JobDB.get(jobId)`, ngắt khi kết thúc, giới hạn ~60s) — không tăng tải Firebase so với việc mở `admin/ai/jobs.html` (NFR Performance của Requirement #2).
+- **Failed hiển thị đúng nguyên nhân**: đọc `job.items[0].error` (message thật từ Provider/Cloud Function Proxy khi lỗi) — không hiển thị "Unknown Error" chung chung.
+- `admin/ai/jobs.html`/`admin/ai/drafts.html` không đổi, vẫn hoạt động độc lập.
 
 ## Giới hạn kiến trúc đã biết (không tự ý "vá" bằng cách thêm hạ tầng mới)
 

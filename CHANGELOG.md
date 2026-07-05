@@ -2,6 +2,25 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 4 — AI Assistant: Experience Layer hoàn chỉnh (Requirement #2)
+
+Hoàn thiện vòng lặp tương tác của AI Assistant (Requirement #1): sau khi gửi yêu cầu, người dùng theo dõi toàn bộ tiến trình và xem/Duyệt/Từ chối Draft **ngay tại `admin/ai/assistant.html`** — không cần rời sang `admin/ai/jobs.html`/`admin/ai/drafts.html`. Không sửa Sprint 2/3, không sửa `js/ai/task-router.js` (Requirement #1), không đổi Constitution.
+
+- **Decision Record đã xử lý (ghi lại quyết định)**: có 2 phương án để "tái sử dụng đúng cơ chế Publish/Reject có sẵn" trong `js/admin-ai.js`:
+  - *Phương án A (đã chọn)*: thêm 2 hàm MỚI `publishDraftById(id)`/`rejectDraftById(id)` vào `js/admin-ai.js`, tái sử dụng nguyên hàm `publishToTarget()` private đã có — không phụ thuộc mảng `drafts` cục bộ của trang Duyệt nội dung, không cần gọi `AdminAuth.init()` lần 2.
+  - *Phương án B (không chọn)*: gọi thẳng `AdminAI.publishDraft(id)`/`rejectDraft(id)` cũ, nhưng phải gọi thêm `AdminAI.initDrafts()` để nạp mảng `drafts` nội bộ trước — phát sinh `AdminAuth.init()`/`onAuthStateChanged` lần 2 trên cùng 1 trang, và có nguy cơ "im lặng không làm gì" nếu gọi `publishDraft(id)` trước khi mảng `drafts` kịp nạp (lỗi tiềm ẩn, khó phát hiện).
+  - **Khuyến nghị/Lý do chọn A**: giảm Coupling đúng theo NFR của Requirement #2 (không phụ thuộc trạng thái nội bộ của 1 trang khác), không có nguy cơ "im lặng thất bại", không đổi `publishDraft()`/`rejectDraft()`/`initDrafts()` cũ (0 rủi ro hồi quy cho `admin/ai/drafts.html`).
+- **Thêm** `publishDraftById(id)`/`rejectDraftById(id)` trong `js/admin-ai.js` — tái sử dụng đúng `publishToTarget()`/`DraftDB` có sẵn, **không sao chép Publish Logic**. `publishDraft()`, `rejectDraft()`, `initDrafts()`, `loadDrafts()`, `renderDrafts()` giữ nguyên 100%.
+- **Sửa** `js/admin-ai-assistant.js`:
+  - Sau khi `AITaskRouter.dispatch()` tạo Job thành công, gọi `AIJobQueue.resume(userId, userEmail)` — đây là API công khai có sẵn của Queue (giống hệt `js/admin-ai.js` `runModule()` đã làm cho Dashboard cũ), không bypass Queue. **Đây là 1 khoảng trống thực sự phát hiện được từ Requirement #1**: trước đây `dispatch()` chỉ enqueue Job (status `queued`) mà không có gì gọi `resume()`, nên Job tạo từ AI Assistant sẽ không bao giờ chạy cho tới khi ai đó mở `admin/ai/jobs.html`. Đã sửa trong Requirement #2 vì đây là điều kiện tiên quyết để "theo dõi tiến trình" có ý nghĩa.
+  - Thêm theo dõi tiến trình: `trackJob(jobId, routeResult)` chỉ đọc đúng 1 Job vừa tạo (`JobDB.get(jobId)`, polling ngắt khi Job kết thúc, giới hạn tối đa ~60s) — không polling toàn bộ `JobDB` như `admin/ai/jobs.html` (đúng NFR Performance).
+  - Trạng thái hiển thị: Request Received → Processing → Completed/Draft Ready hoặc Failed (kèm nguyên nhân thật từ `item.error`, không hiển thị "Unknown Error" chung chung).
+  - Khi Completed, đọc `job.items[0].resultDraftId` → `DraftDB.get()` → hiển thị Preview (JSON, cùng kiểu với `admin/ai/drafts.html`) + nút "DUYỆT & PUBLISH"/"TỪ CHỐI" gọi `AdminAI.publishDraftById()`/`rejectDraftById()`.
+- **Xác nhận không đổi**: `js/ai/task-router.js` (Requirement #1), `job-queue.js`, `plugin-manager.js`, `provider-registry.js`, `permission-service.js`, `data-provider.js`, `AI_RULES.md`. `admin/ai/jobs.html`/`admin/ai/drafts.html` hoạt động độc lập, không bị thay thế.
+- **Kiểm thử**: mô phỏng chạy `js/admin-ai.js` thật qua Node `vm` (không DOM) — `publishDraftById()` tái sử dụng đúng `publishToTarget()` cho cả 3 `targetCollection` (`products`/`blogPosts`/`siteContent.heroSlides`), báo lỗi rõ ràng khi Draft không tồn tại (khác hành vi "im lặng" của `publishDraft()` cũ), các hàm cũ không đổi. Mô phỏng lại `job-queue.js` thật xác nhận hình dạng dữ liệu Job/Draft (`item.resultDraftId` khi thành công, `item.error` thật khi thất bại) khớp đúng những gì `admin-ai-assistant.js` đọc. Kiểm tra `admin/ai/assistant.html` qua static server — 0 lỗi console.
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md` (đánh dấu hoàn tất mục đã ghi ở Requirement #1).
+- Chưa triển khai Requirement #3.
+
 ## Sprint 4 — AI Assistant Entry Point + AI Task Router (Requirement #1)
 
 Sprint 4 chuyển trọng tâm từ "xây AI Framework" (Sprint 2/3) sang "AI là lớp trải nghiệm chính" (Experience Layer) — theo đúng Sprint 4 Planning (Revision) đã được Chief Architect phê duyệt. Không sửa Sprint 2/3, không đổi Constitution (`AI_RULES.md`), không refactor `job-queue.js`/`plugin-manager.js`/`provider-registry.js`/`permission-service.js`/`data-provider.js`.
