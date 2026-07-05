@@ -2,6 +2,24 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 4 — AI Conversation History (Requirement #4)
+
+Bổ sung khả năng xem lại các phiên làm việc trước đây của AI Assistant, giúp AI Assistant trở thành trung tâm làm việc thay vì chỉ là nơi nhập Prompt. Không sửa Sprint 2/3, không sửa Requirement #1/#2/#3 (`task-router.js`, Queue, Plugin Manager, Provider Manager, Permission Service, Data Provider, Draft/Human Review Workflow).
+
+- **Database Policy — không tạo Database/Collection/field mới**: Conversation History tổng hợp hoàn toàn từ `aiJobs` (`JobDB.getAll()`) + `aiDrafts` (`DraftDB.get()`) + `products`/`blogPosts` (`DB.getAll()`/`BlogDB.getAll()`) đã có — không cần Decision Record "Database mới" vì chứng minh được reuse là đủ, không phát sinh Database mới ở Requirement này.
+- **Ghi chú quan trọng cần biết (không phải bug — giới hạn có chủ đích)**: "User Request" hiển thị trong Lịch sử là **mô tả suy ra** (`outcomeLabel` + tên đối tượng, vd `Mô tả sản phẩm — "Loa JBL PartyBox 310"`), **KHÔNG phải nguyên văn câu người dùng đã gõ**. Lý do: `aiJobs`/`aiDrafts`/`aiLogs` hiện tại (Requirement #1–#3) không lưu lại chuỗi tự do người dùng gõ ở bất kỳ đâu — chỉ lưu `inputParams` đã được `AITaskRouter` phân giải (vd `{productId, tone}`). Vì Database Policy ưu tiên cao nhất "không thêm Database/field mới", đã chọn cách suy luận lại mô tả từ dữ liệu đã có thay vì thêm 1 field mới vào `aiJobs` để lưu nguyên văn câu gõ — thỏa mãn đầy đủ Functional Requirement #2/#8 (hiển thị + tìm kiếm theo "Request") mà không cần bất kỳ thay đổi Database Structure nào.
+- **Thêm** vào `js/admin-ai-assistant.js`:
+  - `loadHistory()` — tải `JobDB.getAll()` + `DB.getAll()`/`BlogDB.getAll()` (danh sách Product/Blog Post để tra tên), giới hạn hiển thị 50 phiên gần nhất (cùng cách `admin/ai/logs.html` giới hạn 200 — NFR "mở rộng khi Conversation tăng").
+  - `outcomeLabelForModule(moduleId)` — suy nhãn hiển thị từ `AITaskRouter.ROUTES` đã công khai (không sửa Router); fallback về nhãn Plugin thật (`AIModuleRegistry`) cho Job tạo từ Plugin Manager cũ (`admin/ai/index.html`) — Conversation History hiển thị TẤT CẢ `aiJobs` bất kể tạo từ đâu, không chỉ job từ AI Assistant, vì không có field nào phân biệt nguồn gốc Job và không muốn thêm field mới chỉ để lọc.
+  - `renderHistoryList()` — tìm kiếm/lọc theo Request (text), Plugin (dropdown), Thời gian (ngày) — lọc hoàn toàn trên dữ liệu đã tải, không gọi thêm Firebase mỗi lần gõ tìm kiếm (Functional Requirement #8).
+  - `openHistorySession(entry)` — mở lại 1 phiên: **chỉ đọc** (`DraftDB.get()`), **KHÔNG gọi** `AIJobQueue.resume()`/`AITaskRouter.dispatch()` — tuyệt đối không tự chạy lại Job/Generate lại (Functional Requirement #4). Hiển thị đúng trạng thái Draft thật: còn `draft` → tái sử dụng `renderDraftPreview()` (Requirement #2, không viết lại) cho Preview + Duyệt/Từ chối; `published` → hiển thị Published kèm thời gian; `rejected` → hiển thị Rejected.
+  - Sau khi 1 Job mới kết thúc (thành công/thất bại/hủy) hoặc sau khi Publish/Reject (kể cả từ trong Lịch sử), gọi lại `loadHistory()` để danh sách luôn khớp dữ liệu thật.
+- **Thêm** khung "Lịch sử làm việc" (bảng + ô tìm kiếm/lọc) vào `admin/ai/assistant.html` — không có trang mới, vẫn cùng 1 trang AI Assistant.
+- **Xác nhận không đổi**: `js/ai/task-router.js`, `job-queue.js`, `plugin-manager.js`, `provider-registry.js`, `permission-service.js`, `data-provider.js`, `AI_RULES.md`, `js/admin-ai.js` (không thêm hàm mới lần này — `publishDraftById`/`rejectDraftById` từ Requirement #2 đã đủ dùng).
+- **Kiểm thử**: chạy thật `js/admin-ai-assistant.js` qua Node `vm` với DOM giả lập tối thiểu (khác các Requirement trước — file này là Experience Layer thuần UI, không có logic nghiệp vụ mới để mô phỏng tách biệt) — xác nhận `loadHistory()`/`renderHistoryList()` tổng hợp đúng dữ liệu Job/Product/Blog Post thật thành mô tả đúng định dạng, lọc theo Plugin và tìm theo Request đều hoạt động đúng trên dữ liệu đã tải. Kiểm tra `admin/ai/assistant.html` qua static server — 0 lỗi console.
+- Cập nhật `PROJECT_ARCHITECTURE.md`.
+- Chưa triển khai Requirement #5.
+
 ## Sprint 4 — Ambiguous Target Resolution (Requirement #3)
 
 Cho phép AI Assistant xử lý đúng trường hợp yêu cầu khớp nhiều đối tượng (vd "Loa JBL" khớp cả "Loa JBL" và "Loa JBL PartyBox 310") — người dùng chọn đúng đối tượng từ danh sách, **không cần gõ lại yêu cầu**. Không sửa `js/ai/task-router.js` (Requirement #1), không sửa cơ chế theo dõi tiến trình/Draft (Requirement #2), không sửa Sprint 2/3.

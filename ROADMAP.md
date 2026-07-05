@@ -2,7 +2,7 @@
 
 Mọi mục dưới đây cần được yêu cầu rõ ràng ở 1 sprint sau mới triển khai. Không tự ý code trước khi được giao.
 
-> **Sprint 3 COMPLETED. Sprint 4 Requirement #1–#3 đã hoàn tất** (AI Assistant Entry Point + AI Task Router; theo dõi tiến trình + Draft Preview tại chỗ; Ambiguous Target Resolution) — xem `CHANGELOG.md` mục "Sprint 4". Các mục dưới đây vẫn ở dạng ghi nhận, chưa triển khai trừ khi ghi chú khác — chưa làm Sprint 4 Requirement #4.
+> **Sprint 3 COMPLETED. Sprint 4 Requirement #1–#4 đã hoàn tất** (AI Assistant Entry Point + AI Task Router; theo dõi tiến trình + Draft Preview tại chỗ; Ambiguous Target Resolution; AI Conversation History) — xem `CHANGELOG.md` mục "Sprint 4". Các mục dưới đây vẫn ở dạng ghi nhận, chưa triển khai trừ khi ghi chú khác — chưa làm Sprint 4 Requirement #5.
 
 ## AI Assistant
 
@@ -32,6 +32,9 @@ Mọi mục dưới đây cần được yêu cầu rõ ràng ở 1 sprint sau m
 
 - **Version-control Firebase Realtime Database Rules** (`database.rules.json`) trong repo thay vì chỉ quản lý trên Firebase Console — giúp review/rollback rules dễ hơn, đặc biệt sau khi Cloud Function `openaiProxy` bắt đầu đọc node `roles`. Phát sinh khi rà soát Requirement #5 (Sprint 3).
 - **Test tự động (CI)** cho `job-queue.js`/`permission-service.js`/3 plugin Production/`task-router.js` — mới kiểm thử thủ công qua mô phỏng Node `vm` ở từng Requirement, chưa phải bộ test chạy tự động trong CI.
+- **Lưu nguyên văn "User Request"** — hiện Conversation History (Sprint 4, Requirement #4) chỉ hiển thị mô tả suy ra (outcomeLabel + tên đối tượng), không phải câu tự do người dùng đã gõ, vì hệ thống hiện không lưu chuỗi đó ở đâu. Nếu cần xem lại NGUYÊN VĂN câu gõ, cần thêm 1 field mới vào `aiJobs` (vd `userRequestText`) — đây LÀ 1 thay đổi Database Structure, cần Decision Record riêng và Chief Architect phê duyệt trước, không tự triển khai.
+- **Phân trang thật (Firebase query pagination)** cho Conversation History/Job Queue/Nhật ký khi số lượng tăng lớn — hiện cả 3 trang đều tải toàn bộ node rồi cắt bớt phía client (`.slice()`), không dùng `limitToLast`/`orderByChild` của Firebase. Phát sinh khi rà soát Sprint 4 Requirement #4.
+- **Phân biệt Job tạo từ AI Assistant vs Plugin Manager cũ** — hiện Conversation History hiển thị chung tất cả `aiJobs` vì không có field phân biệt nguồn gốc; nếu cần tách riêng, đó cũng là 1 thay đổi Database Structure (thêm field nguồn gốc Job), cần Decision Record.
 - **Mở rộng Constitution (`AI_RULES.md`) để `AI Task Router` được ghi Log** khi không xác định được Plugin/đối tượng (`plugin_not_found`/`target_not_found`/`target_ambiguous`) — hiện các trường hợp này CHỈ hiển thị ở UI (`js/admin-ai-assistant.js`), không ghi vào `aiLogs`, vì Constitution hiện chỉ cho phép `AIJobQueue`/`PermissionService` ghi Log (xem `PROJECT_ARCHITECTURE.md` mục "AI Assistant — Experience Layer"). Cần Chief Architect quyết định có nên sửa Constitution hay không — không tự ý mở rộng ở Sprint 4 Requirement #1.
 - **Intent Analysis dùng AI thật thay vì rule-based** — `AI Task Router` hiện chỉ khớp từ khóa/tên thực thể cố định (không gọi OpenAI, không dùng AI Provider nào), theo đúng ràng buộc "không gọi OpenAI trực tiếp/không thêm AI Provider mới" của Sprint 4 Requirement #1. Nếu muốn Router hiểu ý định linh hoạt hơn (câu phức tạp, nhiều cách diễn đạt), cần thiết kế riêng cách Router gọi AI mà vẫn không phá ranh giới kiến trúc hiện tại (vd: có nên xem đây là 1 "Plugin nội bộ" gọi qua đúng Provider Manager, hay cần cơ chế mới) — để ngỏ, không quyết định trước.
 - ✅ ~~Giao diện chọn thủ công khi đối tượng bị "ambiguous"~~ — **đã làm** ở Sprint 4 Requirement #3 (bảng chọn Tên/Danh mục/ID/Ngày tạo, không cần gõ lại yêu cầu).

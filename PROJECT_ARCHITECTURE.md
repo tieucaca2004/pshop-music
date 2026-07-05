@@ -215,7 +215,7 @@ Requirement cuối cùng của Sprint 3 — tái xác nhận toàn bộ AI Frame
 - **Security Verification**: xác nhận lại Permission/RBAC/Queue/Draft/API Key đều đúng; riêng Firebase Database Rules KHÔNG version-control trong repo nên không thể xác minh trực tiếp từ môi trường này (ghi Known Limitations).
 - **Kết luận**: Code 100% sẵn sàng Pilot Production. Kích hoạt Pilot Production thật (traffic thật, response OpenAI thật) chờ deploy Cloud Function.
 
-## AI Assistant — Experience Layer + AI Task Router (Sprint 4, Requirement #1–#3)
+## AI Assistant — Experience Layer + AI Task Router (Sprint 4, Requirement #1–#4)
 
 Sprint 4 thêm 1 lớp MỚI nằm **bên trên** toàn bộ kiến trúc Sprint 2/3 — không sửa `job-queue.js`/`plugin-manager.js`/`provider-registry.js`/`permission-service.js`/`data-provider.js`/`AI_RULES.md`. Về vai trò kiến trúc, lớp này tương đương `js/admin-ai.js` (1 caller mới của `PluginManager`), chỉ khác ở chỗ người dùng gõ yêu cầu tự do thay vì chọn Plugin từ danh sách:
 
@@ -270,6 +270,26 @@ route() trả target_ambiguous + danh sách {id,label}
 - **Không sửa `js/ai/task-router.js`** — chỉ tiêu thụ nhiều hơn dữ liệu nó đã công khai sẵn (`ROUTES`, `routeResult.ambiguous`). Về mặt lý thuyết có thể mở rộng API của Router để tự trả routeResult đã giải quyết, nhưng phương án đó bị loại ngay vì vi phạm trực tiếp ràng buộc "không sửa AI Task Router" của Requirement #3 — không phải 1 lựa chọn kiến trúc cần cân nhắc thêm.
 - Dữ liệu hiển thị (Tên/Danh mục/ID/Ngày tạo) lấy từ `candidates` đã tải ở bước đầu (`DB.getAll()`/`BlogDB.getAll()`), không phát sinh lời gọi Firebase mới khi hiển thị danh sách chọn.
 - Không tạo đường xử lý mới ngoài Workflow hiện tại — sau khi chọn, luồng tiếp tục qua đúng `dispatchAndShow()` đã có từ Requirement #2 (Permission → Plugin Manager → Queue → Provider → Draft → Human Review), không có nhánh gọi Plugin/Queue nào khác.
+
+### AI Conversation History (Requirement #4)
+
+AI Assistant cho xem lại các phiên làm việc trước đây, giúp trở thành trung tâm làm việc thay vì chỉ là nơi nhập Prompt — **không tạo Database/Collection/field mới**, tổng hợp hoàn toàn từ dữ liệu đã có:
+
+```
+"Phiên làm việc" = 1 bản ghi trong aiJobs (JobDB.getAll())
+    → làm giàu bằng AITaskRouter.ROUTES (outcomeLabel, đã công khai, không sửa Router)
+      + DB.getAll()/BlogDB.getAll() (tên Product/Blog Post that, đã tải sẵn)
+    → hiển thị danh sách + tìm kiếm/lọc (Request/Plugin/Thời gian) — lọc trên dữ liệu đã tải, không gọi thêm Firebase
+    → Mở 1 phiên: CHỈ ĐỌC (JobDB đã tải + DraftDB.get()) — KHÔNG gọi AIJobQueue.resume()/AITaskRouter.dispatch()
+    → Draft còn 'draft': tái sử dụng renderDraftPreview() (Requirement #2) cho Preview + Duyệt/Từ chối
+    → Draft 'published'/'rejected': chỉ hiển thị trạng thái + nội dung đã lưu
+```
+
+- **Database Policy đã tuân thủ**: không có Decision Record "Database mới" vì chứng minh được dữ liệu hiện có (`aiJobs`/`aiDrafts`/`products`/`blogPosts`) đã đủ — không phát sinh Database/Collection/field mới nào.
+- **Giới hạn có chủ đích (không phải bug)**: "User Request" hiển thị là **mô tả suy ra** (`outcomeLabel` + tên đối tượng, vd `Mô tả sản phẩm — "Loa JBL PartyBox 310"`), KHÔNG phải nguyên văn câu người dùng gõ — vì hệ thống hiện tại không lưu chuỗi tự do đó ở bất kỳ đâu (`aiJobs.items[].inputParams` chỉ lưu dữ liệu đã được `AITaskRouter` phân giải, vd `{productId, tone}`). Đây là lựa chọn có chủ đích để tránh thêm field mới vào `aiJobs`, đúng ưu tiên cao nhất của Database Policy — nếu sau này cần lưu nguyên văn câu gõ, đó sẽ là 1 thay đổi Database Structure cần Decision Record riêng (đã ghi ý tưởng vào `ROADMAP.md`).
+- **Conversation History hiển thị TẤT CẢ `aiJobs`**, không chỉ Job tạo từ AI Assistant — vì hiện không có field nào phân biệt "Job tạo từ AI Assistant" với "Job tạo từ Plugin Manager cũ" (`admin/ai/index.html`), và thêm field đó sẽ vi phạm Database Policy. `outcomeLabelForModule()` fallback về nhãn Plugin thật (`AIModuleRegistry`) cho các Job không khớp route nào trong `AITaskRouter.ROUTES`.
+- Giới hạn hiển thị 50 phiên gần nhất (cùng cách `admin/ai/logs.html` giới hạn 200) — không phải phân trang thật (Firebase query pagination), chỉ là cắt bớt phía client, cùng mức độ "mở rộng được" như các trang Job Queue/Nhật ký hiện có.
+- Mở lại 1 phiên **không** bao giờ gọi `AIJobQueue.resume()`/`AITaskRouter.dispatch()` — đảm bảo tuyệt đối không tự chạy lại Job/Generate lại (Functional Requirement #4).
 
 ## Giới hạn kiến trúc đã biết (không tự ý "vá" bằng cách thêm hạ tầng mới)
 

@@ -1,9 +1,10 @@
 /*
  * AI Assistant (admin/ai/assistant.html) — Entry Point DUY NHẤT của AI
  * (Sprint 4, Requirement #1) + theo dõi tiến trình/Draft ngay tại chỗ
- * (Sprint 4, Requirement #2 — Experience Layer hoàn chỉnh). Người dùng gõ
- * yêu cầu tự do, không chọn Plugin, không biết Plugin nào chạy, và không
- * cần rời trang để biết kết quả.
+ * (Requirement #2) + Ambiguous Target Resolution (Requirement #3) +
+ * Conversation History (Requirement #4 — Experience Layer hoàn chỉnh).
+ * Người dùng gõ yêu cầu tự do, không chọn Plugin, không biết Plugin nào
+ * chạy, và không cần rời trang để biết kết quả hay xem lại việc đã làm.
  *
  * File này CHỈ là Experience Layer — không chứa Business Logic:
  * - "Hiểu yêu cầu + chọn Plugin" nằm trong AITaskRouter (js/ai/task-router.js).
@@ -15,13 +16,23 @@
  *   productSelect/blogSelect trên Dashboard cũ.
  * - Theo dõi tiến trình chỉ đọc đúng 1 Job vừa tạo (JobDB.get(jobId)) —
  *   không polling toàn bộ JobDB như admin/ai/jobs.html.
+ * - Conversation History (Requirement #4) KHÔNG tạo Database/Collection/
+ *   field mới nào — tổng hợp hoàn toàn từ `aiJobs`/`aiDrafts` đã có
+ *   (JobDB.getAll()/DraftDB.get()), cùng dữ liệu Product/Blog Post đã tải
+ *   qua DB.getAll()/BlogDB.getAll(). "User Request" hiển thị là mô tả suy ra
+ *   (outcomeLabel + tên đối tượng), không phải nguyên văn câu gõ — vì hệ
+ *   thống hiện tại (Requirement #1-#3) không lưu lại chuỗi tự do người dùng
+ *   gõ ở đâu cả, và Database Policy của Requirement #4 ưu tiên cao nhất
+ *   việc KHÔNG thêm Database/field mới. Xem PROJECT_ARCHITECTURE.md.
  */
 const AdminAIAssistant = (function () {
   const CONFIDENCE_AUTO_THRESHOLD = 95;
   const POLL_INTERVAL_MS = 1200;
   const POLL_MAX_ATTEMPTS = 50; // ~60s — tránh polling vô hạn nếu Job kẹt
+  const HISTORY_LIMIT = 50; // NFR "mở rộng khi Conversation tăng" — giữ nhẹ, cùng cách admin/ai/logs.html đã giới hạn (200)
   let user = null;
   let pollTimer = null;
+  let historyEntries = [];
 
   function escapeHtml(str) {
     return String(str || '').replace(/[&<>"']/g, c => ({
@@ -33,6 +44,16 @@ const AdminAIAssistant = (function () {
     AdminAuth.init({ page: 'ai-assistant', title: 'AI ASSISTANT' }).then(({ user: u }) => {
       user = u;
       document.getElementById('assistantSendBtn').addEventListener('click', handleSend);
+      document.getElementById('historySearchInput').addEventListener('input', renderHistoryList);
+      document.getElementById('historyPluginFilter').addEventListener('change', renderHistoryList);
+      document.getElementById('historyDateFilter').addEventListener('change', renderHistoryList);
+      document.getElementById('historyClearFilterBtn').addEventListener('click', () => {
+        document.getElementById('historySearchInput').value = '';
+        document.getElementById('historyPluginFilter').value = '';
+        document.getElementById('historyDateFilter').value = '';
+        renderHistoryList();
+      });
+      loadHistory();
     });
   }
 
@@ -177,6 +198,7 @@ const AdminAIAssistant = (function () {
       setResult(progressPanel('Đang publish...', routeResult));
       AdminAI.publishDraftById(draft.id).then(() => {
         setResult(progressPanel('Hoàn tất — đã publish vào dữ liệu thật.', routeResult));
+        loadHistory(); // cập nhật lại danh sách Lịch sử ở nền (Requirement #4) — không ảnh hưởng panel đang hiển thị
       }).catch(err => {
         setResult(progressPanel('Publish thất bại: ' + escapeHtml(err.message), routeResult));
       });
@@ -185,6 +207,7 @@ const AdminAIAssistant = (function () {
       if (!confirm('Từ chối nội dung này? Vẫn giữ lại để tra cứu, không xóa.')) return;
       AdminAI.rejectDraftById(draft.id).then(() => {
         setResult(progressPanel('Đã từ chối nội dung này.', routeResult));
+        loadHistory(); // cập nhật lại danh sách Lịch sử ở nền (Requirement #4)
       });
     });
   }
@@ -207,6 +230,14 @@ const AdminAIAssistant = (function () {
     setResult(progressPanel('Failed', routeResult, `<p style="color:#c0392b">${escapeHtml(reason)}</p>`));
   }
 
+  // Job vừa kết thúc (bất kể thành công/thất bại) — cập nhật lại danh sách
+  // Lịch sử (Requirement #4) để phiên vừa tạo xuất hiện ngay, không cần tải
+  // lại trang. Chỉ gọi ĐÚNG 1 LẦN khi Job kết thúc — không gọi mỗi lượt poll.
+  function refreshHistoryAfterJobEnds(job, routeResult) {
+    handleJobFinished(job, routeResult);
+    loadHistory();
+  }
+
   // Chỉ theo dõi đúng 1 Job vừa tạo (JobDB.get(jobId)) — không polling toàn
   // bộ JobDB như admin/ai/jobs.html, giảm tải Firebase (NFR Performance).
   function trackJob(jobId, routeResult) {
@@ -218,12 +249,13 @@ const AdminAIAssistant = (function () {
         if (!job) { stopPolling(); return; }
         if (job.status === 'completed' || job.status === 'failed') {
           stopPolling();
-          handleJobFinished(job, routeResult);
+          refreshHistoryAfterJobEnds(job, routeResult);
           return;
         }
         if (job.status === 'cancelled') {
           stopPolling();
           setResult(progressPanel('Đã hủy — job này đã bị hủy (có thể từ Job Queue).', routeResult));
+          loadHistory();
           return;
         }
         if (attempts >= POLL_MAX_ATTEMPTS) {
@@ -286,6 +318,187 @@ const AdminAIAssistant = (function () {
       } else {
         showConfirmation(routeResult);
       }
+    });
+  }
+
+  // ============== Conversation History (Sprint 4, Requirement #4) ==============
+  //
+  // Không tạo Database/Collection/field mới (Database Policy — ưu tiên cao
+  // nhất là tổng hợp từ dữ liệu hiện có). "Phiên làm việc" = 1 Job trong
+  // `aiJobs` — tái sử dụng đúng JobDB/DraftDB/DB/BlogDB đã có, không viết
+  // logic ghi dữ liệu mới. Xem PROJECT_ARCHITECTURE.md mục "Conversation
+  // History" để biết vì sao "User Request" là mô tả suy ra, không phải
+  // nguyên văn câu gõ.
+
+  const JOB_STATUS_LABELS_HISTORY = { queued: 'Đang chờ xử lý', running: 'Đang xử lý', completed: 'Hoàn tất', failed: 'Thất bại', cancelled: 'Đã hủy' };
+
+  // outcomeLabel suy từ AITaskRouter.ROUTES (đã công khai, không sửa Router)
+  // — fallback về nhãn Plugin thật (AIModuleRegistry) nếu Job không đến từ
+  // AI Assistant (vd tạo từ Plugin Manager cũ, admin/ai/index.html).
+  function outcomeLabelForModule(moduleId) {
+    const routeConfig = AITaskRouter.ROUTES.find(r => r.pluginId === moduleId);
+    if (routeConfig) return routeConfig.outcomeLabel;
+    const module = typeof AIModuleRegistry !== 'undefined' ? AIModuleRegistry.get(moduleId) : null;
+    return module ? module.label : moduleId;
+  }
+
+  function targetNameFor(inputParams, lookups) {
+    if (!inputParams) return '';
+    if (inputParams.productId && lookups.products[inputParams.productId]) return lookups.products[inputParams.productId].name;
+    if (inputParams.postId && lookups.posts[inputParams.postId]) return lookups.posts[inputParams.postId].title;
+    return '';
+  }
+
+  function buildHistoryEntry(job, lookups) {
+    const item = job.items && job.items[0];
+    const outcomeLabel = outcomeLabelForModule(job.moduleId);
+    const targetName = targetNameFor(item && item.inputParams, lookups);
+    return {
+      jobId: job.id,
+      createdAt: job.createdAt,
+      outcomeLabel,
+      targetName,
+      requestDescription: targetName ? (outcomeLabel + ' — "' + targetName + '"') : outcomeLabel,
+      jobStatus: job.status,
+      resultDraftId: item && item.resultDraftId,
+      errorMessage: item && item.error
+    };
+  }
+
+  function loadHistory() {
+    return Promise.all([
+      JobDB.getAll(),
+      typeof DB !== 'undefined' ? DB.getAll() : Promise.resolve([]),
+      typeof BlogDB !== 'undefined' ? BlogDB.getAll() : Promise.resolve([])
+    ]).then(([jobs, products, posts]) => {
+      const lookups = { products: {}, posts: {} };
+      products.forEach(p => { lookups.products[p.id] = p; });
+      posts.forEach(p => { lookups.posts[p.id] = p; });
+      historyEntries = jobs
+        .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+        .slice(0, HISTORY_LIMIT)
+        .map(job => buildHistoryEntry(job, lookups));
+      populatePluginFilterOptions();
+      renderHistoryList();
+    });
+  }
+
+  function populatePluginFilterOptions() {
+    const select = document.getElementById('historyPluginFilter');
+    const current = select.value;
+    const labels = Array.from(new Set(historyEntries.map(e => e.outcomeLabel))).sort();
+    select.innerHTML = '<option value="">Tất cả công việc</option>' +
+      labels.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+    select.value = current;
+  }
+
+  // Tìm kiếm theo Request/Plugin/Thời gian (Functional Requirement #8) —
+  // lọc hoàn toàn trên dữ liệu đã tải (historyEntries), không gọi thêm
+  // Firebase mỗi lần gõ tìm kiếm.
+  function renderHistoryList() {
+    const searchText = document.getElementById('historySearchInput').value.trim().toLowerCase();
+    const pluginFilter = document.getElementById('historyPluginFilter').value;
+    const dateFilter = document.getElementById('historyDateFilter').value; // yyyy-mm-dd
+
+    const filtered = historyEntries.filter(e => {
+      if (searchText && !e.requestDescription.toLowerCase().includes(searchText)) return false;
+      if (pluginFilter && e.outcomeLabel !== pluginFilter) return false;
+      if (dateFilter) {
+        const d = e.createdAt ? new Date(e.createdAt) : null;
+        const dStr = d ? d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') : '';
+        if (dStr !== dateFilter) return false;
+      }
+      return true;
+    });
+
+    const body = document.getElementById('historyTableBody');
+    if (!filtered.length) {
+      body.innerHTML = '<tr><td colspan="5" style="color:var(--ink-mute);text-align:center;padding:2rem">Chưa có phiên làm việc nào khớp.</td></tr>';
+      return;
+    }
+    body.innerHTML = filtered.map(e => `
+      <tr>
+        <td>${escapeHtml(e.requestDescription)}</td>
+        <td>${escapeHtml(e.outcomeLabel)}</td>
+        <td>${e.createdAt ? escapeHtml(new Date(e.createdAt).toLocaleString('vi-VN')) : '—'}</td>
+        <td>${escapeHtml(JOB_STATUS_LABELS_HISTORY[e.jobStatus] || e.jobStatus)}</td>
+        <td><button class="btn-secondary assistant-history-open-btn" data-job-id="${escapeHtml(e.jobId)}">Xem</button></td>
+      </tr>`).join('');
+
+    document.querySelectorAll('.assistant-history-open-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const entry = historyEntries.find(e => e.jobId === btn.getAttribute('data-job-id'));
+        if (entry) openHistorySession(entry);
+      });
+    });
+  }
+
+  // Mở lại 1 phiên làm việc — CHỈ hiển thị lịch sử (Functional Requirement
+  // #4): không gọi AIJobQueue.resume(), không gọi AITaskRouter.dispatch() —
+  // tuyệt đối không tự chạy lại Job / Generate lại.
+  function openHistorySession(entry) {
+    stopPolling();
+    const pseudoRouteResult = { outcomeLabel: entry.outcomeLabel, targetLabel: entry.targetName };
+    const backLink = '<p style="margin-top:1rem"><a href="#" id="assistantHistoryBackLink" style="color:var(--gold-ink)">&larr; Quay lại danh sách lịch sử</a></p>';
+
+    if (entry.jobStatus === 'queued' || entry.jobStatus === 'running') {
+      setResult(progressPanel(JOB_STATUS_LABELS_HISTORY[entry.jobStatus], pseudoRouteResult,
+        '<p class="small-muted">Job này vẫn đang xử lý — xem trực tiếp ở <a href="jobs.html" style="color:var(--gold-ink)">Job Queue</a> (không tự chạy lại từ đây).</p>' + backLink));
+      bindHistoryBackLink();
+      return;
+    }
+    if (entry.jobStatus === 'failed') {
+      setResult(progressPanel('Failed', pseudoRouteResult,
+        `<p style="color:#c0392b">${escapeHtml(entry.errorMessage || 'Không rõ nguyên nhân — kiểm tra ở Nhật ký.')}</p>` + backLink));
+      bindHistoryBackLink();
+      return;
+    }
+    if (entry.jobStatus === 'cancelled') {
+      setResult(progressPanel('Đã hủy', pseudoRouteResult, backLink));
+      bindHistoryBackLink();
+      return;
+    }
+    if (!entry.resultDraftId) {
+      setResult(progressPanel('Hoàn tất', pseudoRouteResult, '<p class="small-muted">Không có Draft liên quan.</p>' + backLink));
+      bindHistoryBackLink();
+      return;
+    }
+    // Completed + có Draft — đọc trạng thái Draft thật (draft/published/
+    // rejected, Functional Requirement #5/#6/#7).
+    DraftDB.get(entry.resultDraftId).then(draft => {
+      if (!draft) {
+        setResult(progressPanel('Hoàn tất', pseudoRouteResult, '<p class="small-muted">Không tìm thấy Draft (có thể đã bị xóa thủ công).</p>' + backLink));
+        bindHistoryBackLink();
+        return;
+      }
+      if (draft.status === 'published') {
+        setResult(progressPanel('Published', pseudoRouteResult,
+          `<p class="small-muted">Đã publish lúc ${draft.publishedAt ? escapeHtml(new Date(draft.publishedAt).toLocaleString('vi-VN')) : ''}.</p>
+           <pre style="white-space:pre-wrap;background:var(--bg-alt);padding:1rem;font-size:0.82rem;max-height:260px;overflow:auto">${escapeHtml(JSON.stringify(draft.content, null, 2))}</pre>` + backLink));
+        bindHistoryBackLink();
+        return;
+      }
+      if (draft.status === 'rejected') {
+        setResult(progressPanel('Rejected', pseudoRouteResult,
+          `<pre style="white-space:pre-wrap;background:var(--bg-alt);padding:1rem;font-size:0.82rem;max-height:260px;overflow:auto">${escapeHtml(JSON.stringify(draft.content, null, 2))}</pre>` + backLink));
+        bindHistoryBackLink();
+        return;
+      }
+      // Vẫn 'draft' — cho Preview + Duyệt/Từ chối ngay tại đây, tái sử dụng
+      // ĐÚNG renderDraftPreview() đã có ở Requirement #2 (không viết lại).
+      renderDraftPreview(draft, pseudoRouteResult);
+      const result = document.getElementById('assistantResult');
+      result.insertAdjacentHTML('beforeend', backLink);
+      bindHistoryBackLink();
+    });
+  }
+
+  function bindHistoryBackLink() {
+    const link = document.getElementById('assistantHistoryBackLink');
+    if (!link) return;
+    link.addEventListener('click', ev => {
+      ev.preventDefault();
+      setResult('');
     });
   }
 

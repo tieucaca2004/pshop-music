@@ -28,6 +28,21 @@
         </div>
       </div>
       <div id="assistantResult" style="margin-top:1.5rem"></div>
+
+      <div class="panel" style="margin-top:2rem">
+        <h3>Lịch sử làm việc</h3>
+        <p class="small-muted">Xem lại các phiên làm việc trước đây — mở lại chỉ để xem, không tự chạy lại.</p>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;margin:1rem 0">
+          <input type="text" id="historySearchInput" placeholder="Tìm theo yêu cầu..." style="flex:1;min-width:200px">
+          <select id="historyPluginFilter"><option value="">Tất cả công việc</option></select>
+          <input type="date" id="historyDateFilter">
+          <button class="btn-secondary" id="historyClearFilterBtn">Xóa lọc</button>
+        </div>
+        <table class="admin-table">
+          <thead><tr><th>Yêu cầu</th><th>Công việc</th><th>Thời gian</th><th>Trạng thái</th><th></th></tr></thead>
+          <tbody id="historyTableBody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 </div>
