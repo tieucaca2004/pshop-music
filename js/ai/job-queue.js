@@ -55,6 +55,7 @@ const AIJobQueue = (function () {
         // không tự quyết định provider nào, chỉ hỏi qua đây.
         return AIProviderRegistry.resolveForPlugin(job.moduleId).then(({ provider, config }) => {
           providerId = provider.id;
+          job.provider = providerId; // Job phải lưu tối thiểu provider đã dùng
           const check = provider.validate ? provider.validate(config) : { valid: true, reason: '' };
           if (!check.valid) return Promise.reject(new Error(check.reason || 'Provider chưa sẵn sàng.'));
           return provider.generate({ moduleId: job.moduleId, prompt, params: item.inputParams, config })
@@ -95,8 +96,13 @@ const AIJobQueue = (function () {
     return JobDB.get(job.id).then(latest => {
       if (!latest || latest.status === 'cancelled') return;
       if (index >= job.items.length) {
-        job.status = 'completed';
-        job.finishedAt = Date.now();
+        // Job hoàn tất xử lý: nếu TẤT CẢ item đều lỗi thì trạng thái Job là
+        // "failed" (đúng yêu cầu Queue phải phân biệt Completed/Failed ở cấp
+        // Job) — nếu có ít nhất 1 item thành công thì vẫn là "completed"
+        // (kèm progress.failed để biết số lượng lỗi trong lô).
+        const allFailed = job.items.length > 0 && job.items.every(i => i.status === 'failed');
+        job.status = allFailed ? 'failed' : 'completed';
+        job.finishedAt = Date.now(); // = "completedAt" — xem AI_RULES.md mục field mapping
         return JobDB.update(job.id, job);
       }
       // Item đã xử lý xong ở lần chạy trước (resume/retry) — bỏ qua, tránh
@@ -114,7 +120,7 @@ const AIJobQueue = (function () {
 
   function runJob(jobId, userId, userEmail) {
     return JobDB.get(jobId).then(job => {
-      if (!job || job.status === 'cancelled' || job.status === 'completed') return;
+      if (!job || job.status === 'cancelled' || job.status === 'completed' || job.status === 'failed') return;
       job.status = 'running';
       job.startedAt = job.startedAt || Date.now();
       return JobDB.update(jobId, job).then(() => processSequentially(job, 0, userId, userEmail));

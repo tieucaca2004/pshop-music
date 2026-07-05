@@ -86,9 +86,33 @@ UI → PluginManager → { AIModuleRegistry (metadata) + PluginDB (trạng thái
 
 `PluginManager` **chỉ quản lý Plugin** — KHÔNG chứa Business Logic (nằm trong từng file `js/ai/modules/*.js`), KHÔNG chứa Prompt, KHÔNG chứa AI Provider (nằm trong `js/ai/provider-registry.js`). Đổi provider (OpenAI/Claude/Gemini/DeepSeek) không bao giờ cần sửa `plugin-manager.js`. Log của mọi lượt `execute()` vẫn ghi qua `LogDB`/`aiLogs` có sẵn bên trong `AIJobQueue` — không xây cơ chế log riêng ở tầng Plugin Manager.
 
-## 6. Job Queue tuần tự
+## 6. Job Queue tuần tự — Queue duy nhất, mọi Plugin bắt buộc đi qua (Sprint 2, Requirement #6)
 
-Mọi plugin chạy qua `js/ai/job-queue.js` (`AIJobQueue`), xử lý **tuần tự từng item**, không chạy song song. Trạng thái job: `queued` (hiển thị "Pending"), `running`, `completed`, `failed` (ở cấp item), `cancelled`, và hành động `retryFailed()`/`resume()`.
+Mọi plugin chạy qua `js/ai/job-queue.js` (`AIJobQueue`), xử lý **tuần tự từng item**, không chạy song song, không có Queue thứ 2. Luồng xử lý bắt buộc:
+
+```
+User → AI Plugin (PluginManager.execute) → Queue (AIJobQueue) → DataProvider → Context → AI Provider → Draft → Completed
+```
+
+- **UI chỉ được tạo Job** — không bao giờ gọi `AIProviderRegistry`/provider `.generate()` hay chạy Plugin logic trực tiếp.
+- **PluginManager chỉ gửi Job vào Queue** (`execute()` → `AIJobQueue.enqueue()`), không tự chạy AI.
+- **Queue chịu trách nhiệm**: Tạo Job (`enqueue`), Chạy Job (`runJob`), Retry Job (`retryFailed`), Resume Job (`resume`), Cập nhật Status (`JobDB.update`), Trả kết quả (`DraftDB`/`LogDB`).
+- **Queue độc lập với UI/Plugin/Provider** — không phụ thuộc vòng: `job-queue.js` không tham chiếu file UI nào; `js/ai/modules/*.js` và `js/ai/providers/*.js` không tham chiếu ngược `AIJobQueue`.
+
+**Field tối thiểu của 1 Job** (giữ nguyên tên field hiện có — không đổi Database Structure nếu không thật sự cần) và ánh xạ sang khái niệm yêu cầu:
+
+| Khái niệm yêu cầu | Field thật trong `aiJobs/{id}` |
+|---|---|
+| `id` | `id` |
+| `plugin` | `moduleId` |
+| `provider` | `provider` (mới thêm — provider thực tế đã dùng khi xử lý job) |
+| `user` | `createdBy` (uid) + `createdByEmail` |
+| `status` | `status` |
+| `createdAt` | `createdAt` |
+| `startedAt` | `startedAt` |
+| `completedAt` | `finishedAt` |
+
+**Trạng thái**: `queued` (hiển thị "Pending"), `running`, `completed`, `failed` (Job — MỚI: khi TẤT CẢ item trong job đều lỗi; trước Requirement #6, job luôn thành `completed` bất kể item lỗi hay không, nay đã sửa), `failed` (item, đã có từ trước), `cancelled` (đã có từ trước Requirement #6, giữ nguyên vì là trạng thái đang dùng thật, không phải bổ sung mới). "Retry"/"Resume" là 2 **hành động** Queue hỗ trợ (`retryFailed()`/`resume()`), không phải giá trị `status` riêng biệt.
 
 ⚠️ **Giới hạn kiến trúc đã biết**: Job Queue hiện chạy phía trình duyệt Admin (V1) — PSH Platform không có backend/Cloud Functions. Nếu đóng tab `admin/ai/jobs.html` giữa chừng, job dở tiếp tục khi mở lại trang đó. Xem `ROADMAP.md` cho hướng nâng cấp — **không tự ý thêm Cloud Functions để "sửa" giới hạn này** nếu chưa được yêu cầu rõ ràng.
 

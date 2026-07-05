@@ -4,6 +4,18 @@
 
 ## Sprint 2 — AI Assistant: Plugin Manager, Retry, mở rộng 3 plugin chính thức
 
+### Requirement #6 — Queue là điểm thực thi duy nhất, phân biệt Completed/Failed ở cấp Job (bổ sung sau Requirement #5)
+
+- **Xác nhận** (không cần đổi code): UI (`admin-ai.js`) chỉ tạo Job qua `PluginManager.execute()`, không gọi `AIProviderRegistry`/Plugin trực tiếp; `PluginManager.execute()` chỉ gọi `AIJobQueue.enqueue()`, không tự chạy AI; `job-queue.js` không phụ thuộc UI, `js/ai/modules/*.js`/`js/ai/providers/*.js` không phụ thuộc ngược `AIJobQueue` — đã đúng kiến trúc từ Requirement #4/#5, không có gì phải sửa cho các điểm này.
+- **Thêm** field `job.provider` (trong `js/ai/job-queue.js`, `processItem()`) — Job trước đây chưa lưu provider đã dùng ở cấp Job (chỉ có ở `aiLogs`/`aiDrafts.providerUsed`), nay lưu thêm để đủ field tối thiểu theo yêu cầu.
+- **Sửa** `processSequentially()`: Job chuyển trạng thái **`failed`** (thay vì luôn `completed`) khi TẤT CẢ item trong job đều lỗi — trước đây job luôn thành `completed` dù 100% item thất bại, không đúng yêu cầu Queue phải phân biệt rõ Completed/Failed ở cấp Job. Job có ít nhất 1 item thành công vẫn là `completed` (kèm `progress.failed`).
+- **Sửa** `runJob()`: không chạy lại job đã ở trạng thái `failed` (trạng thái kết thúc, giống `completed`/`cancelled`).
+- **Sửa** `admin-ai.js`: nút "Thử lại" (`canRetry`) hiện thêm cho job ở trạng thái `failed`, giữ nguyên các điều kiện cũ.
+- Không đổi tên field hiện có (`moduleId`, `createdBy`/`createdByEmail`, `finishedAt`) dù yêu cầu dùng tên `plugin`/`user`/`completedAt` — đã lập bảng ánh xạ khái niệm trong `AI_RULES.md`/`PROJECT_ARCHITECTURE.md` thay vì đổi Database Structure của dữ liệu đã tồn tại trên Firebase.
+- Không xây Queue mới, không bổ sung trạng thái `status` nào khác ngoài `failed` ở cấp Job (vốn đã tồn tại ở cấp item từ Sprint 1).
+- Cập nhật `PROJECT_ARCHITECTURE.md` (mục "Queue Layer"), `AI_RULES.md` (mục 6 viết lại hoàn chỉnh).
+- Chưa triển khai Requirement #7, chưa xây Queue mới.
+
 ### Requirement #5 — IAIProvider chính thức + Provider Manager chọn provider theo plugin (bổ sung sau Requirement #4)
 
 - **Đổi** `js/ai/provider-interface.js`: formal hóa hợp đồng `IAIProvider` — chỉ 3 phương thức `generate()`, `validate(config)`, `health()` (bỏ `isConfigured()` cũ, vốn chưa từng được gọi ở đâu trong code).

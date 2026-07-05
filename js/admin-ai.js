@@ -251,7 +251,7 @@ const AdminAI = (function () {
     body.innerHTML = jobs.map(j => {
       const module = AIModuleRegistry.get(j.moduleId);
       const canCancel = j.status === 'queued' || j.status === 'running';
-      const canRetry = (j.status === 'completed' && j.progress.failed > 0) || j.status === 'cancelled';
+      const canRetry = j.status === 'failed' || (j.status === 'completed' && j.progress.failed > 0) || j.status === 'cancelled';
       const actions = [
         canCancel ? `<button class="btn-danger" onclick="AdminAI.cancelJob('${j.id}')">Hủy</button>` : '',
         canRetry ? `<button class="btn-secondary" onclick="AdminAI.retryJob('${j.id}')">Thử lại</button>` : ''
