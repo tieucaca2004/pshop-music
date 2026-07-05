@@ -2,6 +2,26 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 3 — SEO AI Plugin: Framework → Production (Requirement #3)
+
+- **Không sửa code** — rà soát chuỗi `User → Permission → Queue → SEO AI Plugin → DataProvider → OpenAI Provider → Draft → Completed` cho plugin **SEO Generator** (`js/ai/modules/seo-generator.js`) và xác nhận đã đúng yêu cầu Requirement #3 nhờ hạ tầng có sẵn từ Sprint 2 + Requirement #1/#2, không cần thêm/đổi dòng code nào:
+  - **Dữ liệu thật**: `loadContext()` gọi `DataProvider.getBlogPost(postId)` (không gọi thẳng `BlogDB`); `buildPrompt()` dùng đúng nội dung bài viết thật (`title`, `excerpt`) — không hardcode, không nhập tay.
+  - **Trường SEO được tạo**: `mapToDraftContent()` sinh `seoTitle` (SEO Title), `seoDescription` (Meta Description), `keywords` (mảng từ khóa — tương đương Focus Keyword mở rộng), `ogTitle`/`ogDescription`/`ogImage` (Open Graph), `schemaSuggestion` (gợi ý Schema.org).
+  - **Provider**: giống Requirement #2, Queue chọn provider qua `AIProviderRegistry.resolveForPlugin('seo-generator')` — Admin gán "OpenAI" cho plugin này qua dropdown có sẵn ở `admin/ai/plugins.html`; plugin không biết provider cụ thể.
+  - **Draft-only, Human Review giữ nguyên**: `DraftDB.add({status:'draft', targetCollection:'blogPosts', ...})`; publish thật (`BlogDB.update(targetId, draft.content)`) chỉ chạy khi Admin/Editor bấm "DUYỆT & PUBLISH" ở `admin/ai/drafts.html` — không đổi gì ở đây.
+  - **Retry/Failed/Log khi OpenAI lỗi**: dùng nguyên `job-queue.js` đã có (Requirement #6/#7) — không mất Job.
+  - **Không đổi**: Database, Queue, Provider, Workflow, Plugin Architecture, Permission (`ai.generate.seo` đã có sẵn từ Requirement #8, áp dụng đúng cho `seo-generator`).
+- **Phát hiện quan trọng cần ghi nhận rõ (không sửa)**: SEO AI Plugin hiện có nhắm vào **Blog Post** (`targetCollection:'blogPosts'`), KHÔNG nhắm vào **Product** như các trường ví dụ trong yêu cầu (Product Name/Brand/Category) gợi ý — đây là giới hạn kiến trúc đã biết từ Sprint 1/2 (Product chưa có trang chi tiết riêng để gắn Meta/OG/Schema — xem `AI_RULES.md`, `ROADMAP.md` mục "SEO cho trang sản phẩm riêng"), không phải lỗi phát sinh ở Requirement #3. Không tự mở rộng plugin sang Product ở sprint này (đúng yêu cầu "không tạo Plugin mới, không đổi Interface").
+- **Ý tưởng phát sinh (không triển khai)** — ghi vào `ROADMAP.md`:
+  - Tách riêng 1 field "Focus Keyword" (hiện đang gộp trong mảng `keywords`).
+  - AI gợi ý "URL Slug" — CHƯA làm: đổi slug của bài đã publish có rủi ro phá link cũ, cần thiết kế riêng (vd chỉ áp dụng cho bài chưa publish), không tự quyết định ở sprint này.
+  - Prompt Optimization cho SEO Generator (hiện là 1 prompt cố định từ Requirement #3 Sprint 2).
+  - Prompt Versioning (theo dõi lịch sử thay đổi prompt theo thời gian).
+  - Cost Tracking theo provider/plugin (chi phí OpenAI usage).
+  - SEO AI Plugin cho Product — cần Product có trang chi tiết riêng trước (đã ghi từ trước).
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+- Chưa triển khai Requirement #4.
+
 ## Sprint 3 — Product AI Plugin: Framework → Production (Requirement #2)
 
 - **Không sửa code** — rà soát toàn bộ chuỗi `User → Permission → Queue → Product AI Plugin → DataProvider → OpenAI Provider → Draft → Completed` cho plugin **Product Description Generator** (`js/ai/modules/product-description-writer.js`) và xác nhận toàn bộ đã đúng yêu cầu Requirement #2 nhờ hạ tầng có sẵn từ Sprint 2 + Requirement #1, không cần thêm/đổi dòng code nào:
