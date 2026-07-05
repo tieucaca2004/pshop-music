@@ -2,6 +2,18 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 3 — Tích hợp OpenAI API thật (Requirement #1)
+
+- **Phát hiện lỗ hổng kiến trúc** khi triển khai theo đúng nghĩa đen (lưu API Key trong `aiProviderConfig` phía client) — bị hệ thống an toàn tự động chặn vì node này đọc được bởi mọi tài khoản Editor/Admin CMS. Đã lập `ARCHITECTURE_REVIEW_SPRINT3.md`, phân loại **A — bắt buộc sửa ngay** (không phải rủi ro lý thuyết, có thể gây thiệt hại tài chính thật qua OpenAI billing).
+- **Quyết định kiến trúc** (Chief Architect): chuyển sang **Cloud Function Proxy** — `Browser (CMS) → Cloud Function (openaiProxy) → OpenAI API`. API Key chỉ tồn tại trong Secret Manager phía server (Firebase Functions v2 `defineSecret`), không bao giờ xuất hiện ở Firebase Realtime Database hay bất kỳ đâu phía trình duyệt.
+- **Thêm** `functions/index.js` (`openaiProxy`, Cloud Function 2nd gen) + `functions/package.json` + `firebase.json` + `.firebaserc` (mới, project lần đầu có Cloud Functions). Function chỉ có 3 nhiệm vụ: nhận request, validate request (xác thực Firebase Auth ID token + kiểm tra `roles/{uid}` — tái dùng đúng cơ chế phân quyền CMS đã có, không xây auth mới), gọi OpenAI, trả kết quả — không chứa Business Logic.
+- **Đổi** `js/ai/providers/openai.js`: `generate()`/`health()` gọi qua Cloud Function Proxy thay vì gọi thẳng OpenAI — **`IAIProvider` không đổi** (vẫn đúng 3 phương thức `generate/validate/health`), chỉ đổi điểm kết nối bên trong 1 provider.
+- **Đổi** `admin/ai/providers.html`/`js/admin-ai-providers.js`: bỏ hẳn ý định thêm ô nhập API Key (không cần nữa vì key không còn ở client); thêm nút "Kiểm tra kết nối" cho OpenAI — gọi đúng `provider.health()` có sẵn, không thêm phương thức mới vào `IAIProvider`.
+- **Xác nhận không đổi**: Plugin (`js/ai/modules/*.js`) vẫn không biết OpenAI/Claude/Gemini/DeepSeek, chỉ gọi qua `IAIProvider`; Queue (`js/ai/job-queue.js`) và Plugin Manager (`js/ai/plugin-manager.js`) không sửa; Workflow `User → Permission → Queue → AI Provider → Draft → Completed` giữ nguyên; không đổi Database Structure/Collection nào (chỉ thêm 1 Cloud Function mới, không thêm node Firebase).
+- Claude/Gemini/DeepSeek **không đổi** — vẫn là stub, ngoài phạm vi Requirement #1.
+- Cập nhật `ROADMAP.md` (đánh dấu hoàn tất mục bảo mật API key cho OpenAI, thêm 3 mục Future Roadmap mới từ Architecture Review Report), `PROJECT_ARCHITECTURE.md`.
+- Chưa triển khai Requirement #2.
+
 ## Sprint 2 — AI Assistant: Plugin Manager, Retry, mở rộng 3 plugin chính thức
 
 ### Requirement #8 — Permission & Safety Layer (RBAC) (bổ sung sau Requirement #7)

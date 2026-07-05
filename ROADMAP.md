@@ -2,13 +2,16 @@
 
 Mọi mục dưới đây cần được yêu cầu rõ ràng ở 1 sprint sau mới triển khai. Không tự ý code trước khi được giao.
 
-> **Trạng thái hiện tại: Sprint 2 đã hoàn tất. Sprint 3 CHƯA bắt đầu** — toàn bộ mục dưới đây đang ở dạng ghi nhận, chưa có mục nào được triển khai.
+> **Trạng thái hiện tại: Sprint 2 đã hoàn tất. Sprint 3 Requirement #1 (tích hợp OpenAI thật qua Cloud Function Proxy) đã hoàn tất.** Các mục dưới đây vẫn ở dạng ghi nhận, chưa triển khai trừ khi ghi chú khác.
 
 ## AI Assistant
 
 - **Kích hoạt 5 plugin đang "Coming Soon"** (Blog Writer, Facebook Post Generator, Banner Generator, FAQ Generator, Image Prompt Generator) — code đã có từ Sprint 1, chỉ cần bật Enable trong Plugin Manager ở sprint được giao.
 - **Job Queue V2**: chuyển xử lý `aiJobs` sang Firebase Cloud Functions (trigger theo dữ liệu) — xử lý tuần tự thật sự, không phụ thuộc trình duyệt Admin còn mở hay không.
-- **Bảo mật API key provider (đi kèm V2)**: proxy lời gọi AI thật (OpenAI/Claude/Gemini/DeepSeek) qua Cloud Function, không lưu/lộ key ở phía client.
+- ✅ ~~Bảo mật API key provider~~ — **đã làm cho OpenAI** ở Sprint 3 Requirement #1 qua Cloud Function Proxy (`functions/openaiProxy`, key trong Secret Manager, không lưu Firebase/không lộ client). Xem `ARCHITECTURE_REVIEW_SPRINT3.md`.
+- **Áp dụng lại mẫu Cloud Function Proxy cho Claude/Gemini/DeepSeek** khi các provider này được tích hợp thật ở sprint sau — dùng đúng khuôn mẫu `functions/index.js` đã có, không thiết kế lại (xem `ARCHITECTURE_REVIEW_SPRINT3.md`, phân loại C).
+- **Rate limiting cho Cloud Function Proxy** — hiện chỉ xác thực (Firebase Auth + `roles`), chưa giới hạn tần suất gọi/quota theo user. Cân nhắc khi số lượng tài khoản CMS tăng (xem `ARCHITECTURE_REVIEW_SPRINT3.md`, phân loại B).
+- **Đổi region Cloud Function** sang gần Việt Nam hơn (hiện `us-central1`) để giảm độ trễ, nếu cần tối ưu (phân loại C).
 - **Job Queue V3**: dedicated queue service (vd Cloud Tasks) khi quy mô lớn hơn.
 - **Media Library CMS module**: kho ảnh trung tâm (duyệt/tìm/tái sử dụng ảnh đã upload) — hiện ảnh chỉ quản lý rời rạc theo từng field. Cần có trước khi Slider Generator/Banner Generator thật sự "đọc Media Library" đúng nghĩa.
 - **SEO cho trang sản phẩm riêng**: SEO Generator mở rộng sang Product — cần có trang chi tiết/URL riêng cho từng sản phẩm trước (hiện Product chỉ hiển thị dạng lưới + modal trên `category.html`).

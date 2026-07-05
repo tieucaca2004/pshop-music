@@ -19,7 +19,7 @@
     <div class="admin-wrap">
       <div class="panel">
         <h3>NHÀ CUNG CẤP AI</h3>
-        <p class="small-muted">Trang này chỉ chuẩn bị cấu trúc — CHƯA nhập được API key thật ở giai đoạn này. Việc lưu key an toàn (qua proxy phía server) thuộc Roadmap V2, xem README.md.</p>
+        <p class="small-muted">Sprint 3: OpenAI đã tích hợp API thật qua Cloud Function Proxy (<code>functions/openaiProxy</code>) — API Key OpenAI chỉ lưu trong Secret Manager phía server, KHÔNG lưu ở Firebase Realtime Database hay bất kỳ đâu phía trình duyệt. 3 nhà cung cấp còn lại (Claude/Gemini/DeepSeek) vẫn là bản thiết kế (stub), chưa dùng được.</p>
         <div class="form-group full" style="margin-top:1rem">
           <label>NHÀ CUNG CẤP ĐANG SỬ DỤNG (ACTIVE)</label>
           <select id="activeProvider">
@@ -34,7 +34,11 @@
         <div class="field-grid" style="margin-top:1.5rem">
           <div class="form-group">
             <label class="cms-toggle"><input type="checkbox" id="enabled-openai"> Bật OpenAI</label>
-            <input type="text" id="model-openai" placeholder="Model (vd: gpt-4o) — chưa dùng thật">
+            <input type="text" id="model-openai" placeholder="Model (vd: gpt-4o-mini)">
+            <div class="upload-row" style="margin-top:0.5rem">
+              <button type="button" class="upload-btn" id="testConnectionOpenaiBtn">Kiểm tra kết nối</button>
+              <span class="upload-status" id="testResult-openai"></span>
+            </div>
           </div>
           <div class="form-group">
             <label class="cms-toggle"><input type="checkbox" id="enabled-claude"> Bật Claude</label>
@@ -68,6 +72,9 @@
 <script src="../../js/cms-db.js"></script>
 <script src="../../js/admin-auth.js"></script>
 <script src="../../js/ai/ai-db.js"></script>
+<script src="../../js/ai/provider-interface.js"></script>
+<script src="../../js/ai/provider-registry.js"></script>
+<script src="../../js/ai/providers/openai.js"></script>
 <script src="../../js/admin-ai-providers.js"></script>
 </body>
 </html>

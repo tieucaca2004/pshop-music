@@ -1,8 +1,8 @@
 /*
  * Nhà cung cấp AI (admin/ai/providers.html, Admin-only) — chọn provider
- * đang active + bật/tắt từng provider. CHƯA nhập được API key thật ở giai
- * đoạn này (xem Roadmap README.md) — trang này chỉ chuẩn bị sẵn cấu trúc để
- * cắm provider thật vào sau mà không cần đổi Workflow/UI.
+ * đang active + bật/tắt từng provider. Sprint 3: OpenAI gọi qua Cloud
+ * Function Proxy — trang này KHÔNG có ô nhập API Key, key chỉ tồn tại
+ * trong Secret Manager phía server (xem functions/index.js).
  */
 document.addEventListener('DOMContentLoaded', () => {
   AdminAuth.init({ page: 'ai', title: 'AI ASSISTANT — NHÀ CUNG CẤP AI', requiredRole: 'admin' }).then(load);
@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
         model: document.getElementById('model-' + id).value.trim()
       };
     });
-    ProviderConfigDB.save(config).then(() => showStatus('Đã lưu cấu hình nhà cung cấp AI.'));
+    return ProviderConfigDB.save(config).then(() => showStatus('Đã lưu cấu hình nhà cung cấp AI.'));
   }
 
   function showStatus(msg) {
@@ -41,5 +41,32 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => { el.style.display = 'none'; }, 3000);
   }
 
+  // "Kiểm tra kết nối" — lưu cấu hình hiện tại trước (để test đúng giá trị
+  // model vừa sửa), rồi gọi provider.health() có sẵn (không thêm phương thức
+  // mới vào IAIProvider) — health() của OpenAI tự gọi Cloud Function Proxy.
+  function testConnection(id) {
+    const resultEl = document.getElementById('testResult-' + id);
+    if (!resultEl) return;
+    resultEl.style.display = 'inline';
+    resultEl.style.color = 'var(--ink-mute)';
+    resultEl.textContent = 'Đang lưu cấu hình và kiểm tra kết nối...';
+    save().then(() => {
+      const provider = AIProviderRegistry.get(id);
+      if (!provider || !provider.health) {
+        resultEl.textContent = 'Provider chưa hỗ trợ kiểm tra kết nối.';
+        return;
+      }
+      return provider.health().then(result => {
+        resultEl.textContent = (result.healthy ? '✓ ' : '✗ ') + result.message;
+        resultEl.style.color = result.healthy ? 'var(--gold-ink)' : '#c0392b';
+      });
+    }).catch(err => {
+      resultEl.textContent = 'Lỗi: ' + err.message;
+      resultEl.style.color = '#c0392b';
+    });
+  }
+
   document.getElementById('saveProvidersBtn').addEventListener('click', save);
+  const testBtn = document.getElementById('testConnectionOpenaiBtn');
+  if (testBtn) testBtn.addEventListener('click', () => testConnection('openai'));
 });

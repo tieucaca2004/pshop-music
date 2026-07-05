@@ -3,3 +3,7 @@ node_modules/
 Thumbs.db
 .netlify/
 .claude/
+.firebase/
+firebase-debug.log
+functions/.env
+functions/.env.*
