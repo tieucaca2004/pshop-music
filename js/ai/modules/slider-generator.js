@@ -1,8 +1,9 @@
 /*
  * Slider Generator (Sprint 2 — plugin chính thức #2) — sinh nội dung 1 slide
  * mới cho hero slider trang chủ, dựa trên 1 sản phẩm CÓ SẴN (đọc qua
- * DB.get()). Dùng ảnh có sẵn của chính sản phẩm (product.images) làm gợi ý
- * — CMS hiện chưa có module Media Library riêng, xem ROADMAP.md.
+ * DataProvider.getProduct()/getMedia() — không gọi thẳng DB.get()). Dùng
+ * ảnh có sẵn của chính sản phẩm (DataProvider.getMedia) làm gợi ý — CMS
+ * hiện chưa có module Media Library riêng, xem ROADMAP.md.
  *
  * targetCollection dùng ký hiệu "siteContent.heroSlides" — Publish (trong
  * admin/ai/drafts.html) đọc SiteContentDB.get(), nối thêm slide vào mảng
@@ -22,8 +23,11 @@ AIModuleRegistry.register({
   ],
 
   loadContext(inputParams) {
-    if (typeof DB === 'undefined' || !inputParams.productId) return Promise.resolve({});
-    return DB.get(inputParams.productId).then(product => ({ product }));
+    if (!inputParams.productId) return Promise.resolve({});
+    return Promise.all([
+      DataProvider.getProduct(inputParams.productId),
+      DataProvider.getMedia(inputParams.productId)
+    ]).then(([product, media]) => ({ product, media }));
   },
 
   buildPrompt(inputParams, context) {
@@ -38,9 +42,9 @@ AIModuleRegistry.register({
   mapToDraftContent(providerOutput, inputParams, context) {
     const p = context.product || {};
     const lines = (providerOutput.text || '').split('\n').filter(Boolean);
-    const images = Array.isArray(p.images) && p.images.length ? p.images : (p.image ? [p.image] : []);
+    const media = context.media || [];
     return {
-      image: images[0] || '',
+      image: media[0] || '',
       title: lines[0] || p.name || '',
       subtitle: lines[1] || '',
       link: p.category ? `category.html?cat=${p.category}` : '',

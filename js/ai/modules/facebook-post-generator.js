@@ -15,8 +15,8 @@ AIModuleRegistry.register({
   ],
 
   loadContext(inputParams) {
-    if (typeof DB === 'undefined' || !inputParams.productId) return Promise.resolve({});
-    return DB.get(inputParams.productId).then(product => ({ product }));
+    if (!inputParams.productId) return Promise.resolve({});
+    return DataProvider.getProduct(inputParams.productId).then(product => ({ product }));
   },
 
   buildPrompt(inputParams, context) {

@@ -12,9 +12,36 @@ AI không được tự Publish trong bất kỳ trường hợp nào. Mọi k�
 
 ## 2. Chỉ đọc, không bịa, không sửa dữ liệu gốc
 
-- AI chỉ đọc CMS qua đúng hàm data layer đã có: `DB.get/getAll`, `CategoryDB.getAll`, `BlogDB.get/getAll`, `SeoDB.get`, `SiteContentDB.get` (Products/Categories/Blog/SEO/Settings). Không tự suy diễn/bịa số liệu không có trong dữ liệu đọc được.
-- **Brands** và **Media Library** hiện chưa phải CMS module riêng: Brand đọc qua field `brand` sẵn có trên Product; Media Library dùng tạm ảnh sẵn có của chính đối tượng đang xử lý (vd `product.images`) — xem `ROADMAP.md` mục Media Library.
-- AI không bao giờ gọi `DB.update`, `BlogDB.update`, `BannerDB.add`, `SiteContentDB.save`... trực tiếp từ trong 1 module/plugin. Các hàm ghi dữ liệu thật chỉ được gọi ở **đúng 1 nơi**: `publishToTarget()` trong `js/admin-ai.js`, và chỉ chạy khi Admin bấm Publish.
+AI KHÔNG ĐƯỢC:
+- Tự tạo Product/Brand/Category không có trong Database.
+- Tự suy diễn/bịa số liệu không có trong dữ liệu đọc được.
+- Tự sửa dữ liệu gốc, tự ghi đè dữ liệu CMS, hay tự Publish.
+
+AI chỉ được phép đọc dữ liệu từ: **Products, Categories, Brands, Media Library, Blog, SEO, Settings** — và CHỈ qua `DataProvider` (xem mục 2b), không bao giờ gọi thẳng `DB`/`CategoryDB`/`BlogDB`/`SeoDB`/`SiteContentDB` từ trong 1 module/plugin.
+
+Các hàm ghi dữ liệu thật (`DB.update`, `BlogDB.update`, `BannerDB.add`, `SiteContentDB.save`...) chỉ được gọi ở **đúng 1 nơi**: `publishToTarget()` trong `js/admin-ai.js`, và chỉ chạy khi Admin bấm Publish.
+
+## 2b. Data Provider — cổng đọc CMS duy nhất (Sprint 2, Requirement #3)
+
+Pipeline bắt buộc cho mọi plugin:
+
+```
+AI Plugin → DataProvider (IDataProvider) → CMS Database → Context → AI Provider
+```
+
+`js/ai/data-provider.js` export `DataProvider`, implement đúng interface `IDataProvider`:
+
+| Hàm | Nguồn dữ liệu thật |
+|---|---|
+| `getProduct(id)` / `getProducts()` | `DB` (Products) |
+| `getCategories()` | `CategoryDB` (Categories) |
+| `getBrands()` | Suy ra từ field `brand` trên Products — chưa có CMS module Brand riêng |
+| `getMedia(productId)` | Ảnh có sẵn của chính Product (`images`) — chưa có Media Library CMS module riêng |
+| `getBlogPost(id)` / `getBlogPosts()` | `BlogDB` (Blog) |
+| `getSEO()` | `SeoDB` (SEO) |
+| `getSettings()` | `SiteContentDB.settings` (Settings) |
+
+`DataProvider` **chỉ có hàm đọc** (`get*`), không có hàm ghi — plugin không bao giờ tự query Database, chỉ nhận Context do `DataProvider` trả về. Đổi nguồn dữ liệu sau này chỉ cần sửa `js/ai/data-provider.js`, không phải sửa từng plugin trong `js/ai/modules/*.js`.
 
 ## 3. Chỉ chạy khi có hành động rõ ràng của người dùng
 

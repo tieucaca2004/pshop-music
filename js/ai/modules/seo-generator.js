@@ -1,7 +1,8 @@
 /*
  * SEO Generator (Sprint 2 — plugin chính thức #3) — sinh gói SEO đầy đủ
  * (Meta Title, Meta Description, Keywords, Open Graph, gợi ý Schema) cho 1
- * bài blog CÓ SẴN, dựa trên đúng nội dung bài viết đó (đọc qua BlogDB.get()).
+ * bài blog CÓ SẴN, dựa trên đúng nội dung bài viết đó (đọc qua
+ * DataProvider.getBlogPost() — không gọi thẳng BlogDB.get()).
  * Publish sẽ gọi BlogDB.update(targetId, {...}) có sẵn — các field
  * keywords/ogTitle/ogDescription/ogImage/schemaSuggestion là field MỚI được
  * bổ sung thêm vào bản ghi blogPosts khi publish (không phá field cũ).
@@ -21,8 +22,8 @@ AIModuleRegistry.register({
   ],
 
   loadContext(inputParams) {
-    if (typeof BlogDB === 'undefined' || !inputParams.postId) return Promise.resolve({});
-    return BlogDB.get(inputParams.postId).then(post => ({ post }));
+    if (!inputParams.postId) return Promise.resolve({});
+    return DataProvider.getBlogPost(inputParams.postId).then(post => ({ post }));
   },
 
   buildPrompt(inputParams, context) {

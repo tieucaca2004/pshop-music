@@ -1,8 +1,9 @@
 /*
  * Product Description Generator (Sprint 2 — plugin chính thức #1) — sinh mô
- * tả chi tiết CHUẨN SEO cho 1 sản phẩm CÓ SẴN. Đọc đúng dữ liệu sản phẩm
- * thật qua DB.get() (js/db.js) làm căn cứ, không bịa thông số. Publish sẽ
- * gọi DB.update(targetId, {description}) có sẵn.
+ * tả chi tiết CHUẨN SEO cho 1 sản phẩm CÓ SẴN. Đọc dữ liệu sản phẩm thật
+ * qua DataProvider (js/ai/data-provider.js) — không gọi thẳng DB.get() —
+ * làm căn cứ, không bịa thông số. Publish sẽ gọi DB.update(targetId,
+ * {description}) có sẵn (ngoài phạm vi plugin, xem js/admin-ai.js).
  */
 AIModuleRegistry.register({
   id: 'product-description-writer',
@@ -16,8 +17,8 @@ AIModuleRegistry.register({
   ],
 
   loadContext(inputParams) {
-    if (typeof DB === 'undefined' || !inputParams.productId) return Promise.resolve({});
-    return DB.get(inputParams.productId).then(product => ({ product }));
+    if (!inputParams.productId) return Promise.resolve({});
+    return DataProvider.getProduct(inputParams.productId).then(product => ({ product }));
   },
 
   buildPrompt(inputParams, context) {

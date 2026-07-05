@@ -4,6 +4,18 @@
 
 ## Sprint 2 — AI Assistant: Plugin Manager, Retry, mở rộng 3 plugin chính thức
 
+### Requirement #3 — Data Provider Layer (bổ sung sau khi Sprint 2 đã push lên GitHub)
+
+- **Thêm** `js/ai/data-provider.js` (`DataProvider`, implement `IDataProvider`): `getProduct/getProducts/getCategories/getBrands/getMedia/getBlogPost/getBlogPosts/getSEO/getSettings` — cổng đọc CMS DUY NHẤT cho AI Plugin, chỉ có hàm đọc, không có hàm ghi.
+- **Đổi cách 4 module đọc dữ liệu** (hành vi/prompt/output giữ nguyên, chỉ đổi đường truy vấn): `product-description-writer.js`, `seo-generator.js`, `slider-generator.js`, `facebook-post-generator.js` — từ gọi thẳng `DB.get()`/`BlogDB.get()` sang gọi qua `DataProvider.getProduct()`/`getBlogPost()`/`getMedia()`. 4 module còn lại (Blog Writer, FAQ, Image Prompt, Banner Generator) vốn không đọc CMS nên đã tuân thủ sẵn, không cần đổi.
+- **Thêm** script `js/ai/data-provider.js` vào cả 5 trang `admin/ai/*.html` (trước `module-registry.js`).
+- Pipeline chuẩn hóa: `AI Plugin → DataProvider → CMS Database → Context → AI Provider` — plugin không bao giờ tự query Database, chỉ nhận Context do `DataProvider` trả về.
+- Không đổi Database, không đổi Workflow Draft → Review → Publish, không refactor `js/admin-ai.js`/`job-queue.js`/12 trang CMS gốc.
+- Cập nhật `PROJECT_ARCHITECTURE.md` (mục "Data Provider Layer"), `AI_RULES.md` (mục 2 mở rộng + mục 2b mới).
+- Chưa triển khai Requirement #4 (chờ giao ở lượt sau).
+
+### Các hạng mục trước đó trong Sprint 2
+
 - **Thêm** Plugin Manager (`admin/ai/plugins.html`, `js/admin-ai-plugins.js`, node `aiPlugins` qua `js/ai/plugin-db.js`): bật/tắt, version, gán AI Provider riêng theo từng plugin, xem trạng thái, link nhanh sang Nhật ký lọc theo plugin.
 - **Thêm** cơ chế Enable/Disable thực thi 2 lớp: Dashboard (`admin/ai/index.html`) chỉ hiển thị plugin đang bật; `AdminAI.runModule()` kiểm tra lại trước khi tạo job.
 - **Xác định phạm vi chính thức Sprint 2**: chỉ 3 plugin hoạt động — Product Description Generator, Slider Generator, SEO Generator. 5 plugin còn lại từ Sprint 1 (Blog Writer, Facebook Post Generator, Banner Generator, FAQ Generator, Image Prompt Generator) giữ nguyên code, chuyển trạng thái "Coming Soon" trong Plugin Manager.
