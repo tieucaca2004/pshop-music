@@ -116,6 +116,22 @@ User → AI Plugin (PluginManager.execute) → Queue (AIJobQueue) → DataProvid
 
 ⚠️ **Giới hạn kiến trúc đã biết**: Job Queue hiện chạy phía trình duyệt Admin (V1) — PSH Platform không có backend/Cloud Functions. Nếu đóng tab `admin/ai/jobs.html` giữa chừng, job dở tiếp tục khi mở lại trang đó. Xem `ROADMAP.md` cho hướng nâng cấp — **không tự ý thêm Cloud Functions để "sửa" giới hạn này** nếu chưa được yêu cầu rõ ràng.
 
+## 7. Log bắt buộc cho mọi lượt chạy — chỉ Queue được ghi (Sprint 2, Requirement #7)
+
+**Chỉ `AIJobQueue` (Queue) được ghi Log** vào `LogDB`/`aiLogs` (Logging System đã có từ Sprint 1 — không tạo Database/Collection mới):
+- Plugin (`js/ai/modules/*.js`) **không ghi Log trực tiếp** — chỉ thực hiện nhiệm vụ của mình (`loadContext`/`buildPrompt`/`mapToDraftContent`).
+- AI Provider (`js/ai/providers/*.js`) **không ghi Log trực tiếp** — chỉ trả kết quả cho Queue qua `generate()`.
+- `PluginManager` **không ghi Log trực tiếp** — Queue chịu trách nhiệm ghi Log trong quá trình thực thi Job.
+- UI (`js/admin-ai.js`) **chỉ được đọc Log** (`LogDB.getAll()`) — không tạo/sửa/xóa Log.
+
+Không được bỏ qua bất kỳ Job nào: Queue ghi 1 dòng Log cho **mỗi item xử lý** (thành công/thất bại) và **mỗi lần hủy Job** (`cancel()`, mới thêm ở Requirement #7 — trước đây hủy job không ghi log).
+
+**Mỗi Log có tối thiểu** (không thêm field ngoài phạm vi Sprint): `userId`/`userEmail` (User), `moduleId` (Plugin), `provider` (Provider), `timestamp` (Time), `durationMs` (Duration), `status` (Status), `errorMessage` (Error).
+
+**Trạng thái Log**: `completed`, `failed`, `cancelled` (Queue chủ động ghi cả 3 — đổi từ `success`/`failure` cũ sang đúng thuật ngữ này). `pending`/`running` là trạng thái tạm thời của Job/Item, đã hiển thị real-time qua Job Queue Monitor (`admin/ai/jobs.html`) — **không ghi Log riêng cho 2 trạng thái này**, tránh mở rộng Logging System ngoài phạm vi Sprint.
+
+Log phục vụ: theo dõi tiến trình, debug, audit, kiểm tra lỗi — qua `admin/ai/logs.html`. **Chưa xây Dashboard phân tích Log** ở sprint này.
+
 ## 7. Log bắt buộc cho mọi lượt chạy
 
 Mỗi item xử lý (kể cả thất bại vì chưa cấu hình provider) đều ghi 1 dòng vào `aiLogs` (`LogDB`) gồm: thời gian, người thực hiện (uid + email), plugin, provider, `jobId`, thời gian xử lý (`durationMs`), trạng thái (`success`/`failure`), thông báo lỗi nếu có. Không được bỏ log ở bất kỳ nhánh nào của `processItem()`.

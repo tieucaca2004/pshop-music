@@ -43,7 +43,7 @@ const AIJobQueue = (function () {
       item.error = 'Module không tồn tại: ' + job.moduleId;
       return logAttempt({
         moduleId: job.moduleId, provider: 'none', jobId: job.id,
-        durationMs: 0, status: 'failure', errorMessage: item.error, userId, userEmail
+        durationMs: 0, status: 'failed', errorMessage: item.error, userId, userEmail
       });
     }
 
@@ -78,7 +78,7 @@ const AIJobQueue = (function () {
           item.resultDraftId = draft.id;
           return logAttempt({
             moduleId: job.moduleId, provider: providerId, jobId: job.id,
-            durationMs: Date.now() - startedAt, status: 'success', userId, userEmail
+            durationMs: Date.now() - startedAt, status: 'completed', userId, userEmail
           });
         });
       })
@@ -87,7 +87,7 @@ const AIJobQueue = (function () {
         item.error = err.message;
         return logAttempt({
           moduleId: job.moduleId, provider: providerId, jobId: job.id,
-          durationMs: Date.now() - startedAt, status: 'failure', errorMessage: err.message, userId, userEmail
+          durationMs: Date.now() - startedAt, status: 'failed', errorMessage: err.message, userId, userEmail
         });
       });
   }
@@ -138,8 +138,18 @@ const AIJobQueue = (function () {
     }).then(() => { processing = false; }, err => { processing = false; throw err; });
   }
 
-  function cancel(jobId) {
-    return JobDB.update(jobId, { status: 'cancelled', finishedAt: Date.now() });
+  function cancel(jobId, userId, userEmail) {
+    return JobDB.get(jobId).then(job => {
+      return JobDB.update(jobId, { status: 'cancelled', finishedAt: Date.now() }).then(() => {
+        if (!job) return;
+        // Queue chịu trách nhiệm ghi Log — kể cả khi job bị hủy, không bỏ qua.
+        return logAttempt({
+          moduleId: job.moduleId, provider: job.provider || 'none', jobId,
+          durationMs: job.startedAt ? Date.now() - job.startedAt : 0,
+          status: 'cancelled', userId, userEmail
+        });
+      });
+    });
   }
 
   // Đặt lại các item "failed" về "queued" (giữ nguyên item đã completed),

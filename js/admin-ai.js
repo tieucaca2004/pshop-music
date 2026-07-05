@@ -276,10 +276,12 @@ const AdminAI = (function () {
   function cancelJob(id) {
     // Gọi Plugin thông qua Interface (plugin.cancel()) thay vì gọi thẳng
     // AIJobQueue.cancel() — plugin.cancel() vẫn ủy quyền cho Queue bên trong.
+    // Truyền user hiện tại để Queue ghi Log đúng ai là người hủy job.
     const job = jobs.find(j => j.id === id);
     if (!job) return;
+    const user = AdminAuth.getUser();
     PluginManager.loadPlugin(job.moduleId).then(plugin => {
-      const cancelPromise = plugin ? plugin.cancel(id) : AIJobQueue.cancel(id);
+      const cancelPromise = plugin ? plugin.cancel(id, user.uid, user.email) : AIJobQueue.cancel(id, user.uid, user.email);
       return cancelPromise.then(loadJobs);
     });
   }
@@ -301,6 +303,12 @@ const AdminAI = (function () {
     });
   }
 
+  const LOG_STATUS_LABELS = {
+    completed: 'Completed',
+    failed: '<span style="color:#c0392b">Failed</span>',
+    cancelled: '<span style="color:var(--ink-mute)">Cancelled</span>'
+  };
+
   function renderLogs() {
     const body = document.getElementById('logsTableBody');
     if (!body) return;
@@ -316,7 +324,7 @@ const AdminAI = (function () {
         <td>${escapeHtml(l.userEmail || '')}</td>
         <td>${escapeHtml(module ? module.label : l.moduleId)}</td>
         <td>${escapeHtml(l.provider || '')}</td>
-        <td>${l.status === 'success' ? 'Thành công' : '<span style="color:#c0392b">Thất bại</span>'}</td>
+        <td>${LOG_STATUS_LABELS[l.status] || escapeHtml(l.status || '')}</td>
         <td>${escapeHtml(l.errorMessage || '')}</td>
       </tr>`;
     }).join('');

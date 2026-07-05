@@ -14,8 +14,9 @@
  *   validate(inputParams) -> { valid, missingFields }
  *   execute(items, userId, userEmail) -> Promise (CHỈ gửi job vào
  *     AIJobQueue — không tự chạy AI, Queue chịu trách nhiệm thực thi)
- *   cancel(jobId) -> Promise (ủy quyền cho AIJobQueue.cancel — Plugin
- *     Manager không tự quản lý vòng đời job)
+ *   cancel(jobId, userId, userEmail) -> Promise (ủy quyền cho
+ *     AIJobQueue.cancel — Plugin Manager không tự quản lý vòng đời job,
+ *     userId/userEmail chỉ để Queue ghi Log ai là người hủy)
  *
  * Log: mọi lượt chạy plugin đi qua execute() → AIJobQueue → LogDB (aiLogs)
  * — hệ thống log đã có sẵn từ Sprint 1, không xây thêm cơ chế log mới ở đây.
@@ -59,8 +60,8 @@ const PluginManager = (function () {
         return AIJobQueue.enqueue(module.id, items, userId, userEmail);
       },
 
-      cancel(jobId) {
-        return AIJobQueue.cancel(jobId);
+      cancel(jobId, userId, userEmail) {
+        return AIJobQueue.cancel(jobId, userId, userEmail);
       }
     };
   }

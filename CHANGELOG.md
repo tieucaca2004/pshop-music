@@ -4,6 +4,18 @@
 
 ## Sprint 2 — AI Assistant: Plugin Manager, Retry, mở rộng 3 plugin chính thức
 
+### Requirement #7 — Log đúng thuật ngữ Completed/Failed/Cancelled, ghi cả khi hủy Job (bổ sung sau Requirement #6)
+
+- **Xác nhận** (không cần đổi code): chỉ `AIJobQueue` ghi vào `LogDB`/`aiLogs`; `js/ai/modules/*.js`, `js/ai/providers/*.js`, `js/ai/plugin-manager.js` không tham chiếu `LogDB`; `js/admin-ai.js` chỉ đọc (`LogDB.getAll()`) — đã đúng kiến trúc từ Sprint 1/Requirement #4, không có gì phải sửa cho các điểm này.
+- **Đổi** giá trị `status` trong log entry: `success` → `completed`, `failure` → `failed` (đúng thuật ngữ Requirement #7, không đổi field/schema).
+- **Thêm** ghi Log khi hủy Job: `AIJobQueue.cancel(jobId, userId, userEmail)` giờ ghi thêm 1 dòng `aiLogs` với `status: 'cancelled'` — trước đây hủy job không tạo log nào, không đúng yêu cầu "không được bỏ qua bất kỳ Job nào".
+- **Đổi** `PluginManager.cancel(jobId, userId, userEmail)` và `AdminAI.cancelJob()` để truyền user hiện tại xuống Queue, phục vụ đúng field "User" bắt buộc trong Log khi hủy.
+- **Đổi** `admin-ai.js` `renderLogs()`: hiển thị đúng 3 nhãn Completed/Failed/Cancelled thay vì "Thành công"/"Thất bại" cũ.
+- Không ghi Log riêng cho trạng thái `pending`/`running` — đã hiển thị real-time qua Job Queue Monitor, tránh mở rộng Logging System ngoài phạm vi.
+- Không tạo Database/Collection mới, không thêm field nào ngoài `status` đổi giá trị.
+- Cập nhật `PROJECT_ARCHITECTURE.md` (mục "Logging Layer"), `AI_RULES.md` (mục 7 mới).
+- Chưa triển khai Requirement #8, chưa xây Dashboard phân tích Log.
+
 ### Requirement #6 — Queue là điểm thực thi duy nhất, phân biệt Completed/Failed ở cấp Job (bổ sung sau Requirement #5)
 
 - **Xác nhận** (không cần đổi code): UI (`admin-ai.js`) chỉ tạo Job qua `PluginManager.execute()`, không gọi `AIProviderRegistry`/Plugin trực tiếp; `PluginManager.execute()` chỉ gọi `AIJobQueue.enqueue()`, không tự chạy AI; `job-queue.js` không phụ thuộc UI, `js/ai/modules/*.js`/`js/ai/providers/*.js` không phụ thuộc ngược `AIJobQueue` — đã đúng kiến trúc từ Requirement #4/#5, không có gì phải sửa cho các điểm này.
