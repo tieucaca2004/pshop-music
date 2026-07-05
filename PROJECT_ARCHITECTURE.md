@@ -215,7 +215,7 @@ Requirement cuối cùng của Sprint 3 — tái xác nhận toàn bộ AI Frame
 - **Security Verification**: xác nhận lại Permission/RBAC/Queue/Draft/API Key đều đúng; riêng Firebase Database Rules KHÔNG version-control trong repo nên không thể xác minh trực tiếp từ môi trường này (ghi Known Limitations).
 - **Kết luận**: Code 100% sẵn sàng Pilot Production. Kích hoạt Pilot Production thật (traffic thật, response OpenAI thật) chờ deploy Cloud Function.
 
-## AI Assistant — Experience Layer + AI Task Router (Sprint 4, Requirement #1–#2)
+## AI Assistant — Experience Layer + AI Task Router (Sprint 4, Requirement #1–#3)
 
 Sprint 4 thêm 1 lớp MỚI nằm **bên trên** toàn bộ kiến trúc Sprint 2/3 — không sửa `job-queue.js`/`plugin-manager.js`/`provider-registry.js`/`permission-service.js`/`data-provider.js`/`AI_RULES.md`. Về vai trò kiến trúc, lớp này tương đương `js/admin-ai.js` (1 caller mới của `PluginManager`), chỉ khác ở chỗ người dùng gõ yêu cầu tự do thay vì chọn Plugin từ danh sách:
 
@@ -253,6 +253,23 @@ AI Assistant hoàn thiện thành 1 Experience Layer trọn vẹn — không ch�
 - **Theo dõi tiến trình**: chỉ đọc đúng 1 Job (`JobDB.get(jobId)`, ngắt khi kết thúc, giới hạn ~60s) — không tăng tải Firebase so với việc mở `admin/ai/jobs.html` (NFR Performance của Requirement #2).
 - **Failed hiển thị đúng nguyên nhân**: đọc `job.items[0].error` (message thật từ Provider/Cloud Function Proxy khi lỗi) — không hiển thị "Unknown Error" chung chung.
 - `admin/ai/jobs.html`/`admin/ai/drafts.html` không đổi, vẫn hoạt động độc lập.
+
+### Ambiguous Target Resolution (Requirement #3)
+
+Khi `AITaskRouter.route()` trả `reason:'target_ambiguous'` (yêu cầu khớp nhiều đối tượng, vd "Loa JBL" khớp cả "Loa JBL" và "Loa JBL PartyBox 310"), AI Assistant cho người dùng chọn đúng đối tượng thay vì bắt gõ lại yêu cầu:
+
+```
+route() trả target_ambiguous + danh sách {id,label}
+    → AI Assistant đối chiếu lại với candidates ĐÃ tải sẵn (làm giàu: Danh mục, Ngày tạo — không gọi thêm Firebase)
+    → Hiển thị bảng cho người dùng chọn
+    → Chọn: dựng lại 1 routeResult đã giải quyết bằng AITaskRouter.ROUTES[].buildInputParams(chosenId) (đọc dữ liệu Router đã công khai, không viết Business Logic mới)
+    → dispatchAndShow() (Requirement #2) — tiếp tục ĐÚNG Workflow (Permission → Plugin Manager → Queue → Provider → Draft → Human Review)
+    → Hủy: chỉ hiển thị thông báo, KHÔNG gọi dispatch() — không tạo Job, không ghi Draft
+```
+
+- **Không sửa `js/ai/task-router.js`** — chỉ tiêu thụ nhiều hơn dữ liệu nó đã công khai sẵn (`ROUTES`, `routeResult.ambiguous`). Về mặt lý thuyết có thể mở rộng API của Router để tự trả routeResult đã giải quyết, nhưng phương án đó bị loại ngay vì vi phạm trực tiếp ràng buộc "không sửa AI Task Router" của Requirement #3 — không phải 1 lựa chọn kiến trúc cần cân nhắc thêm.
+- Dữ liệu hiển thị (Tên/Danh mục/ID/Ngày tạo) lấy từ `candidates` đã tải ở bước đầu (`DB.getAll()`/`BlogDB.getAll()`), không phát sinh lời gọi Firebase mới khi hiển thị danh sách chọn.
+- Không tạo đường xử lý mới ngoài Workflow hiện tại — sau khi chọn, luồng tiếp tục qua đúng `dispatchAndShow()` đã có từ Requirement #2 (Permission → Plugin Manager → Queue → Provider → Draft → Human Review), không có nhánh gọi Plugin/Queue nào khác.
 
 ## Giới hạn kiến trúc đã biết (không tự ý "vá" bằng cách thêm hạ tầng mới)
 

@@ -2,6 +2,21 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 4 — Ambiguous Target Resolution (Requirement #3)
+
+Cho phép AI Assistant xử lý đúng trường hợp yêu cầu khớp nhiều đối tượng (vd "Loa JBL" khớp cả "Loa JBL" và "Loa JBL PartyBox 310") — người dùng chọn đúng đối tượng từ danh sách, **không cần gõ lại yêu cầu**. Không sửa `js/ai/task-router.js` (Requirement #1), không sửa cơ chế theo dõi tiến trình/Draft (Requirement #2), không sửa Sprint 2/3.
+
+- **Không có Decision Record chính thức** — về lý thuyết có 2 hướng triển khai (A: Assistant tự đọc thêm dữ liệu Router đã công khai để dựng lại 1 routeResult đã giải quyết; B: mở rộng API `task-router.js` để tự trả về routeResult đã giải quyết sau khi nhận thêm 1 tham số lựa chọn), nhưng Phương án B bị loại ngay từ đầu vì vi phạm trực tiếp ràng buộc "Không thay đổi AI Task Router" — chỉ còn đúng 1 hướng hợp lệ (A), không phải 1 lựa chọn kiến trúc thật sự cần Chief Architect quyết định.
+- **Sửa** `js/admin-ai-assistant.js` — thêm nhánh xử lý khi `AITaskRouter.route()` trả `reason:'target_ambiguous'`:
+  - `showAmbiguousPicker(routeResult, candidates)` — hiển thị bảng các mục khớp (Tên, Danh mục, ID, Ngày tạo) để người dùng chọn. Dữ liệu làm giàu (`categoryLabel`/`createdAt`) lấy từ `candidates` **đã tải sẵn** ở `loadCandidates()` (không gọi thêm Firebase nào) — Router chỉ trả `{id,label}` tối thiểu, Assistant tự đối chiếu lại để hiển thị đủ thông tin phân biệt.
+  - Khi người dùng bấm "Chọn": Assistant tự dựng lại 1 `routeResult` đã giải quyết, dùng `AITaskRouter.ROUTES.find(...).buildInputParams(chosenId)` — **đọc thêm dữ liệu Router đã công khai sẵn (`ROUTES`)**, không viết logic tính `inputParams` mới — rồi gọi thẳng `dispatchAndShow()` (Requirement #2) để tiếp tục đúng Workflow (`Permission Service → Plugin Manager → Queue → AI Provider → Draft → Human Review`), không cần người dùng nhập lại Prompt.
+  - Khi người dùng bấm "Hủy": chỉ hiển thị thông báo, không gọi `dispatch()` — không tạo Job, không ghi Draft (Functional Requirement #5).
+  - Trường hợp "không tìm thấy đối tượng phù hợp" (0 khớp, không phải ambiguous) giữ nguyên hành vi cũ từ Requirement #1 — chỉ báo lỗi, không tạo Job, không gọi Plugin.
+- **Xác nhận không đổi**: `js/ai/task-router.js`, `job-queue.js`, `plugin-manager.js`, `provider-registry.js`, `permission-service.js`, `data-provider.js`, `AI_RULES.md`, `js/admin-ai.js` (các hàm `publishDraftById`/`rejectDraftById` từ Requirement #2 không đổi).
+- **Kiểm thử**: mô phỏng chạy `task-router.js` thật (không sửa) qua Node `vm` — xác nhận `route()` vẫn trả đúng `target_ambiguous` + danh sách như trước; `AITaskRouter.ROUTES[].buildInputParams()` tái sử dụng đúng để dựng `inputParams` sau khi chọn; sau khi "chọn" (routeResult tự dựng lại), `dispatch()` vẫn gọi đúng thứ tự `PermissionService → PluginManager.execute()` với đúng đối tượng người dùng chọn (không phải đối tượng suy đoán sai); xác nhận khi Hủy không có Permission/PluginManager nào được gọi. Kiểm tra `admin/ai/assistant.html` qua static server — 0 lỗi console.
+- Cập nhật `PROJECT_ARCHITECTURE.md`.
+- Chưa triển khai Requirement #4.
+
 ## Sprint 4 — AI Assistant: Experience Layer hoàn chỉnh (Requirement #2)
 
 Hoàn thiện vòng lặp tương tác của AI Assistant (Requirement #1): sau khi gửi yêu cầu, người dùng theo dõi toàn bộ tiến trình và xem/Duyệt/Từ chối Draft **ngay tại `admin/ai/assistant.html`** — không cần rời sang `admin/ai/jobs.html`/`admin/ai/drafts.html`. Không sửa Sprint 2/3, không sửa `js/ai/task-router.js` (Requirement #1), không đổi Constitution.

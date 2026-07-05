@@ -60,14 +60,95 @@ const AdminAIAssistant = (function () {
         return 'AI chưa hiểu rõ yêu cầu này. Hãy mô tả cụ thể hơn — ví dụ: "viết mô tả cho sản phẩm ...", "làm SEO cho bài viết ...", "gợi ý nội dung slide quảng cáo cho sản phẩm ...". Bạn cũng có thể vào <a href="index.html" style="color:var(--gold-ink)">Plugin Manager</a> để chọn thủ công.';
       case 'target_not_found':
         return 'AI đã hiểu loại yêu cầu nhưng không xác định được đúng sản phẩm/bài viết — hãy nhắc rõ tên sản phẩm hoặc tiêu đề bài viết trong câu yêu cầu.';
-      case 'target_ambiguous':
-        return 'AI tìm thấy nhiều mục khớp với yêu cầu, chưa chắc chắn bạn muốn mục nào: ' +
-          result.ambiguous.map(a => escapeHtml(a.label)).join(', ') + '. Hãy nói rõ tên đầy đủ hơn.';
       case 'permission_denied':
         return 'Bạn không có quyền thực hiện yêu cầu này.';
       default:
         return 'Không thực hiện được yêu cầu.';
     }
+  }
+
+  // ============== Đối tượng mơ hồ — Ambiguous Target Resolution (Sprint 4,
+  // Requirement #3) ==============
+  //
+  // Không sửa js/ai/task-router.js — chỉ ĐỌC THÊM dữ liệu Router đã công
+  // khai sẵn (AITaskRouter.ROUTES, routeResult.ambiguous) để mở rộng cách xử
+  // lý kết quả, đúng yêu cầu "chỉ mở rộng khả năng xử lý kết quả do AI Task
+  // Router trả về, không tạo đường xử lý mới ngoài Workflow hiện tại".
+
+  function findRouteConfig(pluginId) {
+    return AITaskRouter.ROUTES.find(r => r.pluginId === pluginId);
+  }
+
+  // Router chỉ trả {id,label} trong routeResult.ambiguous — Assistant tự làm
+  // giàu thông tin hiển thị (danh mục/ngày tạo) bằng cách đối chiếu lại với
+  // `candidates` ĐÃ tải sẵn ở handleSend() (không gọi thêm Firebase nào, giữ
+  // đúng NFR Performance/Coupling).
+  function enrichAmbiguous(routeResult, candidates, routeConfig) {
+    const list = (routeConfig.targetType === 'product' ? candidates.products : candidates.posts) || [];
+    const nameKey = routeConfig.targetType === 'product' ? 'name' : 'title';
+    const ids = (routeResult.ambiguous || []).map(a => a.id);
+    return list.filter(item => ids.includes(item.id)).map(item => ({
+      id: item.id,
+      label: item[nameKey],
+      categoryLabel: routeConfig.targetType === 'product' ? (item.categoryLabel || item.category || '') : '',
+      createdAt: item.createdAt || null
+    }));
+  }
+
+  function showAmbiguousPicker(routeResult, candidates) {
+    const routeConfig = findRouteConfig(routeResult.pluginId);
+    const details = enrichAmbiguous(routeResult, candidates, routeConfig);
+
+    if (!details.length) {
+      // An toàn: nếu vì lý do gì không đối chiếu được chi tiết, vẫn không
+      // được tự đoán — báo rõ, không tạo Job (giữ đúng Functional Req #4).
+      setResult('<p style="color:#c0392b">AI tìm thấy nhiều mục khớp nhưng không tải được chi tiết để bạn chọn — hãy nói rõ tên đầy đủ hơn trong yêu cầu.</p>');
+      return;
+    }
+
+    const rows = details.map(d => `
+      <tr>
+        <td>${escapeHtml(d.label)}</td>
+        <td>${escapeHtml(d.categoryLabel || '—')}</td>
+        <td>${escapeHtml(d.id)}</td>
+        <td>${d.createdAt ? escapeHtml(new Date(d.createdAt).toLocaleDateString('vi-VN')) : '—'}</td>
+        <td><button class="btn-secondary assistant-pick-btn" data-id="${escapeHtml(d.id)}">Chọn</button></td>
+      </tr>`).join('');
+
+    setResult(`
+      <div class="panel">
+        <p>Yêu cầu của bạn khớp với nhiều mục cho: <strong>${escapeHtml(routeResult.outcomeLabel)}</strong>. Vui lòng chọn đúng đối tượng — không cần gõ lại yêu cầu.</p>
+        <table class="admin-table">
+          <thead><tr><th>Tên</th><th>Danh mục</th><th>ID</th><th>Ngày tạo</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        <div class="admin-actions">
+          <button class="btn-secondary" id="assistantPickCancelBtn">HỦY</button>
+        </div>
+      </div>`);
+
+    document.querySelectorAll('.assistant-pick-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const chosen = details.find(d => d.id === btn.getAttribute('data-id'));
+        if (!chosen) return;
+        // Tiếp tục ĐÚNG Workflow hiện tại (Permission -> Plugin Manager ->
+        // Queue -> AI Provider -> Draft -> Human Review) qua dispatchAndShow()
+        // đã có — không tạo đường xử lý mới, không cần người dùng nhập lại
+        // Prompt (Functional Req #3).
+        dispatchAndShow({
+          pluginId: routeResult.pluginId,
+          outcomeLabel: routeResult.outcomeLabel,
+          targetId: chosen.id,
+          targetLabel: chosen.label,
+          confidence: 100,
+          ambiguous: [],
+          inputParams: routeConfig.buildInputParams(chosen.id),
+          reason: 'ok'
+        });
+      });
+    });
+    // Hủy: Workflow dừng hẳn — không tạo Job, không ghi Draft (Functional Req #5).
+    document.getElementById('assistantPickCancelBtn').addEventListener('click', () => setResult('<p class="small-muted">Đã hủy yêu cầu.</p>'));
   }
 
   // ============== Theo dõi tiến trình (Sprint 4, Requirement #2) ==============
@@ -192,6 +273,10 @@ const AdminAIAssistant = (function () {
     setResult('<p class="small-muted">Đang phân tích yêu cầu...</p>');
     loadCandidates().then(candidates => {
       const routeResult = AITaskRouter.route(text, candidates);
+      if (routeResult.reason === 'target_ambiguous') {
+        showAmbiguousPicker(routeResult, candidates);
+        return;
+      }
       if (!routeResult.pluginId || !routeResult.targetId) {
         setResult('<p style="color:#c0392b">' + reasonMessage(routeResult) + '</p>');
         return;
