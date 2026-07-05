@@ -2,6 +2,19 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 3 — Product AI Plugin: Framework → Production (Requirement #2)
+
+- **Không sửa code** — rà soát toàn bộ chuỗi `User → Permission → Queue → Product AI Plugin → DataProvider → OpenAI Provider → Draft → Completed` cho plugin **Product Description Generator** (`js/ai/modules/product-description-writer.js`) và xác nhận toàn bộ đã đúng yêu cầu Requirement #2 nhờ hạ tầng có sẵn từ Sprint 2 + Requirement #1, không cần thêm/đổi dòng code nào:
+  - **Dữ liệu Product thật**: `loadContext()` gọi `DataProvider.getProduct(productId)` (không gọi thẳng `DB`), `buildPrompt()` dùng đúng field thật (`name`, `brand`, `specs`, `categoryLabel`) — không hardcode, không nhập tay (đã đúng từ Requirement #3).
+  - **Provider**: Queue chọn provider qua `AIProviderRegistry.resolveForPlugin('product-description-writer')` — Admin gán "OpenAI" cho plugin này qua dropdown có sẵn ở `admin/ai/plugins.html` (Requirement #4/#5), tự động dùng đúng `openai.js` (Requirement #1 — gọi qua Cloud Function Proxy). Plugin không biết provider cụ thể là OpenAI.
+  - **Draft-only, Human Review giữ nguyên**: `mapToDraftContent()` → `DraftDB.add(status:'draft')`, không publish tự động — `admin/ai/drafts.html` yêu cầu bấm "Duyệt & Publish" mới ghi vào Product thật (chưa đổi gì ở đây).
+  - **Retry/Failed/Log khi lỗi**: `job-queue.js` `processItem()` bắt lỗi từ `provider.generate()` (kể cả lỗi từ Cloud Function Proxy), đánh dấu item `failed`, ghi `LogDB` (`status:'failed'`, `errorMessage`), không mất Job — `retryFailed()`/`resume()` có sẵn từ Requirement #6 xử lý đúng retry mà không tạo trùng Draft cho item đã thành công.
+  - **Không đổi**: `IAIProvider`, `IAIPlugin`, Queue, Plugin Manager, Database Structure/Collection — đúng yêu cầu chỉ "kích hoạt" plugin đã có sang Production, không refactor/không mở rộng Sprint.
+- **Kiểm thử**: xác nhận qua đọc code + luồng đã kiểm chứng ở Requirement #1/#6/#7 (Queue, Retry/Failed/Log, Draft, Human Review). Riêng mục "OpenAI Generate thành công" với response thật cần Cloud Function `openaiProxy` đã deploy — **vẫn đang chặn** ở bước `firebase login`/`firebase deploy` (thao tác CLI người phụ trách hạ tầng tự thực hiện, xem Requirement #1); sau khi deploy, chạy lại đúng plugin Product Description Generator để xác nhận Generate thật + Draft + Log.
+- **Ý tưởng phát sinh (không triển khai)**: đưa vào `ROADMAP.md` — (1) thêm field "Model" riêng cho Product (hiện gộp trong `specs`), (2) cho phép AI dùng `description` hiện có làm ngữ cảnh viết lại/mở rộng thay vì luôn viết mới hoàn toàn.
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+- Chưa triển khai Requirement #3.
+
 ## Sprint 3 — Tích hợp OpenAI API thật (Requirement #1)
 
 - **Phát hiện lỗ hổng kiến trúc** khi triển khai theo đúng nghĩa đen (lưu API Key trong `aiProviderConfig` phía client) — bị hệ thống an toàn tự động chặn vì node này đọc được bởi mọi tài khoản Editor/Admin CMS. Đã lập `ARCHITECTURE_REVIEW_SPRINT3.md`, phân loại **A — bắt buộc sửa ngay** (không phải rủi ro lý thuyết, có thể gây thiệt hại tài chính thật qua OpenAI billing).
