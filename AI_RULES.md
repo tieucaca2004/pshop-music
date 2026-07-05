@@ -47,13 +47,22 @@ AI Plugin → DataProvider (IDataProvider) → CMS Database → Context → AI P
 
 Không có trigger tự động/cron/webhook nào khởi chạy AI. Mọi job đều bắt đầu từ việc người dùng bấm "Chạy" trên `admin/ai/index.html`.
 
-## 4. Provider độc lập (Provider Interface)
+## 4. Provider độc lập (IAIProvider + Provider Manager) (Sprint 2, Requirement #5)
 
-Hợp đồng chung: `js/ai/provider-interface.js`. Đổi nhà cung cấp AI (OpenAI/Claude/Gemini/DeepSeek/khác) chỉ cần:
+Hợp đồng chung **`IAIProvider`** (`js/ai/provider-interface.js`) — chỉ đúng 3 phương thức, không thêm gì khác:
+- `generate({ moduleId, prompt, params, config })` — gọi AI thật (hiện là stub, luôn reject vì chưa tích hợp API)
+- `validate(config)` — trả `{ valid, reason }`, kiểm tra provider đã đủ điều kiện dùng chưa TRƯỚC khi gọi `generate()`
+- `health()` — trả `Promise<{ healthy, message }>`, kiểm tra tình trạng kết nối provider hiện tại
+
+`js/ai/provider-registry.js` (`AIProviderRegistry`) là **Provider Manager** — chịu trách nhiệm Đăng ký Provider (`register()`), Chọn Provider, và Trả về Provider đang hoạt động (`getActive()` toàn cục, `resolveForPlugin(moduleId)` theo từng plugin). AI Plugin **không được tự chọn Provider** và không biết Provider nào đang chạy — chỉ `AIJobQueue` mới gọi qua registry này (`resolveForPlugin()` → `provider.validate()` → `provider.generate()`).
+
+Đổi nhà cung cấp AI (OpenAI/Claude/Gemini/DeepSeek/khác) chỉ cần:
 - Đổi `activeProvider` toàn cục trong `admin/ai/providers.html`, HOẶC
-- Gán provider riêng cho 1 plugin cụ thể trong `admin/ai/plugins.html` (Plugin Manager, `aiPlugins/{id}.providerId`).
+- Gán provider riêng cho 1 plugin cụ thể trong `admin/ai/plugins.html` (Plugin Manager, `aiPlugins/{id}.providerId`, đọc qua `AIProviderRegistry.resolveForPlugin()`).
 
-Không việc nào trong 2 việc trên yêu cầu sửa Workflow, UI, hay `js/ai/job-queue.js`. Provider mới = thêm 1 file trong `js/ai/providers/*.js` tự gọi `AIProviderRegistry.register()`.
+Không việc nào trong 2 việc trên yêu cầu sửa UI, Workflow, Plugin (`js/ai/modules/*.js`), hay Queue (`js/ai/job-queue.js`). Provider mới = thêm 1 file trong `js/ai/providers/*.js` tự gọi `AIProviderRegistry.register()`, implement đúng `IAIProvider` — không sửa `provider-registry.js`.
+
+Luồng xử lý chuẩn (đúng Requirement #5): **AI Plugin → DataProvider → Context → AI Provider → Draft**. Log của mọi lượt `generate()` (kể cả thất bại vì chưa cấu hình) vẫn ghi qua `LogDB`/`aiLogs` có sẵn bên trong `AIJobQueue` — không xây Logging mới ở tầng Provider.
 
 ## 5. Plugin độc lập (Module/Plugin Registry)
 

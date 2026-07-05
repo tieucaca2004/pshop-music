@@ -4,6 +4,17 @@
 
 ## Sprint 2 — AI Assistant: Plugin Manager, Retry, mở rộng 3 plugin chính thức
 
+### Requirement #5 — IAIProvider chính thức + Provider Manager chọn provider theo plugin (bổ sung sau Requirement #4)
+
+- **Đổi** `js/ai/provider-interface.js`: formal hóa hợp đồng `IAIProvider` — chỉ 3 phương thức `generate()`, `validate(config)`, `health()` (bỏ `isConfigured()` cũ, vốn chưa từng được gọi ở đâu trong code).
+- **Đổi** cả 4 file provider (`openai.js`, `claude.js`, `gemini.js`, `deepseek.js`): thay `isConfigured()` bằng `validate(config)` (trả `{valid, reason}`), thêm `health()` (stub, luôn `healthy:false` vì chưa tích hợp API thật).
+- **Thêm** `AIProviderRegistry.resolveForPlugin(moduleId)` trong `js/ai/provider-registry.js` — chuyển logic "ưu tiên provider riêng của plugin, rơi về provider mặc định toàn cục" từ `job-queue.js` vào đúng 1 nơi (Provider Manager), tập trung trách nhiệm "Chọn Provider".
+- **Đổi** `js/ai/job-queue.js`: xóa hàm `resolveProvider()` cục bộ (logic trùng lặp), gọi `AIProviderRegistry.resolveForPlugin()` thay thế; thêm bước gọi `provider.validate(config)` trước `provider.generate()` để báo lỗi rõ ràng hơn khi provider chưa sẵn sàng — lỗi vẫn ghi log qua `LogDB` như cũ.
+- Luồng xử lý chuẩn hóa đúng yêu cầu: `AI Plugin → DataProvider → Context → AI Provider → Draft`.
+- Không đổi Database, không đổi CMS Module khác, không đổi giao diện hiển thị, không đổi Plugin Manager hay Queue ngoài 1 điểm gọi hàm.
+- Cập nhật `PROJECT_ARCHITECTURE.md` (mục "Provider Manager Layer"), `AI_RULES.md` (mục 4 viết lại hoàn chỉnh).
+- Chưa triển khai Requirement #6, chưa tích hợp thêm AI Provider nào ngoài 4 cái đã có.
+
 ### Requirement #4 — Plugin Manager là điểm gọi Plugin duy nhất (bổ sung sau Requirement #3)
 
 - **Thêm** `js/ai/plugin-manager.js` (`PluginManager`): `loadPlugins()`, `loadPlugin(id)`, `isEnabled(id)`, `enablePlugin(id)`, `disablePlugin(id)`, `setProvider(id, providerId)`. Mỗi plugin trả về qua `loadPlugin()` theo interface `IAIPlugin`: `metadata` (`id/name/description/version/provider/enabled/status`), `validate(inputParams)`, `execute(items, userId, userEmail)` (chỉ gửi job vào `AIJobQueue`, không tự chạy AI), `cancel(jobId)` (ủy quyền `AIJobQueue.cancel()`).

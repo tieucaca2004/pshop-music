@@ -4,11 +4,13 @@
  * V2 mà không cần đổi hàm enqueue/resume/cancel bên dưới — admin/ai/*.html
  * chỉ gọi qua các hàm này, không biết/không phụ thuộc cách xử lý bên trong).
  *
- * Từng item trong job đi qua đúng 1 luồng: module.loadContext() (đọc CMS
- * thật) → module.buildPrompt() → AIProviderRegistry.getActive().generate()
- * → module.mapToDraftContent() → DraftDB.add() (không bao giờ ghi thẳng vào
- * collection gốc). Mọi bước — kể cả thất bại vì chưa cấu hình provider —
- * đều được ghi vào LogDB.
+ * Luồng xử lý đúng theo AI_RULES.md: AI Plugin → DataProvider → Context →
+ * AI Provider → Draft. Từng item trong job đi qua: module.loadContext()
+ * (đọc CMS thật qua DataProvider) → module.buildPrompt() →
+ * AIProviderRegistry.resolveForPlugin() (Provider Manager chọn provider) →
+ * provider.validate() → provider.generate() → module.mapToDraftContent() →
+ * DraftDB.add() (không bao giờ ghi thẳng vào collection gốc). Mọi bước —
+ * kể cả thất bại vì chưa cấu hình provider — đều được ghi vào LogDB.
  */
 const AIJobQueue = (function () {
   let processing = false;
@@ -31,25 +33,6 @@ const AIJobQueue = (function () {
     return LogDB.add(Object.assign({ timestamp: Date.now(), errorMessage: '' }, entry));
   }
 
-  // Sprint 2: mỗi plugin có thể gán 1 AI Provider riêng qua Plugin Manager
-  // (aiPlugins/{moduleId}.providerId) — nếu không gán, dùng provider mặc
-  // định toàn cục như trước (AIProviderRegistry.getActive()).
-  function resolveProvider(moduleId) {
-    if (typeof PluginDB === 'undefined') return AIProviderRegistry.getActive();
-    return PluginDB.get(moduleId).then(plugin => {
-      if (plugin && plugin.providerId) {
-        const provider = AIProviderRegistry.get(plugin.providerId);
-        if (provider) {
-          return ProviderConfigDB.get().then(config => ({
-            provider,
-            config: (config.providers && config.providers[plugin.providerId]) || {}
-          }));
-        }
-      }
-      return AIProviderRegistry.getActive();
-    });
-  }
-
   function processItem(job, itemIndex, userId, userEmail) {
     const module = AIModuleRegistry.get(job.moduleId);
     const item = job.items[itemIndex];
@@ -68,8 +51,12 @@ const AIJobQueue = (function () {
     return Promise.resolve(module.loadContext(item.inputParams))
       .then(context => {
         const prompt = module.buildPrompt(item.inputParams, context);
-        return resolveProvider(job.moduleId).then(({ provider, config }) => {
+        // Chọn Provider qua Provider Manager (AIProviderRegistry) — Queue
+        // không tự quyết định provider nào, chỉ hỏi qua đây.
+        return AIProviderRegistry.resolveForPlugin(job.moduleId).then(({ provider, config }) => {
           providerId = provider.id;
+          const check = provider.validate ? provider.validate(config) : { valid: true, reason: '' };
+          if (!check.valid) return Promise.reject(new Error(check.reason || 'Provider chưa sẵn sàng.'));
           return provider.generate({ moduleId: job.moduleId, prompt, params: item.inputParams, config })
             .then(output => ({ output, context }));
         });
