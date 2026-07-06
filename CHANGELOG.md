@@ -2,6 +2,18 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 8 — Planning (chưa triển khai Requirement nào)
+
+Không viết code, không Refactor — chỉ rà soát Sprint 7, rà soát Constitution/Kiến trúc, Architecture Challenge, và lập kế hoạch Sprint 8.
+
+- **Review Sprint 7**: xác nhận cả 5 Requirement (#1-#5) + Requirement #6 (Sprint Review) đều đã hoàn thành, không còn TODO phát sinh riêng từ Sprint 7 (grep xác nhận 7 TODO còn lại trong `js/ai/providers/{claude,deepseek,gemini,openai}.js` đều là TODO CŨ từ Sprint 2/3, đã ghi "Roadmap V2"/hướng dẫn deploy, không phải việc dang dở của Sprint 7), không Refactor dang dở, không Regression (đối chiếu lại `git log`/`git diff` — kết quả giống hệt Requirement #6).
+- **Review Constitution (`AI_RULES.md`)**: không phát hiện nguyên tắc kiến trúc mới cần bổ sung, không có mâu thuẫn với kiến trúc hiện tại — mục 8 (đã viết từ Sprint 2) đã dự liệu đúng chính xác trường hợp `WorkflowEngine` (Sprint 7 #4) cần tự gọi `PermissionService.checkPluginExecution()`, không cần sửa gì thêm. `ContextBuilder` là công cụ tùy chọn (opt-in), chưa cần 1 quy tắc bắt buộc riêng cho tới khi có Plugin thật sự dùng tới. **Không sửa `AI_RULES.md`.**
+- **Review `PROJECT_ARCHITECTURE.md`**: Dependency Rule/Module Boundary/Plugin Framework/AI Framework/Provider Independence/Workflow Boundary đều nhất quán với code thật, không phát hiện vi phạm. Ghi nhận 1 câu mô tả cũ (mục "Tổng quan", từ trước Sprint 7) khẳng định dữ liệu "bảo vệ bằng Firebase Auth + Database Rules" nhưng Rules không version-control được trong repo để xác minh — không sửa câu này ở Planning (chỉ ghi nhận, xem Architecture Challenge #1), để dành cho Requirement Sprint 8 #1 xử lý phần thiếu xác minh này. **Không đổi kiến trúc.**
+- **Architecture Challenge** (không khen, chỉ tìm vấn đề) — 7 phát hiện, phân loại A (nên thành Requirement)/B (đưa Roadmap)/C (không cần sửa): (A) Firebase Rules chưa version-control/chưa xác minh được RBAC có backing thật ở tầng Database; (A) `AIJobQueue` có rủi ro race condition khi nhiều tab/admin cùng gọi `resume()` (biến `processing` chỉ cục bộ theo phiên trình duyệt, không đồng bộ qua Firebase); (B) `escapeHtml()` lặp lại ở 10 file, `rangeStartMs()` lặp lại ở 3 file (Technical Debt, rủi ro thấp); (B) `ContextBuilder` chưa có Plugin nào dùng; (B) chỉ 1/4 Provider có tích hợp thật; (C) Cloud Function chưa deploy (vận hành, không phải kiến trúc); (C) `AITaskRouter` rule-based cứng, chưa phát sinh vấn đề thật ở quy mô hiện tại. Chi tiết đầy đủ: xem `ROADMAP.md` mục "Sprint 8 Planning".
+- **Đề xuất Sprint 8 (chờ phê duyệt)**: Requirement #1 Firebase Database Rules — Version Control + Verification (ưu tiên cao nhất); Requirement #2 Job Queue Concurrency Safety (cần Decision Record riêng vì phải sửa `job-queue.js`); Requirement #3 Kiểm tra toàn diện + Đóng Sprint. Các ý tưởng khác (hợp nhất helper trùng lặp, migrate Plugin sang `ContextBuilder`, tích hợp Provider thật thứ 2, deploy Cloud Function, Topic-only Routing, Automation nền thật) **KHÔNG đưa vào Sprint 8** — chỉ ghi `ROADMAP.md`, chờ quyết định riêng.
+- Cập nhật `ROADMAP.md` (thêm mục "Sprint 8 Planning" đầy đủ). Không sửa `PROJECT_ARCHITECTURE.md` (không có thay đổi kiến trúc nào ở bước Planning này).
+- **SPRINT 8 PLANNING HOÀN THÀNH. Không bắt đầu Requirement #1. Chờ Chief Architect phê duyệt.**
+
 ## Sprint 7 — Kiểm tra toàn diện + Đóng Sprint (Requirement #6) — SPRINT 7 COMPLETED
 
 Sprint Review cuối cùng của Sprint 7 — không thêm tính năng, chỉ kiểm thử/xác minh/đánh giá toàn bộ 5 Requirement trước khi đóng Sprint.
