@@ -423,6 +423,29 @@ Sprint Review cuối cùng của Sprint 6 — tái xác nhận toàn bộ 4 Requ
 - **Security check**: không có secret nào trong code Sprint 6; Cloud Function vẫn chưa deploy (kế thừa từ Sprint 3, không phải vấn đề Sprint 6).
 - **Project Backup**: không khả dụng trong môi trường hiện tại — Auto Mode Safety Classifier chặn cứng việc nén + upload source code lên Google Drive bên ngoài (phân loại "Data Exfiltration"). GitHub (`feature/cms-ai-sprint2`) là nơi backup từ xa duy nhất khả dụng.
 
+## User-triggered Workflow Automation (Sprint 7, Requirement #4)
+
+Cho phép Administrator ghép nhiều AI Plugin thành 1 chuỗi Bước chạy TUẦN TỰ, CHỈ chạy khi chủ động bấm "Chạy Workflow" — KHÔNG có Trigger tự động/Cron/Webhook nào:
+
+```
+Administrator → admin/ai/workflow.html (js/admin-ai-workflow.js): thêm Step (Plugin + input)
+             → bấm "Chạy Workflow" → WorkflowEngine.run(steps, userId, userEmail, onStepDone) (js/ai/workflow-engine.js)
+                  Với MỖI Step (tuần tự, dừng ngay khi 1 Step không "completed"):
+                  ├─ PermissionService.checkPluginExecution(userId, userEmail, pluginId) — không granted → dừng, KHÔNG gọi Plugin Manager
+                  ├─ PluginManager.loadPlugin(pluginId).execute([inputParams], userId, userEmail) → AIJobQueue.enqueue() (Job riêng cho Step này)
+                  ├─ AIJobQueue.resume(userId, userEmail) → xử lý Queue (tuần tự, Queue DUY NHẤT đã có)
+                  └─ JobDB.get(jobId) → đọc trạng thái Job thật ("completed"/"failed") để quyết định chạy tiếp hay dừng
+             → Step "completed" → Draft (trạng thái "draft") → Human Review tại admin/ai/drafts.html (không sửa, Workflow KHÔNG tự Publish)
+```
+
+- **Không phát sinh Business Logic mới, không bypass Layer nào**: `WorkflowEngine` KHÔNG tự enqueue Job (không gọi `AIJobQueue.enqueue()` trực tiếp — luôn qua `PluginManager.loadPlugin().execute()`), KHÔNG tự chọn Provider/gọi AI (không đụng `AIProviderRegistry`), KHÔNG tự kiểm tra quyền theo cách riêng (luôn qua `PermissionService.checkPluginExecution()`, đúng cách `js/admin-ai.js runModule()` đã làm cho 1 Plugin đơn — `AI_RULES.md` mục 8 đã dự liệu rõ: nơi gọi `PluginManager.execute()` trực tiếp khác phải tự gọi `PermissionService.checkPluginExecution()`).
+- **Không lưu định nghĩa Workflow vào Database**: danh sách Step (Plugin + input mỗi Step) chỉ tồn tại trong bộ nhớ trình duyệt (biến JS) ở phiên chạy hiện tại — không có Collection/Field Firebase mới nào. Muốn lưu Workflow để chạy lại nhiều lần cần 1 Collection mới, LÀ 1 thay đổi Database Structure — chưa triển khai, cần Decision Record riêng (xem `ROADMAP.md`).
+- **Dừng đúng lúc khi 1 Step thất bại**: `WorkflowEngine.run()` kiểm tra `status` trả về của mỗi Step (`completed`/`failed`/`permission_denied`/`plugin_not_found`) — bất kỳ giá trị nào khác `completed` đều dừng chuỗi Step ngay, các Step còn lại không được gọi tới (không tạo Job cho Step chưa chạy tới).
+- **Mỗi Step vẫn là 1 Job riêng qua đúng Queue hiện có**: `plugin.execute([inputParams], userId, userEmail)` gọi hệt như Dashboard chính (`js/admin-ai.js runModule()`) — mỗi Step luôn tạo đúng 1 bản ghi `aiJobs` riêng, xử lý qua `AIJobQueue` (Queue DUY NHẤT, không có Queue thứ 2 cho Workflow).
+- **Không Publish tự động**: `workflow-engine.js` không import/gọi `publishToTarget()`/`publishDraftById()` — mọi Draft tạo ra từ Workflow vẫn dừng ở trạng thái `draft`, chờ Admin tự duyệt tại `admin/ai/drafts.html` (Draft Workflow/Human Review Workflow không đổi).
+- **Không đổi Database Structure, không Trigger tự động**: không thêm Field/Collection nào; Workflow chỉ chạy khi có hành động bấm nút rõ ràng của Admin — không có polling/cron/webhook nào lắng nghe chạy nền.
+- **Có thể mở rộng sang Automation thật trong tương lai** (NFR) — SAU KHI `AI_RULES.md` (Constitution) được sửa để cho phép Trigger tự động (hiện quy tắc 3 "Chỉ chạy khi có hành động rõ ràng của người dùng" cấm điều này) — đây là thay đổi Constitution, cần Decision Record + Chief Architect phê duyệt riêng, chưa triển khai ở Requirement này.
+
 ## AI Context Foundation (Sprint 7, Requirement #3)
 
 Lớp Context DÙNG CHUNG cho AI Framework, đứng giữa Data Provider (Sprint 2, Requirement #3) và AI Provider — đóng gói dữ liệu CMS có sẵn thành 1 Context Package chuẩn hoá trước khi ghép vào Prompt, CHỈ ĐỌC, không ghi Memory dài hạn:

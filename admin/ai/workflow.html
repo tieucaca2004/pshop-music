@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Duyệt nội dung AI - Pshop Music Admin</title>
+<title>AI Workflow Automation - Pshop Music Admin</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -17,8 +17,13 @@
   <div class="admin-main">
     <div class="admin-topbar" id="adminTopbar"></div>
     <div class="admin-wrap">
-      <p class="small-muted" style="margin-bottom:1.5rem">Nội dung AI tạo ra chỉ có hiệu lực sau khi bấm <strong>Duyệt &amp; Publish</strong> — trước đó không ảnh hưởng gì tới dữ liệu thật trên site. Muốn chạy nhiều Plugin liên tiếp tự động, xem <a href="workflow.html" style="color:var(--gold-ink)">Workflow Automation</a>.</p>
-      <div id="draftsList"></div>
+      <p class="small-muted" style="margin-bottom:1.5rem">Ghép nhiều Plugin AI thành 1 chuỗi Bước chạy TUẦN TỰ, chỉ chạy khi bạn chủ động bấm "Chạy Workflow" — không có Trigger tự động/Cron/Webhook nào. Mỗi Bước vẫn tạo Job riêng qua đúng Queue/Permission Service hiện có. Nếu 1 Bước lỗi, Workflow dừng ngay, không chạy Bước tiếp theo. Kết quả luôn dừng ở Draft — Workflow KHÔNG tự Publish.</p>
+      <div id="wfSteps"></div>
+      <div style="display:flex; gap:1rem; margin:1rem 0">
+        <button class="submit-btn" id="wfAddStepBtn" type="button">+ THÊM BƯỚC</button>
+        <button class="submit-btn" id="wfRunBtn" type="button">CHẠY WORKFLOW</button>
+      </div>
+      <div id="wfResult"></div>
     </div>
   </div>
 </div>
@@ -53,7 +58,9 @@
 <script src="../../js/ai/modules/banner-generator.js"></script>
 <script src="../../js/ai/job-queue.js"></script>
 <script src="../../js/ai/plugin-manager.js"></script>
-<script src="../../js/admin-ai.js"></script>
-<script>AdminAI.initDrafts();</script>
+<script src="../../js/ai/permission-service.js"></script>
+<script src="../../js/ai/workflow-engine.js"></script>
+<script src="../../js/admin-ai-workflow.js"></script>
+<script>AdminAIWorkflow.init();</script>
 </body>
 </html>
