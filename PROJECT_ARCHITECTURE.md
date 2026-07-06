@@ -423,6 +423,32 @@ Sprint Review cuối cùng của Sprint 6 — tái xác nhận toàn bộ 4 Requ
 - **Security check**: không có secret nào trong code Sprint 6; Cloud Function vẫn chưa deploy (kế thừa từ Sprint 3, không phải vấn đề Sprint 6).
 - **Project Backup**: không khả dụng trong môi trường hiện tại — Auto Mode Safety Classifier chặn cứng việc nén + upload source code lên Google Drive bên ngoài (phân loại "Data Exfiltration"). GitHub (`feature/cms-ai-sprint2`) là nơi backup từ xa duy nhất khả dụng.
 
+## AI Context Foundation (Sprint 7, Requirement #3)
+
+Lớp Context DÙNG CHUNG cho AI Framework, đứng giữa Data Provider (Sprint 2, Requirement #3) và AI Provider — đóng gói dữ liệu CMS có sẵn thành 1 Context Package chuẩn hoá trước khi ghép vào Prompt, CHỈ ĐỌC, không ghi Memory dài hạn:
+
+```
+(Plugin tương lai, opt-in) → ContextBuilder.build(moduleId, inputParams) (js/ai/context-builder.js)
+                                  ├─ DataProvider.getProduct()/getMedia() (nếu có productId)
+                                  ├─ DataProvider.getBlogPost() (nếu có postId)
+                                  └─ DataProvider.getSettings() (luôn thử đọc — ngữ cảnh nền tảng chung)
+                             → Context Package { moduleId, builtAt, data, missing }
+                             → ContextBuilder.toPromptText(package) → đoạn text sẵn sàng ghép vào `prompt`
+                                  (tham số của IAIProvider.generate({prompt}), js/ai/provider-interface.js)
+
+Admin (xem trước) → admin/ai/context-builder.html (js/admin-ai-context-builder.js)
+                  → PluginManager.loadPlugins() (chọn Plugin) + DB.getAll()/BlogDB.getAll() (chọn Sản phẩm/Bài viết)
+                  → ContextBuilder.build() + toPromptText() → hiển thị Context Package (chỉ xem, không tạo Job/Draft)
+```
+
+- **Không phát sinh Business Logic mới, không đổi Sprint 2-6**: mỗi module trong `js/ai/modules/*.js` vẫn tự `loadContext()` riêng như trước — `job-queue.js` KHÔNG gọi tới `context-builder.js`. `ContextBuilder` là nền tảng CHUNG, SẴN SÀNG cho Plugin tương lai dùng (gọi trực tiếp `build()`, giống hệt cách gọi `DataProvider`), không bắt buộc Plugin hiện tại phải đổi theo — đúng Architectural Constraint "Không Refactor Sprint 2-6".
+- **Không Memory dài hạn, không RAG**: `build()` là hàm thuần đọc, không cache/ghi vào bất kỳ Database/collection nào — mỗi lần gọi là 1 lượt đọc `DataProvider` mới hoàn toàn; không tìm kiếm ngữ nghĩa/vector, chỉ đọc trực tiếp theo id có sẵn trong `inputParams` (`productId`/`postId`), đúng cách các module Sprint 2-6 đã tự làm.
+- **Thiếu Context không phải System Error**: mỗi nguồn dữ liệu tự bắt lỗi/rỗng riêng vào mảng `missing` — kể cả `DataProvider` reject toàn bộ hoặc chưa được nạp script, `build()` vẫn luôn resolve về 1 Context Package hợp lệ (rỗng nếu cần), không bao giờ throw/reject. Đã xác nhận qua kiểm thử thật trên Chrome (7 kịch bản, xem `CHANGELOG.md`).
+- **`toPromptText()` — chứng minh tương thích với AI Provider mà không tự gọi Provider**: định dạng Context Package thành 1 đoạn text đúng kiểu tham số `prompt` (string) mà `IAIProvider.generate({prompt})` chấp nhận — không tự gọi `AIProviderRegistry`/`provider.generate()` ở đây; việc chọn Provider và gọi AI thật vẫn CHỈ thuộc về `AIJobQueue` (`AI_RULES.md` mục 6).
+- **`admin/ai/context-builder.html` chỉ là công cụ xem trước kiến trúc**: liệt kê cả Plugin đang Disable/Coming Soon (không phải nơi chạy Plugin thật), không tạo Job, không gọi `AIJobQueue`/`AIProviderRegistry`, không tạo Draft. Dropdown Sản phẩm/Bài viết tải qua `DB.getAll()`/`BlogDB.getAll()` trực tiếp — đúng khuôn mẫu `js/admin-ai.js` đã dùng cho `productSelect`/`blogSelect` (quy tắc "chỉ qua DataProvider" ở `AI_RULES.md` mục 2b áp dụng cho `loadContext()` của Plugin, không áp dụng cho UI tải danh sách hiển thị dropdown).
+- **Không đổi Database Structure**: không thêm Field/Collection nào — toàn bộ dữ liệu đọc qua `DataProvider` đã có.
+- **Có thể mở rộng thành AI Memory trong tương lai** (NFR) — Context Package hiện là dữ liệu tức thời (không lưu), có cấu trúc `{ moduleId, builtAt, data, missing }` rõ ràng, dễ thêm 1 lớp lưu trữ/lấy lại theo thời gian sau này NẾU được giao 1 Requirement riêng (sẽ cần Decision Record vì đó là thay đổi Database Structure) — chưa triển khai ở Requirement này.
+
 ## AI Cost Tracking (Sprint 7, Requirement #2)
 
 Cho Administrator theo dõi mức sử dụng AI và chi phí ƯỚC TÍNH theo Provider/Plugin — công cụ thống kê, hoàn toàn CHỈ ĐỌC, không phải Billing/thanh toán:

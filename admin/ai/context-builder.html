@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Plugin Manager - Pshop Music Admin</title>
+<title>AI Context Builder - Pshop Music Admin</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -17,16 +17,25 @@
   <div class="admin-main">
     <div class="admin-topbar" id="adminTopbar"></div>
     <div class="admin-wrap">
+      <p class="small-muted" style="margin-bottom:1.5rem">Xem trước Context Package mà Context Builder đóng gói từ dữ liệu CMS có sẵn (qua Data Provider) cho 1 Plugin/mục tiêu cụ thể. CHỈ ĐỌC — không tạo Job, không gọi AI Provider, không tạo Draft, không thay đổi bất kỳ đâu. Đây là nền tảng dùng chung cho Plugin tương lai, chưa thay đổi cách các Plugin hiện tại (Sprint 2-6) hoạt động.</p>
       <div class="panel">
-        <h3 style="margin:0 0 1rem">QUẢN LÝ PLUGIN AI</h3>
-        <p class="small-muted">Chỉ plugin "Đang bật" mới hiện trên Dashboard và chạy được. Plugin "Sắp ra mắt" giữ nguyên code, sẽ kích hoạt ở sprint sau — không xóa, không mất dữ liệu. Xem <a href="context-builder.html" style="color:var(--gold-ink)">AI Context Builder</a> để xem trước Context Package mà từng Plugin có thể dùng.</p>
-        <div class="admin-table-wrap">
-          <table class="admin-table">
-            <thead><tr><th>Plugin</th><th>Version</th><th>AI Provider</th><th>Trạng thái</th><th>Bật/Tắt</th><th></th></tr></thead>
-            <tbody id="pluginTableBody"></tbody>
-          </table>
+        <div class="field-grid">
+          <div class="form-group">
+            <label>Plugin</label>
+            <select id="cbPluginSelect"></select>
+          </div>
+          <div class="form-group" id="cbProductGroup" style="display:none">
+            <label>Sản phẩm</label>
+            <select id="cbProductSelect"></select>
+          </div>
+          <div class="form-group" id="cbPostGroup" style="display:none">
+            <label>Bài viết</label>
+            <select id="cbPostSelect"></select>
+          </div>
         </div>
+        <button class="submit-btn" id="cbBuildBtn" style="margin-top:1rem">XÂY DỰNG CONTEXT</button>
       </div>
+      <div id="cbResult" style="margin-top:1.5rem"></div>
     </div>
   </div>
 </div>
@@ -41,15 +50,9 @@
 <script src="../../js/cms-db.js"></script>
 <script src="../../js/admin-auth.js"></script>
 
-<script src="../../js/ai/provider-interface.js"></script>
-<script src="../../js/ai/provider-registry.js"></script>
 <script src="../../js/ai/ai-db.js"></script>
-<script src="../../js/ai/plugin-db.js"></script>
-<script src="../../js/ai/providers/openai.js"></script>
-<script src="../../js/ai/providers/claude.js"></script>
-<script src="../../js/ai/providers/gemini.js"></script>
-<script src="../../js/ai/providers/deepseek.js"></script>
 <script src="../../js/ai/data-provider.js"></script>
+<script src="../../js/ai/plugin-db.js"></script>
 <script src="../../js/ai/module-registry.js"></script>
 <script src="../../js/ai/modules/blog-writer.js"></script>
 <script src="../../js/ai/modules/product-description-writer.js"></script>
@@ -59,8 +62,9 @@
 <script src="../../js/ai/modules/image-prompt-generator.js"></script>
 <script src="../../js/ai/modules/slider-generator.js"></script>
 <script src="../../js/ai/modules/banner-generator.js"></script>
-<script src="../../js/ai/job-queue.js"></script>
 <script src="../../js/ai/plugin-manager.js"></script>
-<script src="../../js/admin-ai-plugins.js"></script>
+<script src="../../js/ai/context-builder.js"></script>
+<script src="../../js/admin-ai-context-builder.js"></script>
+<script>AdminAIContextBuilder.init();</script>
 </body>
 </html>
