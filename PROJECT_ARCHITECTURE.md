@@ -423,6 +423,30 @@ Sprint Review cuối cùng của Sprint 6 — tái xác nhận toàn bộ 4 Requ
 - **Security check**: không có secret nào trong code Sprint 6; Cloud Function vẫn chưa deploy (kế thừa từ Sprint 3, không phải vấn đề Sprint 6).
 - **Project Backup**: không khả dụng trong môi trường hiện tại — Auto Mode Safety Classifier chặn cứng việc nén + upload source code lên Google Drive bên ngoài (phân loại "Data Exfiltration"). GitHub (`feature/cms-ai-sprint2`) là nơi backup từ xa duy nhất khả dụng.
 
+## AI Workflow Insights (Sprint 7, Requirement #5 — cuối cùng phát triển tính năng Sprint 7)
+
+Cho Administrator quan sát toàn bộ vòng đời 1 AI Request — Context → Queue → Provider → Draft → Human Review → Trạng thái cuối — trên 1 màn hình, công cụ Observability, hoàn toàn CHỈ ĐỌC, không phát sinh Business Logic:
+
+```
+Administrator → admin/ai/workflow-insights.html (js/admin-ai-workflow-insights.js)
+             → WorkflowInsightsService.compute(rangeKey) (js/ai/workflow-insights.js)
+                  ├─ JobDB.getAll() → mỗi Job = 1 "AI Request": Timeline (createdAt/startedAt/finishedAt),
+                  │    Provider (job.provider), Plugin (job.moduleId), items[] (status/error/resultDraftId)
+                  ├─ LogDB.getAll() → khớp theo jobId → durationMs mỗi item (Context+Provider+Draft gộp chung)
+                  ├─ LogDB entries jobId:null, status:'permission_denied' → mỗi entry = 1 "AI Request" riêng
+                  └─ DraftDB.getAll() → khớp theo item.resultDraftId → trạng thái Draft/Human Review
+             → 1 danh sách AI Request (Timeline + Trạng thái cuối), UI resolve nhãn Plugin/Provider qua
+                AIModuleRegistry.get()/AIProviderRegistry.get(), cho xem chi tiết từng Request
+```
+
+- **Định nghĩa 1 "AI Request" = 1 `aiJobs` record**, cộng các lượt bị từ chối quyền (`aiLogs` có `jobId:null`, `status:'permission_denied'` — AI_RULES.md mục 8: Queue chưa từng được gọi tới nên không có Job) — mỗi lượt này là 1 Request riêng có trạng thái cuối "Permission Denied".
+- **Timeline giới hạn đúng độ chi tiết dữ liệu hiện có**: `createdAt`/`startedAt`/`finishedAt` của Job (không đổi Queue) cho ra "Queue chờ" (`queueWaitMs`) và "Xử lý" (`processingMs`) ở cấp Job; thời gian xử lý mỗi item lấy từ `durationMs` của `aiLogs` khớp `jobId` (khớp theo thứ tự xử lý tuần tự, vì Log không lưu `itemIndex` riêng) — đây là thời gian GỘP CHUNG Context+Provider+tạo Draft, Queue không ghi tách timestamp riêng từng giai đoạn con. Không suy đoán thêm số liệu ngoài dữ liệu đã ghi.
+- **Provider/Plugin đã dùng**: Provider lấy trực tiếp từ `job.provider` (Sprint 2 Requirement #6, đã ghi đúng mục đích này); nhãn hiển thị resolve ở tầng UI (không phải Service) qua `AIModuleRegistry.get()`/`AIProviderRegistry.get()` — đúng cách tách Service (tính toán)/UI (trình bày) đã dùng ở `cost-tracking.js`/`admin-ai-cost-tracking.js`.
+- **Thiếu dữ liệu → "Unknown", không phải System Error**: mọi field hiển thị có fallback "Unknown" (Draft bị xoá dù Job có `resultDraftId`, Job đang `queued`/`running` chưa có `startedAt`/`finishedAt`...); mỗi nguồn đọc (`JobDB`/`LogDB`/`DraftDB`) tự bắt lỗi riêng trong `compute()` — 1 nguồn lỗi không làm hỏng toàn bộ Insights.
+- **Không phát sinh Business Logic mới**: `WorkflowInsightsService` chỉ đọc + ghép nối dữ liệu 3 nguồn đã có, không có quyết định nghiệp vụ nào ngoài đối chiếu theo `id`/`jobId`/`resultDraftId` sẵn có.
+- **Không đổi Database Structure**: không thêm Field/Collection nào.
+- **Có thể mở rộng thành Distributed Tracing trong tương lai** (NFR) — muốn Timeline tách riêng từng giai đoạn con (Context/Provider/Draft riêng biệt thay vì gộp `durationMs`) cần Queue (`job-queue.js`) ghi thêm timestamp cho từng bước — LÀ 1 thay đổi Queue/Database Structure, chưa triển khai, cần Decision Record + Chief Architect phê duyệt riêng (xem `ROADMAP.md`).
+
 ## User-triggered Workflow Automation (Sprint 7, Requirement #4)
 
 Cho phép Administrator ghép nhiều AI Plugin thành 1 chuỗi Bước chạy TUẦN TỰ, CHỈ chạy khi chủ động bấm "Chạy Workflow" — KHÔNG có Trigger tự động/Cron/Webhook nào:
