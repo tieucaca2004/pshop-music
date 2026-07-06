@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Nhật ký AI - Pshop Music Admin</title>
+<title>Usage Visibility - Pshop Music Admin</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -17,16 +17,18 @@
   <div class="admin-main">
     <div class="admin-topbar" id="adminTopbar"></div>
     <div class="admin-wrap">
+      <p class="small-muted" style="margin-bottom:1.5rem">Mức độ sử dụng AI Framework, tổng hợp từ Nhật ký (<code>aiLogs</code>) đã có — chỉ đọc, không phải Cost Tracking/Billing (chưa theo dõi token/chi phí).</p>
       <div class="panel">
-        <h3 style="margin:0 0 1rem">NHẬT KÝ HOẠT ĐỘNG AI (200 gần nhất)</h3>
-        <p class="small-muted" style="margin:0 0 1rem">Xem <a href="usage.html" style="color:var(--gold-ink)">Usage Visibility</a> để xem số liệu tổng hợp theo Plugin/Provider/Trạng thái.</p>
-        <div class="admin-table-wrap">
-          <table class="admin-table">
-            <thead><tr><th>Thời gian</th><th>Người thực hiện</th><th>Module</th><th>Provider</th><th>Trạng thái</th><th>Lỗi (nếu có)</th></tr></thead>
-            <tbody id="logsTableBody"></tbody>
-          </table>
+        <div class="form-group" style="max-width:280px">
+          <label>Khoảng thời gian</label>
+          <select id="usageRangeFilter">
+            <option value="today">Hôm nay</option>
+            <option value="7d" selected>7 ngày gần nhất</option>
+            <option value="30d">30 ngày gần nhất</option>
+          </select>
         </div>
       </div>
+      <div id="usageResult" style="margin-top:1.5rem"></div>
     </div>
   </div>
 </div>
@@ -41,8 +43,6 @@
 <script src="../../js/cms-db.js"></script>
 <script src="../../js/admin-auth.js"></script>
 
-<script src="../../js/ai/provider-interface.js"></script>
-<script src="../../js/ai/provider-registry.js"></script>
 <script src="../../js/ai/ai-db.js"></script>
 <script src="../../js/ai/data-provider.js"></script>
 <script src="../../js/ai/module-registry.js"></script>
@@ -54,7 +54,8 @@
 <script src="../../js/ai/modules/image-prompt-generator.js"></script>
 <script src="../../js/ai/modules/slider-generator.js"></script>
 <script src="../../js/ai/modules/banner-generator.js"></script>
-<script src="../../js/admin-ai.js"></script>
-<script>AdminAI.initLogs();</script>
+<script src="../../js/ai/usage-stats.js"></script>
+<script src="../../js/admin-ai-usage.js"></script>
+<script>AdminAIUsage.init();</script>
 </body>
 </html>

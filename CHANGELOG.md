@@ -2,6 +2,22 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 5 — Usage Visibility (Requirement #4)
+
+**Lưu ý về trình tự (nhắc lại)**: Requirement ghi "Requirement #2 và #3 đã hoàn thành" — Requirement #3 đúng là đã COMPLETED, nhưng "Requirement #2" (AI Workflow Engine) **vẫn chưa từng được triển khai** (bị hủy giữa chừng từ nhiều lượt trước). Đã tiếp tục Requirement #4 vì Usage Visibility không phụ thuộc Workflow Engine.
+
+Xây `Usage Visibility` — cho Administrator quan sát mức độ sử dụng AI Framework, hoàn toàn từ dữ liệu `aiLogs` đã có, KHÔNG phải Cost Tracking/Billing. Không sửa Sprint 2/3/4, không Refactor AI Framework/Queue/Plugin Manager/Provider Manager/Permission Service/AI Task Router/Data Provider/Draft Workflow/Human Review Workflow, không đổi Database Structure.
+
+- **Không cần Decision Record**: mọi dữ liệu cần thiết (tổng số Generate, theo Plugin, theo Provider, theo trạng thái Completed/Failed/Cancelled) đã có sẵn trong `aiLogs` hiện tại (`moduleId`, `provider`, `status`, `timestamp`) — không cần thêm Field/Collection nào, không đụng tới Token Usage/Cost Tracking (đúng Out of Scope).
+- **Thêm** `js/ai/usage-stats.js` (`UsageStats.compute(rangeKey)`) — CHỈ ĐỌC `LogDB.getAll()` (`js/ai/ai-db.js`), không gọi bất kỳ hàm ghi nào (`add`/`update`). Lọc theo `rangeKey` (`today`/`7d`/`30d`), tổng hợp đếm theo Plugin (`moduleId`), theo Provider (`provider`), theo Trạng thái (`completed`/`failed`/`cancelled`/`permission_denied` — hiển thị đủ cả 4 vì đều là dữ liệu thật có sẵn trong `aiLogs`, không chỉ 3 mục yêu cầu tối thiểu). "Tổng số lần Generate" = tổng số bản ghi Log trong khoảng thời gian đã chọn (mọi trạng thái) — định nghĩa đơn giản, nhất quán với các breakdown, không ước tính token/chi phí.
+- **Thêm** `admin/ai/usage.html` + `js/admin-ai-usage.js` — trang Admin-only mới, bộ lọc Hôm nay/7 ngày/30 ngày, 3 bảng (Plugin/Provider/Trạng thái). Khi không có dữ liệu trong khoảng đã chọn, hiển thị thông báo rõ ràng ("Chưa có dữ liệu...") — không phải "System Error".
+- **Thêm** 1 dòng liên kết trong `admin/ai/logs.html` trỏ sang `usage.html`.
+- **Xác nhận không đổi**: `job-queue.js`, `plugin-manager.js`, `provider-registry.js`, `permission-service.js`, `task-router.js`, `data-provider.js`, `AI_RULES.md`, Database Structure — `usage-stats.js` không import/gọi bất kỳ hàm ghi nào của các module này.
+- **Kiểm thử**: chạy thật `js/ai/usage-stats.js` qua Node `vm` (4 kịch bản: tổng hợp 7 ngày, mở rộng 30 ngày, lọc "hôm nay", dữ liệu rỗng) — tất cả PASS, xác nhận `LogDB.getAll()` là lời gọi DUY NHẤT (0 lần gọi `add`/`update`), tổng hợp đúng theo cả 3 chiều, an toàn khi không có dữ liệu. Kiểm tra `admin/ai/usage.html` + `admin/ai/logs.html` qua static server — 0 lỗi console.
+- Cập nhật `PROJECT_ARCHITECTURE.md`.
+- **Có khả năng mở rộng thành Cost Tracking sau này** (NFR) — nếu cần token/chi phí thật, sẽ cần thêm field vào `aiLogs` (đã ghi `ROADMAP.md` từ trước, cần Decision Record riêng khi được giao).
+- Chưa triển khai Requirement #5.
+
 ## Sprint 5 — Requirement #3 (Revised): Decision Record Resolution — REQUIREMENT #3 COMPLETED
 
 Chief Architect đã phê duyệt Decision Record còn treo từ Requirement #3 (xem mục ngay bên dưới): **chọn Option B**.

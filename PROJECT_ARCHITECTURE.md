@@ -347,6 +347,22 @@ FAQ Generator (`js/ai/modules/faq-generator.js`, đã có từ Sprint 1) đượ
 
 **Chief Architect đã quyết định (Requirement #3 Revised): Option B** — không sửa `task-router.js`, không tích hợp FAQ Generator vào AI Assistant ở Sprint 5. FAQ Generator CHỈ dùng được qua Plugin Manager Dashboard (`admin/ai/index.html`). **Topic-only Routing cho AI Assistant sẽ được xem xét ở một Requirement riêng trong tương lai** (xem `ROADMAP.md`). Đây là giới hạn có chủ đích, không phải bug.
 
+## Usage Visibility (Sprint 5, Requirement #4)
+
+Cho Administrator quan sát mức độ sử dụng AI Framework — CHỈ ĐỌC, không tạo Database/Collection/Field mới, không phải Cost Tracking/Billing:
+
+```
+Administrator → admin/ai/usage.html (js/admin-ai-usage.js)
+             → UsageStats.compute(rangeKey) (js/ai/usage-stats.js)
+                  → LogDB.getAll() (chỉ đọc, KHÔNG add/update) — lọc theo today/7d/30d
+             → Report: Tổng số Generate, theo Plugin, theo Provider, theo Trạng thái
+```
+
+- **Không có Decision Record** — toàn bộ dữ liệu cần thiết đã có sẵn trong `aiLogs` (`moduleId`, `provider`, `status`, `timestamp`), không cần thêm field/collection nào.
+- **Không thêm Business Logic mới** — chỉ đếm/gom nhóm dữ liệu Log đã có, không có quyết định nghiệp vụ nào (không tính token/chi phí — đó là Cost Tracking, ngoài phạm vi).
+- **"Tổng số lần Generate"** = tổng số bản ghi Log trong khoảng thời gian đã chọn (mọi trạng thái, kể cả `permission_denied`) — định nghĩa đơn giản, khớp với tổng của 3 bảng breakdown, không cần ước tính riêng.
+- **Có thể mở rộng thành Cost Tracking** (NFR) — nếu cần chi phí/token thật, cần thêm field vào `aiLogs` (Database Structure change, cần Decision Record + Chief Architect phê duyệt riêng, đã ghi `ROADMAP.md`).
+
 ## Giới hạn kiến trúc đã biết (không tự ý "vá" bằng cách thêm hạ tầng mới)
 
 - **Job Queue vẫn không có backend riêng (V1)** — `AIJobQueue` xử lý tuần tự phía trình duyệt Admin, không đổi ở Sprint 3. Cloud Function duy nhất hiện có (`openaiProxy`, xem mục "Cloud Function Proxy Layer") chỉ là proxy gọi OpenAI API, KHÔNG phải backend xử lý Queue — nâng Job Queue lên Cloud Functions (Job Queue V2, xem `ROADMAP.md`) vẫn là quyết định kiến trúc cần người phụ trách xác nhận trước, chưa triển khai.
