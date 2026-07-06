@@ -23,13 +23,14 @@ const AI_PERMISSIONS = {
   GENERATE_BLOG: 'ai.generate.blog', // Sprint 6, Requirement #1 — kích hoạt Blog Writer (Functional Requirement #3, "thêm Permission phù hợp nếu cần")
   GENERATE_FACEBOOK: 'ai.generate.facebook', // Sprint 6, Requirement #2 — kích hoạt Facebook Post Generator (Functional Requirement "thêm Permission nếu cần")
   GENERATE_BANNER: 'ai.generate.banner', // Sprint 6, Requirement #3 — kích hoạt Banner Generator (Functional Requirement #3, "thêm Permission nếu cần")
+  GENERATE_IMAGE_PROMPT: 'ai.generate.imagePrompt', // Sprint 6, Requirement #4 — kích hoạt Image Prompt Generator (Functional Requirement #3, "thêm Permission nếu cần")
   MANAGE_PROVIDERS: 'ai.manage.providers',
   MANAGE_PLUGINS: 'ai.manage.plugins'
 };
 
-// Mỗi plugin ứng với đúng 1 quyền "ai.generate.*" — 1 plugin "coming_soon"
-// còn lại (Image Prompt) chưa được gán quyền, sẽ bổ sung khi kích hoạt ở
-// sprint sau (xem ROADMAP.md).
+// Mỗi plugin ứng với đúng 1 quyền "ai.generate.*" — không còn plugin nào
+// "coming_soon" kể từ Sprint 6 Requirement #4 (tất cả plugin viết ở Sprint 1
+// đã được kích hoạt sang Production).
 const PLUGIN_PERMISSIONS = {
   'product-description-writer': AI_PERMISSIONS.GENERATE_PRODUCT,
   'slider-generator': AI_PERMISSIONS.GENERATE_SLIDER,
@@ -37,7 +38,8 @@ const PLUGIN_PERMISSIONS = {
   'faq-generator': AI_PERMISSIONS.GENERATE_FAQ,
   'blog-writer': AI_PERMISSIONS.GENERATE_BLOG,
   'facebook-post-generator': AI_PERMISSIONS.GENERATE_FACEBOOK,
-  'banner-generator': AI_PERMISSIONS.GENERATE_BANNER
+  'banner-generator': AI_PERMISSIONS.GENERATE_BANNER,
+  'image-prompt-generator': AI_PERMISSIONS.GENERATE_IMAGE_PROMPT
 };
 
 // Chỉ Admin mới có ai.manage.providers/ai.manage.plugins (đúng yêu cầu #7:
@@ -45,7 +47,7 @@ const PLUGIN_PERMISSIONS = {
 // generate — đúng với khả năng Editor đã có trên Dashboard từ trước.
 const ROLE_PERMISSIONS = {
   admin: Object.values(AI_PERMISSIONS),
-  editor: [AI_PERMISSIONS.GENERATE_PRODUCT, AI_PERMISSIONS.GENERATE_SLIDER, AI_PERMISSIONS.GENERATE_SEO, AI_PERMISSIONS.GENERATE_FAQ, AI_PERMISSIONS.GENERATE_BLOG, AI_PERMISSIONS.GENERATE_FACEBOOK, AI_PERMISSIONS.GENERATE_BANNER]
+  editor: [AI_PERMISSIONS.GENERATE_PRODUCT, AI_PERMISSIONS.GENERATE_SLIDER, AI_PERMISSIONS.GENERATE_SEO, AI_PERMISSIONS.GENERATE_FAQ, AI_PERMISSIONS.GENERATE_BLOG, AI_PERMISSIONS.GENERATE_FACEBOOK, AI_PERMISSIONS.GENERATE_BANNER, AI_PERMISSIONS.GENERATE_IMAGE_PROMPT]
 };
 
 const PermissionService = (function () {

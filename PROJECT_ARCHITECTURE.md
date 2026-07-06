@@ -381,6 +381,17 @@ Blog Writer (`js/ai/modules/blog-writer.js`, đã có từ Sprint 1) được k�
 - **Draft Workflow**: không cần sửa gì — Draft không có `targetId` tự động tạo MỚI 1 blog post khi publish (`publishToTarget()` trong `js/admin-ai.js`, không đổi) — giống hệt FAQ Generator.
 - **Không có Decision Record cần thiết**: khác với FAQ Generator, Requirement #1 của Sprint 6 liệt kê rõ "Topic-only Routing" trong Out of Scope và không yêu cầu thêm Route vào AI Task Router — Blog Writer chỉ dùng qua Plugin Manager Dashboard (`admin/ai/index.html`), nhất quán với quyết định đã có cho FAQ Generator (Sprint 5 Requirement #3, Decision Record Option B).
 
+## Kích hoạt Image Prompt Generator (Sprint 6, Requirement #4)
+
+Image Prompt Generator (`js/ai/modules/image-prompt-generator.js`, đã có từ Sprint 1) được kích hoạt sang Production — **plugin cuối cùng** viết từ Sprint 1, sau Requirement này không còn plugin nào ở trạng thái "coming_soon":
+
+- **Plugin Manager**: `js/ai/plugin-db.js` thêm `'image-prompt-generator'` vào danh sách seed mặc định `enabled:true` — chỉ áp dụng cho môi trường CHƯA có dữ liệu `aiPlugins`; Production đã seed từ trước cần Admin tự bật thủ công.
+- **Permission**: `js/ai/permission-service.js` thêm `ai.generate.imagePrompt` (Admin + Editor) — đúng khuôn mẫu các quyền `ai.generate.*` đã có.
+- **Chỉ sinh văn bản Prompt, không tự tạo ảnh**: `mapToDraftContent()` trả về đúng 1 field `imagePrompt` (chuỗi văn bản tiếng Anh mô tả ảnh, để người dùng tự dán vào công cụ tạo ảnh AI khác) — module không có bất kỳ hàm nào gọi API tạo ảnh, đúng ranh giới "AI Image Generation" vẫn ngoài phạm vi kiến trúc hiện tại (xem `ROADMAP.md`, mục "AI Image Generation").
+- **`targetCollection: null` — cùng dạng "chỉ xem/copy" như Facebook Post Generator (Sprint 6, Requirement #2)**: không có nơi publish trực tiếp; `publishDraftById()` chuyển Draft sang `'published'` mà không ghi vào bất kỳ node CMS nào — xác nhận qua mô phỏng, không sửa `publishToTarget()`.
+- **Dữ liệu thật, không hardcode**: `buildPrompt()` dùng `subject`/`style` tự do người dùng nhập, không qua `DataProvider` (cùng dạng "chủ đề tự do" như Blog Writer/FAQ Generator/Facebook Post Generator/Banner Generator).
+- **Không có Decision Record cần thiết**: không yêu cầu thêm Route vào AI Task Router — chỉ dùng qua Plugin Manager Dashboard (`admin/ai/index.html`), cùng lý do Topic-only Routing (xem `ROADMAP.md`).
+
 ## Kích hoạt Banner Generator (Sprint 6, Requirement #3)
 
 Banner Generator (`js/ai/modules/banner-generator.js`, đã có từ Sprint 1) được kích hoạt sang Production theo đúng khuôn mẫu Blog Writer/FAQ Generator/Facebook Post Generator — sinh nội dung 1 banner quảng cáo mới (tiêu đề nội bộ + link) theo chủ đề tự do:

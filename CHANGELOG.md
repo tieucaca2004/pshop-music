@@ -2,6 +2,22 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 6 — Kích hoạt Image Prompt Generator (Requirement #4)
+
+Kích hoạt Image Prompt Generator (`js/ai/modules/image-prompt-generator.js`, đã có từ Sprint 1) từ "Coming Soon" sang Production, tái sử dụng hoàn toàn AI Framework hiện có. Đây là **plugin cuối cùng** viết từ Sprint 1 được kích hoạt — sau Requirement này, không còn plugin nào ở trạng thái "coming_soon". Không sửa Sprint 2/3/4/5, không Refactor AI Framework/Queue/Plugin Manager/Provider Manager/AI Task Router/Data Provider/Draft Workflow/Human Review Workflow, không đổi Database Structure.
+
+- **Không cần Decision Record** — giống Blog Writer/Facebook Post Generator/Banner Generator, Requirement này không yêu cầu thêm Route vào AI Task Router, không có xung đột giữa Functional Requirement và Architectural Constraint.
+- **Kích hoạt Plugin (Functional Req #1/#2)**: thêm `'image-prompt-generator'` vào `SPRINT2_ENABLED_MODULES` (`js/ai/plugin-db.js`) — chỉ ảnh hưởng giá trị SEED MẶC ĐỊNH cho môi trường CHƯA có dữ liệu; môi trường Production đã seed từ trước vẫn cần Admin tự bật "Enable" trong `admin/ai/plugins.html`.
+- **Permission (Functional Req #3)**: thêm `GENERATE_IMAGE_PROMPT: 'ai.generate.imagePrompt'` vào `AI_PERMISSIONS`, gán `'image-prompt-generator'` trong `PLUGIN_PERMISSIONS`, thêm vào `ROLE_PERMISSIONS.editor` (`js/ai/permission-service.js`) — đúng khuôn mẫu đã dùng cho các plugin trước, không đổi logic RBAC.
+- **Dữ liệu thật, không hardcode Prompt (Functional Req #4)**: xác nhận `buildPrompt()` dùng đúng `subject`/`style` tự do người dùng nhập — không có chuỗi cố định nào.
+- **Không Generate Image, chỉ sinh văn bản Prompt (Functional Req #5)**: xác nhận qua mô phỏng — `mapToDraftContent()` chỉ trả về `{ imagePrompt: <văn bản> }` (đúng 1 field, không có URL ảnh/binary nào), module không có bất kỳ hàm nào gọi API tạo ảnh — đúng thiết kế "chỉ sinh Prompt tham khảo để dán vào công cụ tạo ảnh AI khác", không tự động tạo ảnh (đúng Out of Scope "AI Image Generation").
+- **`targetCollection: null` — cùng dạng "chỉ xem/copy" như Facebook Post Generator**: không có nơi publish trực tiếp trong CMS. Xác nhận qua mô phỏng: nhánh `targetCollection === null` trong `publishToTarget()` (`js/admin-ai.js`, không sửa) hoạt động đúng — `publishDraftById()` chuyển Draft sang `'published'` mà KHÔNG ghi vào bất kỳ node CMS nào.
+- **Plugin Disable (Functional Req #6)**: đã đúng sẵn — Dashboard chỉ hiển thị Plugin đang Enable; `runModule()` đã có `.catch()` hiển thị lỗi rõ ràng nếu vô tình gọi khi Disable — không tạo Job.
+- **Không đổi**: `job-queue.js`, `plugin-manager.js`, `provider-registry.js`, `data-provider.js`, `AI_RULES.md`, `js/ai/task-router.js` (Topic-only Routing, cùng lý do như các plugin trước).
+- **Kiểm thử**: chạy thật `permission-service.js`/`plugin-db.js`/`image-prompt-generator.js`/`job-queue.js`/`admin-ai.js` qua Node `vm` (4 kịch bản) — Editor/Admin được phép chạy `image-prompt-generator` với quyền `ai.generate.imagePrompt` mới thêm; seed mặc định đúng (plugin cuối cùng, không còn module nào "coming_soon"); module đọc đúng dữ liệu thật (`subject`/`style` tự do), không hardcode Prompt, xác nhận Draft content chỉ có văn bản Prompt, không có hàm nào gọi API tạo ảnh; toàn bộ luồng enqueue→Queue xử lý→Draft→`publishDraftById()` với `targetCollection: null` đều đúng. Kiểm tra `admin/ai/plugins.html`/`admin/ai/index.html` qua static server — 0 lỗi console.
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+- Chưa triển khai Requirement #5.
+
 ## Sprint 6 — Kích hoạt Banner Generator (Requirement #3)
 
 Kích hoạt Banner Generator (`js/ai/modules/banner-generator.js`, đã có từ Sprint 1) từ "Coming Soon" sang Production, tái sử dụng hoàn toàn AI Framework hiện có, theo đúng khuôn mẫu Blog Writer/FAQ Generator/Facebook Post Generator. Không sửa Sprint 2/3/4/5, không Refactor AI Framework/Queue/Plugin Manager/Provider Manager/AI Task Router/Data Provider/Draft Workflow/Human Review Workflow, không đổi Database Structure.
