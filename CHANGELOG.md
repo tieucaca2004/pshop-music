@@ -2,6 +2,19 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 4 — Requirement #5: Decision Record Resolution — REQUIREMENT #5 COMPLETED
+
+Chief Architect đã phê duyệt Decision Record còn treo từ Requirement #5 (xem mục "Sprint 4 — AI Assistant: điểm tương tác duy nhất" bên dưới): **chọn Option A**.
+
+- **Quyết định**: `admin/ai/index.html` (Dashboard cũ) tiếp tục giữ mục điều hướng riêng trong `ADMIN_NAV`, song song với "Trợ lý AI" — không gỡ, không chuyển hướng, không ẩn chức năng hiện có. Không có thay đổi code nào (đúng trạng thái Option A đã được triển khai mặc định từ Requirement #6, nay được chính thức phê duyệt).
+- **Điều chỉnh khung Functional Requirement #1**: AI Assistant là **Primary Experience Layer** (cách tương tác chính) — **không phải Unique Entry Point** (không phải cách duy nhất). Đây là điều chỉnh về ngôn ngữ/kỳ vọng của Requirement, không phải thay đổi kiến trúc hay code.
+- **Architectural Rule mới, áp dụng cho các Requirement sau này**: Workflow AI Assistant không được thay thế Workflow Dashboard/Plugin Manager thủ công cho đến khi (1) đã kiểm chứng trên Production, (2) đã có người dùng thực tế, (3) đã chứng minh ổn định. Ghi nhận làm nguyên tắc lâu dài, không chỉ áp dụng 1 lần.
+- **Không thay đổi**: Queue, Plugin Manager, Provider Manager, Permission Service, Database Structure, Workflow (`User → AI Assistant → AI Task Router → Permission Service → Plugin Manager → Queue → AI Provider → Draft → Human Review → Publish`) — quyết định này thuần về điều hướng/khung ngôn ngữ, không đụng bất kỳ lớp kiến trúc nào.
+- **Acceptance Criteria của Requirement #5 kiểm tra lại — đều đạt** (không đổi so với xác nhận ở Requirement #6): người dùng làm việc được qua AI Assistant mà không cần biết Plugin nào chạy; AI Task Router chọn đúng Plugin; toàn bộ Workflow hiển thị đầy đủ trong AI Assistant; không bypass Permission/Plugin Manager/Queue/Human Review; không Refactor Sprint 2/3.
+- Cập nhật `PROJECT_ARCHITECTURE.md` (đổi tên mục thành "Primary Experience Layer", thêm Architectural Rule).
+- **Requirement #5: COMPLETED.**
+- Lưu ý: Sprint 4 Requirement #6 (kiểm tra toàn diện + đóng Sprint) đã hoàn tất ở lượt trước — Sprint 4 đã ở trạng thái COMPLETED, mang theo đúng 1 Decision Record treo (mặc định Option A, không chặn đóng Sprint). Mục này chính thức phê duyệt Decision Record đó — không mở lại hay lặp lại Requirement #6.
+
 ## Sprint 4 — Kiểm tra toàn diện + Đóng Sprint (Requirement #6) — SPRINT 4 COMPLETED
 
 Requirement cuối cùng của Sprint 4 — không thêm tính năng, chỉ tái xác nhận toàn bộ AI Experience Layer (Requirement #1–#5) và đóng Sprint. Không sửa Sprint 2/3, không Refactor ngoài phạm vi.

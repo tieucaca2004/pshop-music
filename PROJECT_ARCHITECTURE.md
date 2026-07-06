@@ -291,11 +291,13 @@ AI Assistant cho xem lại các phiên làm việc trước đây, giúp trở t
 - Giới hạn hiển thị 50 phiên gần nhất (cùng cách `admin/ai/logs.html` giới hạn 200) — không phải phân trang thật (Firebase query pagination), chỉ là cắt bớt phía client, cùng mức độ "mở rộng được" như các trang Job Queue/Nhật ký hiện có.
 - Mở lại 1 phiên **không** bao giờ gọi `AIJobQueue.resume()`/`AITaskRouter.dispatch()` — đảm bảo tuyệt đối không tự chạy lại Job/Generate lại (Functional Requirement #4).
 
-### AI Assistant — điểm tương tác duy nhất (Requirement #5)
+### AI Assistant — Primary Experience Layer (Requirement #5 — COMPLETED)
 
-⚠️ **1 Decision Record vẫn đang treo (không chặn đóng Sprint 4)**: Functional Requirement #1 ("AI Assistant phải trở thành điểm vào duy nhất cho toàn bộ AI trong CMS") có 1 câu hỏi kiến trúc/UX chưa được Chief Architect quyết định — giữ hay gỡ mục điều hướng riêng cho Dashboard cũ (`admin/ai/index.html`) trong `ADMIN_NAV`. Xem Decision Record đầy đủ trong `CHANGELOG.md` mục Sprint 4 Requirement #5. **Mặc định giữ theo Option A** (giữ nguyên cả 2 mục nav "Trợ lý AI" + "AI Assistant" cũ) cho tới khi có quyết định khác — đây là 1 lựa chọn chính sách/UX còn treo, không phải lỗi hay chức năng thiếu, nên không chặn việc đóng Sprint 4 (xác nhận lại ở Requirement #6).
+✅ **Decision Record đã được Chief Architect phê duyệt: Option A.** `admin/ai/index.html` (Dashboard cũ, chọn Plugin thủ công) **vẫn giữ nguyên** mục điều hướng riêng trong `ADMIN_NAV`, song song với "Trợ lý AI" (`assistant.html`) — không gỡ, không chuyển hướng, không ẩn chức năng hiện có. Quyết định này điều chỉnh lại đúng khung của Functional Requirement #1: AI Assistant là **Primary Experience Layer** (cách tương tác chính, được khuyến khích sử dụng) — **không phải Unique Entry Point** (không phải cách DUY NHẤT, không loại bỏ Workflow cũ).
 
-Các phần khác của Requirement #5 đã hoàn tất, không phụ thuộc quyết định trên:
+**Architectural Rule** (áp dụng cho mọi Requirement sau này liên quan AI Assistant): Workflow mới (AI Assistant) **không được thay thế** Workflow cũ (Dashboard/Plugin Manager thủ công) cho đến khi: (1) đã được kiểm chứng trên Production, (2) đã có người dùng thực tế sử dụng, (3) đã chứng minh ổn định. Cho tới lúc đó, cả 2 lối vào cùng tồn tại — không tự ý gỡ Dashboard cũ ở bất kỳ Requirement nào chưa được giao rõ.
+
+Toàn bộ phần còn lại của Requirement #5 đã hoàn tất từ trước, không đổi:
 
 - **Hiển thị "Plugin đã chọn" (Functional Requirement #3)**: `dispatchAndShow()` (`js/admin-ai-assistant.js`) hiển thị `routeResult.outcomeLabel` ngay khi Routing xong, trước khi gọi Permission/Plugin Manager — vẫn đúng nguyên tắc "người dùng không biết Plugin kỹ thuật nào đang chạy" vì `outcomeLabel` là mô tả theo Kết quả, không phải id/tên Plugin.
 - **Hiển thị đủ tiến trình (Functional Requirement #4)**: `Request` (`simplePanel`, ngay khi gửi) → `Routing` (`simplePanel`, trong lúc tải candidates + Router phân tích) → `Processing` (Requirement #2) → `Draft Ready` (Requirement #2) → Review (chính là panel Preview + nút Duyệt/Từ chối) → Publish (trạng thái cuối sau khi bấm Duyệt).
