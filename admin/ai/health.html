@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Production Health Check - Pshop Music Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/admin.css">
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="adminSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-wrap">
+      <p class="small-muted" style="margin-bottom:1.5rem">Kiểm tra nhanh toàn bộ chuỗi AI Provider → Cloud Function → OpenAI API → Queue → Draft Workflow. Chỉ đọc trạng thái — không tạo Job, không tạo Draft, không Publish, không tốn token ngoài mức tối thiểu.</p>
+      <div class="panel">
+        <div class="admin-actions">
+          <button class="submit-btn" id="healthCheckRunBtn">CHẠY HEALTH CHECK</button>
+        </div>
+      </div>
+      <div id="healthCheckResult" style="margin-top:1.5rem"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../../js/firebase-config.js"></script>
+<script src="../../js/products-seed.js"></script>
+<script src="../../js/site-content-seed.js"></script>
+<script src="../../js/db.js"></script>
+<script src="../../js/cms-db.js"></script>
+<script src="../../js/admin-auth.js"></script>
+
+<script src="../../js/ai/provider-interface.js"></script>
+<script src="../../js/ai/provider-registry.js"></script>
+<script src="../../js/ai/ai-db.js"></script>
+<script src="../../js/ai/providers/openai.js"></script>
+<script src="../../js/ai/health-check.js"></script>
+<script src="../../js/admin-ai-health.js"></script>
+<script>AdminAIHealth.init();</script>
+</body>
+</html>

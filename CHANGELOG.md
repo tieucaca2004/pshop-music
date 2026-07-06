@@ -2,6 +2,23 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 5 — Production Health Check (Requirement #1)
+
+Xây `Production Health Check` — cho Administrator xác nhận nhanh toàn bộ chuỗi AI Provider → Cloud Function → OpenAI API → Queue → Draft Workflow, KHÔNG tạo Job, KHÔNG tạo Draft, KHÔNG Publish. Không sửa Sprint 2/3/4, không Refactor AI Framework/Queue/Plugin Manager/Provider Manager/Permission Service/AI Task Router/Draft Workflow/Human Review Workflow, không đổi Database Structure.
+
+- **Decision Record (tự xử lý, không phải fork thật cần chờ duyệt)**: cân nhắc 2 cách đặt Health Check — *Option A (đã chọn)*: trang mới riêng `admin/ai/health.html`, Admin-only; *Option B*: nhét thêm vào `admin/ai/providers.html` (đã có nút "Kiểm tra kết nối" per-provider). Chọn A vì Requirement định nghĩa đây là 1 "Health Report" tổng thể của cả hệ thống (Provider + Queue + Draft Workflow), không chỉ riêng Provider như trang cấu hình hiện có — nhét chung sẽ làm lẫn lộn "cấu hình provider" với "báo cáo sức khỏe hệ thống". Có thêm 1 dòng liên kết từ `providers.html` sang trang mới, không tạo mục nav cấp cao (tránh rối menu cho 1 công cụ chẩn đoán).
+- **Thêm** `js/ai/health-check.js` (`HealthCheck.run(providerId)`) — tái sử dụng đúng API đã có, không phát sinh Business Logic mới:
+  - **AI Provider + Cloud Function + OpenAI API**: gọi `AIProviderRegistry.get(id).health()` (đã có từ Sprint 3 Requirement #1) — 1 lời gọi này tự nhiên xác minh đủ cả 3 lớp trong 1 lượt (health() của OpenAI gọi Cloud Function → Cloud Function gọi `GET /v1/models` của OpenAI, không tốn token completion nào).
+  - **Queue**: CHỈ ĐỌC `JobDB.getAll()` (`js/ai/ai-db.js`) — không gọi bất kỳ hàm ghi nào của `AIJobQueue` (`enqueue`/`resume`/`cancel`), không tạo/chạy Job nào. "Sẵn sàng" = node Firebase `aiJobs` đọc được.
+  - **Draft Workflow**: CHỈ ĐỌC `DraftDB.getAll()` — không tạo/publish Draft nào.
+  - Chạy đồng thời cả 3 nhánh (`Promise.all`, đều chỉ đọc, an toàn song song), trả về báo cáo với trạng thái riêng biệt từng thành phần — không gộp thành 1 "System Error" chung chung.
+- **Thêm** `admin/ai/health.html` + `js/admin-ai-health.js` — trang Admin-only (`requiredRole:'admin'`), 1 nút "Chạy Health Check" + bảng kết quả 3 dòng (Provider→Cloud Function→OpenAI / Queue / Draft Workflow), mỗi dòng hiển thị đúng thông báo lỗi thật nếu có.
+- **Thêm** 1 dòng liên kết trong `admin/ai/providers.html` trỏ sang `health.html`.
+- **Xác nhận không đổi**: `job-queue.js`, `plugin-manager.js`, `provider-registry.js`, `permission-service.js`, `task-router.js`, `data-provider.js`, `AI_RULES.md`, Database Structure — `health-check.js` không import/gọi bất kỳ hàm ghi nào của các module này.
+- **Kiểm thử**: chạy thật `js/ai/health-check.js` qua Node `vm` (4 kịch bản: tất cả OK, Provider/Cloud Function lỗi, Queue lỗi, gọi với providerId khác không hardcode) — tất cả PASS, xác nhận không có lời gọi hàm ghi nào (`add`/`update`) trong bất kỳ kịch bản nào, kể cả khi có lỗi. Kiểm tra `admin/ai/health.html` + `admin/ai/providers.html` qua static server — 0 lỗi console.
+- Cập nhật `PROJECT_ARCHITECTURE.md`.
+- Chưa triển khai Requirement #2.
+
 ## Sprint 4 — Requirement #5: Decision Record Resolution — REQUIREMENT #5 COMPLETED
 
 Chief Architect đã phê duyệt Decision Record còn treo từ Requirement #5 (xem mục "Sprint 4 — AI Assistant: điểm tương tác duy nhất" bên dưới): **chọn Option A**.

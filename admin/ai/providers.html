@@ -19,7 +19,7 @@
     <div class="admin-wrap">
       <div class="panel">
         <h3>NHÀ CUNG CẤP AI</h3>
-        <p class="small-muted">Sprint 3: OpenAI đã tích hợp API thật qua Cloud Function Proxy (<code>functions/openaiProxy</code>) — API Key OpenAI chỉ lưu trong Secret Manager phía server, KHÔNG lưu ở Firebase Realtime Database hay bất kỳ đâu phía trình duyệt. 3 nhà cung cấp còn lại (Claude/Gemini/DeepSeek) vẫn là bản thiết kế (stub), chưa dùng được.</p>
+        <p class="small-muted">Sprint 3: OpenAI đã tích hợp API thật qua Cloud Function Proxy (<code>functions/openaiProxy</code>) — API Key OpenAI chỉ lưu trong Secret Manager phía server, KHÔNG lưu ở Firebase Realtime Database hay bất kỳ đâu phía trình duyệt. 3 nhà cung cấp còn lại (Claude/Gemini/DeepSeek) vẫn là bản thiết kế (stub), chưa dùng được. Xem <a href="health.html" style="color:var(--gold-ink)">Production Health Check</a> để kiểm tra nhanh toàn bộ chuỗi Provider → Cloud Function → OpenAI → Queue → Draft Workflow.</p>
         <div class="form-group full" style="margin-top:1rem">
           <label>NHÀ CUNG CẤP ĐANG SỬ DỤNG (ACTIVE)</label>
           <select id="activeProvider">

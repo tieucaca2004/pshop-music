@@ -314,6 +314,24 @@ Requirement cuối cùng của Sprint 4 — tái xác nhận toàn bộ AI Exper
 - **Security check**: không có API Key/secret nào trong code Sprint 4; Cloud Function vẫn chưa deploy (không đổi so với Sprint 3, không phải vấn đề do Sprint 4 gây ra).
 - **Decision Record Requirement #5**: vẫn treo, mặc định Option A — không chặn đóng Sprint.
 
+## Production Health Check (Sprint 5, Requirement #1)
+
+Cho Administrator xác nhận nhanh toàn bộ chuỗi AI Provider → Cloud Function → OpenAI API → Queue → Draft Workflow đang hoạt động, KHÔNG tạo Job/Draft/Publish nào — công cụ chẩn đoán, không phải Workflow thứ 2:
+
+```
+Administrator → admin/ai/health.html (js/admin-ai-health.js)
+             → HealthCheck.run('openai') (js/ai/health-check.js)
+                  ├─ AIProviderRegistry.get('openai').health() (đã có, Sprint 3 Req #1) → Provider + Cloud Function + OpenAI trong 1 lượt
+                  ├─ JobDB.getAll() (chỉ đọc, KHÔNG enqueue/resume/cancel)
+                  └─ DraftDB.getAll() (chỉ đọc, KHÔNG add/update)
+             → Health Report (3 dòng trạng thái riêng biệt, không gộp "System Error")
+```
+
+- **Không thêm Business Logic** — `health-check.js` chỉ gọi lại đúng 3 hàm đọc/kiểm tra đã có sẵn (`provider.health()`, `JobDB.getAll()`, `DraftDB.getAll()`), không viết logic nghiệp vụ mới.
+- **Không bypass gì vì không đi qua Workflow chính** — Health Check KHÔNG gọi `PermissionService`/`PluginManager`/`AITaskRouter`/`AIJobQueue.enqueue()` — đây là 1 nhánh chẩn đoán riêng, tách biệt hoàn toàn khỏi luồng `User → AI Assistant → ... → Draft → Human Review`. Trang được bảo vệ bằng page-level guard có sẵn (`AdminAuth.init({requiredRole:'admin'})`), không phải cơ chế Permission mới.
+- **An toàn tuyệt đối**: cả 3 nhánh kiểm tra đều CHỈ ĐỌC (`.health()`, `.getAll()` x2) — không có nhánh nào gọi hàm ghi (`add`/`update`/`enqueue`/`resume`/`cancel`) — đã xác nhận qua mô phỏng chạy mã nguồn thật (không phát hiện lời gọi ghi nào trong mọi kịch bản, kể cả khi có lỗi).
+- **Vị trí**: trang riêng `admin/ai/health.html` (Admin-only), liên kết từ `admin/ai/providers.html` — không thêm mục điều hướng cấp cao mới (tránh rối menu cho 1 công cụ chẩn đoán ít dùng).
+
 ## Giới hạn kiến trúc đã biết (không tự ý "vá" bằng cách thêm hạ tầng mới)
 
 - **Job Queue vẫn không có backend riêng (V1)** — `AIJobQueue` xử lý tuần tự phía trình duyệt Admin, không đổi ở Sprint 3. Cloud Function duy nhất hiện có (`openaiProxy`, xem mục "Cloud Function Proxy Layer") chỉ là proxy gọi OpenAI API, KHÔNG phải backend xử lý Queue — nâng Job Queue lên Cloud Functions (Job Queue V2, xem `ROADMAP.md`) vẫn là quyết định kiến trúc cần người phụ trách xác nhận trước, chưa triển khai.
