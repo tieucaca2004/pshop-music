@@ -2,6 +2,20 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 7 — Kiểm tra toàn diện + Đóng Sprint (Requirement #6) — SPRINT 7 COMPLETED
+
+Sprint Review cuối cùng của Sprint 7 — không thêm tính năng, chỉ kiểm thử/xác minh/đánh giá toàn bộ 5 Requirement trước khi đóng Sprint.
+
+- **Requirement Summary**: #1 AI Observability Dashboard ✅, #2 AI Cost Tracking ✅, #3 AI Context Foundation ✅, #4 User-triggered Workflow Automation ✅, #5 AI Workflow Insights ✅.
+- **Kiểm thử lại toàn bộ 5 Requirement bằng mã nguồn thật**: môi trường hiện tại không có Node.js/Python nên không dùng được khuôn mẫu Node `vm` như các Review trước — chạy `observability.js`/`cost-tracking.js`/`context-builder.js`/`workflow-engine.js` (nguyên văn từ repo) qua Chrome thật (`javascript_tool`), mock đúng Service/DB liền kề theo đúng contract đã xác nhận trong code. Tổng cộng 3 (Observability) + 3 (Cost Tracking) + 7 (Context Foundation) + 6 (Workflow Automation) = **19/19 kịch bản PASS**, bao gồm cả 2 Requirement (#1, #2) viết ở phiên trước — xác nhận lại từ đầu, không chỉ tin vào kết quả cũ.
+- **Regression Test**: `git log --oneline -- <file>` xác nhận `job-queue.js`/`plugin-manager.js`/`provider-registry.js`/`provider-interface.js`/`task-router.js`/`data-provider.js`/`AI_RULES.md`/`functions/index.js` không có commit nào trong suốt Sprint 7 (`permission-service.js` dừng ở Sprint 6). `git diff 47f450d..HEAD` trên toàn bộ file lõi trả về rỗng. Mỗi file mới Sprint 7 (`context-builder.js`/`workflow-engine.js`/`workflow-insights.js`/`observability.js`/`cost-tracking.js`) chỉ có đúng 1 commit trong lịch sử — chưa từng bị sửa lại. Mỗi commit Sprint 7 chỉ động đúng 7 file (3 docs + 1 dòng liên kết + 3 file mới), không Requirement nào sửa trang/link của Requirement khác.
+- **Architecture Verification**: xác nhận đủ 8 mục (AI Framework/Queue/Plugin Manager/Provider Manager/Permission Service/AI Task Router/Database Structure/`AI_RULES.md`) đều KHÔNG đổi trong suốt Sprint 7.
+- **Security Verification**: grep xác nhận không có API Key/secret nào trong toàn bộ file Sprint 7; `WorkflowEngine` xác nhận KHÔNG bypass Permission (test thật: từ chối quyền → `PluginManager.loadPlugin` không hề được gọi); `ContextBuilder` xác nhận không rò rỉ dữ liệu (chỉ đọc đúng `id` trong `inputParams`, không bao giờ lấy toàn bộ danh sách Product/Blog); Cloud Function vẫn CHƯA deploy (kế thừa Sprint 3, không phải vấn đề Sprint 7); Firebase Rules vẫn không version-control trong repo (kế thừa Sprint 3) — không phát hiện lỗ hổng bảo mật mới nào.
+- **Production Readiness**: AI Framework/AI Assistant/Plugin Framework/Provider Framework/Queue/Context Builder/Workflow Engine/Observability/Cost Tracking/Draft Workflow/Human Review đều ✅ sẵn sàng Production về mặt code — giới hạn duy nhất là vận hành (deploy Cloud Function OpenAI), kế thừa từ Sprint 3.
+- Lập `docs/SPRINT_7_FINAL_REPORT.md` (Requirement Summary, Kiểm thử #1-10, Regression, Architecture/Security Verification, Production Readiness, Non-functional Evaluation, Known Limitations, mục chuyển sang Sprint 8).
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+- **SPRINT 7 COMPLETED (Requirement #1, #2, #3, #4, #5 — tất cả đã giao và triển khai đầy đủ). Không bắt đầu Sprint 8. Không tự viết Sprint 8 Planning.**
+
 ## Sprint 7 — AI Workflow Insights (Requirement #5) — cuối cùng phát triển tính năng Sprint 7
 
 Triển khai `js/ai/workflow-insights.js` (`WorkflowInsightsService`) + `admin/ai/workflow-insights.html` — cho Administrator quan sát toàn bộ vòng đời của 1 AI Request (Context → Queue → Provider → Draft → Human Review → Trạng thái cuối) trên 1 màn hình, ghép lại từ đúng `aiJobs`/`aiLogs`/`aiDrafts` đã có, HOÀN TOÀN CHỈ ĐỌC. Không sửa Sprint 2–6, không sửa Sprint 7 Requirement #1–#4, không Refactor AI Framework/Queue/Plugin Manager/Provider Manager/Permission Service/AI Task Router/Data Provider/Context Builder/Draft Workflow/Human Review Workflow, không đổi `AI_RULES.md`, không đổi Database Structure, không phát sinh Business Logic mới.

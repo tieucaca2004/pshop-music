@@ -423,6 +423,17 @@ Sprint Review cuối cùng của Sprint 6 — tái xác nhận toàn bộ 4 Requ
 - **Security check**: không có secret nào trong code Sprint 6; Cloud Function vẫn chưa deploy (kế thừa từ Sprint 3, không phải vấn đề Sprint 6).
 - **Project Backup**: không khả dụng trong môi trường hiện tại — Auto Mode Safety Classifier chặn cứng việc nén + upload source code lên Google Drive bên ngoài (phân loại "Data Exfiltration"). GitHub (`feature/cms-ai-sprint2`) là nơi backup từ xa duy nhất khả dụng.
 
+## Kiểm tra toàn diện + Đóng Sprint (Sprint 7, Requirement #6 — SPRINT 7 COMPLETED)
+
+Sprint Review cuối cùng của Sprint 7 — tái xác nhận toàn bộ 5 Requirement (Observability Dashboard, Cost Tracking, Context Foundation, Workflow Automation, Workflow Insights), không thêm tính năng. Báo cáo đầy đủ: xem `docs/SPRINT_7_FINAL_REPORT.md`.
+
+- **Kiểm thử lại toàn bộ 5 Requirement bằng mã nguồn thật** (Chrome + `javascript_tool`, không có Node.js/Python trong môi trường hiện tại): `observability.js`/`cost-tracking.js`/`context-builder.js`/`workflow-engine.js` chạy nguyên văn, mock đúng contract các Service/DB liền kề — 3+3+7+6 = **19/19 kịch bản PASS** (kể cả 2 Requirement viết ở phiên trước, xác nhận lại từ đầu chứ không chỉ tin kết quả cũ).
+- **Regression Test**: `git log --oneline -- <file>` xác nhận `job-queue.js`/`plugin-manager.js`/`provider-registry.js`/`provider-interface.js`/`task-router.js`/`data-provider.js`/`AI_RULES.md`/`functions/index.js` không có commit nào trong suốt Sprint 7; `git diff 47f450d..HEAD` trên toàn bộ file lõi trả về rỗng. Mỗi file mới Sprint 7 chỉ có đúng 1 commit trong lịch sử (chưa từng bị sửa lại ở Requirement sau). Mỗi commit Sprint 7 chỉ động đúng 7 file (3 docs + 1 dòng liên kết + 3 file mới) — không Requirement nào sửa trang/link của Requirement khác.
+- **Architecture Verification**: xác nhận đủ 8 mục (AI Framework/Queue/Plugin Manager/Provider Manager/Permission Service/AI Task Router/Database Structure/`AI_RULES.md`) đều KHÔNG đổi trong suốt Sprint 7.
+- **Security Verification**: không có API Key/secret nào trong file Sprint 7; `WorkflowEngine` xác nhận KHÔNG bypass Permission (test thật: từ chối quyền → `PluginManager.loadPlugin` không hề được gọi); `ContextBuilder` xác nhận không rò rỉ dữ liệu (chỉ đọc đúng `id` chỉ định, không lấy toàn bộ danh sách); Cloud Function vẫn chưa deploy, Firebase Rules vẫn không version-control (cả 2 kế thừa Sprint 3) — không phát hiện lỗ hổng mới.
+- **Production Readiness**: toàn bộ 11 hạng mục (AI Framework/AI Assistant/Plugin Framework/Provider Framework/Queue/Context Builder/Workflow Engine/Observability/Cost Tracking/Draft Workflow/Human Review) đều ✅ sẵn sàng về code — giới hạn duy nhất là vận hành (deploy Cloud Function), kế thừa từ Sprint 3.
+- **Project Backup**: không khả dụng trong môi trường hiện tại — Auto Mode Safety Classifier chặn cứng việc nén + upload source code lên Google Drive bên ngoài (phân loại "Data Exfiltration"). GitHub (`feature/cms-ai-sprint2`) là nơi backup từ xa duy nhất khả dụng.
+
 ## AI Workflow Insights (Sprint 7, Requirement #5 — cuối cùng phát triển tính năng Sprint 7)
 
 Cho Administrator quan sát toàn bộ vòng đời 1 AI Request — Context → Queue → Provider → Draft → Human Review → Trạng thái cuối — trên 1 màn hình, công cụ Observability, hoàn toàn CHỈ ĐỌC, không phát sinh Business Logic:
