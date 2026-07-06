@@ -1,0 +1,68 @@
+{
+  "rules": {
+    "products": {
+      ".read": true,
+      ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')"
+    },
+    "categories": {
+      ".read": true,
+      ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')"
+    },
+    "banners": {
+      ".read": true,
+      ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')"
+    },
+    "blogPosts": {
+      ".read": true,
+      ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')"
+    },
+    "videos": {
+      ".read": true,
+      ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')"
+    },
+
+    "siteContent": {
+      ".read": true,
+      ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')"
+    },
+
+    "seoSettings": {
+      ".read": true,
+      ".write": "auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin'"
+    },
+
+    "roles": {
+      ".read": "auth != null || !data.exists()",
+      "$uid": {
+        ".write": "(auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin') || (auth != null && auth.uid === $uid && !root.child('roles').exists())",
+        ".validate": "newData.hasChildren(['role']) && (newData.child('role').val() === 'admin' || newData.child('role').val() === 'editor')"
+      }
+    },
+
+    "aiDrafts": {
+      ".read": "auth != null && root.child('roles').child(auth.uid).exists()",
+      ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')"
+    },
+    "aiJobs": {
+      ".read": "auth != null && root.child('roles').child(auth.uid).exists()",
+      ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')"
+    },
+    "aiLogs": {
+      ".read": "auth != null && root.child('roles').child(auth.uid).exists()",
+      ".write": "auth != null && root.child('roles').child(auth.uid).exists()"
+    },
+    "aiProviderConfig": {
+      ".read": "auth != null && root.child('roles').child(auth.uid).exists()",
+      ".write": "auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "aiPlugins": {
+      ".read": "auth != null && root.child('roles').child(auth.uid).exists()",
+      ".write": "auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin'"
+    },
+
+    "$other": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}

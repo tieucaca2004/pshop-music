@@ -34,6 +34,26 @@ Không có máy chủ ứng dụng tổng quát — mọi logic CMS/AI Assistant
 
 Mọi tính năng mới (kể cả AI) đều phải tái sử dụng các hàm data layer đã có (`DB.get/update`, `BlogDB.add/update`, `SiteContentDB.get/save`...) thay vì viết logic ghi Firebase mới — nguyên tắc xuyên suốt từ CMS ban đầu tới AI Assistant.
 
+## Firebase Database Rules (Sprint 8, Requirement #1)
+
+Từ Sprint 8, `database.rules.json` (version-control trong repo, wiring qua `firebase.json` → `"database": {"rules": "database.rules.json"}`) là lớp kiểm soát truy cập THẬT ở tầng Database, bổ sung cho RBAC phía client (`js/admin-auth.js`/`js/ai/permission-service.js`) — trước Sprint 8, mọi kiểm tra quyền chỉ nằm ở tầng client, không có gì ngăn 1 client gọi thẳng Firebase SDK bỏ qua UI/PermissionService:
+
+```
+Site khách (không đăng nhập) → .read: true trên products/categories/banners/blogPosts/videos/siteContent/seoSettings
+CMS Admin/Editor (đã đăng nhập, có roles/{uid}) → .write trên các node CMS trên (seoSettings chỉ Admin)
+                                                 → .read/.write trên aiDrafts/aiJobs/aiLogs (Admin hoặc Editor)
+                                                 → .write trên aiProviderConfig/aiPlugins (CHỈ Admin, khớp AI_RULES.md mục 8)
+roles/{uid} → .read công khai CHỈ khi node rỗng (bootstrap tài khoản Admin đầu tiên qua admin/login.html)
+            → .write: Admin hiện tại, HOẶC tự ghi uid của chính mình khi roles hoàn toàn rỗng (bootstrap, 1 lần duy nhất)
+            → .validate: field "role" chỉ chấp nhận "admin"/"editor"
+Mọi node khác không liệt kê ở trên ($other) → .read/.write: false (deny by default, tường minh)
+```
+
+- **KHÔNG lặp lại Business Logic của `PermissionService` trong Rules** — Rules chỉ enforce "đã đăng nhập + đúng vai trò `admin`/`editor` ở tầng node", KHÔNG cố tái tạo độ chi tiết "quyền theo từng Plugin" (`PLUGIN_PERMISSIONS`) vì Rules không phải nơi chứa Business Logic (đúng NFR "không tạo kiến trúc trùng lặp") — đây là phòng thủ 2 lớp: Rules chặn truy cập trái phép ở tầng ngoài (Database), `PermissionService` xử lý phân quyền chi tiết ở tầng trong (Application).
+- **Không đổi Database Structure** — Rules không thêm Field/Collection nào, chỉ mô tả điều kiện đọc/ghi cho các node ĐÃ CÓ.
+- **3 xung đột phát hiện với code hiện có, KHÔNG tự sửa** (xem `CHANGELOG.md`/`ROADMAP.md` để biết chi tiết đầy đủ): (1) `js/admin-users.js` "Thêm tài khoản mới" sẽ thất bại sau khi deploy Rules này (Firebase Auth tự chuyển phiên đăng nhập sang tài khoản mới trước khi ghi `roles`); (2) `admin/login.html` sẽ hiện cảnh báo sai (không ảnh hưởng chức năng) do đọc `roles` công khai bị chặn đúng thiết kế sau khi có Admin đầu tiên; (3) `siteContent` gộp chung tính năng chỉ-Admin và Admin+Editor trong 1 node ghi đè toàn bộ, nên Rules chỉ chặn được ở mức "Admin hoặc Editor", không tách được chính xác theo từng tính năng con.
+- **Chưa deploy lên môi trường thật** — cần `firebase deploy --only database` (thao tác vận hành, cần Firebase CLI + đăng nhập, không thực hiện được trong môi trường phát triển hiện tại — giống giới hạn "Cloud Function chưa deploy" từ Sprint 3).
+
 ## Vị trí AI Assistant trong tổng thể
 
 AI Assistant KHÔNG phải chatbot, KHÔNG có quyền ghi trực tiếp vào dữ liệu gốc. Nó là 1 tập Plugin chạy qua Job Queue phía trình duyệt Admin, đọc CMS thật, sinh **Draft**, chờ Admin duyệt mới ghi vào dữ liệu thật (qua đúng hàm data layer ở trên). Chi tiết đầy đủ: xem `AI_RULES.md`.
