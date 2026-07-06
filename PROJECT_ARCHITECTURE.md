@@ -423,6 +423,29 @@ Sprint Review cuối cùng của Sprint 6 — tái xác nhận toàn bộ 4 Requ
 - **Security check**: không có secret nào trong code Sprint 6; Cloud Function vẫn chưa deploy (kế thừa từ Sprint 3, không phải vấn đề Sprint 6).
 - **Project Backup**: không khả dụng trong môi trường hiện tại — Auto Mode Safety Classifier chặn cứng việc nén + upload source code lên Google Drive bên ngoài (phân loại "Data Exfiltration"). GitHub (`feature/cms-ai-sprint2`) là nơi backup từ xa duy nhất khả dụng.
 
+## AI Observability Dashboard (Sprint 7, Requirement #1)
+
+Cho Administrator quan sát toàn bộ trạng thái AI Framework từ 1 màn hình duy nhất — công cụ tổng hợp, không phải Workflow thứ 2, hoàn toàn CHỈ ĐỌC:
+
+```
+Administrator → admin/ai/observability.html (js/admin-ai-observability.js)
+             → ObservabilityService.compute(rangeKey) (js/ai/observability.js)
+                  ├─ HealthCheck.run(activeProviderId) (Sprint 5 #1) → Health Status
+                  ├─ AIProviderRegistry.getAll() + ProviderConfigDB.get() → Provider Status
+                  ├─ JobDB.getAll() (chỉ đọc) → Queue Status (đang bận/rảnh) + Job Summary (tổng theo trạng thái) — dùng CHUNG 1 lượt đọc
+                  ├─ PluginManager.loadPlugins() (Sprint 2 #4) → Plugin Status
+                  ├─ UsageStats.compute(rangeKey) (Sprint 5 #4) → Usage Summary
+                  └─ DraftDB.getAll() (chỉ đọc) → Draft Summary
+             → 1 báo cáo hợp nhất + thời điểm cập nhật gần nhất
+```
+
+- **Không phát sinh Business Logic mới**: `ObservabilityService` chỉ gọi lại đúng các Service/Manager/DB đã có ở Sprint 2–5 và gộp kết quả — không có quyết định/tính toán nghiệp vụ nào mới ngoài đếm số lượng theo trạng thái (giống cách `UsageStats` đã làm).
+- **Plugin Status đi qua đúng Plugin Manager**: `computePlugins()` gọi `PluginManager.loadPlugins()`, không đọc thẳng `PluginDB`/`AIModuleRegistry` — đúng quy tắc "UI luôn qua Plugin Manager" (`AI_RULES.md` mục 5b).
+- **Cô lập lỗi từng nhánh**: mỗi nhánh (Health/Provider/Queue/Plugin/Usage/Draft) tự bắt lỗi riêng (`{ error: message }`) trong `Promise.all()` — 1 thành phần lỗi (vd Provider chưa cấu hình, mất kết nối) không làm hỏng các phần còn lại của Dashboard, đúng NFR "Không phụ thuộc AI Provider". Đã xác nhận qua mô phỏng: giả lập lỗi đọc `aiJobs` — Queue Status hiển thị lỗi rõ ràng trong khi Health/Provider/Plugin/Usage/Draft vẫn hiển thị đúng.
+- **Empty State thay vì System Error**: Queue/Draft/Usage rỗng trả về `total:0` — UI hiển thị thông báo rõ ràng ("Chưa có Job/Draft/dữ liệu nào..."), không phải lỗi hệ thống.
+- **Không đổi Database Structure**: không thêm Field/Collection nào — toàn bộ dữ liệu đọc từ `aiLogs`/`aiJobs`/`aiDrafts`/`aiPlugins`/`aiProviderConfig` đã có.
+- **Có thể mở rộng thành Monitoring Dashboard sau này** (NFR) — `compute()` tách biệt hoàn toàn khỏi phần render, dễ thêm auto-refresh/ngưỡng cảnh báo ở Requirement sau mà không đổi cấu trúc hiện tại.
+
 ## Giới hạn kiến trúc đã biết (không tự ý "vá" bằng cách thêm hạ tầng mới)
 
 - **Job Queue vẫn không có backend riêng (V1)** — `AIJobQueue` xử lý tuần tự phía trình duyệt Admin, không đổi ở Sprint 3. Cloud Function duy nhất hiện có (`openaiProxy`, xem mục "Cloud Function Proxy Layer") chỉ là proxy gọi OpenAI API, KHÔNG phải backend xử lý Queue — nâng Job Queue lên Cloud Functions (Job Queue V2, xem `ROADMAP.md`) vẫn là quyết định kiến trúc cần người phụ trách xác nhận trước, chưa triển khai.

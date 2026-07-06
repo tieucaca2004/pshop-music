@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI Assistant - Pshop Music Admin</title>
+<title>AI Observability Dashboard - Pshop Music Admin</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -17,8 +17,21 @@
   <div class="admin-main">
     <div class="admin-topbar" id="adminTopbar"></div>
     <div class="admin-wrap">
-      <p class="small-muted" style="margin-bottom:1.5rem">Mỗi module đọc dữ liệu thật từ CMS (không tự bịa), kết quả luôn lưu ở dạng Nháp — vào mục <a href="drafts.html" style="color:var(--gold-ink)">Duyệt nội dung</a> để xem trước và Publish, <a href="jobs.html" style="color:var(--gold-ink)">Job Queue</a> để theo dõi/thử lại, <a href="plugins.html" style="color:var(--gold-ink)">Plugin Manager</a> để bật/tắt plugin. Cần cấu hình + gán đúng nhà cung cấp AI cho plugin ở <a href="providers.html" style="color:var(--gold-ink)">Nhà cung cấp AI</a>/<a href="plugins.html" style="color:var(--gold-ink)">Plugin Manager</a> trước khi chạy — nếu chưa cấu hình hoặc provider gặp lỗi, job sẽ báo lỗi rõ ràng trong "Nhật ký" thay vì tạo nội dung. Xem toàn bộ trạng thái hệ thống trong 1 màn hình tại <a href="observability.html" style="color:var(--gold-ink)">AI Observability Dashboard</a>.</p>
-      <div id="moduleCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:1.5rem"></div>
+      <p class="small-muted" style="margin-bottom:1.5rem">Quan sát toàn bộ trạng thái AI Framework từ 1 màn hình duy nhất — Health Check, Provider, Queue, Plugin, Usage, Job, Draft. Chỉ đọc dữ liệu — không tạo Job, không tạo Draft, không Publish, không thay đổi bất kỳ đâu.</p>
+      <div class="panel">
+        <div class="admin-actions" style="display:flex; gap:1rem; align-items:flex-end; flex-wrap:wrap">
+          <div class="form-group" style="max-width:280px; margin:0">
+            <label>Khoảng thời gian (Usage Summary)</label>
+            <select id="observabilityRangeFilter">
+              <option value="today">Hôm nay</option>
+              <option value="7d" selected>7 ngày gần nhất</option>
+              <option value="30d">30 ngày gần nhất</option>
+            </select>
+          </div>
+          <button class="submit-btn" id="observabilityRefreshBtn">LÀM MỚI</button>
+        </div>
+      </div>
+      <div id="observabilityResult" style="margin-top:1.5rem"></div>
     </div>
   </div>
 </div>
@@ -36,12 +49,8 @@
 <script src="../../js/ai/provider-interface.js"></script>
 <script src="../../js/ai/provider-registry.js"></script>
 <script src="../../js/ai/ai-db.js"></script>
-<script src="../../js/ai/plugin-db.js"></script>
-<script src="../../js/ai/providers/openai.js"></script>
-<script src="../../js/ai/providers/claude.js"></script>
-<script src="../../js/ai/providers/gemini.js"></script>
-<script src="../../js/ai/providers/deepseek.js"></script>
 <script src="../../js/ai/data-provider.js"></script>
+<script src="../../js/ai/plugin-db.js"></script>
 <script src="../../js/ai/module-registry.js"></script>
 <script src="../../js/ai/modules/blog-writer.js"></script>
 <script src="../../js/ai/modules/product-description-writer.js"></script>
@@ -51,10 +60,12 @@
 <script src="../../js/ai/modules/image-prompt-generator.js"></script>
 <script src="../../js/ai/modules/slider-generator.js"></script>
 <script src="../../js/ai/modules/banner-generator.js"></script>
-<script src="../../js/ai/job-queue.js"></script>
 <script src="../../js/ai/plugin-manager.js"></script>
-<script src="../../js/ai/permission-service.js"></script>
-<script src="../../js/admin-ai.js"></script>
-<script>AdminAI.initDashboard();</script>
+<script src="../../js/ai/providers/openai.js"></script>
+<script src="../../js/ai/health-check.js"></script>
+<script src="../../js/ai/usage-stats.js"></script>
+<script src="../../js/ai/observability.js"></script>
+<script src="../../js/admin-ai-observability.js"></script>
+<script>AdminAIObservability.init();</script>
 </body>
 </html>

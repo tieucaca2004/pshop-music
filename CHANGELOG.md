@@ -2,6 +2,19 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 7 — AI Observability Dashboard (Requirement #1)
+
+Triển khai `admin/ai/observability.html` — 1 màn hình duy nhất tổng hợp toàn bộ trạng thái AI Framework (Health/Provider/Queue/Plugin/Usage/Job/Draft), hoàn toàn CHỈ ĐỌC, tái sử dụng 100% Service/Manager/DB đã có từ Sprint 2–5. Không sửa Sprint 2/3/4/5/6, không Refactor AI Framework/Queue/Plugin Manager/Provider Manager/Permission Service/AI Task Router/Data Provider/Draft Workflow/Human Review Workflow, không đổi Database Structure.
+
+- **Không cần Decision Record** — không thêm Field/Collection Firebase nào; toàn bộ dữ liệu hiển thị đọc từ `aiLogs`/`aiJobs`/`aiDrafts`/`aiPlugins`/`aiProviderConfig` đã có.
+- **Thêm** `js/ai/observability.js` (`ObservabilityService.compute(rangeKey)`) — gộp kết quả từ `HealthCheck.run()` (Sprint 5 #1), `UsageStats.compute()` (Sprint 5 #4), `PluginManager.loadPlugins()` (Sprint 2 #4 — đúng quy tắc "UI luôn qua Plugin Manager", `AI_RULES.md` mục 5b, không đọc thẳng `PluginDB`/`AIModuleRegistry`), `AIProviderRegistry.getAll()` + `ProviderConfigDB.get()` (Provider Status), `JobDB.getAll()` (Queue Status + Job Summary, dùng chung 1 lượt đọc), `DraftDB.getAll()` (Draft Summary). Mỗi nhánh tự bắt lỗi riêng (`{ error }`) để 1 thành phần lỗi không làm hỏng toàn bộ Dashboard — đúng NFR "Không phụ thuộc AI Provider".
+- **Thêm** `admin/ai/observability.html` + `js/admin-ai-observability.js` — trang Admin-only mới, bộ lọc khoảng thời gian cho Usage Summary (Hôm nay/7 ngày/30 ngày), nút "Làm mới", hiển thị thời điểm cập nhật gần nhất. Khi không có dữ liệu ở bất kỳ mục nào (Job/Draft/Usage rỗng), hiển thị thông báo rõ ràng ("Chưa có Job/Draft/dữ liệu sử dụng nào...") — không phải "System Error", đúng Functional Requirement #9.
+- **Thêm** 1 dòng liên kết trong `admin/ai/index.html` trỏ sang `observability.html`.
+- **Xác nhận không đổi**: `job-queue.js`, `plugin-manager.js`, `provider-registry.js`, `permission-service.js`, `task-router.js`, `data-provider.js`, `AI_RULES.md`, Database Structure — `observability.js` không import/gọi bất kỳ hàm ghi nào (`add`/`update`/`set`/`save`) của các module/DB này.
+- **Kiểm thử**: chạy thật `health-check.js`/`usage-stats.js`/`observability.js` qua Node `vm` (4 kịch bản: hệ thống khỏe mạnh — xác nhận 0 lời gọi ghi trong suốt quá trình; chưa cấu hình Provider mặc định — Health trả về `skipped` rõ ràng, không throw; 1 nhánh đọc lỗi giả lập (Queue) được cô lập đúng, các nhánh khác vẫn hiển thị bình thường; Queue/Draft rỗng — trả về `total:0` để UI hiện Empty State) — tất cả PASS. Kiểm tra `admin/ai/observability.html`/`admin/ai/index.html` qua static server — cả 20 script tag trả về 200, 0 lỗi console, đúng luồng redirect sang đăng nhập khi chưa xác thực (đúng `requiredRole:'admin'`).
+- Cập nhật `PROJECT_ARCHITECTURE.md`.
+- Chưa triển khai Requirement #2.
+
 ## Sprint 6 — Kiểm tra toàn diện + Đóng Sprint (Sprint Review) — SPRINT 6 COMPLETED
 
 Sprint Review cuối cùng của Sprint 6 — không thêm tính năng, chỉ kiểm thử/xác minh/đánh giá toàn bộ 4 Requirement trước khi đóng Sprint.
