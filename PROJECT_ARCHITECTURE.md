@@ -332,6 +332,20 @@ Administrator → admin/ai/health.html (js/admin-ai-health.js)
 - **An toàn tuyệt đối**: cả 3 nhánh kiểm tra đều CHỈ ĐỌC (`.health()`, `.getAll()` x2) — không có nhánh nào gọi hàm ghi (`add`/`update`/`enqueue`/`resume`/`cancel`) — đã xác nhận qua mô phỏng chạy mã nguồn thật (không phát hiện lời gọi ghi nào trong mọi kịch bản, kể cả khi có lỗi).
 - **Vị trí**: trang riêng `admin/ai/health.html` (Admin-only), liên kết từ `admin/ai/providers.html` — không thêm mục điều hướng cấp cao mới (tránh rối menu cho 1 công cụ chẩn đoán ít dùng).
 
+## Kích hoạt FAQ Generator (Sprint 5, Requirement #3 — hoàn tất một phần)
+
+FAQ Generator (`js/ai/modules/faq-generator.js`, đã có từ Sprint 1) được kích hoạt sang Production theo đúng khuôn mẫu Sprint 3 — sinh 1 bài blog dạng hỏi-đáp mới theo chủ đề tự do (không nhắm 1 Product/Blog Post có sẵn, khác Product/SEO/Slider Generator):
+
+- **Plugin Manager**: `js/ai/plugin-db.js` thêm `'faq-generator'` vào danh sách seed mặc định `enabled:true` — chỉ áp dụng cho môi trường CHƯA có dữ liệu `aiPlugins`; Production đã seed từ trước cần Admin tự bật thủ công.
+- **Permission**: `js/ai/permission-service.js` thêm `ai.generate.faq` (Admin + Editor) — đúng khuôn mẫu 3 quyền `ai.generate.*` đã có, không đổi logic RBAC.
+- **Draft Workflow**: không cần sửa gì — Draft không có `targetId` (giống Blog Writer) tự động tạo MỚI 1 blog post khi publish (`publishToTarget()` trong `js/admin-ai.js`, không đổi).
+
+### ⚠️ Giới hạn kiến trúc phát hiện được: AI Task Router chưa hỗ trợ Plugin "không có thực thể mục tiêu"
+
+`AITaskRouter.route()`/`matchTarget()` (`js/ai/task-router.js`, Sprint 4 Requirement #1) được thiết kế với giả định MỌI Plugin đều nhắm vào 1 thực thể CMS có sẵn (Product hoặc Blog Post) — bắt buộc khớp được `targetId` từ `candidates` mới trả `reason:'ok'`. FAQ Generator (và tương tự: Blog Writer, Facebook Post Generator) không có thực thể mục tiêu nào — chỉ nhận 1 `topic` tự do — nên **route thêm cho các Plugin này sẽ luôn trả về `target_not_found`, không bao giờ định tuyến được qua AI Assistant** (đã xác nhận bằng thử nghiệm cụ thể, không phải suy đoán).
+
+**Quyết định (Sprint 5 Requirement #3)**: chưa sửa `task-router.js` — FAQ Generator hiện CHỈ dùng được qua Plugin Manager Dashboard cũ (`admin/ai/index.html`, đã hỗ trợ input text tự do sẵn), KHÔNG dùng được qua AI Assistant (free-text) cho tới khi có quyết định kiến trúc riêng về việc mở rộng Router để hỗ trợ Plugin dạng "topic-only" (xem `ROADMAP.md`). Đây là giới hạn có chủ đích, không phải bug — tránh sửa `AI Task Router` khi chưa có quyết định rõ ràng.
+
 ## Giới hạn kiến trúc đã biết (không tự ý "vá" bằng cách thêm hạ tầng mới)
 
 - **Job Queue vẫn không có backend riêng (V1)** — `AIJobQueue` xử lý tuần tự phía trình duyệt Admin, không đổi ở Sprint 3. Cloud Function duy nhất hiện có (`openaiProxy`, xem mục "Cloud Function Proxy Layer") chỉ là proxy gọi OpenAI API, KHÔNG phải backend xử lý Queue — nâng Job Queue lên Cloud Functions (Job Queue V2, xem `ROADMAP.md`) vẫn là quyết định kiến trúc cần người phụ trách xác nhận trước, chưa triển khai.
