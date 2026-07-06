@@ -2,6 +2,20 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 4 — Kiểm tra toàn diện + Đóng Sprint (Requirement #6) — SPRINT 4 COMPLETED
+
+Requirement cuối cùng của Sprint 4 — không thêm tính năng, chỉ tái xác nhận toàn bộ AI Experience Layer (Requirement #1–#5) và đóng Sprint. Không sửa Sprint 2/3, không Refactor ngoài phạm vi.
+
+- **Chạy lại toàn bộ mô phỏng đã viết qua Requirement #1–#5** (`task-router.js`, `admin-ai.js`, `admin-ai-assistant.js` — chạy mã nguồn thật qua Node `vm`, không viết lại) — **tất cả PASS, không đổi kết quả**: AI Task Router (chọn đúng Plugin/Confidence Score/không tạo Job khi thiếu điều kiện), Publish/Reject tái sử dụng đúng `publishToTarget()`, Ambiguous Target Resolution (tiếp tục Workflow đúng sau khi chọn), Conversation History (tổng hợp đúng từ dữ liệu có sẵn), AI Assistant Requirement #5 (Plugin không khả dụng → thông báo rõ, không tạo Job; tiến trình Request/Routing hiển thị đúng).
+- **Chạy lại mô phỏng Sprint 3** (`job-queue.js`, `providers/openai.js`, 3 Plugin) — tất cả PASS, xác nhận Sprint 3 không bị ảnh hưởng bởi bất kỳ thay đổi nào của Sprint 4.
+- **Regression Test (Functional Requirement #7)**: `git log` xác nhận `job-queue.js`/`plugin-manager.js`/`provider-registry.js`/`permission-service.js`/`data-provider.js`/`AI_RULES.md` không bị sửa lần nào kể từ Sprint 2 Requirement #8 — kể cả trong suốt Sprint 4; `js/ai/task-router.js` chỉ có đúng 1 commit (tạo ở Requirement #1), chưa từng bị sửa lại ở Requirement #2–#5; `functions/index.js` không đổi từ Sprint 3.
+- **CMS Console check**: cả 7 trang `admin/ai/{index,drafts,jobs,logs,plugins,providers,assistant}.html` load 0 lỗi console qua static server nội bộ.
+- **Security check**: grep xác nhận không có API Key/secret nào xuất hiện trong `task-router.js`/`admin-ai-assistant.js`/`assistant.html`; `firebase functions:list` xác nhận Cloud Function vẫn CHƯA deploy — không đổi so với Sprint 3 (không phải vấn đề phát sinh từ Sprint 4).
+- **Decision Record Requirement #5 vẫn chưa được quyết định** — mặc định giữ theo Option A (giữ nguyên Dashboard cũ trong `ADMIN_NAV`, không cần code gì thêm) cho tới khi Chief Architect quyết định khác. Không chặn việc đóng Sprint 4 vì đây là 1 lựa chọn chính sách/UX còn treo, không phải lỗi hay thiếu chức năng.
+- Lập `docs/SPRINT_4_FINAL_REPORT.md` (Requirement Summary, Architecture Verification, Security Verification, Production Readiness, Non-functional Evaluation, Known Limitations).
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+- **SPRINT 4 COMPLETED (Requirement #1–#6). Không bắt đầu Sprint 5. Chờ Sprint 5 Planning.**
+
 ## Sprint 4 — AI Assistant: điểm tương tác duy nhất (Requirement #5) — CHỜ 1 QUYẾT ĐỊNH
 
 **Trạng thái: hoàn tất Functional Requirement #2–#6 + toàn bộ NFR. Functional Requirement #1 ("điểm vào duy nhất") có 1 Decision Record đang CHỜ Chief Architect quyết định — xem bên dưới, chưa tự ý đóng mục này.**

@@ -2,7 +2,7 @@
 
 Mọi mục dưới đây cần được yêu cầu rõ ràng ở 1 sprint sau mới triển khai. Không tự ý code trước khi được giao.
 
-> **Sprint 3 COMPLETED. Sprint 4 Requirement #1–#4 đã hoàn tất**; **Requirement #5 hoàn tất phần lớn nhưng ĐANG CHỜ Decision Record** (giữ hay gỡ mục nav riêng cho Dashboard cũ `admin/ai/index.html` — xem `CHANGELOG.md` mục Sprint 4 Requirement #5) — xem `CHANGELOG.md` mục "Sprint 4". Các mục dưới đây vẫn ở dạng ghi nhận, chưa triển khai trừ khi ghi chú khác — chưa làm Sprint 4 Requirement #6.
+> **SPRINT 4 COMPLETED (Requirement #1–#6).** Sprint 2 và Sprint 3 cũng đã COMPLETED. AI Assistant (Experience Layer) + AI Task Router hoàn tất, kiểm thử toàn diện xong — xem `docs/SPRINT_4_FINAL_REPORT.md`. **1 Decision Record vẫn treo** (giữ hay gỡ mục nav riêng cho Dashboard cũ `admin/ai/index.html` — xem `CHANGELOG.md` mục Sprint 4 Requirement #5), mặc định Option A, không chặn đóng Sprint. Các mục dưới đây vẫn ở dạng ghi nhận, chưa triển khai trừ khi ghi chú khác — chưa bắt đầu Sprint 5, chờ Sprint 5 Planning.
 
 ## AI Assistant
 
