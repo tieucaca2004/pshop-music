@@ -381,6 +381,16 @@ Blog Writer (`js/ai/modules/blog-writer.js`, đã có từ Sprint 1) được k�
 - **Draft Workflow**: không cần sửa gì — Draft không có `targetId` tự động tạo MỚI 1 blog post khi publish (`publishToTarget()` trong `js/admin-ai.js`, không đổi) — giống hệt FAQ Generator.
 - **Không có Decision Record cần thiết**: khác với FAQ Generator, Requirement #1 của Sprint 6 liệt kê rõ "Topic-only Routing" trong Out of Scope và không yêu cầu thêm Route vào AI Task Router — Blog Writer chỉ dùng qua Plugin Manager Dashboard (`admin/ai/index.html`), nhất quán với quyết định đã có cho FAQ Generator (Sprint 5 Requirement #3, Decision Record Option B).
 
+## Kích hoạt Banner Generator (Sprint 6, Requirement #3)
+
+Banner Generator (`js/ai/modules/banner-generator.js`, đã có từ Sprint 1) được kích hoạt sang Production theo đúng khuôn mẫu Blog Writer/FAQ Generator/Facebook Post Generator — sinh nội dung 1 banner quảng cáo mới (tiêu đề nội bộ + link) theo chủ đề tự do:
+
+- **Plugin Manager**: `js/ai/plugin-db.js` thêm `'banner-generator'` vào danh sách seed mặc định `enabled:true` — chỉ áp dụng cho môi trường CHƯA có dữ liệu `aiPlugins`; Production đã seed từ trước cần Admin tự bật thủ công.
+- **Permission**: `js/ai/permission-service.js` thêm `ai.generate.banner` (Admin + Editor) — đúng khuôn mẫu các quyền `ai.generate.*` đã có.
+- **`targetCollection: 'banners'` — publish thật vào CMS, khác Facebook Post Generator (`null`)**: đây là plugin đầu tiên kể từ Slider Generator (Sprint 3) ghi thẳng vào 1 node CMS thật. Đã xác nhận qua mô phỏng chạy `publishToTarget()`/`publishDraftById()` (`js/admin-ai.js`, không sửa) rằng nhánh `target === 'banners'` gọi đúng `BannerDB.add(draft.content)` (đã có sẵn từ khi viết `publishToTarget()`, tái sử dụng nguyên vẹn) — tạo đúng 1 bản ghi Banner mới, không ảnh hưởng `BlogDB`/`DB`.
+- **Dữ liệu thật, không hardcode**: `buildPrompt()` dùng `theme` tự do người dùng nhập làm chủ đề banner; `link` cũng do người dùng nhập trực tiếp, không qua `DataProvider` (cùng dạng "chủ đề tự do" như Blog Writer/FAQ Generator, không nhắm 1 Product/Blog Post có sẵn).
+- **Không có Decision Record cần thiết**: giống Blog Writer/Facebook Post Generator, Requirement #3 của Sprint 6 không yêu cầu thêm Route vào AI Task Router — Banner Generator chỉ dùng qua Plugin Manager Dashboard (`admin/ai/index.html`), cùng lý do Topic-only Routing (xem `ROADMAP.md`).
+
 ## Kích hoạt Facebook Post Generator (Sprint 6, Requirement #2)
 
 Facebook Post Generator (`js/ai/modules/facebook-post-generator.js`, đã có từ Sprint 1) được kích hoạt sang Production theo đúng khuôn mẫu Blog Writer (Sprint 6 Requirement #1)/FAQ Generator (Sprint 5 Requirement #3) — sinh nội dung bài đăng Facebook để copy thủ công, không tự đăng:

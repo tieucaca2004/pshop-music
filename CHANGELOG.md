@@ -2,6 +2,22 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 6 — Kích hoạt Banner Generator (Requirement #3)
+
+Kích hoạt Banner Generator (`js/ai/modules/banner-generator.js`, đã có từ Sprint 1) từ "Coming Soon" sang Production, tái sử dụng hoàn toàn AI Framework hiện có, theo đúng khuôn mẫu Blog Writer/FAQ Generator/Facebook Post Generator. Không sửa Sprint 2/3/4/5, không Refactor AI Framework/Queue/Plugin Manager/Provider Manager/AI Task Router/Data Provider/Draft Workflow/Human Review Workflow, không đổi Database Structure.
+
+- **Không cần Decision Record** — giống Blog Writer/Facebook Post Generator, Requirement này không yêu cầu thêm Route vào AI Task Router, không có xung đột giữa Functional Requirement và Architectural Constraint.
+- **Kích hoạt Plugin (Functional Req #1/#2)**: thêm `'banner-generator'` vào `SPRINT2_ENABLED_MODULES` (`js/ai/plugin-db.js`) — chỉ ảnh hưởng giá trị SEED MẶC ĐỊNH cho môi trường CHƯA có dữ liệu; môi trường Production đã seed từ trước vẫn cần Admin tự bật "Enable" trong `admin/ai/plugins.html`.
+- **Permission (Functional Req #3)**: thêm `GENERATE_BANNER: 'ai.generate.banner'` vào `AI_PERMISSIONS`, gán `'banner-generator'` trong `PLUGIN_PERMISSIONS`, thêm vào `ROLE_PERMISSIONS.editor` (`js/ai/permission-service.js`) — đúng khuôn mẫu đã dùng cho Product/SEO/Slider/FAQ/Blog/Facebook, không đổi logic RBAC.
+- **Dữ liệu thật, không hardcode Prompt (Functional Req #4)**: xác nhận `buildPrompt()` dùng đúng `theme` tự do người dùng nhập làm chủ đề banner — không có chuỗi cố định nào; `link` cũng do người dùng nhập, không suy diễn.
+- **`targetCollection: 'banners'` — publish thật, khác Facebook Post Generator**: đây là plugin đầu tiên kể từ Slider Generator (Sprint 3) publish thẳng vào 1 node CMS thật thay vì "chỉ xem/copy". Xác nhận qua mô phỏng: nhánh `target === 'banners'` trong `publishToTarget()` (`js/admin-ai.js`, không sửa) gọi đúng `BannerDB.add(draft.content)` — publish tạo đúng 1 bản ghi Banner mới, không đụng `BlogDB`/`DB`.
+- **Draft Workflow/Human Review (Functional Req #5)**: xác nhận qua mô phỏng — không cần sửa gì, Draft luôn dừng ở trạng thái `draft`, chỉ ghi Banner thật khi Admin bấm "Duyệt & Publish" (`publishDraftById()`).
+- **Plugin Disable (Functional Req #6)**: đã đúng sẵn — Dashboard chỉ hiển thị Plugin đang Enable; `runModule()` đã có `.catch()` hiển thị lỗi rõ ràng nếu vô tình gọi khi Disable — không tạo Job.
+- **Không đổi**: `job-queue.js`, `plugin-manager.js`, `provider-registry.js`, `data-provider.js`, `AI_RULES.md`, `js/ai/task-router.js` (Banner Generator không dùng qua AI Assistant, cùng lý do Topic-only Routing như Blog Writer/FAQ Generator/Facebook Post Generator).
+- **Kiểm thử**: chạy thật `permission-service.js`/`plugin-db.js`/`banner-generator.js`/`job-queue.js`/`admin-ai.js` qua Node `vm` (4 kịch bản) — Editor/Admin được phép chạy `banner-generator` với quyền `ai.generate.banner` mới thêm; seed mặc định đúng (không ảnh hưởng `image-prompt-generator` còn "coming_soon"); module đọc đúng dữ liệu thật (`theme`/`link` tự do), không hardcode Prompt; toàn bộ luồng enqueue→Queue xử lý→Draft→`publishDraftById()` đều đúng — publish tạo đúng 1 Banner thật qua `BannerDB.add()`, không ghi nhầm vào `BlogDB`/`DB`. Kiểm tra `admin/ai/plugins.html`/`admin/ai/index.html` qua static server — 0 lỗi console.
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+- Chưa triển khai Requirement #4.
+
 ## Sprint 6 — Kích hoạt Facebook Post Generator (Requirement #2)
 
 Kích hoạt Facebook Post Generator (`js/ai/modules/facebook-post-generator.js`, đã có từ Sprint 1) từ "Coming Soon" sang Production, tái sử dụng hoàn toàn AI Framework hiện có, theo đúng khuôn mẫu đã kiểm chứng ở Blog Writer (Sprint 6 Requirement #1)/FAQ Generator (Sprint 5 Requirement #3). Không sửa Sprint 2/3/4/5, không Refactor AI Framework/Queue/Plugin Manager/Provider Manager/AI Task Router/Data Provider/Draft Workflow/Human Review Workflow, không đổi Database Structure.
