@@ -2,6 +2,21 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 6 — Kích hoạt Blog Writer (Requirement #1)
+
+Kích hoạt Blog Writer (`js/ai/modules/blog-writer.js`, đã có từ Sprint 1) từ "Coming Soon" sang Production, theo đúng khuôn mẫu đã kiểm chứng ở Sprint 5 Requirement #3 (FAQ Generator). Không sửa Sprint 2/3/4/5, không Refactor AI Framework/Queue/Plugin Manager/Provider Manager/AI Task Router/Data Provider/Draft Workflow/Human Review Workflow, không đổi Database Structure.
+
+- **Không cần Decision Record** — khác với FAQ Generator (Sprint 5 Requirement #3), Requirement này liệt kê rõ "Topic-only Routing" trong Out of Scope và không có Functional Requirement nào yêu cầu thêm Route vào AI Task Router — không có xung đột giữa Functional Requirement và Architectural Constraint như trước.
+- **Kích hoạt Plugin (Functional Req #1/#2)**: thêm `'blog-writer'` vào `SPRINT2_ENABLED_MODULES` (`js/ai/plugin-db.js`) — chỉ ảnh hưởng giá trị SEED MẶC ĐỊNH cho môi trường CHƯA có dữ liệu; môi trường Production đã seed từ trước vẫn cần Admin tự bật "Enable" trong `admin/ai/plugins.html`.
+- **Permission (Functional Req #3)**: thêm `GENERATE_BLOG: 'ai.generate.blog'` vào `AI_PERMISSIONS`, gán `'blog-writer'` trong `PLUGIN_PERMISSIONS`, thêm vào `ROLE_PERMISSIONS.editor` (`js/ai/permission-service.js`) — đúng khuôn mẫu đã dùng cho Product/SEO/Slider/FAQ, không đổi logic RBAC.
+- **Dữ liệu thật, không hardcode Prompt (Functional Req #4)**: xác nhận `buildPrompt()` dùng đúng `topic`/`tone`/`keywords` do người dùng nhập — không có chuỗi cố định nào. Cùng dạng "chủ đề tự do" như FAQ Generator (không có trường chọn 1 Product/Blog Post cụ thể, không gọi `DataProvider`).
+- **Draft Workflow/Human Review (Functional Req #5)**: xác nhận qua mô phỏng — không cần sửa gì, `job-queue.js`/`admin-ai.js` (`publishToTarget()`/`publishDraftById()`) đã xử lý đúng trường hợp Draft không có `targetId` (tạo MỚI 1 blog post, tự sinh slug).
+- **Plugin Disable (Functional Req #6)**: đã đúng sẵn — Dashboard chỉ hiển thị Plugin đang Enable; `runModule()` đã có `.catch()` hiển thị lỗi rõ ràng nếu vô tình gọi khi Disable — không tạo Job.
+- **Không đổi**: `job-queue.js`, `plugin-manager.js`, `provider-registry.js`, `data-provider.js`, `AI_RULES.md`, `js/ai/task-router.js` (Blog Writer không dùng qua AI Assistant, giống FAQ Generator).
+- **Kiểm thử**: chạy thật `permission-service.js`/`plugin-db.js`/`blog-writer.js`/`job-queue.js`/`admin-ai.js` qua Node `vm` — Editor/Admin được phép chạy `blog-writer`; seed mặc định đúng cho môi trường mới (không ảnh hưởng `faq-generator`/`facebook-post-generator`); prompt dùng đúng dữ liệu người dùng nhập; toàn bộ luồng enqueue→Queue xử lý→Draft→`publishDraftById()`→tạo blog post mới đều đúng, Draft luôn dừng ở "draft" trước khi publish. Kiểm tra `admin/ai/plugins.html`/`admin/ai/index.html` qua static server — 0 lỗi console.
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+- Chưa triển khai Requirement #2.
+
 ## Sprint 5 — Kiểm tra toàn diện + Đóng Sprint (Requirement #5) — SPRINT 5 COMPLETED
 
 Requirement cuối cùng của Sprint 5 — không thêm tính năng, chỉ kiểm thử/xác minh/đánh giá toàn bộ Sprint 5 trước khi đóng.

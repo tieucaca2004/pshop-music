@@ -20,18 +20,20 @@ const AI_PERMISSIONS = {
   GENERATE_SLIDER: 'ai.generate.slider',
   GENERATE_SEO: 'ai.generate.seo',
   GENERATE_FAQ: 'ai.generate.faq', // Sprint 5, Requirement #3 — kích hoạt FAQ Generator (Functional Requirement #4, "thêm Permission phù hợp nếu kiến trúc hiện tại yêu cầu")
+  GENERATE_BLOG: 'ai.generate.blog', // Sprint 6, Requirement #1 — kích hoạt Blog Writer (Functional Requirement #3, "thêm Permission phù hợp nếu cần")
   MANAGE_PROVIDERS: 'ai.manage.providers',
   MANAGE_PLUGINS: 'ai.manage.plugins'
 };
 
-// Mỗi plugin ứng với đúng 1 quyền "ai.generate.*" — 4 plugin "coming_soon"
-// còn lại (Blog Writer, Facebook Post, Banner, Image Prompt) chưa được gán
-// quyền, sẽ bổ sung khi kích hoạt ở sprint sau (xem ROADMAP.md).
+// Mỗi plugin ứng với đúng 1 quyền "ai.generate.*" — 3 plugin "coming_soon"
+// còn lại (Facebook Post, Banner, Image Prompt) chưa được gán quyền, sẽ bổ
+// sung khi kích hoạt ở sprint sau (xem ROADMAP.md).
 const PLUGIN_PERMISSIONS = {
   'product-description-writer': AI_PERMISSIONS.GENERATE_PRODUCT,
   'slider-generator': AI_PERMISSIONS.GENERATE_SLIDER,
   'seo-generator': AI_PERMISSIONS.GENERATE_SEO,
-  'faq-generator': AI_PERMISSIONS.GENERATE_FAQ
+  'faq-generator': AI_PERMISSIONS.GENERATE_FAQ,
+  'blog-writer': AI_PERMISSIONS.GENERATE_BLOG
 };
 
 // Chỉ Admin mới có ai.manage.providers/ai.manage.plugins (đúng yêu cầu #7:
@@ -39,7 +41,7 @@ const PLUGIN_PERMISSIONS = {
 // generate — đúng với khả năng Editor đã có trên Dashboard từ trước.
 const ROLE_PERMISSIONS = {
   admin: Object.values(AI_PERMISSIONS),
-  editor: [AI_PERMISSIONS.GENERATE_PRODUCT, AI_PERMISSIONS.GENERATE_SLIDER, AI_PERMISSIONS.GENERATE_SEO, AI_PERMISSIONS.GENERATE_FAQ]
+  editor: [AI_PERMISSIONS.GENERATE_PRODUCT, AI_PERMISSIONS.GENERATE_SLIDER, AI_PERMISSIONS.GENERATE_SEO, AI_PERMISSIONS.GENERATE_FAQ, AI_PERMISSIONS.GENERATE_BLOG]
 };
 
 const PermissionService = (function () {

@@ -372,6 +372,15 @@ Requirement cuối cùng của Sprint 5 — tái xác nhận toàn bộ những 
 - **CMS Console check**: cả 9 trang AI (`index/drafts/jobs/logs/plugins/providers/assistant/health/usage`) load 0 lỗi console.
 - **Security check**: không có secret nào trong code Sprint 5; Cloud Function vẫn chưa deploy (kế thừa từ Sprint 3, không phải vấn đề Sprint 5).
 
+## Kích hoạt Blog Writer (Sprint 6, Requirement #1)
+
+Blog Writer (`js/ai/modules/blog-writer.js`, đã có từ Sprint 1) được kích hoạt sang Production theo đúng khuôn mẫu Sprint 5 Requirement #3 (FAQ Generator) — sinh 1 bài blog mới theo chủ đề tự do (cùng dạng "topic-only" như FAQ Generator, không nhắm 1 Product/Blog Post có sẵn):
+
+- **Plugin Manager**: `js/ai/plugin-db.js` thêm `'blog-writer'` vào danh sách seed mặc định `enabled:true` — chỉ áp dụng cho môi trường CHƯA có dữ liệu `aiPlugins`; Production đã seed từ trước cần Admin tự bật thủ công.
+- **Permission**: `js/ai/permission-service.js` thêm `ai.generate.blog` (Admin + Editor) — đúng khuôn mẫu các quyền `ai.generate.*` đã có.
+- **Draft Workflow**: không cần sửa gì — Draft không có `targetId` tự động tạo MỚI 1 blog post khi publish (`publishToTarget()` trong `js/admin-ai.js`, không đổi) — giống hệt FAQ Generator.
+- **Không có Decision Record cần thiết**: khác với FAQ Generator, Requirement #1 của Sprint 6 liệt kê rõ "Topic-only Routing" trong Out of Scope và không yêu cầu thêm Route vào AI Task Router — Blog Writer chỉ dùng qua Plugin Manager Dashboard (`admin/ai/index.html`), nhất quán với quyết định đã có cho FAQ Generator (Sprint 5 Requirement #3, Decision Record Option B).
+
 ## Giới hạn kiến trúc đã biết (không tự ý "vá" bằng cách thêm hạ tầng mới)
 
 - **Job Queue vẫn không có backend riêng (V1)** — `AIJobQueue` xử lý tuần tự phía trình duyệt Admin, không đổi ở Sprint 3. Cloud Function duy nhất hiện có (`openaiProxy`, xem mục "Cloud Function Proxy Layer") chỉ là proxy gọi OpenAI API, KHÔNG phải backend xử lý Queue — nâng Job Queue lên Cloud Functions (Job Queue V2, xem `ROADMAP.md`) vẫn là quyết định kiến trúc cần người phụ trách xác nhận trước, chưa triển khai.
