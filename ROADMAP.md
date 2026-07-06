@@ -2,7 +2,7 @@
 
 Mọi mục dưới đây cần được yêu cầu rõ ràng ở 1 sprint sau mới triển khai. Không tự ý code trước khi được giao.
 
-> **SPRINT 4 COMPLETED (Requirement #1–#6).** Sprint 2 và Sprint 3 cũng đã COMPLETED. Sprint 5: Requirement #1 (Production Health Check), #3 (kích hoạt FAQ Generator qua Plugin Manager/Dashboard), #4 (Usage Visibility) đều đã COMPLETED. Chief Architect đã quyết định: KHÔNG mở rộng AI Task Router ở Sprint 5 — FAQ Generator chỉ dùng qua Plugin Manager Dashboard, không tích hợp AI Assistant. **Topic-only Routing cho AI Assistant sẽ được xem xét ở một Requirement riêng trong tương lai.** Lưu ý: "Requirement #2" (AI Workflow Engine) chưa từng được triển khai (bị hủy giữa chừng ở 1 lượt trước khi tới Requirement #1) — chưa phụ thuộc các Requirement khác. Các mục dưới đây vẫn ở dạng ghi nhận, chưa triển khai trừ khi ghi chú khác — chưa làm Sprint 5 Requirement #5.
+> **SPRINT 5 COMPLETED (Requirement #1, #3, #4, #5).** Sprint 2, Sprint 3, Sprint 4 cũng đã COMPLETED — xem `docs/SPRINT_5_PROGRESS.md` cho báo cáo kiểm tra toàn diện + regression. Chief Architect đã quyết định: KHÔNG mở rộng AI Task Router ở Sprint 5 — FAQ Generator chỉ dùng qua Plugin Manager Dashboard, không tích hợp AI Assistant. **Topic-only Routing cho AI Assistant sẽ được xem xét ở một Requirement riêng trong tương lai.** Lưu ý còn treo: "Requirement #2" (AI Workflow Engine) **chưa từng được triển khai** trong suốt Sprint 5 dù nhiều Context ghi là COMPLETED — cần quyết định ở Sprint 6 có tiếp tục hay không. Blog Writer/Facebook Post Generator/Banner Generator/Image Prompt Generator vẫn "Coming Soon". Các mục dưới đây vẫn ở dạng ghi nhận, chưa triển khai trừ khi ghi chú khác — chưa bắt đầu Sprint 6, chờ Sprint 6 Planning.
 
 ## AI Assistant
 

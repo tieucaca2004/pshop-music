@@ -363,6 +363,15 @@ Administrator → admin/ai/usage.html (js/admin-ai-usage.js)
 - **"Tổng số lần Generate"** = tổng số bản ghi Log trong khoảng thời gian đã chọn (mọi trạng thái, kể cả `permission_denied`) — định nghĩa đơn giản, khớp với tổng của 3 bảng breakdown, không cần ước tính riêng.
 - **Có thể mở rộng thành Cost Tracking** (NFR) — nếu cần chi phí/token thật, cần thêm field vào `aiLogs` (Database Structure change, cần Decision Record + Chief Architect phê duyệt riêng, đã ghi `ROADMAP.md`).
 
+## Kiểm tra toàn diện + Đóng Sprint (Sprint 5, Requirement #5 — SPRINT 5 COMPLETED)
+
+Requirement cuối cùng của Sprint 5 — tái xác nhận toàn bộ những gì đã xây (Requirement #1, #3, #4), không thêm tính năng. Báo cáo đầy đủ: xem `docs/SPRINT_5_PROGRESS.md`.
+
+- **2 điểm không khớp trong yêu cầu gốc, đã ghi nhận rõ chứ không tự suy diễn**: (1) "Requirement #2" (AI Workflow Engine) chưa từng được triển khai dù Context ghi COMPLETED — không ảnh hưởng vì Requirement #5 không kiểm thử hạng mục nào của Workflow Engine; (2) "Kiểm thử Blog Writer" không thực hiện được vì Blog Writer chưa được kích hoạt sang Production ở Sprint 5 (chỉ FAQ Generator được kích hoạt).
+- **Regression Test**: xác nhận qua `git log` từng file — `job-queue.js`/`plugin-manager.js`/`provider-registry.js`/`data-provider.js`/`AI_RULES.md` không đổi từ Sprint 2 Requirement #8; `task-router.js` chỉ 1 commit (Sprint 4 Requirement #1); `permission-service.js`/`plugin-db.js` chỉ đúng 2 commit/file (Sprint 2 + bổ sung FAQ Generator ở Sprint 5 Requirement #3, đúng dự kiến).
+- **CMS Console check**: cả 9 trang AI (`index/drafts/jobs/logs/plugins/providers/assistant/health/usage`) load 0 lỗi console.
+- **Security check**: không có secret nào trong code Sprint 5; Cloud Function vẫn chưa deploy (kế thừa từ Sprint 3, không phải vấn đề Sprint 5).
+
 ## Giới hạn kiến trúc đã biết (không tự ý "vá" bằng cách thêm hạ tầng mới)
 
 - **Job Queue vẫn không có backend riêng (V1)** — `AIJobQueue` xử lý tuần tự phía trình duyệt Admin, không đổi ở Sprint 3. Cloud Function duy nhất hiện có (`openaiProxy`, xem mục "Cloud Function Proxy Layer") chỉ là proxy gọi OpenAI API, KHÔNG phải backend xử lý Queue — nâng Job Queue lên Cloud Functions (Job Queue V2, xem `ROADMAP.md`) vẫn là quyết định kiến trúc cần người phụ trách xác nhận trước, chưa triển khai.

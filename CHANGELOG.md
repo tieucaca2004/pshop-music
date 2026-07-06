@@ -2,6 +2,21 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 5 — Kiểm tra toàn diện + Đóng Sprint (Requirement #5) — SPRINT 5 COMPLETED
+
+Requirement cuối cùng của Sprint 5 — không thêm tính năng, chỉ kiểm thử/xác minh/đánh giá toàn bộ Sprint 5 trước khi đóng.
+
+- **2 điểm không khớp thực tế trong Context/Functional Requirements — ghi nhận rõ, không tự suy diễn**:
+  - Context ghi "Requirement #2 COMPLETED" — thực tế **"Requirement #2" (AI Workflow Engine) chưa từng được triển khai** (bị hủy giữa chừng từ nhiều lượt trước, đã nhắc lại ở Requirement #3 và #4). Không chặn việc kiểm thử Requirement #5 vì bản thân Functional Requirements #1–10 của Requirement #5 không liệt kê hạng mục nào thuộc Workflow Engine.
+  - Functional Requirement #2 yêu cầu "Kiểm thử Blog Writer" — thực tế **Blog Writer chưa được kích hoạt sang Production ở Sprint 5** (chỉ FAQ Generator được kích hoạt, ở Requirement #3). Blog Writer vẫn ở trạng thái "Coming Soon" — không có gì để kiểm thử ở phạm vi Production. Đã bỏ qua mục này, ghi rõ trong `docs/SPRINT_5_PROGRESS.md`.
+- **Chạy lại toàn bộ mô phỏng đã viết qua Sprint 3/4/5** (12 file kịch bản, chạy mã nguồn thật qua Node `vm`, không viết lại) — **tất cả PASS, không đổi kết quả**: Queue/Permission/Draft/Log (Sprint 3), AI Task Router/Conversation History/Ambiguous Resolution/Plugin Unavailable (Sprint 4), Production Health Check/FAQ Generator/Usage Visibility (Sprint 5).
+- **Regression Test (Functional Requirement #10)**: `git log` xác nhận từng file một — `job-queue.js`, `plugin-manager.js`, `provider-registry.js`, `data-provider.js`, `AI_RULES.md` dừng đúng ở commit Sprint 2 Requirement #8 (không đổi qua Sprint 3/4/5); `task-router.js` chỉ có đúng 1 commit (Sprint 4 Requirement #1); `admin-ai.js` dừng ở Sprint 4 Requirement #2; `admin-ai-assistant.js` dừng ở Sprint 4 Requirement #5; `permission-service.js`/`plugin-db.js` chỉ có đúng 2 commit mỗi file (tạo ở Sprint 2 + bổ sung `ai.generate.faq`/seed FAQ Generator ở Sprint 5 Requirement #3, đúng như đã ghi nhận, không có thay đổi nào khác ngoài dự kiến); `functions/index.js` không đổi từ Sprint 3.
+- **CMS Console check**: cả 9 trang `admin/ai/*.html` (index/drafts/jobs/logs/plugins/providers/assistant/health/usage) load 0 lỗi console, 0 request thất bại.
+- **Security check**: grep xác nhận không có API Key/secret nào trong toàn bộ file Sprint 5 (`health-check.js`, `admin-ai-health.js`, `usage-stats.js`, `admin-ai-usage.js`, `health.html`, `usage.html`); Cloud Function vẫn CHƯA deploy (không đổi so với Sprint 3/4, không phải vấn đề do Sprint 5 gây ra).
+- Lập `docs/SPRINT_5_PROGRESS.md` (Requirement Summary, Architecture/Security Verification, Production Readiness, Non-functional Evaluation, Known Limitations, mục chuyển sang Sprint 6).
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+- **SPRINT 5 COMPLETED (Requirement #1, #3, #4, #5 — theo đúng những gì thực sự được giao và triển khai). Không bắt đầu Sprint 6. Không làm Requirement #6.**
+
 ## Sprint 5 — Usage Visibility (Requirement #4)
 
 **Lưu ý về trình tự (nhắc lại)**: Requirement ghi "Requirement #2 và #3 đã hoàn thành" — Requirement #3 đúng là đã COMPLETED, nhưng "Requirement #2" (AI Workflow Engine) **vẫn chưa từng được triển khai** (bị hủy giữa chừng từ nhiều lượt trước). Đã tiếp tục Requirement #4 vì Usage Visibility không phụ thuộc Workflow Engine.
