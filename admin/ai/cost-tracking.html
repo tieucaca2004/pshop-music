@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Usage Visibility - Pshop Music Admin</title>
+<title>AI Cost Tracking - Pshop Music Admin</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
@@ -17,18 +17,18 @@
   <div class="admin-main">
     <div class="admin-topbar" id="adminTopbar"></div>
     <div class="admin-wrap">
-      <p class="small-muted" style="margin-bottom:1.5rem">Mức độ sử dụng AI Framework, tổng hợp từ Nhật ký (<code>aiLogs</code>) đã có — chỉ đọc. Xem <a href="cost-tracking.html" style="color:var(--gold-ink)">Cost Tracking</a> để xem chi phí ước tính theo Provider/Plugin.</p>
+      <p class="small-muted" style="margin-bottom:1.5rem">Mức sử dụng AI và chi phí ƯỚC TÍNH theo Provider/Plugin, tổng hợp từ Nhật ký (<code>aiLogs</code>) đã có — chỉ đọc. Chi phí là ước tính tham khảo (đơn giá trung bình mỗi lượt Generate thành công), không phải Billing/thanh toán chính xác.</p>
       <div class="panel">
         <div class="form-group" style="max-width:280px">
           <label>Khoảng thời gian</label>
-          <select id="usageRangeFilter">
+          <select id="costRangeFilter">
             <option value="today">Hôm nay</option>
             <option value="7d" selected>7 ngày gần nhất</option>
             <option value="30d">30 ngày gần nhất</option>
           </select>
         </div>
       </div>
-      <div id="usageResult" style="margin-top:1.5rem"></div>
+      <div id="costResult" style="margin-top:1.5rem"></div>
     </div>
   </div>
 </div>
@@ -55,7 +55,8 @@
 <script src="../../js/ai/modules/slider-generator.js"></script>
 <script src="../../js/ai/modules/banner-generator.js"></script>
 <script src="../../js/ai/usage-stats.js"></script>
-<script src="../../js/admin-ai-usage.js"></script>
-<script>AdminAIUsage.init();</script>
+<script src="../../js/ai/cost-tracking.js"></script>
+<script src="../../js/admin-ai-cost-tracking.js"></script>
+<script>AdminAICostTracking.init();</script>
 </body>
 </html>

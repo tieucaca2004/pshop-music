@@ -423,6 +423,24 @@ Sprint Review cuối cùng của Sprint 6 — tái xác nhận toàn bộ 4 Requ
 - **Security check**: không có secret nào trong code Sprint 6; Cloud Function vẫn chưa deploy (kế thừa từ Sprint 3, không phải vấn đề Sprint 6).
 - **Project Backup**: không khả dụng trong môi trường hiện tại — Auto Mode Safety Classifier chặn cứng việc nén + upload source code lên Google Drive bên ngoài (phân loại "Data Exfiltration"). GitHub (`feature/cms-ai-sprint2`) là nơi backup từ xa duy nhất khả dụng.
 
+## AI Cost Tracking (Sprint 7, Requirement #2)
+
+Cho Administrator theo dõi mức sử dụng AI và chi phí ƯỚC TÍNH theo Provider/Plugin — công cụ thống kê, hoàn toàn CHỈ ĐỌC, không phải Billing/thanh toán:
+
+```
+Administrator → admin/ai/cost-tracking.html (js/admin-ai-cost-tracking.js)
+             → CostTrackingService.compute(rangeKey) (js/ai/cost-tracking.js)
+                  ├─ UsageStats.compute(rangeKey) (Sprint 5 #4, không sửa) → Usage Summary (tổng/theo Provider/theo Plugin/theo Trạng thái)
+                  └─ LogDB.getAll() (chỉ đọc, lọc status:'completed') → Cost Estimate theo Provider + theo Plugin
+             → 1 báo cáo hợp nhất (Usage + Cost Estimate)
+```
+
+- **Quyết định kiến trúc quan trọng — không cần Decision Record**: `aiLogs` hiện không lưu token/chi phí thật (chỉ `moduleId`/`provider`/`status`/`timestamp`/`durationMs`...). Thêm field mới sẽ là thay đổi Database Structure, đúng Architectural Constraint của Requirement #2 thì phải có Decision Record + chờ phê duyệt riêng trước khi làm. Đã chọn **không đổi Database Structure**: chi phí ước tính = (số lượt Generate **thành công**, `status:'completed'`) × (đơn giá tham khảo trung bình mỗi lượt, hằng số tĩnh `ESTIMATED_COST_PER_CALL_USD` theo Provider trong `js/ai/cost-tracking.js` — KHÔNG dựa trên token thực tế). Đây là ước tính tham khảo thô, đúng nghĩa đen "chi phí ước tính" của Requirement — không phải Billing chính xác (Out of Scope).
+- **Chỉ tính lượt `completed`**: `failed`/`cancelled`/`permission_denied` không được tính vào chi phí — đây là trạng thái duy nhất chắc chắn đã nhận phản hồi AI thật, tránh ước tính cao hơn thực tế.
+- **NFR "Không phụ thuộc Provider cụ thể"**: bảng đơn giá chỉ có `openai` (Provider duy nhất đã tích hợp API thật, Sprint 3 Requirement #1) — Provider nào chưa có đơn giá (Claude/Gemini/DeepSeek, vẫn là stub) tự động trả về `available:false`, hiển thị **"Cost estimation unavailable"** thay vì suy đoán/mặc định 0.
+- **Tái sử dụng tuyệt đối**: Usage Summary gọi thẳng `UsageStats.compute()` (Sprint 5 #4, không sửa file đó, không viết lại logic lọc thời gian/tổng hợp) — `CostTrackingService` chỉ thêm phần tính Cost Estimate từ cùng 1 lượt đọc `LogDB.getAll()`.
+- **Có thể mở rộng thành Billing thật sau này** (NFR) — nếu cần chi phí chính xác dựa trên token thực tế, cần thêm field vào `aiLogs` (Database Structure change) + đọc field `usage` có sẵn trong response OpenAI qua Cloud Function Proxy — đây LÀ 1 thay đổi cần Decision Record riêng, đã ghi vào `ROADMAP.md`, không tự triển khai ở Requirement này.
+
 ## AI Observability Dashboard (Sprint 7, Requirement #1)
 
 Cho Administrator quan sát toàn bộ trạng thái AI Framework từ 1 màn hình duy nhất — công cụ tổng hợp, không phải Workflow thứ 2, hoàn toàn CHỈ ĐỌC:
