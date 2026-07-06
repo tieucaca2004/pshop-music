@@ -2,6 +2,29 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 4 — AI Assistant: điểm tương tác duy nhất (Requirement #5) — CHỜ 1 QUYẾT ĐỊNH
+
+**Trạng thái: hoàn tất Functional Requirement #2–#6 + toàn bộ NFR. Functional Requirement #1 ("điểm vào duy nhất") có 1 Decision Record đang CHỜ Chief Architect quyết định — xem bên dưới, chưa tự ý đóng mục này.**
+
+- **Decision Record — Dashboard cũ (`admin/ai/index.html`) có còn là 1 điểm vào song song không?**
+  - **Option A — Giữ nguyên như hiện tại**: `admin/ai/index.html` (chọn Plugin thủ công) vẫn còn trong `ADMIN_NAV` như 1 mục điều hướng riêng, song song với "Trợ lý AI" (`assistant.html`).
+    - *Ưu điểm*: giữ lối thoát thủ công khi AI Task Router không hiểu được yêu cầu (dù đã có Ambiguous Picker + thông báo lỗi rõ ràng ở Requirement #1/#3); không rủi ro, không cần đổi gì.
+    - *Nhược điểm*: không thỏa mãn đúng nghĩa đen "điểm vào duy nhất" của Functional Requirement #1/Acceptance Criteria ("Người dùng chỉ làm việc thông qua AI Assistant") — vẫn có 2 cách để chạy AI.
+  - **Option B — `admin/ai/index.html` không còn là điểm vào song song**: gỡ mục nav riêng cho Dashboard cũ (hoặc chuyển hướng `index.html` sang `assistant.html`), chỉ còn đúng 1 mục nav "AI" trỏ tới `assistant.html`. Các trang cấu hình/giám sát khác (Plugin Manager, Nhà cung cấp AI, Job Queue, Nhật ký, Duyệt nội dung) không đổi, vẫn truy cập được (không phải "điểm vào để chạy AI", mà là trang cấu hình/giám sát).
+    - *Ưu điểm*: đúng nghĩa đen Functional Requirement #1 — chỉ 1 cách để bắt đầu 1 tác vụ AI.
+    - *Nhược điểm*: mất hẳn lối "chọn Plugin thủ công" nếu AI Task Router hiểu sai nhiều lần liên tục; là thay đổi điều hướng có thể ảnh hưởng thói quen người dùng đã quen với Dashboard cũ.
+  - **Ảnh hưởng kiến trúc**: cả 2 phương án đều KHÔNG đụng tới Queue/Plugin Manager/Provider Manager/Permission Service/Data Provider/AI Task Router/Database — chỉ là thay đổi 1 dòng trong `ADMIN_NAV` (`js/admin-auth.js`) và/hoặc nội dung `admin/ai/index.html`. Rủi ro kỹ thuật thấp, dễ đảo ngược ở cả 2 hướng.
+  - **Khuyến nghị**: Option A tạm thời (giữ nguyên), vì Ambiguous Picker (Requirement #3) + thông báo lỗi rõ ràng (Requirement #1) + xử lý "Plugin không khả dụng" (Requirement #5, xem bên dưới) đã đủ để AI Assistant tự xử lý phần lớn trường hợp mà không cần lối thoát thủ công — nhưng việc **gỡ bỏ hẳn** 1 điểm vào đang tồn tại là thay đổi trải nghiệm người dùng trực tiếp, nên cần Chief Architect xác nhận rõ trước khi thực hiện, không tự quyết.
+- **Đã hoàn tất (không phụ thuộc Decision Record trên)**:
+  - **Functional Requirement #3** ("hiển thị Plugin đã được chọn sau khi Router định tuyến xong"): `dispatchAndShow()` hiển thị `routeResult.outcomeLabel` (mô tả theo Kết quả — "Mô tả sản phẩm"/"Gói SEO cho bài viết"/"Nội dung slide quảng cáo", KHÔNG phải id/tên Plugin kỹ thuật) ngay khi Routing xong, trước khi gọi Permission/Plugin Manager — vẫn đúng "người dùng không cần biết Plugin nào đang chạy" (Objective).
+  - **Functional Requirement #4** (hiển thị đủ tiến trình Request/Routing/Processing/Draft Ready/Review/Publish): thêm 2 giai đoạn hiển thị mới — "Request" (ngay khi bấm gửi) và "Routing" (trong lúc tải dữ liệu + Router phân tích) — nối tiếp đúng các giai đoạn đã có từ Requirement #2 (Processing/Draft Ready) và cơ chế Publish/Reject.
+  - **Functional Requirement #6 — sửa 1 bug thực sự phát hiện được**: `AITaskRouter.dispatch()` gọi `PluginManager.execute()` bên trong — nếu Plugin đang **Disable** trong Plugin Manager (hoặc thiếu dữ liệu bắt buộc), `execute()` **reject Promise** thay vì trả `{dispatched:false}` (hành vi có sẵn của `plugin-manager.js`, không sửa). Trước Requirement #5, `dispatchAndShow()` KHÔNG có `.catch()` cho trường hợp này — nếu gặp phải, màn hình sẽ treo ở "Đang xử lý" vĩnh viễn, không có thông báo, không rõ ràng. Đã thêm `.catch()` ở đúng Experience Layer (`js/admin-ai-assistant.js`) để hiển thị thông báo rõ ràng — không tạo Job (vì lỗi xảy ra trước khi Job được enqueue thành công).
+  - **NFR "mở rộng khi bổ sung Plugin mới"**: đã thỏa mãn sẵn từ kiến trúc Requirement #1 (`AITaskRouter.ROUTES` là cấu hình dạng mảng, `outcomeLabelForModule()` có fallback `AIModuleRegistry` cho Plugin chưa có route) — không cần thêm gì.
+- **Xác nhận không đổi**: `js/ai/task-router.js`, `job-queue.js`, `plugin-manager.js`, `provider-registry.js`, `permission-service.js`, `data-provider.js`, `AI_RULES.md`, Database Structure.
+- **Kiểm thử**: chạy thật `js/admin-ai-assistant.js` qua Node `vm` với DOM giả lập — xác nhận: (1) khi `dispatch()` reject vì Plugin không khả dụng, hiển thị thông báo rõ ràng và **không gọi** `AIJobQueue.resume()` (không tạo/chạy Job); (2) giai đoạn "Request"/"Routing" hiển thị đúng thứ tự trước khi hiện "Plugin đã chọn". Kiểm tra `admin/ai/assistant.html` qua static server — 0 lỗi console.
+- Cập nhật `PROJECT_ARCHITECTURE.md`.
+- **Chưa đóng Requirement #5** cho tới khi Chief Architect quyết định Decision Record ở trên. Chưa triển khai Requirement #6.
+
 ## Sprint 4 — AI Conversation History (Requirement #4)
 
 Bổ sung khả năng xem lại các phiên làm việc trước đây của AI Assistant, giúp AI Assistant trở thành trung tâm làm việc thay vì chỉ là nơi nhập Prompt. Không sửa Sprint 2/3, không sửa Requirement #1/#2/#3 (`task-router.js`, Queue, Plugin Manager, Provider Manager, Permission Service, Data Provider, Draft/Human Review Workflow).

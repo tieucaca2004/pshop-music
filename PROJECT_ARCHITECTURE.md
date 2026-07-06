@@ -215,7 +215,7 @@ Requirement cuối cùng của Sprint 3 — tái xác nhận toàn bộ AI Frame
 - **Security Verification**: xác nhận lại Permission/RBAC/Queue/Draft/API Key đều đúng; riêng Firebase Database Rules KHÔNG version-control trong repo nên không thể xác minh trực tiếp từ môi trường này (ghi Known Limitations).
 - **Kết luận**: Code 100% sẵn sàng Pilot Production. Kích hoạt Pilot Production thật (traffic thật, response OpenAI thật) chờ deploy Cloud Function.
 
-## AI Assistant — Experience Layer + AI Task Router (Sprint 4, Requirement #1–#4)
+## AI Assistant — Experience Layer + AI Task Router (Sprint 4, Requirement #1–#5)
 
 Sprint 4 thêm 1 lớp MỚI nằm **bên trên** toàn bộ kiến trúc Sprint 2/3 — không sửa `job-queue.js`/`plugin-manager.js`/`provider-registry.js`/`permission-service.js`/`data-provider.js`/`AI_RULES.md`. Về vai trò kiến trúc, lớp này tương đương `js/admin-ai.js` (1 caller mới của `PluginManager`), chỉ khác ở chỗ người dùng gõ yêu cầu tự do thay vì chọn Plugin từ danh sách:
 
@@ -290,6 +290,17 @@ AI Assistant cho xem lại các phiên làm việc trước đây, giúp trở t
 - **Conversation History hiển thị TẤT CẢ `aiJobs`**, không chỉ Job tạo từ AI Assistant — vì hiện không có field nào phân biệt "Job tạo từ AI Assistant" với "Job tạo từ Plugin Manager cũ" (`admin/ai/index.html`), và thêm field đó sẽ vi phạm Database Policy. `outcomeLabelForModule()` fallback về nhãn Plugin thật (`AIModuleRegistry`) cho các Job không khớp route nào trong `AITaskRouter.ROUTES`.
 - Giới hạn hiển thị 50 phiên gần nhất (cùng cách `admin/ai/logs.html` giới hạn 200) — không phải phân trang thật (Firebase query pagination), chỉ là cắt bớt phía client, cùng mức độ "mở rộng được" như các trang Job Queue/Nhật ký hiện có.
 - Mở lại 1 phiên **không** bao giờ gọi `AIJobQueue.resume()`/`AITaskRouter.dispatch()` — đảm bảo tuyệt đối không tự chạy lại Job/Generate lại (Functional Requirement #4).
+
+### AI Assistant — điểm tương tác duy nhất (Requirement #5)
+
+⚠️ **Chưa hoàn tất — chờ Decision Record**: Functional Requirement #1 ("AI Assistant phải trở thành điểm vào duy nhất cho toàn bộ AI trong CMS") có 1 câu hỏi kiến trúc/UX đang chờ Chief Architect quyết định — giữ hay gỡ mục điều hướng riêng cho Dashboard cũ (`admin/ai/index.html`) trong `ADMIN_NAV`. Xem Decision Record đầy đủ trong `CHANGELOG.md` mục Sprint 4 Requirement #5. Cho tới khi có quyết định, `ADMIN_NAV` vẫn giữ nguyên cả 2 mục ("Trợ lý AI" + "AI Assistant" cũ) như từ Requirement #1.
+
+Các phần khác của Requirement #5 đã hoàn tất, không phụ thuộc quyết định trên:
+
+- **Hiển thị "Plugin đã chọn" (Functional Requirement #3)**: `dispatchAndShow()` (`js/admin-ai-assistant.js`) hiển thị `routeResult.outcomeLabel` ngay khi Routing xong, trước khi gọi Permission/Plugin Manager — vẫn đúng nguyên tắc "người dùng không biết Plugin kỹ thuật nào đang chạy" vì `outcomeLabel` là mô tả theo Kết quả, không phải id/tên Plugin.
+- **Hiển thị đủ tiến trình (Functional Requirement #4)**: `Request` (`simplePanel`, ngay khi gửi) → `Routing` (`simplePanel`, trong lúc tải candidates + Router phân tích) → `Processing` (Requirement #2) → `Draft Ready` (Requirement #2) → Review (chính là panel Preview + nút Duyệt/Từ chối) → Publish (trạng thái cuối sau khi bấm Duyệt).
+- **Xử lý Plugin không khả dụng (Functional Requirement #6) — sửa 1 bug thật**: `PluginManager.execute()` (gọi bên trong `AITaskRouter.dispatch()`, không sửa) tự reject Promise khi Plugin đang Disable hoặc thiếu dữ liệu bắt buộc — hành vi này có từ Sprint 2, không đổi. Trước Requirement #5, `dispatchAndShow()` không có `.catch()` cho nhánh này → màn hình treo vô thời hạn ở "Đang xử lý", không thông báo. Đã thêm `.catch()` ở Experience Layer để hiển thị thông báo rõ ràng, không tạo Job.
+- **NFR "mở rộng khi bổ sung Plugin mới"**: đã thỏa mãn sẵn — `AITaskRouter.ROUTES` (Requirement #1) là cấu hình dạng mảng, thêm 1 Plugin mới chỉ cần thêm 1 phần tử route, không cần sửa `admin-ai-assistant.js`.
 
 ## Giới hạn kiến trúc đã biết (không tự ý "vá" bằng cách thêm hạ tầng mới)
 

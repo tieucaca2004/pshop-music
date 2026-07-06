@@ -24,6 +24,14 @@
  *   thống hiện tại (Requirement #1-#3) không lưu lại chuỗi tự do người dùng
  *   gõ ở đâu cả, và Database Policy của Requirement #4 ưu tiên cao nhất
  *   việc KHÔNG thêm Database/field mới. Xem PROJECT_ARCHITECTURE.md.
+ * - Requirement #5: hiển thị đủ tiến trình Request → Routing → Processing →
+ *   Draft Ready → Review → Publish (Functional Req #4); hiển thị rõ "Plugin
+ *   đã chọn" bằng outcomeLabel ngay sau khi Routing xong (Functional Req #3
+ *   — không lộ id/tên Plugin kỹ thuật); bắt lỗi khi Plugin không khả dụng
+ *   (disabled trong Plugin Manager) — PluginManager.execute() tự reject
+ *   Promise trong trường hợp này (hành vi có sẵn, không sửa Plugin Manager),
+ *   Assistant chỉ bắt lại ở Experience Layer để hiển thị rõ ràng, không tạo
+ *   Job (Functional Req #6).
  */
 const AdminAIAssistant = (function () {
   const CONFIDENCE_AUTO_THRESHOLD = 95;
@@ -183,6 +191,18 @@ const AdminAIAssistant = (function () {
       </div>`;
   }
 
+  // Panel cho 2 giai đoạn đầu (Request/Routing) — chưa có routeResult (chưa
+  // xác định được Plugin), nên chưa thể hiển thị outcomeLabel như
+  // progressPanel(). Cùng 1 luồng trạng thái với progressPanel(), chỉ khác
+  // ở chỗ chưa có "Plugin đã chọn" để hiển thị (Functional Requirement #4).
+  function simplePanel(stageLabel, message) {
+    return `
+      <div class="panel">
+        <p class="small-muted">Trạng thái: ${escapeHtml(stageLabel)}</p>
+        <p>${escapeHtml(message)}</p>
+      </div>`;
+  }
+
   function renderDraftPreview(draft, routeResult) {
     setResult(`
       <div class="panel">
@@ -270,7 +290,12 @@ const AdminAIAssistant = (function () {
   // ============== Gửi yêu cầu / Safety Checkpoint ==============
 
   function dispatchAndShow(routeResult) {
-    setResult(progressPanel('Request Received', routeResult));
+    // "AI Assistant phải hiển thị Plugin đã được chọn sau khi AI Task Router
+    // hoàn tất định tuyến" (Sprint 4, Requirement #5, Functional Req #3) —
+    // progressPanel() hiển thị routeResult.outcomeLabel (mô tả theo Kết quả,
+    // không phải id/tên Plugin kỹ thuật — vẫn đúng "người dùng không cần
+    // biết Plugin nào đang chạy").
+    setResult(progressPanel('Routing hoàn tất — đang kiểm tra quyền...', routeResult));
     return AITaskRouter.dispatch(routeResult, user.uid, user.email).then(outcome => {
       if (!outcome.dispatched) {
         setResult('<p style="color:#c0392b">' + reasonMessage(Object.assign({}, routeResult, outcome)) + '</p>');
@@ -282,6 +307,15 @@ const AdminAIAssistant = (function () {
       // đang làm cho Dashboard cũ). Không bypass Queue — chỉ gọi API công khai.
       AIJobQueue.resume(user.uid, user.email);
       trackJob(outcome.job.id, routeResult);
+    }).catch(err => {
+      // Functional Requirement #6 (Sprint 4, Requirement #5): "Nếu Plugin
+      // không khả dụng (vd đang Disable trong Plugin Manager), hiển thị
+      // thông báo rõ ràng, không tạo Job." PluginManager.execute() (gọi bên
+      // trong AITaskRouter.dispatch(), không sửa Router/Plugin Manager) tự
+      // reject Promise khi plugin bị tắt hoặc thiếu dữ liệu bắt buộc, thay vì
+      // trả {dispatched:false} — Assistant bắt lại đúng tại đây (Experience
+      // Layer) để không bỏ sót, không hiển thị màn hình treo vô thời hạn.
+      setResult('<p style="color:#c0392b">Không thể thực hiện yêu cầu: ' + escapeHtml(err.message) + '</p>');
     });
   }
 
@@ -302,8 +336,12 @@ const AdminAIAssistant = (function () {
   function handleSend() {
     const text = document.getElementById('assistantInput').value.trim();
     if (!text) return;
-    setResult('<p class="small-muted">Đang phân tích yêu cầu...</p>');
+    // Functional Requirement #4 (Sprint 4, Requirement #5): toàn bộ tiến
+    // trình phải hiển thị — Request → Routing → Processing → Draft Ready →
+    // Review → Publish. 2 giai đoạn đầu chưa có Plugin nào được xác định.
+    setResult(simplePanel('Request', 'Đã nhận yêu cầu của bạn.'));
     loadCandidates().then(candidates => {
+      setResult(simplePanel('Routing', 'AI đang xác định công việc phù hợp...'));
       const routeResult = AITaskRouter.route(text, candidates);
       if (routeResult.reason === 'target_ambiguous') {
         showAmbiguousPicker(routeResult, candidates);
