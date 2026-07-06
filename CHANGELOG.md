@@ -2,6 +2,21 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 6 — Kích hoạt Facebook Post Generator (Requirement #2)
+
+Kích hoạt Facebook Post Generator (`js/ai/modules/facebook-post-generator.js`, đã có từ Sprint 1) từ "Coming Soon" sang Production, tái sử dụng hoàn toàn AI Framework hiện có, theo đúng khuôn mẫu đã kiểm chứng ở Blog Writer (Sprint 6 Requirement #1)/FAQ Generator (Sprint 5 Requirement #3). Không sửa Sprint 2/3/4/5, không Refactor AI Framework/Queue/Plugin Manager/Provider Manager/AI Task Router/Data Provider/Draft Workflow/Human Review Workflow, không đổi Database Structure.
+
+- **Không cần Decision Record** — giống Blog Writer, Requirement này không yêu cầu thêm Route vào AI Task Router và liệt kê rõ việc đó ngoài phạm vi — không có xung đột giữa Functional Requirement và Architectural Constraint.
+- **Kích hoạt Plugin (Functional Req)**: thêm `'facebook-post-generator'` vào `SPRINT2_ENABLED_MODULES` (`js/ai/plugin-db.js`) — chỉ ảnh hưởng giá trị SEED MẶC ĐỊNH cho môi trường CHƯA có dữ liệu; môi trường Production đã seed từ trước vẫn cần Admin tự bật "Enable" trong `admin/ai/plugins.html`.
+- **Permission (Functional Req "thêm Permission nếu cần")**: thêm `GENERATE_FACEBOOK: 'ai.generate.facebook'` vào `AI_PERMISSIONS`, gán `'facebook-post-generator'` trong `PLUGIN_PERMISSIONS`, thêm vào `ROLE_PERMISSIONS.editor` (`js/ai/permission-service.js`) — đúng khuôn mẫu đã dùng cho Product/SEO/Slider/FAQ/Blog, không đổi logic RBAC.
+- **Dữ liệu thật, không hardcode Prompt**: xác nhận `buildPrompt()` dùng đúng `message` tự do người dùng nhập, kèm `product` thật qua `DataProvider.getProduct()` khi có chọn sản phẩm (trường `productId` optional) — không có chuỗi cố định nào; xử lý đúng cả 2 trường hợp có/không chọn sản phẩm.
+- **Draft Workflow, `targetCollection: null` — lần đầu kích hoạt dạng plugin "chỉ xem/copy"**: khác Blog Writer/FAQ Generator/SEO/Product/Slider (đều có `targetCollection` ghi vào 1 node CMS thật), Facebook Post Generator có `targetCollection: null` vì không có nơi publish trực tiếp trong CMS — Draft chỉ để xem/copy thủ công trong `admin/ai/drafts.html`. Xác nhận qua mô phỏng: nhánh `targetCollection === null` trong `publishToTarget()` (`js/admin-ai.js`) đã xử lý đúng từ trước (`Promise.resolve()`, không ghi gì) — `publishDraftById()` chuyển Draft sang trạng thái `'published'` mà KHÔNG ghi vào bất kỳ node CMS nào (`BlogDB`/`DB`/`BannerDB`/`SiteContentDB` đều không bị gọi) — đúng thiết kế "chỉ xem/copy, không tự đăng Facebook".
+- **Plugin Disable (Functional Req)**: đã đúng sẵn — Dashboard chỉ hiển thị Plugin đang Enable; `runModule()` đã có `.catch()` hiển thị lỗi rõ ràng nếu vô tình gọi khi Disable — không tạo Job.
+- **Không đổi**: `job-queue.js`, `plugin-manager.js`, `provider-registry.js`, `data-provider.js`, `AI_RULES.md`, `js/ai/task-router.js` (Facebook Post Generator không dùng qua AI Assistant, cùng lý do Topic-only Routing như Blog Writer/FAQ Generator).
+- **Kiểm thử**: chạy thật `permission-service.js`/`plugin-db.js`/`facebook-post-generator.js`/`job-queue.js`/`admin-ai.js` qua Node `vm` (4 kịch bản) — Editor/Admin được phép chạy `facebook-post-generator` với quyền `ai.generate.facebook` mới thêm; seed mặc định đúng (không ảnh hưởng `banner-generator` còn "coming_soon"); module đọc đúng dữ liệu thật (product optional qua DataProvider + message tự do), không hardcode Prompt; toàn bộ luồng enqueue→Queue xử lý→Draft→`publishDraftById()` với `targetCollection: null` đều đúng — Draft chuyển "published" nhưng KHÔNG ghi vào bất kỳ node CMS nào. Kiểm tra `admin/ai/plugins.html`/`admin/ai/index.html` qua static server — 0 lỗi console.
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+- Chưa triển khai Requirement #3 (Banner Generator).
+
 ## Sprint 6 — Kích hoạt Blog Writer (Requirement #1)
 
 Kích hoạt Blog Writer (`js/ai/modules/blog-writer.js`, đã có từ Sprint 1) từ "Coming Soon" sang Production, theo đúng khuôn mẫu đã kiểm chứng ở Sprint 5 Requirement #3 (FAQ Generator). Không sửa Sprint 2/3/4/5, không Refactor AI Framework/Queue/Plugin Manager/Provider Manager/AI Task Router/Data Provider/Draft Workflow/Human Review Workflow, không đổi Database Structure.

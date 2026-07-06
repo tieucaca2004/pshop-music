@@ -381,6 +381,16 @@ Blog Writer (`js/ai/modules/blog-writer.js`, đã có từ Sprint 1) được k�
 - **Draft Workflow**: không cần sửa gì — Draft không có `targetId` tự động tạo MỚI 1 blog post khi publish (`publishToTarget()` trong `js/admin-ai.js`, không đổi) — giống hệt FAQ Generator.
 - **Không có Decision Record cần thiết**: khác với FAQ Generator, Requirement #1 của Sprint 6 liệt kê rõ "Topic-only Routing" trong Out of Scope và không yêu cầu thêm Route vào AI Task Router — Blog Writer chỉ dùng qua Plugin Manager Dashboard (`admin/ai/index.html`), nhất quán với quyết định đã có cho FAQ Generator (Sprint 5 Requirement #3, Decision Record Option B).
 
+## Kích hoạt Facebook Post Generator (Sprint 6, Requirement #2)
+
+Facebook Post Generator (`js/ai/modules/facebook-post-generator.js`, đã có từ Sprint 1) được kích hoạt sang Production theo đúng khuôn mẫu Blog Writer (Sprint 6 Requirement #1)/FAQ Generator (Sprint 5 Requirement #3) — sinh nội dung bài đăng Facebook để copy thủ công, không tự đăng:
+
+- **Plugin Manager**: `js/ai/plugin-db.js` thêm `'facebook-post-generator'` vào danh sách seed mặc định `enabled:true` — chỉ áp dụng cho môi trường CHƯA có dữ liệu `aiPlugins`; Production đã seed từ trước cần Admin tự bật thủ công.
+- **Permission**: `js/ai/permission-service.js` thêm `ai.generate.facebook` (Admin + Editor) — đúng khuôn mẫu các quyền `ai.generate.*` đã có.
+- **`targetCollection: null` — plugin đầu tiên dạng "chỉ xem/copy, không publish vào CMS"**: khác mọi plugin Production trước đó (Product/SEO/Slider/FAQ/Blog Writer đều có `targetCollection` trỏ vào 1 node CMS thật), Facebook Post Generator không có nơi publish trực tiếp — không có trang/module "Facebook Posts" trong CMS, và tự động đăng lên Facebook thật ngoài phạm vi kiến trúc hiện tại (không có tích hợp Facebook API). Đã xác nhận qua mô phỏng chạy `publishToTarget()`/`publishDraftById()` (`js/admin-ai.js`, không sửa) rằng nhánh `targetCollection === null` đã xử lý đúng từ khi viết (Sprint 1/2): trả `Promise.resolve()`, không ghi vào bất kỳ node CMS nào (`BlogDB`/`DB`/`BannerDB`/`SiteContentDB`), Draft chỉ chuyển trạng thái `'published'` để đánh dấu Admin đã xử lý xong (xem/copy nội dung thủ công trong `admin/ai/drafts.html`).
+- **Dữ liệu thật, không hardcode**: `loadContext()` gọi `DataProvider.getProduct(productId)` khi có chọn sản phẩm (trường optional); `buildPrompt()` dùng `message` tự do người dùng nhập, không có chuỗi cố định.
+- **Không có Decision Record cần thiết**: giống Blog Writer, Requirement #2 của Sprint 6 không yêu cầu thêm Route vào AI Task Router — Facebook Post Generator chỉ dùng qua Plugin Manager Dashboard (`admin/ai/index.html`), cùng lý do Topic-only Routing (xem `ROADMAP.md`).
+
 ## Giới hạn kiến trúc đã biết (không tự ý "vá" bằng cách thêm hạ tầng mới)
 
 - **Job Queue vẫn không có backend riêng (V1)** — `AIJobQueue` xử lý tuần tự phía trình duyệt Admin, không đổi ở Sprint 3. Cloud Function duy nhất hiện có (`openaiProxy`, xem mục "Cloud Function Proxy Layer") chỉ là proxy gọi OpenAI API, KHÔNG phải backend xử lý Queue — nâng Job Queue lên Cloud Functions (Job Queue V2, xem `ROADMAP.md`) vẫn là quyết định kiến trúc cần người phụ trách xác nhận trước, chưa triển khai.
