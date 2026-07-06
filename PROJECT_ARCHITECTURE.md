@@ -412,6 +412,17 @@ Facebook Post Generator (`js/ai/modules/facebook-post-generator.js`, đã có t�
 - **Dữ liệu thật, không hardcode**: `loadContext()` gọi `DataProvider.getProduct(productId)` khi có chọn sản phẩm (trường optional); `buildPrompt()` dùng `message` tự do người dùng nhập, không có chuỗi cố định.
 - **Không có Decision Record cần thiết**: giống Blog Writer, Requirement #2 của Sprint 6 không yêu cầu thêm Route vào AI Task Router — Facebook Post Generator chỉ dùng qua Plugin Manager Dashboard (`admin/ai/index.html`), cùng lý do Topic-only Routing (xem `ROADMAP.md`).
 
+## Kiểm tra toàn diện + Đóng Sprint (Sprint 6, Sprint Review — SPRINT 6 COMPLETED)
+
+Sprint Review cuối cùng của Sprint 6 — tái xác nhận toàn bộ 4 Requirement (Blog Writer, Facebook Post Generator, Banner Generator, Image Prompt Generator), không thêm tính năng. Báo cáo đầy đủ: xem `docs/SPRINT_6_PROGRESS.md`.
+
+- **Sau Sprint 6, cả 8/8 plugin viết từ Sprint 1 đều đã Production** — không còn plugin nào ở trạng thái "coming_soon" trong `js/ai/plugin-db.js`.
+- **Regression Test**: xác nhận qua `git log` từng file — `job-queue.js`/`plugin-manager.js`/`provider-registry.js`/`data-provider.js`/`AI_RULES.md` không đổi từ Sprint 2 Requirement #8; `task-router.js` chỉ 1 commit (Sprint 4 Requirement #1); `permission-service.js`/`plugin-db.js` đúng 6 commit/file (Sprint 2 + FAQ Generator Sprint 5 Requirement #3 + 4 Requirement Sprint 6, đúng dự kiến, không có thay đổi ngoài kế hoạch).
+- **Kiểm thử trạng thái cuối cùng**: chạy lại cả 4 file mô phỏng riêng của từng Requirement (`sprint6_req1_sim.js`…`sprint6_req4_sim.js`) — 3/4 file báo lỗi ở đúng 1 assertion phụ ("plugin kế tiếp vẫn phải coming_soon"), đây KHÔNG PHẢI regression mà là giả định đã lỗi thời của chính file đó (viết tại thời điểm plugin kế tiếp chưa được giao kích hoạt) — mọi assertion CHÍNH (Permission/dữ liệu thật/Draft Workflow/publish đúng đích) đều PASS. Đã viết thêm 1 mô phỏng mới cho trạng thái cuối (`sprint6_review_sim.js`) xác nhận cả 8 plugin đều seed đúng, Permission đủ cho cả 8, và 4 plugin Sprint 6 chạy đồng thời qua chung 1 Queue thật không ghi chéo node CMS của nhau.
+- **CMS Console check**: cả 9 trang AI (`index/drafts/jobs/logs/plugins/providers/assistant/health/usage`) load 0 lỗi console.
+- **Security check**: không có secret nào trong code Sprint 6; Cloud Function vẫn chưa deploy (kế thừa từ Sprint 3, không phải vấn đề Sprint 6).
+- **Project Backup**: không khả dụng trong môi trường hiện tại — Auto Mode Safety Classifier chặn cứng việc nén + upload source code lên Google Drive bên ngoài (phân loại "Data Exfiltration"). GitHub (`feature/cms-ai-sprint2`) là nơi backup từ xa duy nhất khả dụng.
+
 ## Giới hạn kiến trúc đã biết (không tự ý "vá" bằng cách thêm hạ tầng mới)
 
 - **Job Queue vẫn không có backend riêng (V1)** — `AIJobQueue` xử lý tuần tự phía trình duyệt Admin, không đổi ở Sprint 3. Cloud Function duy nhất hiện có (`openaiProxy`, xem mục "Cloud Function Proxy Layer") chỉ là proxy gọi OpenAI API, KHÔNG phải backend xử lý Queue — nâng Job Queue lên Cloud Functions (Job Queue V2, xem `ROADMAP.md`) vẫn là quyết định kiến trúc cần người phụ trách xác nhận trước, chưa triển khai.

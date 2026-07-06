@@ -2,6 +2,20 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 6 — Kiểm tra toàn diện + Đóng Sprint (Sprint Review) — SPRINT 6 COMPLETED
+
+Sprint Review cuối cùng của Sprint 6 — không thêm tính năng, chỉ kiểm thử/xác minh/đánh giá toàn bộ 4 Requirement trước khi đóng Sprint.
+
+- **Requirement Summary**: #1 Blog Writer ✅, #2 Facebook Post Generator ✅, #3 Banner Generator ✅, #4 Image Prompt Generator ✅ — cả 8/8 plugin viết từ Sprint 1 nay đều Production, không còn plugin nào "coming_soon".
+- **Chạy lại toàn bộ mô phỏng đã viết qua Sprint 6** (4 file kịch bản riêng từng Requirement) — 3/4 file báo lỗi ở đúng 1 assertion phụ mang tính "ảnh chụp thời điểm" (khẳng định plugin kế tiếp vẫn phải "coming_soon", đúng tại thời điểm viết nhưng đã lỗi thời sau khi Requirement kế tiếp hợp lệ kích hoạt plugin đó) — **không phải regression**, mọi assertion chính (Permission/dữ liệu thật/Draft Workflow/publish đúng đích) đều PASS không đổi. Viết thêm 1 mô phỏng mới cho Review (`sprint6_review_sim.js`) xác nhận đúng TRẠNG THÁI CUỐI CÙNG: cả 8/8 plugin seed đúng, Permission đủ cho cả 8, 4 plugin Sprint 6 chạy đồng thời qua chung 1 Queue thật, publish đúng đích (Blog Writer → blog post mới, Banner Generator → `BannerDB`, Facebook Post Generator/Image Prompt Generator → không ghi node nào), không ghi chéo sang node của plugin khác.
+- **Regression Test**: `git log` xác nhận từng file — `job-queue.js`/`plugin-manager.js`/`provider-registry.js`/`data-provider.js`/`AI_RULES.md`/`task-router.js` không đổi trong suốt Sprint 6 (giữ nguyên từ Sprint 2/4); `permission-service.js`/`plugin-db.js` đúng 6 commit/file (Sprint 2 + FAQ Generator Sprint 5 + 4 Requirement Sprint 6), không có thay đổi ngoài kế hoạch; `functions/index.js` không đổi từ Sprint 3. Mọi thay đổi Sprint 6 chỉ giới hạn đúng trong 5 file mỗi Requirement: `CHANGELOG.md`/`PROJECT_ARCHITECTURE.md`/`ROADMAP.md`/`js/ai/permission-service.js`/`js/ai/plugin-db.js`.
+- **CMS Console check**: cả 9 trang `admin/ai/*.html` (assistant/drafts/health/index/jobs/logs/plugins/providers/usage) load 0 lỗi console, 0 request thất bại.
+- **Security check**: grep xác nhận không có API Key/secret nào trong toàn bộ file Sprint 6; Cloud Function vẫn CHƯA deploy (không đổi so với Sprint 3/4/5, không phải vấn đề do Sprint 6 gây ra).
+- **Project Backup**: không khả dụng — môi trường hiện tại bị Auto Mode Safety Classifier chặn cứng hành động nén + upload toàn bộ source code lên Google Drive bên ngoài (phân loại "Data Exfiltration", không thể gỡ bằng yêu cầu người dùng). Không tự tạo giải pháp thay thế, theo đúng chỉ dẫn. GitHub (`feature/cms-ai-sprint2`) là nơi backup từ xa duy nhất khả dụng.
+- Lập `docs/SPRINT_6_PROGRESS.md` (Requirement Summary, Kiểm thử trạng thái cuối, Architecture/Security Verification, Production Readiness, Non-functional Evaluation, Known Limitations, mục chuyển sang Sprint 7).
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+- **SPRINT 6 COMPLETED (Requirement #1, #2, #3, #4 — tất cả đã giao và triển khai đầy đủ). Không bắt đầu Sprint 7. Không tự viết Sprint 7 Planning.**
+
 ## Sprint 6 — Kích hoạt Image Prompt Generator (Requirement #4)
 
 Kích hoạt Image Prompt Generator (`js/ai/modules/image-prompt-generator.js`, đã có từ Sprint 1) từ "Coming Soon" sang Production, tái sử dụng hoàn toàn AI Framework hiện có. Đây là **plugin cuối cùng** viết từ Sprint 1 được kích hoạt — sau Requirement này, không còn plugin nào ở trạng thái "coming_soon". Không sửa Sprint 2/3/4/5, không Refactor AI Framework/Queue/Plugin Manager/Provider Manager/AI Task Router/Data Provider/Draft Workflow/Human Review Workflow, không đổi Database Structure.
