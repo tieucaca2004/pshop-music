@@ -332,19 +332,20 @@ Administrator → admin/ai/health.html (js/admin-ai-health.js)
 - **An toàn tuyệt đối**: cả 3 nhánh kiểm tra đều CHỈ ĐỌC (`.health()`, `.getAll()` x2) — không có nhánh nào gọi hàm ghi (`add`/`update`/`enqueue`/`resume`/`cancel`) — đã xác nhận qua mô phỏng chạy mã nguồn thật (không phát hiện lời gọi ghi nào trong mọi kịch bản, kể cả khi có lỗi).
 - **Vị trí**: trang riêng `admin/ai/health.html` (Admin-only), liên kết từ `admin/ai/providers.html` — không thêm mục điều hướng cấp cao mới (tránh rối menu cho 1 công cụ chẩn đoán ít dùng).
 
-## Kích hoạt FAQ Generator (Sprint 5, Requirement #3 — hoàn tất một phần)
+## Kích hoạt FAQ Generator (Sprint 5, Requirement #3 — COMPLETED)
 
-FAQ Generator (`js/ai/modules/faq-generator.js`, đã có từ Sprint 1) được kích hoạt sang Production theo đúng khuôn mẫu Sprint 3 — sinh 1 bài blog dạng hỏi-đáp mới theo chủ đề tự do (không nhắm 1 Product/Blog Post có sẵn, khác Product/SEO/Slider Generator):
+FAQ Generator (`js/ai/modules/faq-generator.js`, đã có từ Sprint 1) được kích hoạt sang Production theo đúng khuôn mẫu Sprint 3 — sinh 1 bài blog dạng hỏi-đáp mới theo chủ đề tự do (không nhắm 1 Product/Blog Post có sẵn, khác Product/SEO/Slider Generator). Chạy qua **Plugin Manager Dashboard** (`admin/ai/index.html`) — theo đúng phạm vi Requirement #3 (Revised): "FAQ Generator hoạt động thông qua Plugin Manager và Dashboard hiện có — Requirement này KHÔNG tích hợp AI Assistant, KHÔNG mở rộng AI Task Router":
 
 - **Plugin Manager**: `js/ai/plugin-db.js` thêm `'faq-generator'` vào danh sách seed mặc định `enabled:true` — chỉ áp dụng cho môi trường CHƯA có dữ liệu `aiPlugins`; Production đã seed từ trước cần Admin tự bật thủ công.
 - **Permission**: `js/ai/permission-service.js` thêm `ai.generate.faq` (Admin + Editor) — đúng khuôn mẫu 3 quyền `ai.generate.*` đã có, không đổi logic RBAC.
 - **Draft Workflow**: không cần sửa gì — Draft không có `targetId` (giống Blog Writer) tự động tạo MỚI 1 blog post khi publish (`publishToTarget()` trong `js/admin-ai.js`, không đổi).
+- **Plugin Disable**: đã đúng sẵn — Dashboard chỉ hiển thị Plugin đang Enable (`renderModuleCards()`); nếu vô tình gọi khi Disable, `runModule()` đã có `.catch()` hiển thị lỗi rõ ràng (`js/admin-ai.js`, không đổi) — không tạo Job.
 
-### ⚠️ Giới hạn kiến trúc phát hiện được: AI Task Router chưa hỗ trợ Plugin "không có thực thể mục tiêu"
+### Quyết định kiến trúc: KHÔNG mở rộng AI Task Router ở Sprint 5 (Decision Record — Option B)
 
-`AITaskRouter.route()`/`matchTarget()` (`js/ai/task-router.js`, Sprint 4 Requirement #1) được thiết kế với giả định MỌI Plugin đều nhắm vào 1 thực thể CMS có sẵn (Product hoặc Blog Post) — bắt buộc khớp được `targetId` từ `candidates` mới trả `reason:'ok'`. FAQ Generator (và tương tự: Blog Writer, Facebook Post Generator) không có thực thể mục tiêu nào — chỉ nhận 1 `topic` tự do — nên **route thêm cho các Plugin này sẽ luôn trả về `target_not_found`, không bao giờ định tuyến được qua AI Assistant** (đã xác nhận bằng thử nghiệm cụ thể, không phải suy đoán).
+`AITaskRouter.route()`/`matchTarget()` (`js/ai/task-router.js`, Sprint 4 Requirement #1) được thiết kế với giả định MỌI Plugin đều nhắm vào 1 thực thể CMS có sẵn (Product hoặc Blog Post) — bắt buộc khớp được `targetId` từ `candidates` mới trả `reason:'ok'`. FAQ Generator (và tương tự: Blog Writer, Facebook Post Generator) không có thực thể mục tiêu nào — chỉ nhận 1 `topic` tự do — nên route thêm cho các Plugin này sẽ luôn trả về `target_not_found`, không bao giờ định tuyến được qua AI Assistant (đã xác nhận bằng thử nghiệm cụ thể ở bản đầu của Requirement #3, không phải suy đoán).
 
-**Quyết định (Sprint 5 Requirement #3)**: chưa sửa `task-router.js` — FAQ Generator hiện CHỈ dùng được qua Plugin Manager Dashboard cũ (`admin/ai/index.html`, đã hỗ trợ input text tự do sẵn), KHÔNG dùng được qua AI Assistant (free-text) cho tới khi có quyết định kiến trúc riêng về việc mở rộng Router để hỗ trợ Plugin dạng "topic-only" (xem `ROADMAP.md`). Đây là giới hạn có chủ đích, không phải bug — tránh sửa `AI Task Router` khi chưa có quyết định rõ ràng.
+**Chief Architect đã quyết định (Requirement #3 Revised): Option B** — không sửa `task-router.js`, không tích hợp FAQ Generator vào AI Assistant ở Sprint 5. FAQ Generator CHỈ dùng được qua Plugin Manager Dashboard (`admin/ai/index.html`). **Topic-only Routing cho AI Assistant sẽ được xem xét ở một Requirement riêng trong tương lai** (xem `ROADMAP.md`). Đây là giới hạn có chủ đích, không phải bug.
 
 ## Giới hạn kiến trúc đã biết (không tự ý "vá" bằng cách thêm hạ tầng mới)
 

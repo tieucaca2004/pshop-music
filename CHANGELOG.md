@@ -2,6 +2,17 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 5 — Requirement #3 (Revised): Decision Record Resolution — REQUIREMENT #3 COMPLETED
+
+Chief Architect đã phê duyệt Decision Record còn treo từ Requirement #3 (xem mục ngay bên dưới): **chọn Option B**.
+
+- **Quyết định**: KHÔNG mở rộng `js/ai/task-router.js` ở Sprint 5. FAQ Generator chỉ hoạt động qua Plugin Manager/Dashboard (`admin/ai/index.html`) — đúng phạm vi Requirement #3 (Revised): "Requirement này KHÔNG tích hợp AI Assistant, KHÔNG mở rộng AI Task Router". Không có thay đổi code nào so với bản trước — toàn bộ phần code (Plugin Manager seed, Permission `ai.generate.faq`, Draft Workflow) đã hoàn tất đúng ở lượt trước, `task-router.js` vẫn chưa từng bị đụng tới.
+- **Xác nhận Acceptance Criteria (Revised) — đều đạt**: FAQ Generator hoạt động qua Dashboard; Plugin đăng ký đúng (`AIModuleRegistry`/`PluginDB` seed); Permission hoạt động đúng (`ai.generate.faq`); Queue hoạt động đúng (tái sử dụng nguyên `job-queue.js`); Draft được tạo (tạo mới blog post khi publish); Human Review hoạt động (Draft luôn dừng ở trạng thái `draft` trước khi Admin duyệt); không sửa `AI Task Router`; không Refactor Sprint 2/3/4 — tất cả đã xác nhận qua mô phỏng chạy mã nguồn thật ở lượt trước, không cần chạy lại vì không có code nào thay đổi.
+- Cập nhật `ROADMAP.md`: ghi rõ nguyên văn theo yêu cầu — *"Topic-only Routing cho AI Assistant sẽ được xem xét ở một Requirement riêng trong tương lai."*
+- Cập nhật `PROJECT_ARCHITECTURE.md` (đổi trạng thái mục "Kích hoạt FAQ Generator" thành COMPLETED, ghi rõ quyết định Option B).
+- **Requirement #3: COMPLETED.**
+- Không mở rộng Sprint. Không làm Requirement #4.
+
 ## Sprint 5 — Kích hoạt FAQ Generator (Requirement #3) — HOÀN TẤT MỘT PHẦN, CHỜ 1 QUYẾT ĐỊNH
 
 **Lưu ý về trình tự**: Requirement này ghi "Requirement #1 và Requirement #2 đã hoàn thành", nhưng thực tế **chỉ Requirement #1 (Production Health Check) đã hoàn tất**. "Requirement #2" theo đúng nghĩa (AI Workflow Engine — nhiều bước liên tiếp) đã được gửi ở 1 lượt trước nhưng bị hủy giữa chừng ("[Request interrupted by user]") trước khi triển khai — chưa có dòng code nào cho Workflow Engine. Đã tiếp tục thực hiện Requirement #3 vì FAQ Generator không phụ thuộc Workflow Engine (đây là 1 plugin đơn, không phải chuỗi nhiều bước) — không có rủi ro kỹ thuật khi bỏ qua thứ tự. Cần Chief Architect xác nhận có muốn quay lại làm Workflow Engine sau không.
