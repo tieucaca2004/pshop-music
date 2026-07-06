@@ -11,6 +11,7 @@ const AdminApp = (function () {
   let categories = [];
   let editingId = null;
   let quill = null;
+  let pImagesPicker = null;
 
   function catLabel(code) {
     const c = categories.find(x => x.code === code);
@@ -121,6 +122,7 @@ const AdminApp = (function () {
     if (quill) quill.root.innerHTML = p.description || '';
     const images = Array.isArray(p.images) && p.images.length ? p.images : (p.image ? [p.image] : []);
     document.getElementById('pImages').value = images.join('\n');
+    pImagesPicker.refresh();
     document.getElementById('formTitle').textContent = 'SỬA SẢN PHẨM';
     document.getElementById('saveBtn').textContent = 'CẬP NHẬT SẢN PHẨM';
     document.getElementById('formPanel').scrollIntoView({ behavior: 'smooth' });
@@ -142,6 +144,7 @@ const AdminApp = (function () {
     ['pName', 'pPrice', 'pOldPrice', 'pSpecs', 'pBadgeText', 'pImages'].forEach(id => {
       document.getElementById(id).value = '';
     });
+    pImagesPicker.refresh();
     if (quill) quill.setText('');
     if (categories[0]) document.getElementById('pCategory').value = categories[0].code;
     document.getElementById('pStatus').value = 'New';
@@ -231,6 +234,8 @@ const AdminApp = (function () {
       loadCategories().then(() => loadProducts());
     });
 
+    pImagesPicker = MediaLibraryPicker.mountMulti('pImages', 'pImagesGrid');
+
     if (typeof Quill !== 'undefined') {
       quill = new Quill('#pDescriptionEditor', {
         theme: 'snow',
@@ -258,13 +263,6 @@ const AdminApp = (function () {
     document.getElementById('importFile').addEventListener('change', e => {
       if (e.target.files[0]) importJson(e.target.files[0]);
       e.target.value = '';
-    });
-
-    const uploadInput = document.getElementById('pImageUpload');
-    const uploadStatus = document.getElementById('pImageUploadStatus');
-    StorageUpload.attachUploadInput(uploadInput, uploadStatus, 'products', url => {
-      const field = document.getElementById('pImages');
-      field.value = field.value.trim() ? field.value.trim() + '\n' + url : url;
     });
   });
 

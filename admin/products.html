@@ -92,13 +92,8 @@
           </div>
           <div class="form-group full">
             <label>ẢNH SẢN PHẨM — ảnh đầu tiên là ảnh đại diện hiển thị ở lưới sản phẩm</label>
-            <textarea id="pImages" rows="4" placeholder="https://...&#10;https://... (thêm ảnh thứ 2, thứ 3 nếu muốn)"></textarea>
-            <p class="small-muted">Phân tách các link ảnh bằng dấu phẩy (,), dấu chấm phẩy (;), hoặc xuống dòng.</p>
-            <div class="upload-row">
-              <button type="button" class="upload-btn" onclick="document.getElementById('pImageUpload').click()">&#128247; Upload ảnh từ máy</button>
-              <input type="file" id="pImageUpload" accept="image/*" style="display:none">
-              <span class="upload-status" id="pImageUploadStatus"></span>
-            </div>
+            <textarea id="pImages" rows="4" style="display:none"></textarea>
+            <div id="pImagesGrid"></div>
           </div>
         </div>
         <div class="admin-actions">
@@ -145,6 +140,8 @@
 <script src="../js/cms-db.js"></script>
 <script src="../js/admin-auth.js"></script>
 <script src="../js/storage-upload.js"></script>
+<script src="../js/media-library.js"></script>
+<script src="../js/media-library-picker.js"></script>
 <script src="../js/admin-products.js"></script>
 </body>
 </html>

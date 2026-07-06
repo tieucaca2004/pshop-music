@@ -49,11 +49,7 @@
           <div class="form-group full">
             <label>ẢNH BÌA</label>
             <input type="text" id="postCover" placeholder="https://...">
-            <div class="upload-row">
-              <button type="button" class="upload-btn" onclick="document.getElementById('postCoverUpload').click()">&#128247; Upload ảnh từ máy</button>
-              <input type="file" id="postCoverUpload" accept="image/*" style="display:none">
-              <span class="upload-status" id="postCoverUploadStatus"></span>
-            </div>
+            <div id="postCoverPreview"></div>
           </div>
           <div class="form-group full">
             <label>MÔ TẢ NGẮN (hiển thị ở danh sách blog)</label>
@@ -103,6 +99,8 @@
 <script src="../js/cms-db.js"></script>
 <script src="../js/admin-auth.js"></script>
 <script src="../js/storage-upload.js"></script>
+<script src="../js/media-library.js"></script>
+<script src="../js/media-library-picker.js"></script>
 <script src="../js/admin-blog.js"></script>
 </body>
 </html>

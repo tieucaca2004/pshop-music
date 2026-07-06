@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let siteContent = null;
   let slides = [];
-  let uploadTargetIndex = null;
 
   function escapeHtml(str) {
     return String(str || '').replace(/[&<>"']/g, c => ({
@@ -31,11 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="field-grid">
           <div class="form-group full">
             <label>ẢNH SLIDE ${i + 1}</label>
-            <input type="text" value="${escapeHtml(s.image)}" placeholder="https://..." oninput="AdminSliders.setField(${i},'image',this.value)">
-            <div class="upload-row">
-              <button type="button" class="upload-btn" onclick="AdminSliders.uploadImage(${i})">&#128247; Upload ảnh từ máy</button>
-              ${s.image ? `<img src="${escapeHtml(s.image)}" style="width:48px;height:48px;object-fit:cover;border:1px solid var(--line2)">` : ''}
-            </div>
+            ${MediaLibraryPicker.renderSlot(s.image, url => setField(i, 'image', url), {})}
           </div>
           <div class="form-group">
             <label>TIÊU ĐỀ LỚN</label>
@@ -78,11 +73,6 @@ document.addEventListener('DOMContentLoaded', () => {
     render();
   }
 
-  function uploadImage(i) {
-    uploadTargetIndex = i;
-    document.getElementById('slideImageUpload').click();
-  }
-
   function saveAll() {
     const content = Object.assign({}, siteContent, { heroSlides: slides });
     SiteContentDB.save(content).then(() => {
@@ -100,12 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('addSlideBtn').addEventListener('click', addSlide);
   document.getElementById('saveSlidesBtn').addEventListener('click', saveAll);
-  StorageUpload.attachUploadInput(
-    document.getElementById('slideImageUpload'),
-    document.getElementById('slideUploadStatus'),
-    'sliders',
-    url => { if (uploadTargetIndex !== null) { slides[uploadTargetIndex].image = url; render(); } }
-  );
 
-  window.AdminSliders = { setField, move, remove, uploadImage };
+  window.AdminSliders = { setField, move, remove };
 });

@@ -28,11 +28,7 @@
           <div class="form-group full">
             <label>ẢNH BANNER</label>
             <input type="text" id="bImage" placeholder="https://...">
-            <div class="upload-row">
-              <button type="button" class="upload-btn" onclick="document.getElementById('bImageUpload').click()">&#128247; Upload ảnh từ máy</button>
-              <input type="file" id="bImageUpload" accept="image/*" style="display:none">
-              <span class="upload-status" id="bImageUploadStatus"></span>
-            </div>
+            <div id="bImagePreview"></div>
           </div>
           <div class="form-group full">
             <label>LINK KHI BẤM VÀO BANNER (để trống nếu không cần)</label>
@@ -82,6 +78,8 @@
 <script src="../js/cms-db.js"></script>
 <script src="../js/admin-auth.js"></script>
 <script src="../js/storage-upload.js"></script>
+<script src="../js/media-library.js"></script>
+<script src="../js/media-library-picker.js"></script>
 <script src="../js/admin-banners.js"></script>
 </body>
 </html>

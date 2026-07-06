@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   let banners = [];
   let editingId = null;
+  const bImagePicker = MediaLibraryPicker.mount('bImage', 'bImagePreview');
 
   function escapeHtml(str) {
     return String(str || '').replace(/[&<>"']/g, c => ({
@@ -52,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     editingId = id;
     document.getElementById('bTitle').value = b.title || '';
     document.getElementById('bImage').value = b.image || '';
+    bImagePicker.refresh();
     document.getElementById('bLink').value = b.link || '';
     document.getElementById('bZone').value = b.zone || 'home-top';
     document.getElementById('bOrder').value = b.order || 0;
@@ -64,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function resetForm() {
     editingId = null;
     ['bTitle', 'bImage', 'bLink'].forEach(id => { document.getElementById(id).value = ''; });
+    bImagePicker.refresh();
     document.getElementById('bZone').value = 'home-top';
     document.getElementById('bOrder').value = 0;
     document.getElementById('bActive').checked = true;
@@ -104,12 +107,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('bannerSaveBtn').addEventListener('click', save);
   document.getElementById('bannerResetBtn').addEventListener('click', resetForm);
-  StorageUpload.attachUploadInput(
-    document.getElementById('bImageUpload'),
-    document.getElementById('bImageUploadStatus'),
-    'banners',
-    url => { document.getElementById('bImage').value = url; }
-  );
 
   window.AdminBanners = { edit, remove };
 });

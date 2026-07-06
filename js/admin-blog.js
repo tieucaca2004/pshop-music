@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let editingId = null;
   let quill = null;
   let slugManuallyEdited = false;
+  const postCoverPicker = MediaLibraryPicker.mount('postCover', 'postCoverPreview');
 
   function escapeHtml(str) {
     return String(str || '').replace(/[&<>"']/g, c => ({
@@ -65,6 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('postSlug').value = p.slug || '';
     document.getElementById('postExcerpt').value = p.excerpt || '';
     document.getElementById('postCover').value = p.coverImage || '';
+    postCoverPicker.refresh();
     document.getElementById('postAuthor').value = p.author || 'Pshop Music';
     document.getElementById('postTags').value = (p.tags || []).join(', ');
     document.getElementById('postStatus').value = p.status || 'draft';
@@ -82,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ['postTitle', 'postSlug', 'postExcerpt', 'postCover', 'postTags', 'postSeoTitle', 'postSeoDescription'].forEach(id => {
       document.getElementById(id).value = '';
     });
+    postCoverPicker.refresh();
     document.getElementById('postAuthor').value = 'Pshop Music';
     document.getElementById('postStatus').value = 'draft';
     if (quill) quill.setText('');
@@ -142,13 +145,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!slugManuallyEdited) document.getElementById('postSlug').value = slugify(e.target.value);
   });
   document.getElementById('postSlug').addEventListener('input', () => { slugManuallyEdited = true; });
-
-  StorageUpload.attachUploadInput(
-    document.getElementById('postCoverUpload'),
-    document.getElementById('postCoverUploadStatus'),
-    'blog',
-    url => { document.getElementById('postCover').value = url; }
-  );
 
   if (typeof Quill !== 'undefined') {
     quill = new Quill('#postContentEditor', {

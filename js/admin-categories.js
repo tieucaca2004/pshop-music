@@ -95,7 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ---------------- Ô danh mục hiển thị trang chủ (siteContent.categoryTiles) ---------------- */
   let siteContent = null;
   let tiles = [];
-  let uploadTargetIndex = null;
 
   function loadTiles() {
     SiteContentDB.get().then(content => {
@@ -113,10 +112,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const wrap = document.getElementById('tileList');
     wrap.innerHTML = tiles.map((t, i) => `
       <div class="cms-row" data-idx="${i}">
+        ${MediaLibraryPicker.renderSlot(t.image, url => setTileField(i, 'image', url), {})}
         <div class="cms-row-fields">
           <select data-field="category" onchange="AdminCategories.setTileField(${i},'category',this.value)">${categoryOptions(t.category)}</select>
           <input type="text" value="${escapeHtml(t.label)}" placeholder="Tên hiển thị" oninput="AdminCategories.setTileField(${i},'label',this.value)">
-          <input type="text" value="${escapeHtml(t.image)}" placeholder="Link ảnh" oninput="AdminCategories.setTileField(${i},'image',this.value)">
           <select data-field="size" onchange="AdminCategories.setTileField(${i},'size',this.value)">
             <option value="normal" ${t.size !== 'wide' ? 'selected' : ''}>Ô vuông (normal)</option>
             <option value="wide" ${t.size === 'wide' ? 'selected' : ''}>Banner ngang (wide)</option>
@@ -127,7 +126,6 @@ document.addEventListener('DOMContentLoaded', () => {
           </select>
         </div>
         <div class="cms-row-actions">
-          <button class="upload-btn" onclick="AdminCategories.uploadTileImage(${i})">&#128247;</button>
           <button class="btn-secondary" ${i === 0 ? 'disabled' : ''} onclick="AdminCategories.moveTile(${i},-1)">&#8593;</button>
           <button class="btn-secondary" ${i === tiles.length - 1 ? 'disabled' : ''} onclick="AdminCategories.moveTile(${i},1)">&#8595;</button>
           <button class="btn-danger" onclick="AdminCategories.removeTile(${i})">Xóa</button>
@@ -157,11 +155,6 @@ document.addEventListener('DOMContentLoaded', () => {
     renderTiles();
   }
 
-  function uploadTileImage(i) {
-    uploadTargetIndex = i;
-    document.getElementById('tileImageUpload').click();
-  }
-
   function saveTiles() {
     const content = Object.assign({}, siteContent, { categoryTiles: tiles });
     SiteContentDB.save(content).then(() => {
@@ -179,15 +172,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('addTileBtn').addEventListener('click', addTile);
   document.getElementById('saveTilesBtn').addEventListener('click', saveTiles);
-  StorageUpload.attachUploadInput(
-    document.getElementById('tileImageUpload'),
-    document.getElementById('tileUploadStatus'),
-    'category-tiles',
-    url => { if (uploadTargetIndex !== null) { tiles[uploadTargetIndex].image = url; renderTiles(); } }
-  );
 
   window.AdminCategories = {
     save, move, remove,
-    setTileField, moveTile, removeTile, uploadTileImage
+    setTileField, moveTile, removeTile
   };
 });

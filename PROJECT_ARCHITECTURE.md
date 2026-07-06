@@ -54,6 +54,32 @@ Mọi node khác không liệt kê ở trên ($other) → .read/.write: false (d
 - **3 xung đột phát hiện với code hiện có, KHÔNG tự sửa** (xem `CHANGELOG.md`/`ROADMAP.md` để biết chi tiết đầy đủ): (1) `js/admin-users.js` "Thêm tài khoản mới" sẽ thất bại sau khi deploy Rules này (Firebase Auth tự chuyển phiên đăng nhập sang tài khoản mới trước khi ghi `roles`); (2) `admin/login.html` sẽ hiện cảnh báo sai (không ảnh hưởng chức năng) do đọc `roles` công khai bị chặn đúng thiết kế sau khi có Admin đầu tiên; (3) `siteContent` gộp chung tính năng chỉ-Admin và Admin+Editor trong 1 node ghi đè toàn bộ, nên Rules chỉ chặn được ở mức "Admin hoặc Editor", không tách được chính xác theo từng tính năng con.
 - **Chưa deploy lên môi trường thật** — cần `firebase deploy --only database` (thao tác vận hành, cần Firebase CLI + đăng nhập, không thực hiện được trong môi trường phát triển hiện tại — giống giới hạn "Cloud Function chưa deploy" từ Sprint 3).
 
+## Media Library (Sprint 8, Requirement #2)
+
+Kho ảnh DÙNG CHUNG cho toàn bộ CMS (Product/Blog/Banner/Slider/Category) — thay thế việc nhập URL ảnh thủ công bằng Preview thumbnail + chọn/tải ảnh từ 1 nơi duy nhất. Xây HOÀN TOÀN trên Firebase Storage đã có (`js/storage-upload.js`, Sprint 1) — KHÔNG thêm Field/Collection Realtime Database nào (đúng "Media Library chỉ là lớp Experience Layer"):
+
+```
+Admin (Product/Blog/Banner/Slider/Category form) → MediaLibraryPicker.mount()/mountMulti()/renderSlot()
+                                                       (js/media-library-picker.js — Preview + Chọn/Xóa/Advanced URL)
+                                                  → bấm "Chọn ảnh" → Modal Thư viện ảnh (tạo động, dùng chung 1 lần)
+                                                       → MediaLibrary.list(searchTerm) (js/media-library.js)
+                                                            → firebase.storage().ref().listAll() ĐỆ QUY toàn Bucket
+                                                              (không hard-code thư mục — phủ cả ảnh cũ + mới)
+                                                       → MediaLibrary.upload(file) → StorageUpload.uploadImage()
+                                                              (Sprint 1, không viết lại — tải vào thư mục media/)
+                                                       → MediaLibrary.remove(fullPath) → CHỈ gọi sau confirm() rõ ràng
+                                                  → chọn/tải xong → URL ghi thẳng vào input/textarea đã có của trang
+                                                       → save()/saveProduct()/saveAll()/saveTiles() (Sprint 1, không sửa)
+```
+
+- **Không cần Decision Record**: không có Database Structure nào thay đổi — "danh sách ảnh có sẵn" đọc trực tiếp từ Storage (không cần 1 node Firebase riêng để biết ảnh nào tồn tại), nên ảnh upload từ trước Requirement này vẫn hiện đầy đủ, không cần migrate. Thư mục `media/` cho ảnh mới là quy ước bổ sung thuần túy, không phải thay đổi Storage Structure cần phê duyệt.
+- **Không tạo kiến trúc trùng lặp**: `MediaLibrary.upload()` ủy quyền nguyên vẹn cho `StorageUpload.uploadImage()` (Sprint 1) — không viết lại logic Storage. `MediaLibraryPicker` không chứa Business Logic CMS (không gọi `DB.update`/`BannerDB.update`/...) — chỉ đọc/ghi giá trị URL vào đúng field mà từng trang admin đã có, giữ nguyên toàn bộ hàm `save()` của Product/Blog/Banner/Slider/Category.
+- **Ẩn hoàn toàn URL/Storage Path khỏi giao diện chính**: chỉ hiện trong `<details class="medialib-advanced">` đóng sẵn (đúng NFR "ưu tiên Preview thay vì dữ liệu kỹ thuật"). Document ID không áp dụng (không có Database node).
+- **Xóa an toàn 2 mức**: "Xóa"/"Bỏ ảnh này" (trên 1 field form) chỉ xóa tham chiếu, KHÔNG đụng Storage. "Xóa khỏi Thư viện" (trong Modal) mới là xóa thật, luôn bắt buộc `confirm()` trước.
+- **Tích hợp cả 5 field ảnh CMS**: `bImage` (Banner), `postCover` (Blog), `heroSlides[i].image` (Slider), `categoryTiles[i].image` (Category), `pImages` (Product, nhiều ảnh) — không còn ô nhập URL thủ công nào trên giao diện quản trị.
+- **Có thể mở rộng sang Video/PDF trong tương lai** (NFR) — chỉ cần bỏ/đổi điều kiện lọc `contentType` bắt đầu `image/` trong `MediaLibrary.list()`, toàn bộ hạ tầng còn lại (duyệt đệ quy, tìm kiếm, kéo thả, xóa an toàn) dùng lại được nguyên vẹn.
+- **2 giới hạn phát hiện, chưa tự sửa** (xem `ROADMAP.md`): Storage Security Rules (`storage.rules`) chưa version-control — quan trọng hơn trước vì Media Library thêm khả năng LIỆT KÊ + XÓA qua giao diện (trước chỉ có UPLOAD); `StorageUpload.attachUploadInput()` hiện không còn nơi nào gọi (dead code, không xóa).
+
 ## Vị trí AI Assistant trong tổng thể
 
 AI Assistant KHÔNG phải chatbot, KHÔNG có quyền ghi trực tiếp vào dữ liệu gốc. Nó là 1 tập Plugin chạy qua Job Queue phía trình duyệt Admin, đọc CMS thật, sinh **Draft**, chờ Admin duyệt mới ghi vào dữ liệu thật (qua đúng hàm data layer ở trên). Chi tiết đầy đủ: xem `AI_RULES.md`.
