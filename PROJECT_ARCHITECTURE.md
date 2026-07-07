@@ -619,6 +619,14 @@ Requirement thuần tài liệu — không đổi kiến trúc/mã nguồn/Datab
 
 Chi tiết đầy đủ: `CHANGELOG.md` mục "Sprint 9 — Documentation Integrity Restoration".
 
+## Sprint 9 — Firebase Database Rules Production Alignment (Requirement #2)
+
+Chỉ liên quan tới Firebase Database Rules — không đổi AI Framework/Queue/Plugin Manager/Provider Manager/Permission Service/AI Task Router/Database Structure/`AI_RULES.md`. Mục tiêu: đối chiếu `database.rules.json`/`firebase.json`/`README.md`/tài liệu triển khai, xác nhận không còn mâu thuẫn, và chuẩn bị deploy an toàn — KHÔNG tự deploy/giả lập đã deploy.
+
+- **Kiểm thử `database.rules.json` bằng Firebase Realtime Database Emulator thật** (`firebase-tools` + `@firebase/rules-unit-testing`, cài tạm cho việc kiểm thử, không phải dependency của dự án) — nạp đúng file Rules đã commit vào 1 Emulator RTDB thật, chạy 19 kịch bản RBAC/bootstrap/`.validate` qua `authenticatedContext()`/`unauthenticatedContext()` chính thức của Firebase. **19/19 PASS.** Đây là bằng chứng mạnh hơn hẳn so với Sprint 8 (khi đó chỉ mô phỏng lại logic biểu thức Rules bằng tay, không chạy trên engine Rules thật) — nhưng vẫn KHÔNG thay thế được việc xác minh Rules đang chạy thật trên Production Firebase Console, vì môi trường này không có quyền truy cập project thật (đã xác nhận bằng `firebase projects:list`, không suy đoán).
+- **Tạo `docs/FIREBASE_RULES_DEPLOYMENT.md`** — quy trình đầy đủ để người vận hành: (1) đối chiếu Rules đang chạy thật với `database.rules.json` trước khi deploy (tránh deploy đè không biết đang đổi gì); (2) chạy đúng 1 lệnh `firebase deploy --only database`; (3) checklist xác minh sau deploy, bao gồm xác nhận thật lần đầu "Thêm tài khoản mới" (`admin/users.html`) hoạt động đúng — điểm này mới chỉ được đính chính bằng đọc mã nguồn ở Sprint 8 Requirement #4, chưa từng kiểm tra trên Firebase thật; (4) rollback qua Firebase Console History.
+- **Không tuyên bố "Production đã khớp Rules"** — `database.rules.json` vẫn chưa từng được deploy lên môi trường thật, đúng tình trạng đã ghi nhận từ Sprint 8 Requirement #1, không đổi ở Requirement này.
+
 ## Lịch sử phát triển
 
 Xem `CHANGELOG.md` cho từng đợt (Sprint) và mốc thay đổi cụ thể.

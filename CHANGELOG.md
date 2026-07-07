@@ -2,6 +2,18 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 9 — Firebase Database Rules Production Alignment (Requirement #2)
+
+Chỉ làm việc liên quan tới Firebase Database Rules — không đổi AI Framework/Queue/Plugin Manager/Provider Manager/Permission Service/AI Task Router/Database Structure/`AI_RULES.md`.
+
+- **Đối chiếu `database.rules.json` ↔ `firebase.json` ↔ `README.md` ↔ tài liệu triển khai**: `firebase.json` trỏ đúng `database.rules.json`; `.firebaserc` trỏ đúng project `pshop-music`; `README.md` (đã sửa ở Requirement #1) không còn hướng dẫn Rules mâu thuẫn. **Không có "tài liệu triển khai" nào tồn tại trước Requirement này** (không có `DEPLOY.md`/tương đương trên nhánh này) — đã tạo mới `docs/FIREBASE_RULES_DEPLOYMENT.md`.
+- **Kiểm thử nâng cấp đáng kể so với Sprint 8**: cài `firebase-tools` + `@firebase/rules-unit-testing` (tạm thời, không commit vào repo) và chạy **Firebase Realtime Database Emulator thật**, nạp đúng nội dung `database.rules.json` đã commit — không phải mô phỏng lại logic Rules bằng tay (cách đã dùng ở Sprint 8 Requirement #1/#4). 19/19 kịch bản PASS trên Emulator thật (bootstrap, tự nhận quyền Admin đầu tiên, chặn leo thang đặc quyền lần 2, RBAC Admin/Editor cho từng node CMS/AI, `.validate` chặn giá trị rác) — xem `docs/FIREBASE_RULES_DEPLOYMENT.md` mục 5 cho danh sách đầy đủ.
+- **KHÔNG tuyên bố Production đã khớp Rules**: môi trường phát triển này không có Firebase CLI đã đăng nhập/quyền truy cập project `pshop-music` thật (đã xác nhận: `firebase projects:list` báo lỗi xác thực — không suy đoán). `database.rules.json` **vẫn chưa từng được `firebase deploy`** lên Production — kế thừa đúng tình trạng đã ghi nhận từ Sprint 8 Requirement #1, chưa thay đổi ở Requirement này.
+- **Chuẩn bị đầy đủ để deploy an toàn** (`docs/FIREBASE_RULES_DEPLOYMENT.md`): quy trình bắt buộc đối chiếu Rules đang chạy thật trên Firebase Console TRƯỚC khi deploy (tránh deploy đè không biết đang thay đổi gì); lệnh deploy duy nhất (`firebase deploy --only database`); checklist xác minh sau deploy (bao gồm xác nhận thật lần đầu tiên rằng "Thêm tài khoản mới" hoạt động đúng — điểm mới chỉ được đính chính bằng đọc mã nguồn ở Sprint 8 Requirement #4, chưa từng kiểm tra trên Firebase thật); hướng dẫn rollback qua Firebase Console History.
+- **Không phát hiện khác biệt/mâu thuẫn mới nào giữa các file trong repo** — chỉ còn 1 khoảng trống đã biết và ghi rõ (không suy đoán): không biết Rules đang chạy thật trên Production hiện là gì.
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`. Tạo mới `docs/FIREBASE_RULES_DEPLOYMENT.md`.
+- **Không làm Requirement #3.**
+
 ## Sprint 9 — Documentation Integrity Restoration (Requirement #1)
 
 Chỉ sửa tài liệu — không sửa mã nguồn, không đổi Database/Firebase Rules/AI Framework/Workflow/Plugin. Mục tiêu: đồng bộ `README.md`/`AI_RULES.md` với trạng thái thực tế của hệ thống sau khi rà soát ở `SPRINT_9_PLANNING.md`.
