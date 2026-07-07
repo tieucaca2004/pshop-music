@@ -627,6 +627,19 @@ Chỉ liên quan tới Firebase Database Rules — không đổi AI Framework/Qu
 - **Tạo `docs/FIREBASE_RULES_DEPLOYMENT.md`** — quy trình đầy đủ để người vận hành: (1) đối chiếu Rules đang chạy thật với `database.rules.json` trước khi deploy (tránh deploy đè không biết đang đổi gì); (2) chạy đúng 1 lệnh `firebase deploy --only database`; (3) checklist xác minh sau deploy, bao gồm xác nhận thật lần đầu "Thêm tài khoản mới" (`admin/users.html`) hoạt động đúng — điểm này mới chỉ được đính chính bằng đọc mã nguồn ở Sprint 8 Requirement #4, chưa từng kiểm tra trên Firebase thật; (4) rollback qua Firebase Console History.
 - **Không tuyên bố "Production đã khớp Rules"** — `database.rules.json` vẫn chưa từng được deploy lên môi trường thật, đúng tình trạng đã ghi nhận từ Sprint 8 Requirement #1, không đổi ở Requirement này.
 
+## Sprint 9 — Firebase Storage Security Rules (Requirement #3)
+
+Chỉ liên quan tới Firebase Storage Security Rules — không đổi Business Logic/AI Framework/Queue/Plugin Manager/Provider Manager/Permission Service/AI Task Router/Database Structure/`AI_RULES.md`/Media Library. Mục tiêu: đưa Firebase Storage vào trạng thái có Security Rules version-controlled — trước Requirement này, `storage.rules` **không tồn tại trong repo**, Rules chỉ tồn tại thủ công trên Firebase Console.
+
+- **Tạo mới `storage.rules`** — tách 3 quyền theo Firebase Storage Rules v2: `get` (đọc 1 file, công khai — giữ nguyên hành vi hotlink ảnh của trang khách), `list` (liệt kê thư mục/bucket, chỉ người đã đăng nhập — THẮT CHẶT so với ruleset thủ công cũ, vốn có thể đang ngầm cho `list` công khai qua `allow read: if true` gộp chung kiểu v1), `write` (create+update+delete, người đã đăng nhập, không phân biệt vai trò — đúng hành vi Media Library thật: Editor cũng xoá được ảnh).
+- **Giới hạn kỹ thuật xác nhận được**: Firebase Storage Security Rules không có cách nào cross-reference node `roles/{uid}` của Realtime Database (chỉ hỗ trợ `firestore.get()`/`firestore.exists()` cho Cloud Firestore, dự án dùng Realtime Database) — nên không thể siết `write` theo đúng vai trò Admin/Editor như `database.rules.json` đã làm cho Database. Muốn có, cần Firebase Auth Custom Claims (Admin SDK/Cloud Function mới ở `admin/users.html`) — ngoài phạm vi Requirement này, ghi vào `ROADMAP.md`.
+- **Kiểm thử bằng Firebase Storage Emulator thật** (cùng bộ `firebase-tools`/`@firebase/rules-unit-testing` đã dùng ở Requirement #2) — nạp đúng `storage.rules` đã commit, chạy `get`/`list`/`write`/`delete` có xác thực qua `authenticatedContext()`/`unauthenticatedContext()`. **9/9 PASS.**
+- **Tạo `docs/FIREBASE_STORAGE_RULES_DEPLOYMENT.md`** — cùng cấu trúc với `docs/FIREBASE_RULES_DEPLOYMENT.md` (Requirement #2): đối chiếu Rules đang chạy thật trước khi deploy, lệnh `firebase deploy --only storage`, checklist xác minh sau deploy, rollback.
+- **Không tuyên bố "Production đã khớp Rules"** — `storage.rules` chưa từng được deploy lên môi trường thật, cùng giới hạn môi trường đã ghi nhận ở Requirement #2 (không có Firebase CLI đã đăng nhập/quyền truy cập project thật).
+- **Không đổi Media Library** (`js/media-library.js`/`js/media-library-picker.js`) — xác nhận qua `git diff`, không cần thay đổi gì ở tầng gọi API để Rules mới hoạt động đúng.
+
+Chi tiết đầy đủ: `CHANGELOG.md` mục "Sprint 9 — Firebase Storage Security Rules".
+
 ## Lịch sử phát triển
 
 Xem `CHANGELOG.md` cho từng đợt (Sprint) và mốc thay đổi cụ thể.

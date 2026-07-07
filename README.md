@@ -32,7 +32,8 @@ scripts/generate-sitemap.js  Tạo lại sitemap.xml từ dữ liệu Firebase t
 robots.txt, sitemap.xml SEO
 netlify.toml            Cấu hình deploy Netlify (tắt pretty_urls để giữ query string ?cat=...)
 database.rules.json     Firebase Realtime Database Security Rules (Sprint 8) — nguồn sự thật duy nhất, deploy qua `firebase deploy --only database`
-firebase.json           Cấu hình Firebase CLI (trỏ tới `database.rules.json`, Cloud Functions trong `functions/`)
+storage.rules           Firebase Storage Security Rules (Sprint 9) — nguồn sự thật duy nhất, deploy qua `firebase deploy --only storage`
+firebase.json           Cấu hình Firebase CLI (trỏ tới `database.rules.json`, `storage.rules`, Cloud Functions trong `functions/`)
 ```
 
 ## Running locally
@@ -89,19 +90,15 @@ Dự án Firebase hiện tại (`pshop-music`) đã có **Realtime Database**. C
    (yêu cầu đã cài Firebase CLI + `firebase login`, đúng project với Firebase Console.)
 
    ⚠️ **Quan trọng**: `database.rules.json` **chưa từng được deploy** lên môi trường thật tính đến thời điểm này (xem `ROADMAP.md` mục "Firebase Database Rules"). Rules đang chạy thật trên Firebase Console hiện tại có thể vẫn là một bản cấu hình cũ hơn/kém an toàn hơn (không phân biệt vai trò Admin/Editor, để lộ node `roles` công khai vĩnh viễn) — **hãy vào Firebase Console → Realtime Database → Rules để đối chiếu trước khi giả định Rules đã đúng**, rồi deploy bản trong repo.
-4. **Storage Rules**: khác Database Rules, `storage.rules` **hiện chưa tồn tại trong repo** (chưa version-control, chưa được review) — vẫn cấu hình thủ công trong **Storage → Rules** trên Firebase Console. Ruleset tối thiểu để CMS hoạt động:
+4. **Storage Rules**: KHÔNG copy tay vào Console — dùng đúng file đã version-control trong repo, `storage.rules` (Sprint 9 Requirement #3), là nguồn sự thật duy nhất. Deploy bằng Firebase CLI:
    ```
-   rules_version = '2';
-   service firebase.storage {
-     match /b/{bucket}/o {
-       match /{allPaths=**} {
-         allow read: if true;
-         allow write: if request.auth != null;
-       }
-     }
-   }
+   firebase deploy --only storage
    ```
-   ⚠️ Ruleset này **không phân biệt vai trò** — bất kỳ ai đã đăng nhập CMS (kể cả Editor) đều liệt kê/xóa được toàn bộ ảnh trong Storage qua Media Library (Sprint 8 Requirement #2). Xem `ROADMAP.md` mục "Firebase Storage Security Rules" — đây là một khoảng trống production đã ghi nhận, chưa có Requirement nào xử lý.
+   (yêu cầu đã cài Firebase CLI + `firebase login`, đúng project với Firebase Console.)
+
+   Ruleset: đọc 1 file cụ thể (`get`) công khai — giữ nguyên như trước, trang khách hotlink ảnh trực tiếp; liệt kê thư mục/bucket (`list`) chỉ dành cho người đã đăng nhập (THẮT CHẶT so với ruleset thủ công cũ, vốn ngầm cho `list` công khai qua `allow read: if true` — chỉ Media Library mới cần `listAll()`, không trang khách nào cần); ghi/xóa (`write`) giữ nguyên yêu cầu đã đăng nhập, không phân biệt Admin/Editor (đúng hành vi CMS thật — Media Library cho phép cả Editor xóa ảnh). Xem `storage.rules` (chú thích đầy đủ) và `PROJECT_ARCHITECTURE.md` cho lý do không thể siết `write` theo đúng vai trò Admin/Editor (giới hạn kỹ thuật thật của Firebase, không phải bỏ sót).
+
+   ⚠️ **Quan trọng**: `storage.rules` **chưa từng được deploy** lên môi trường thật tính đến thời điểm này (xem `ROADMAP.md` mục "Firebase Storage Security Rules"). Rules đang chạy thật trên Firebase Console hiện tại có thể vẫn cho `list` công khai (bất kỳ ai cũng liệt kê được toàn bộ đường dẫn file trong Storage) — **hãy vào Firebase Console → Storage → Rules để đối chiếu trước khi giả định Rules đã đúng**, rồi deploy bản trong repo.
 5. Truy cập `/admin/login.html` lần đầu → tạo tài khoản Admin đầu tiên ngay trên form (không cần vào Console tạo user).
 
 ⚠️ Trước khi 2 bước 1–4 hoàn tất, các trang admin mới (ngoài Product Manager cũ) và các node mới (banner/category/blog/video) sẽ báo lỗi kết nối rõ ràng trên console — trang khách vẫn chạy bình thường, không vỡ giao diện.
