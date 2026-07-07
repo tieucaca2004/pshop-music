@@ -11,9 +11,61 @@
  * provider.validate() → provider.generate() → module.mapToDraftContent() →
  * DraftDB.add() (không bao giờ ghi thẳng vào collection gốc). Mọi bước —
  * kể cả thất bại vì chưa cấu hình provider — đều được ghi vào LogDB.
+ *
+ * Concurrency Safety (Sprint 8, Requirement #3) — xem Decision Record trong
+ * CHANGELOG.md: biến `processing` bên dưới chỉ chặn được resume() gọi trùng
+ * TRONG CÙNG 1 tab (đứng yên qua các lần gọi lại), không đồng bộ được giữa
+ * nhiều tab/phiên Admin khác nhau. Để chặn 2 phiên cùng xử lý trùng 1 job,
+ * mỗi job giữ thêm 1 "khoá mềm" tại `aiJobs/{jobId}/lock` (`lockedBy` +
+ * `lockedAt`), giành khoá bằng `firebase.database().ref(...).transaction()`
+ * (nguyên tử thật sự ở tầng Firebase, không phải đọc-rồi-ghi như
+ * JobDB.update()). Khoá tự hết hạn sau LOCK_TTL_MS nếu không được làm mới —
+ * để 1 tab bị crash/đóng giữa chừng không khoá chết job mãi mãi. Không đổi
+ * Database Structure các node khác, không thêm `.write`/`.validate` mới vào
+ * `database.rules.json` (node `aiJobs` đã cho phép admin/editor ghi bất kỳ
+ * field con nào từ Requirement #1 — xác nhận lại trước khi làm Requirement
+ * này, không cần sửa Rules).
  */
 const AIJobQueue = (function () {
   let processing = false;
+
+  // Định danh phiên hiện tại (1 tab trình duyệt) — chỉ dùng để nhận diện
+  // "khoá này là của chính mình" khi kiểm tra transaction, KHÔNG phải một
+  // lớp bảo mật/định danh người dùng (đã có Firebase Auth lo việc đó).
+  const CLIENT_ID = 'client-' + Math.random().toString(36).slice(2) + '-' + Date.now();
+
+  // 5 phút — đủ dài cho 1 lượt xử lý item AI thật (vài giây tới vài chục
+  // giây/lượt), đủ ngắn để job không bị khoá chết quá lâu nếu tab xử lý bị
+  // đóng/crash giữa chừng.
+  const LOCK_TTL_MS = 5 * 60 * 1000;
+
+  function lockRef(jobId) {
+    return firebase.database().ref('aiJobs/' + jobId + '/lock');
+  }
+
+  // Giành khoá cho 1 job bằng Firebase transaction (nguyên tử thật sự — nếu
+  // 2 tab cùng gọi gần như đồng thời, Firebase đảm bảo chỉ 1 bên thắng).
+  // Trả về true nếu CHÍNH client này giành được khoá.
+  function claimJobLock(jobId) {
+    return lockRef(jobId).transaction(current => {
+      if (!current || (Date.now() - current.lockedAt) > LOCK_TTL_MS) {
+        return { lockedBy: CLIENT_ID, lockedAt: Date.now() };
+      }
+      return; // undefined = huỷ transaction, không đụng vào khoá còn "tươi" của phiên khác
+    }).then(result => {
+      return !!(result.committed && result.snapshot.val() && result.snapshot.val().lockedBy === CLIENT_ID);
+    });
+  }
+
+  // Làm mới thời điểm khoá — gọi kèm mỗi lần job đã có ghi Firebase khác
+  // (sau mỗi item), không tạo thêm round-trip riêng.
+  function refreshJobLock(jobId) {
+    return lockRef(jobId).child('lockedAt').set(Date.now());
+  }
+
+  function releaseJobLock(jobId) {
+    return lockRef(jobId).remove();
+  }
 
   function enqueue(moduleId, itemsInputParams, userId, userEmail) {
     const items = itemsInputParams.map(inputParams => ({
@@ -103,7 +155,7 @@ const AIJobQueue = (function () {
         const allFailed = job.items.length > 0 && job.items.every(i => i.status === 'failed');
         job.status = allFailed ? 'failed' : 'completed';
         job.finishedAt = Date.now(); // = "completedAt" — xem AI_RULES.md mục field mapping
-        return JobDB.update(job.id, job);
+        return JobDB.update(job.id, job).then(() => releaseJobLock(job.id));
       }
       // Item đã xử lý xong ở lần chạy trước (resume/retry) — bỏ qua, tránh
       // tạo trùng draft cho các item đã thành công.
@@ -113,7 +165,11 @@ const AIJobQueue = (function () {
       return processItem(job, index, userId, userEmail).then(() => {
         job.progress.done = job.items.filter(i => i.status === 'completed').length;
         job.progress.failed = job.items.filter(i => i.status === 'failed').length;
-        return JobDB.update(job.id, job).then(() => processSequentially(job, index + 1, userId, userEmail));
+        // Làm mới khoá cùng lúc job đã phải ghi Firebase (sau mỗi item) —
+        // không thêm round-trip riêng, giữ khoá "tươi" trong suốt job dài.
+        return JobDB.update(job.id, job)
+          .then(() => refreshJobLock(job.id))
+          .then(() => processSequentially(job, index + 1, userId, userEmail));
       });
     });
   }
@@ -121,9 +177,14 @@ const AIJobQueue = (function () {
   function runJob(jobId, userId, userEmail) {
     return JobDB.get(jobId).then(job => {
       if (!job || job.status === 'cancelled' || job.status === 'completed' || job.status === 'failed') return;
-      job.status = 'running';
-      job.startedAt = job.startedAt || Date.now();
-      return JobDB.update(jobId, job).then(() => processSequentially(job, 0, userId, userEmail));
+      return claimJobLock(jobId).then(claimed => {
+        // Không giành được khoá = 1 phiên khác đang xử lý job này rồi (khoá
+        // còn "tươi", chưa hết LOCK_TTL_MS) — bỏ qua, không xử lý trùng.
+        if (!claimed) return;
+        job.status = 'running';
+        job.startedAt = job.startedAt || Date.now();
+        return JobDB.update(jobId, job).then(() => processSequentially(job, 0, userId, userEmail));
+      });
     });
   }
 
@@ -141,12 +202,14 @@ const AIJobQueue = (function () {
   function cancel(jobId, userId, userEmail) {
     return JobDB.get(jobId).then(job => {
       return JobDB.update(jobId, { status: 'cancelled', finishedAt: Date.now() }).then(() => {
-        if (!job) return;
-        // Queue chịu trách nhiệm ghi Log — kể cả khi job bị hủy, không bỏ qua.
-        return logAttempt({
-          moduleId: job.moduleId, provider: job.provider || 'none', jobId,
-          durationMs: job.startedAt ? Date.now() - job.startedAt : 0,
-          status: 'cancelled', userId, userEmail
+        return releaseJobLock(jobId).then(() => {
+          if (!job) return;
+          // Queue chịu trách nhiệm ghi Log — kể cả khi job bị hủy, không bỏ qua.
+          return logAttempt({
+            moduleId: job.moduleId, provider: job.provider || 'none', jobId,
+            durationMs: job.startedAt ? Date.now() - job.startedAt : 0,
+            status: 'cancelled', userId, userEmail
+          });
         });
       });
     });
@@ -166,7 +229,9 @@ const AIJobQueue = (function () {
       job.status = 'queued';
       job.progress.failed = 0;
       job.finishedAt = null;
-      return JobDB.update(jobId, job);
+      // Nhả khoá cũ (nếu còn) để lần resume() kế tiếp giành lại được ngay,
+      // không phải chờ LOCK_TTL_MS hết hạn.
+      return JobDB.update(jobId, job).then(() => releaseJobLock(jobId));
     });
   }
 

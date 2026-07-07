@@ -166,6 +166,10 @@ User → AI Plugin (PluginManager.execute) → Queue (AIJobQueue) → DataProvid
 
 **Trạng thái Job**: `queued` (hiển thị "Pending"), `running`, `completed`, `failed` (mới — khi TẤT CẢ item trong job đều lỗi; trước đây luôn là `completed` bất kể item lỗi hay không), `cancelled` (đã có từ trước Requirement #6, giữ nguyên). "Retry" và "Resume" là 2 hành động Queue hỗ trợ (`retryFailed()`, `resume()`), không phải giá trị `status` riêng.
 
+### Concurrency Safety (Sprint 8, Requirement #3)
+
+`resume()` giữ nguyên biến `processing` (chặn gọi trùng trong CÙNG 1 tab) nhưng nay mỗi Job còn có thêm 1 "khoá mềm" tại `aiJobs/{jobId}/lock` (`lockedBy`, `lockedAt`) — `runJob()` phải giành được khoá này qua `firebase.database().ref(...).transaction()` (nguyên tử ở tầng Firebase) trước khi xử lý; khoá tự hết hạn sau 5 phút (`LOCK_TTL_MS`) không được làm mới, để 1 tab crash giữa chừng không khoá chết Job mãi mãi. `cancel()`/`retryFailed()` chủ động nhả khoá ngay, không phải chờ hết hạn. Đây là lớp phòng vệ THUẦN TÚY bên trong `job-queue.js` — không có API/hàm public nào của Queue đổi (`enqueue`/`resume`/`cancel`/`retryFailed` giữ nguyên chữ ký), không cần sửa `database.rules.json` (node `aiJobs` đã cho phép admin/editor ghi bất kỳ field con nào từ Requirement #1).
+
 ## Logging Layer (Sprint 2, Requirement #7)
 
 `LogDB`/node `aiLogs` (đã có từ Sprint 1, `js/ai/ai-db.js`) là Logging System DUY NHẤT — không tạo Database/Collection mới. **Chỉ `AIJobQueue` (Queue) và `PermissionService` (Requirement #8 — xem mục "Permission & Safety Layer") được ghi Log** — `js/ai/modules/*.js` (Plugin), `js/ai/providers/*.js` (Provider), và `js/ai/plugin-manager.js` (Plugin Manager) không bao giờ gọi `LogDB` trực tiếp; UI (`js/admin-ai.js`) chỉ đọc (`LogDB.getAll()`), không bao giờ tạo/sửa/xóa Log.
