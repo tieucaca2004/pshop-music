@@ -600,9 +600,15 @@ Administrator → admin/ai/observability.html (js/admin-ai-observability.js)
 
 ## Giới hạn kiến trúc đã biết (không tự ý "vá" bằng cách thêm hạ tầng mới)
 
-- **Job Queue vẫn không có backend riêng (V1)** — `AIJobQueue` xử lý tuần tự phía trình duyệt Admin, không đổi ở Sprint 3. Cloud Function duy nhất hiện có (`openaiProxy`, xem mục "Cloud Function Proxy Layer") chỉ là proxy gọi OpenAI API, KHÔNG phải backend xử lý Queue — nâng Job Queue lên Cloud Functions (Job Queue V2, xem `ROADMAP.md`) vẫn là quyết định kiến trúc cần người phụ trách xác nhận trước, chưa triển khai.
-- **Không có Media Library CMS module** — ảnh hiện quản lý rời rạc theo từng field (product/banner/slider/blog cover) qua Firebase Storage, không có kho ảnh trung tâm để duyệt/chọn lại.
+- **Job Queue vẫn không có backend riêng (V1)** — `AIJobQueue` xử lý tuần tự phía trình duyệt Admin, không đổi ở Sprint 3. Cloud Function duy nhất hiện có (`openaiProxy`, xem mục "Cloud Function Proxy Layer") chỉ là proxy gọi OpenAI API, KHÔNG phải backend xử lý Queue — nâng Job Queue lên Cloud Functions (Job Queue V2, xem `ROADMAP.md`) vẫn là quyết định kiến trúc cần người phụ trách xác nhận trước, chưa triển khai. Từ Sprint 8 Requirement #3, Queue có thêm khoá mềm chống xử lý trùng giữa nhiều tab (xem mục "Concurrency Safety" ở "Queue Layer") — vẫn KHÔNG phải backend riêng, chỉ là 1 lớp phòng vệ bổ sung phía client.
+- ~~Không có Media Library CMS module~~ — **đã có từ Sprint 8 Requirement #2** (`js/media-library.js`/`js/media-library-picker.js`, xem mục "Media Library" bên dưới) — ảnh giờ dùng chung 1 kho trung tâm (Firebase Storage) cho Product/Blog/Banner/Slider/Category, có thể duyệt/tìm/chọn lại.
 - **Sản phẩm không có trang riêng** — chỉ hiển thị dạng lưới + modal trên `category.html`, không có URL/route riêng từng sản phẩm để đặt thẻ Meta/OG/Schema riêng.
+
+## Sprint 8 Review (Requirement #4)
+
+Sprint Review cuối Sprint 8 — không thêm kiến trúc mới, chỉ tái xác nhận 3 Requirement (#1-#3) bằng cách chạy lại **mã nguồn thật** (không phải mô tả lại) — 41/41 kịch bản kiểm thử PASS (15 Database Rules + 11 Media Library core + 10 Media Library Picker qua Chromium thật + 5 Job Queue Concurrency). Chi tiết đầy đủ: `docs/SPRINT_8_FINAL_REPORT.md`.
+
+Phát hiện đáng chú ý nhất của Requirement #4: **1 kết luận bảo mật của Requirement #1 bị đính chính**. Ghi nhận ban đầu cho rằng `js/admin-users.js` sẽ gãy sau khi deploy `database.rules.json` (vì `createUserWithEmailAndPassword()` được cho là hijack phiên đăng nhập Admin đang thao tác). Đọc lại đúng mã nguồn thật cho thấy hàm `createUser()` đã dùng 1 Firebase App phụ (`secondaryApp`, có sẵn từ Sprint 1, đúng mục đích tránh hijack phiên) — phiên đăng nhập CHÍNH (nơi ghi `roles/{uid mới}` thật sự chạy) không hề bị ảnh hưởng. Đây là minh chứng cụ thể cho lý do "kiểm thử bằng mã nguồn thật" là một bước bắt buộc của Sprint Review, không phải chỉ tái khẳng định tài liệu cũ. Xem `ROADMAP.md` mục "Firebase Database Rules" cho phân tích đầy đủ.
 
 ## Lịch sử phát triển
 

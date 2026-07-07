@@ -2,6 +2,28 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 8 — Kiểm tra toàn diện + Đóng Sprint (Requirement #4) — SPRINT 8 COMPLETED
+
+Sprint Review cuối cùng của Sprint 8 — không thêm tính năng, chỉ kiểm thử/xác minh/đánh giá toàn bộ 3 Requirement trước khi đóng Sprint.
+
+- **Requirement Summary**: #1 Firebase Database Rules ✅, #2 Media Library ✅, #3 Job Queue Concurrency Safety ✅.
+- **Kiểm thử lại toàn bộ 3 Requirement bằng mã nguồn thật**: môi trường phiên này CÓ Node.js (khác giới hạn ghi nhận ở Sprint Review trước) — tận dụng để kiểm thử chặt hơn thay vì chỉ tin lại kết quả cũ:
+  - **Database Rules**: nạp trực tiếp `database.rules.json` thật, dựng 1 evaluator Snapshot tối thiểu và chạy đúng biểu thức Rules đã commit (không rewrite) — 15/15 kịch bản PASS (giống bộ kịch bản Requirement #1, chạy lại từ đầu).
+  - **Media Library**: nạp `js/media-library.js` thật vào Node `vm`, mock `firebase.storage()` với cấu trúc thư mục lồng nhau + 1 file không phải ảnh — 11/11 kịch bản PASS (duyệt đệ quy, lọc ảnh, sắp xếp, tìm kiếm, upload ủy quyền đúng, remove xóa đúng).
+  - **Media Library Picker**: nạp `js/media-library-picker.js` thật vào Chromium thật qua Playwright (nâng cấp so với DOM giả lập trước đây) — 10/10 kịch bản PASS (ẩn URL mặc định, chọn ảnh cập nhật đúng input/preview, URL chỉ hiện trong Advanced đóng sẵn, `clearFor()` không gọi `remove()`, xóa từ Thư viện có gọi `remove()` sau `confirm()`).
+  - **Job Queue Concurrency**: nạp `js/ai/job-queue.js` thật 2 lần vào 2 ngữ cảnh Node `vm` cách ly (2 "tab" độc lập) — 5/5 kịch bản PASS (đã chạy ở Requirement #3, tái xác nhận không đổi).
+  - **Tổng cộng: 15 + 11 + 10 + 5 = 41/41 kịch bản PASS.**
+- **Regression Test**: `git log --oneline 7ca3841..HEAD -- <file>` (từ commit đóng Sprint 7) xác nhận `plugin-manager.js`/`provider-registry.js`/`provider-interface.js`/`permission-service.js`/`task-router.js`/`data-provider.js`/`module-registry.js`/`functions/index.js`/`AI_RULES.md` đều **0 commit** trong suốt Sprint 8. `job-queue.js` có đúng 1 commit (Requirement #3), không bị Requirement #1/#2 chạm vào. Mỗi commit Sprint 8 chỉ động đúng phạm vi Requirement của nó (`git show --stat`) — không Requirement nào sửa file của Requirement khác trong cùng Sprint.
+- **Architecture Verification**: xác nhận đủ 8 mục (AI Framework/Queue/Plugin Manager/Provider Manager/Permission Service/AI Task Router/Database Structure/`AI_RULES.md`) đều KHÔNG đổi trong suốt Sprint 8 — field duy nhất mới thêm (`aiJobs/{jobId}/lock`, Requirement #3) là field bổ sung trong node đã có, không phải Collection/node mới, không cần Rules mới.
+- **Security Verification**: grep xác nhận không có API Key/secret nào trong file mới/sửa của Sprint 8; không phát hiện lỗ hổng bảo mật mới.
+  - **Đính chính 1 phát hiện cũ**: "Xung đột #1" ghi ở Requirement #1 (nghi `js/admin-users.js` gãy sau khi deploy Rules vì `createUserWithEmailAndPassword()` hijack phiên đăng nhập) — đọc lại đúng mã nguồn thật cho thấy `createUser()` đã dùng 1 Firebase App phụ (`secondaryApp`, có sẵn từ Sprint 1, đúng mục đích tránh hijack phiên) để tạo tài khoản; ghi `roles/{uid mới}` qua App CHÍNH, nơi `auth.uid` vẫn là Admin đang thao tác. Đối chiếu kịch bản Rules #13 ("Admin cấp quyền cho uid mới") — Rules cho phép đúng luồng này. **Kết luận: nhiều khả năng KHÔNG phải lỗi thật**, khác với ghi nhận ban đầu — xem `ROADMAP.md` cho chi tiết đầy đủ và lý do (giá trị cụ thể của "kiểm thử bằng mã nguồn thật" thay vì chỉ tin lại tài liệu).
+  - **Xác nhận 1 phát hiện cũ vẫn đúng**: "Xung đột #2" (cảnh báo sai ở `admin/login.html` sau khi có Admin đầu tiên) — đọc lại `js/admin-login.js`, xác nhận vẫn là vấn đề thật (mức độ thấp, chỉ ảnh hưởng thông báo).
+- **Production Readiness**: AI Framework/Database Rules/Media Library/Job Queue đều ✅ sẵn sàng Production về mặt code — 2 việc vận hành còn thiếu (deploy Database Rules, version-control Storage Rules) không phải do Sprint 8 gây ra.
+- Lập `docs/SPRINT_8_FINAL_REPORT.md` (Requirement Summary, Kiểm thử, Regression, Architecture/Security Verification, Production Readiness, Non-functional Evaluation, Known Limitations, mục chuyển sang Sprint 9).
+- **Lưu ý phát hiện trong quá trình Review**: file `SPRINT_9_PLANNING.md` xuất hiện (untracked) trong working tree — sản phẩm của 1 phiên làm việc trước đã nhầm sang branch `claude/cms-image-experience-2-u89lud` (dự án Next.js/MySQL khác, không liên quan PSH Platform). File đó phân tích sai codebase — không dùng làm cơ sở cho Sprint 9 Planning thật của nhánh này (xem `docs/SPRINT_8_FINAL_REPORT.md`).
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md` (đính chính "Xung đột #1").
+- **SPRINT 8 COMPLETED (Requirement #1, #2, #3, #4 — tất cả đã giao và triển khai đầy đủ). Không bắt đầu Sprint 9. Không tự viết Sprint 9 Planning.**
+
 ## Sprint 8 — Job Queue Concurrency Safety (Requirement #3)
 
 Triển khai Architecture Challenge #2 đã ghi từ Sprint 8 Planning: `AIJobQueue` (`js/ai/job-queue.js`) trước đây chỉ chặn gọi trùng `resume()` bằng 1 biến `processing` cục bộ theo tab/phiên trình duyệt — không đồng bộ được giữa nhiều tab/nhiều Admin, nên 2 phiên cùng gọi `resume()` gần như đồng thời có thể cùng xử lý trùng 1 Job (tạo Draft trùng, gọi Provider trùng — tốn phí kép). Không sửa Sprint 2-7, không Refactor AI Framework/Plugin Manager/Provider Manager/Permission Service/AI Task Router/Data Provider, không đổi Database Structure của bất kỳ node nào khác ngoài field mới trong `aiJobs`, không sửa Requirement #1 (`database.rules.json`) hay Requirement #2 (Media Library) của Sprint 8.
