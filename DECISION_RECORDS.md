@@ -64,3 +64,28 @@ Không tự thay đổi API của `createProduct`/`updateProduct`. Trong phạm 
 - Chấp nhận không có "Lưu & Tiếp tục" cho tới khi có Sprint riêng cho thay đổi API này.
 
 **Trạng thái:** Chờ quyết định. Đã ghi vào `ROADMAP.md`.
+
+## DR-2026-07-07-03: Module Blogs / Banners / Sliders / AI trên Dashboard
+
+**Bối cảnh (Sprint 8, Requirement #5 — CMS Dashboard Experience 2.0)**
+
+Functional Requirement #1 yêu cầu Dashboard hiển thị Card cho: Products, Categories, Blogs, Banners, Sliders, Orders, AI, Media Library.
+
+Kiểm tra codebase hiện tại cho thấy chỉ tồn tại dữ liệu/route thật cho: Products, Categories, "Orders" (ánh xạ tới `contact_orders`/"Yêu cầu liên hệ" — dự án chưa có hệ thống đơn hàng thương mại điện tử thật sự), và Media Library (đọc lại `product_images.url`, không phải module riêng). Không có bảng, business logic, hay route nào cho Blogs, Banners, Sliders. Không có AI Framework/Provider nào được nối vào ứng dụng.
+
+**Vấn đề**
+
+Xây dựng module Blogs/Banners/Sliders thật sự (CRUD, danh sách, form riêng) cần: bảng mới trong Database Structure, Server Actions mới (Business Logic/API mới), và trang quản trị mới — vượt xa phạm vi "chỉ cải thiện Experience Layer" của Requirement #5, đồng thời vi phạm "Không mở rộng Sprint". Tương tự, một "AI" module/"AI Assistant" thật sự cần một AI Framework/Provider được cấu hình — nhưng yêu cầu lại nói rõ "Không Refactor AI Framework", và trên thực tế AI Framework đó không tồn tại trong dự án để tích hợp vào.
+
+**Quyết định**
+
+Không tự tạo bảng/API mới cho Blogs, Banners, Sliders, hay AI. Trong phạm vi Requirement #5:
+- Card và Quick Action tương ứng vẫn được hiển thị (đúng Functional Requirement #1 và #3) nhưng ở trạng thái rõ ràng "Chưa triển khai" / "Chưa cấu hình", không có số liệu giả, không có shortcut dẫn tới trang không tồn tại.
+- "Orders" card ánh xạ sang tính năng "Yêu cầu liên hệ" (contact_orders) đã có sẵn — không đổi tên/API của tính năng đó, chỉ hiển thị lại đúng dữ liệu thật.
+- "Media Library" được nâng thành một trang quản trị thật (`/admin/media`), chỉ đọc dữ liệu đã có trong `product_images`, không có route/API/bảng mới về mặt dữ liệu.
+
+**Cần quyết định tiếp theo (việc của Chief Architect / stakeholder, không tự triển khai)**
+- Có nên xây dựng module Blogs/Banners/Sliders trong Sprint riêng (cần Database Structure + Business Logic mới)?
+- Có nên chọn/tích hợp một AI Framework/Provider cụ thể để "AI Assistant" và "AI" card có dữ liệu thật?
+
+**Trạng thái:** Chờ quyết định. Đã ghi vào `ROADMAP.md`.

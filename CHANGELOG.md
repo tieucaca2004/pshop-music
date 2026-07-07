@@ -2,6 +2,30 @@
 
 Định dạng dựa theo [Keep a Changelog](https://keepachangelog.com/vi/1.0.0/).
 
+## Sprint 8 - Requirement #5: CMS Dashboard Experience 2.0 — 2026-07-07
+
+### Added
+- Dashboard quản trị (`src/app/admin/(protected)/page.tsx`) được thiết kế lại dạng Card, hiển thị đủ 8 nhóm theo yêu cầu: Sản phẩm, Danh mục, Blog, Banner, Slider, Yêu cầu liên hệ (Orders), AI, Thư viện ảnh. Mỗi Card gồm Tổng số, Trạng thái và Shortcut khi module đã tồn tại thật; các module chưa xây dựng (Blog, Banner, Slider, AI) hiển thị rõ nhãn "Chưa triển khai"/"Chưa cấu hình" thay vì số liệu giả hoặc shortcut chết.
+- **Quick Actions**: Thêm sản phẩm, Mở Media Library hoạt động thật (điều hướng tới trang tương ứng); Thêm Blog, Thêm Banner, AI Assistant hiển thị ở trạng thái vô hiệu hóa rõ ràng vì module chưa tồn tại.
+- **Recent Activity**: "Sản phẩm vừa sửa" lấy dữ liệu thật từ `products.updated_at` (query mới `getRecentlyUpdatedProducts`); "Blog vừa tạo", "Banner vừa cập nhật", "AI Draft gần nhất" hiển thị trạng thái rỗng trung thực vì các module này chưa tồn tại.
+- **System Status** (chỉ đọc dữ liệu): Database kiểm tra kết nối thật (`checkDatabaseHealth()` — `SELECT 1`); Health suy ra từ tình trạng Database; AI Provider/Queue/Storage hiển thị "Chưa cấu hình" vì dự án chưa tích hợp các hệ thống này.
+- Trang mới `/admin/media` (Thư viện ảnh) — nâng Media Library (từ Requirement #3) thành một trang quản trị thật, chỉ đọc lại `product_images.url` qua `MediaLibraryGrid`, không có API/bảng mới. Thêm mục điều hướng "Thư viện ảnh" vào sidebar admin.
+- `getDashboardOverview()`, `getRecentlyUpdatedProducts()`, `checkDatabaseHealth()` (`src/lib/admin-data.ts`) và `formatRelativeTime()` (`src/lib/format.ts`) — toàn bộ là hàm đọc dữ liệu mới, không đổi hàm/schema hiện có.
+
+### Changed
+- `src/app/admin/(protected)/layout.tsx`: thêm 1 mục nav "Thư viện ảnh" (không đổi cấu trúc/route khác).
+- Dashboard chia layout responsive: Card grid 1 cột (mobile) → 3 cột (tablet) → 4 cột (desktop); Recent Activity/System Status xếp chồng trên mobile, 2 cột trên desktop.
+
+### Not implemented (xem Decision Record)
+- Module Blogs/Banners/Sliders thật (cần Database Structure + Business Logic mới) và AI Provider/AI Assistant thật (cần tích hợp AI Framework) — xem `DECISION_RECORDS.md` (DR-2026-07-07-03) và `ROADMAP.md`.
+- Sidebar admin responsive trên mobile — vấn đề thuộc `layout.tsx` (chrome dùng chung), ngoài phạm vi Requirement #5; xem `ROADMAP.md`.
+
+### Unchanged (theo đúng phạm vi Requirement)
+- Sprint 2, 3, 4, 5, 6, 7.
+- Sprint 8 Requirement #1, #2, #3, #4.
+- AI Framework, Queue, Plugin Manager, Provider Manager, Permission Service, AI Task Router, Data Provider, `AI_RULES.md`, Database Structure.
+- API và Business Logic hiện có (`src/lib/actions/*.ts` không đổi); các hàm mới trong `admin-data.ts` chỉ đọc dữ liệu (SELECT), không có INSERT/UPDATE/DELETE mới.
+
 ## Sprint 8 - Requirement #4: CMS Form Experience 2.0 — 2026-07-07
 
 ### Added

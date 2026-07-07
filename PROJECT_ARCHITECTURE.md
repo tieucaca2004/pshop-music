@@ -47,6 +47,15 @@ Việc tách lớp này là lý do Requirement #3 (CMS Image Experience 2.0) tri
 - Validation là trách nhiệm của Experience layer khi hiển thị (thông báo lỗi tại field, không alert()/trang lỗi hệ thống); quy tắc field nào bắt buộc vẫn do Business logic layer quyết định (không đổi) — Experience layer chỉ phản chiếu lại cùng một quy tắc đó sớm hơn, tại client.
 - Pattern này (Section + Action Bar + validation tại field) là chuẩn dùng chung cho mọi Module CMS, không riêng Product — form nào có đủ độ phức tạp (nhiều field, nhiều nhóm) nên áp dụng lại; form 1 field (như thêm danh mục nhanh) không cần vì không có gì để chia.
 
+## Dashboard quản trị (từ Sprint 8, Requirement #5)
+
+- Dashboard (`src/app/admin/(protected)/page.tsx`) hiển thị đủ 8 Card theo taxonomy chuẩn (Products, Categories, Blogs, Banners, Sliders, Orders, AI, Media Library), nhưng chỉ Card có dữ liệu/route thật (Sản phẩm, Danh mục, Yêu cầu liên hệ, Thư viện ảnh) mới có Tổng số thật và Shortcut điều hướng được. Card cho module chưa tồn tại (Blog, Banner, Slider, AI) hiển thị "—"/"Chưa triển khai"/"Chưa cấu hình" — không có số liệu giả, không có shortcut dẫn tới trang không tồn tại. Xem `DECISION_RECORDS.md` (DR-2026-07-07-03).
+- "Orders" trong yêu cầu ánh xạ sang tính năng "Yêu cầu liên hệ" (`contact_orders`) đã có từ trước — dự án này không có hệ thống đơn hàng thương mại điện tử riêng.
+- "Media Library" có trang quản trị riêng tại `/admin/media`, chỉ đọc lại `product_images.url` (tái sử dụng `getMediaLibrary()` từ Requirement #3) — không có bảng/API mới.
+- **System Status là read-only thật**: `checkDatabaseHealth()` thực sự gọi `SELECT 1` để kiểm tra kết nối MySQL; các mục không có backend tương ứng (AI Provider, Queue, Storage) hiển thị "Chưa cấu hình" thay vì số liệu giả — không có mục nào trong panel này ghi/đổi cấu hình.
+- **Recent Activity** chỉ hiển thị dữ liệu thật cho loại có backend (sản phẩm vừa sửa, qua cột `products.updated_at` sẵn có trong schema); Blog/Banner/AI Draft hiển thị trạng thái rỗng trung thực vì các module đó chưa tồn tại.
+- Toàn bộ dữ liệu Dashboard là các hàm đọc mới trong `admin-data.ts` (`getDashboardOverview`, `getRecentlyUpdatedProducts`, `checkDatabaseHealth`) — không sửa hàm đọc nào đã có (`getAdminStats` giữ nguyên), không có Server Action/API mới, không đổi Database Structure.
+
 ## Ranh giới không đụng tới (theo chỉ đạo Sprint)
 
 AI Framework, Queue, Plugin Manager, Provider Manager, Permission Service, AI Task Router, Data Provider, `AI_RULES.md`, Database Structure, Storage Structure — không tồn tại hoặc không được thay đổi bởi các thay đổi Experience Layer mô tả ở trên.

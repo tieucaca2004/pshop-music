@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, Package, Tags, Inbox, LogOut } from "lucide-react";
+import { LayoutDashboard, Package, Tags, Inbox, Images, LogOut } from "lucide-react";
 import { logoutAction } from "@/lib/actions/auth";
 import { requireAdminPage } from "@/lib/auth";
 
@@ -8,6 +8,7 @@ const navItems = [
   { href: "/admin/products", label: "Sản phẩm", icon: Package },
   { href: "/admin/categories", label: "Danh mục", icon: Tags },
   { href: "/admin/leads", label: "Yêu cầu liên hệ", icon: Inbox },
+  { href: "/admin/media", label: "Thư viện ảnh", icon: Images },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
