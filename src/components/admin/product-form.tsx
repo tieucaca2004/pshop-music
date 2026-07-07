@@ -1,4 +1,5 @@
 import type { Category, Product } from "@/types";
+import { ImageManagerField } from "@/components/admin/image-manager-field";
 
 export function ProductForm({
   action,
@@ -69,13 +70,13 @@ export function ProductForm({
         <textarea name="specs" defaultValue={product?.specs ?? ""} rows={3} className="form-input" />
       </Field>
 
-      <Field label="Ảnh sản phẩm" hint="Mỗi URL ảnh trên một dòng">
-        <textarea
-          name="images"
-          defaultValue={product?.images?.map((i) => i.url).join("\n") ?? ""}
-          rows={4}
-          className="form-input font-mono text-xs"
-        />
+      <Field label="Ảnh sản phẩm" hint="Kéo thả để đổi thứ tự, chọn từ thư viện hoặc thêm ảnh mới">
+        <div className="mt-1.5">
+          <ImageManagerField
+            name="images"
+            defaultImages={product?.images?.map((i) => i.url) ?? []}
+          />
+        </div>
       </Field>
 
       <div className="flex items-center gap-6">

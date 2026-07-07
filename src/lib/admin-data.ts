@@ -34,6 +34,13 @@ export async function getProductByIdAdmin(id: number): Promise<Product | null> {
   return { ...product, images };
 }
 
+export async function getMediaLibrary(): Promise<string[]> {
+  const rows = await query<{ url: string }[]>(
+    `SELECT url, MAX(id) AS last_id FROM product_images GROUP BY url ORDER BY last_id DESC LIMIT 60`
+  );
+  return rows.map((r) => r.url);
+}
+
 export async function getAllCategoriesAdmin(): Promise<Category[]> {
   return query<Category[]>("SELECT * FROM categories ORDER BY position ASC, id ASC");
 }
