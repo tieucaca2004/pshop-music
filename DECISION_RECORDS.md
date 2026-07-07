@@ -31,3 +31,36 @@ Không tự triển khai storage backend mới. Trong phạm vi Requirement #3, 
 - Nếu chọn phương án, cần Sprint riêng để: thêm API route upload, cấu hình credentials, và (nếu cần) mở rộng Database Structure để lưu metadata file (kích thước, mime type...).
 
 **Trạng thái:** Chờ quyết định. Đã ghi vào `ROADMAP.md`.
+
+## DR-2026-07-07-02: Nút "Lưu & Tiếp tục" cần thay đổi hành vi Server Action
+
+**Bối cảnh (Sprint 8, Requirement #4 — CMS Form Experience 2.0)**
+
+Functional Requirement #4 yêu cầu Action Bar chuẩn hóa với 4 nút: Lưu, Lưu & Tiếp tục, Hủy, Xóa — và "Không có nút trùng chức năng."
+
+**Vấn đề**
+
+`createProduct` / `updateProduct` (`src/lib/actions/products.ts`) luôn gọi `redirect("/admin/products")` sau khi lưu — đây là hành vi cố định trong Business Logic/API hiện tại, không đọc thêm bất kỳ input nào để quyết định điểm đến khác.
+
+"Lưu & Tiếp tục" (lưu xong, ở lại trang chỉnh sửa thay vì quay về danh sách) chỉ có thể triển khai thật sự nếu action biết được nút nào được bấm và điều hướng khác đi — nghĩa là phải:
+1. Đổi API của action (nhận thêm field, ví dụ `intent`/`redirectTo`), và
+2. Đổi nhánh `redirect(...)` bên trong — tức đổi Business Logic/API, dù nhỏ.
+
+Không có cách nào ở Experience Layer thuần túy để "chặn" hoặc "ghi đè" `redirect()` được gọi bên trong Server Action — Next.js xử lý tín hiệu redirect này ở tầng framework bất kể action được gọi qua `<form action>` hay gọi thủ công từ client.
+
+Nếu triển khai nút "Lưu & Tiếp tục" mà chỉ lặp lại đúng hành vi của "Lưu" (cùng quay về danh sách) thì vi phạm "Không có nút trùng chức năng."
+
+**Quyết định**
+
+Không tự thay đổi API của `createProduct`/`updateProduct`. Trong phạm vi Requirement #4, Action Bar (`src/components/admin/form-action-bar.tsx`) chỉ triển khai 3 nút có hành vi thật sự khác nhau, không cần đổi Business Logic/API:
+- **Lưu** — submit form (giữ nguyên hành vi sẵn có).
+- **Hủy** — điều hướng thuần Experience Layer về danh sách, không submit.
+- **Xóa** — chỉ hiện khi sửa sản phẩm, gọi lại `deleteProduct` sẵn có (không đổi), sau đó điều hướng về danh sách ở phía client.
+
+"Lưu & Tiếp tục" chưa được thêm vào Action Bar để tránh vi phạm quy tắc "không nút trùng chức năng".
+
+**Cần quyết định tiếp theo (việc của Chief Architect / stakeholder, không tự triển khai)**
+- Phê duyệt việc mở rộng tối thiểu `createProduct`/`updateProduct` để nhận một field điều hướng (ví dụ `intent: "list" | "continue"`) và redirect theo đó, hoặc
+- Chấp nhận không có "Lưu & Tiếp tục" cho tới khi có Sprint riêng cho thay đổi API này.
+
+**Trạng thái:** Chờ quyết định. Đã ghi vào `ROADMAP.md`.

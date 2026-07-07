@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getAllCategoriesAdmin, getProductByIdAdmin } from "@/lib/admin-data";
-import { updateProduct } from "@/lib/actions/products";
+import { deleteProduct, updateProduct } from "@/lib/actions/products";
 import { ProductForm } from "@/components/admin/product-form";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +24,12 @@ export default async function EditProductPage({ params }: { params: Params }) {
     <div>
       <h1 className="font-heading text-2xl font-bold">Sửa sản phẩm</h1>
       <div className="mt-6 max-w-3xl rounded-xl border border-border bg-card p-6">
-        <ProductForm action={action} categories={categories} product={product} />
+        <ProductForm
+          action={action}
+          categories={categories}
+          product={product}
+          deleteAction={deleteProduct.bind(null, productId)}
+        />
       </div>
     </div>
   );

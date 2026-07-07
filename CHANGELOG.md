@@ -2,6 +2,30 @@
 
 Định dạng dựa theo [Keep a Changelog](https://keepachangelog.com/vi/1.0.0/).
 
+## Sprint 8 - Requirement #4: CMS Form Experience 2.0 — 2026-07-07
+
+### Added
+- `FormSection` (`src/components/admin/form-section.tsx`): section collapsible dùng chung cho form quản trị — hỗ trợ Collapse/Expand và ghi nhớ trạng thái đóng/mở theo `localStorage` (mỗi section một key riêng, còn nguyên sau khi tải lại trang).
+- `FormActionBar` (`src/components/admin/form-action-bar.tsx`): Action Bar chuẩn hóa dùng chung — **Lưu** (submit), **Hủy** (điều hướng về danh sách, không submit), **Xóa** (chỉ hiện khi sửa, gọi lại `deleteProduct` sẵn có rồi điều hướng về danh sách). Không có 2 nút cùng chức năng.
+- Form sản phẩm admin (`product-form.tsx`) được chia thành các Section: **Thông tin cơ bản**, **Hình ảnh**, **Giá & Kho**, **Nâng cao**. Section "Nâng cao" (đóng mặc định) hiển thị ID sản phẩm và slug — các trường kỹ thuật trước đây không hiển thị ở đâu cả, nay hiển thị đúng nơi quy định (Advanced Panel) thay vì ẩn hoàn toàn không lối vào.
+- Validation hiển thị ngay tại field: submit được chặn phía client (`noValidate` + kiểm tra thủ công) khi thiếu Tên sản phẩm / Danh mục / Giá bán hợp lệ, thông báo lỗi hiển thị ngay dưới field tương ứng — không dùng `alert()`, không để lộ trang lỗi hệ thống của Next.js.
+
+### Changed
+- `product-form.tsx` chuyển thành Client Component để hỗ trợ validation tại field, ghi nhớ trạng thái Section và Action Bar. `action` (Server Action) được truyền vào như cũ, không đổi cách gọi.
+- `src/app/admin/(protected)/products/[id]/page.tsx`: truyền thêm `deleteAction={deleteProduct.bind(null, productId)}` cho `ProductForm` để nút Xóa trong Action Bar tái sử dụng đúng server action `deleteProduct` sẵn có.
+
+### Not implemented (xem Decision Record)
+- Nút **"Lưu & Tiếp tục"**: cần đổi hành vi `redirect()` bên trong `createProduct`/`updateProduct` (Business Logic/API) để thực sự khác "Lưu" — nằm ngoài phạm vi Experience Layer. Xem `DECISION_RECORDS.md` (DR-2026-07-07-02).
+- Section **"SEO"** và **"AI"**: không có field SEO/AI nào trong schema hoặc business logic của Product hiện tại — không render section rỗng. Xem `ROADMAP.md`.
+- Preview PDF/Video: không có field PDF/Video trong schema Product hiện tại ("nếu có" theo đúng Functional Requirement #6) — chỉ Image preview (đã có từ Requirement #3) áp dụng.
+
+### Unchanged (theo đúng phạm vi Requirement)
+- Sprint 2, 3, 4, 5, 6, 7.
+- Sprint 8 Requirement #1, #2, #3.
+- AI Framework, Queue, Plugin Manager, Provider Manager, Permission Service, AI Task Router, Database Structure, Data Provider, `AI_RULES.md`.
+- API và Business Logic của `createProduct` / `updateProduct` / `deleteProduct` (`src/lib/actions/products.ts` không đổi).
+- Form thêm danh mục nhanh (`/admin/categories`) — đã đủ đơn giản (1 field), không cần chia section.
+
 ## Sprint 8 - Requirement #3: CMS Image Experience 2.0 — 2026-07-07
 
 ### Added

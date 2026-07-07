@@ -39,6 +39,14 @@ Việc tách lớp này là lý do Requirement #3 (CMS Image Experience 2.0) tri
 - Giao diện mặc định không hiển thị Image URL; URL thô chỉ xuất hiện trong Advanced Panel (đóng mặc định) khi người quản trị thật sự cần dán một URL ảnh mới chưa có trong Media Library.
 - Upload file nhị phân thật sự (chọn ảnh từ máy, lưu vào storage) **chưa có backend** trong dự án này — xem `DECISION_RECORDS.md` (DR-2026-07-07-01) trước khi triển khai.
 
+## Chuẩn hóa Form quản trị (từ Sprint 8, Requirement #4)
+
+- `FormSection` (`src/components/admin/form-section.tsx`): khung Section collapsible dùng chung cho mọi form CMS — Collapse/Expand + ghi nhớ trạng thái qua `localStorage`. Taxonomy Section chuẩn theo yêu cầu: Thông tin cơ bản, Hình ảnh, Giá & Kho, SEO, AI, Nâng cao — nhưng **chỉ render Section khi có field thật sự thuộc về nó**; không tạo Section rỗng cho SEO/AI vì Product hiện không có field nào thuộc 2 nhóm này (xem `ROADMAP.md`).
+- `FormActionBar` (`src/components/admin/form-action-bar.tsx`): Action Bar chuẩn hóa dùng chung — Lưu / Hủy / Xóa. Không thêm nút nào có chức năng trùng nhau; xem `DECISION_RECORDS.md` (DR-2026-07-07-02) về lý do "Lưu & Tiếp tục" chưa có mặt.
+- Trường kỹ thuật (ID, slug) chỉ hiển thị bên trong Section "Nâng cao" (đóng mặc định) — không xuất hiện ở bất kỳ đâu khác trên form.
+- Validation là trách nhiệm của Experience layer khi hiển thị (thông báo lỗi tại field, không alert()/trang lỗi hệ thống); quy tắc field nào bắt buộc vẫn do Business logic layer quyết định (không đổi) — Experience layer chỉ phản chiếu lại cùng một quy tắc đó sớm hơn, tại client.
+- Pattern này (Section + Action Bar + validation tại field) là chuẩn dùng chung cho mọi Module CMS, không riêng Product — form nào có đủ độ phức tạp (nhiều field, nhiều nhóm) nên áp dụng lại; form 1 field (như thêm danh mục nhanh) không cần vì không có gì để chia.
+
 ## Ranh giới không đụng tới (theo chỉ đạo Sprint)
 
 AI Framework, Queue, Plugin Manager, Provider Manager, Permission Service, AI Task Router, Data Provider, `AI_RULES.md`, Database Structure, Storage Structure — không tồn tại hoặc không được thay đổi bởi các thay đổi Experience Layer mô tả ở trên.
