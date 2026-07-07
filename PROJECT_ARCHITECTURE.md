@@ -59,3 +59,11 @@ Việc tách lớp này là lý do Requirement #3 (CMS Image Experience 2.0) tri
 ## Ranh giới không đụng tới (theo chỉ đạo Sprint)
 
 AI Framework, Queue, Plugin Manager, Provider Manager, Permission Service, AI Task Router, Data Provider, `AI_RULES.md`, Database Structure, Storage Structure — không tồn tại hoặc không được thay đổi bởi các thay đổi Experience Layer mô tả ở trên.
+
+## Kiểm thử & xác minh cuối Sprint 8 (Requirement #6)
+
+Requirement #6 không thay đổi code — chỉ xác minh. Kết quả đầy đủ (Regression, Architecture Verification, Security Verification, UX Verification, Production Readiness, Known Limitations) nằm trong `docs/SPRINT_8_FINAL_REPORT.md`. Điểm kiến trúc đáng chú ý rút ra từ lần xác minh này:
+
+- Toàn bộ quyền truy cập dữ liệu đi qua 2 điểm chặn duy nhất: `requireAdminPage()` (mọi trang trong `admin/(protected)/`) và `requireAdminAction()` (mọi Server Action ghi/đọc dữ liệu nhạy cảm) — cả hai đều nằm trong `src/lib/auth.ts`, không đổi trong Sprint 8. Đây là toàn bộ "Permission Service" của dự án; không có RBAC nhiều cấp (single-role).
+- Không có state mutable ở module-level nào ngoài connection pool MySQL singleton (`global.__mysqlPool` trong `src/lib/db.ts`) — không có rủi ro rò rỉ dữ liệu giữa các request/session (context isolation).
+- `db/schema.sql` không đổi kể từ đầu Sprint 8 đến hết Requirement #5 (xác nhận bằng `git diff`).

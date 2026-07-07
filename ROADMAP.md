@@ -24,3 +24,13 @@ Danh sách ý tưởng phát sinh trong quá trình triển khai các Requiremen
 - **Queue, Storage trong System Status** — không có hệ thống Queue hay Storage backend nào trong dự án (xem thêm DR-2026-07-07-01 ở Requirement #3); System Status hiển thị "Chưa cấu hình" trung thực thay vì số liệu giả.
 - **Sidebar admin chưa responsive trên mobile** — `src/app/admin/(protected)/layout.tsx` (thuộc phần chrome chung, không phải phạm vi Requirement #5) dùng sidebar cố định `w-56`, không thu gọn/ẩn trên màn hình nhỏ, khiến vùng nội dung bị hẹp lại trên mobile. Dashboard mới đã tự co về 1 cột để vẫn đọc được trong không gian đó, nhưng cải thiện triệt để cần sửa `layout.tsx` (ví dụ sidebar dạng drawer trên mobile) — nằm ngoài phạm vi Requirement #5 vì đó là chrome dùng chung cho toàn bộ khu vực quản trị, không riêng Dashboard.
 - **Phân trang cho `/admin/media`** — trang Thư viện ảnh mới tái sử dụng `getMediaLibrary()` (giới hạn 60 ảnh từ Requirement #3); nếu số ảnh thực tế vượt quá 60, cần bổ sung phân trang/tải thêm.
+
+## Từ Sprint 8 — Requirement #6 (Kiểm thử tổng thể & đóng Sprint)
+
+Phát hiện trong quá trình QA cuối Sprint, chuyển sang Sprint 9 xem xét (không triển khai trong Sprint 8):
+
+- **Không có rate limiting trên đăng nhập admin** (`POST /api/admin/login`) — có thể bị brute-force mật khẩu. Cân nhắc thêm giới hạn số lần thử/IP hoặc khóa tài khoản tạm thời.
+- **Timing side-channel nhỏ khi đăng nhập** — `verifyAdminPassword()` (`src/lib/admin-users.ts`) bỏ qua `bcrypt.compare()` khi email không tồn tại, tạo chênh lệch thời gian phản hồi giữa "email không tồn tại" và "sai mật khẩu". Cân nhắc luôn chạy một phép so sánh bcrypt "giả" (dummy hash) khi không tìm thấy user, để thời gian phản hồi đồng nhất.
+- **Observability** — hiện chỉ có System Status (Requirement #5) đọc trạng thái Database. Không có logging tập trung, error tracking (vd. Sentry), hay metrics/alerting. Cân nhắc bổ sung nếu lên Production thật.
+- **Regression end-to-end với MySQL thật** — chưa chạy được trong Sprint 8 vì môi trường kiểm thử không có DB server sẵn và không kéo được Docker image (chính sách mạng egress chặn domain CDN của Docker Hub). Khuyến nghị chạy trong CI/staging có DB thật trước khi Production release. Xem `docs/SPRINT_8_FINAL_REPORT.md` mục 3.
+- **Mô hình quyền single-role** — hiện chỉ có 1 vai trò "admin" (`admin_users`), không có RBAC nhiều cấp. Nếu cần nhiều vai trò quản trị (vd. biên tập viên chỉ sửa sản phẩm, không xóa), đây là quyết định kiến trúc mới cần Decision Record riêng.

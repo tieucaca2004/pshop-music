@@ -2,6 +2,24 @@
 
 Định dạng dựa theo [Keep a Changelog](https://keepachangelog.com/vi/1.0.0/).
 
+## Sprint 8 - Requirement #6: Kiểm thử tổng thể & đóng Sprint — 2026-07-07
+
+Không có thay đổi code/feature nào trong Requirement này (đúng vai trò Chief Architect — chỉ xác minh, không triển khai). Toàn bộ kết quả kiểm thử chi tiết nằm trong tài liệu mới `docs/SPRINT_8_FINAL_REPORT.md`.
+
+### Added
+- `docs/SPRINT_8_FINAL_REPORT.md` — báo cáo tổng kết Sprint 8: kết quả theo từng Requirement, Regression Test, Architecture Verification, Security Verification, UX Verification, Production Readiness, Known Limitations.
+
+### Verified (không đổi code)
+- Static verification sạch trên toàn repo: `tsc --noEmit`, `npm run lint`, `next build` — 0 lỗi.
+- Toàn bộ Server Action ghi/đọc dữ liệu (`src/lib/actions/*.ts`) đều gọi `requireAdminAction()`; toàn bộ trang trong `admin/(protected)/` (bao gồm 3 trang thêm ở Sprint 8) đều bị chặn bởi `requireAdminPage()` khi chưa đăng nhập — xác minh bằng route crawl thật (307 khi chưa đăng nhập, 200 khi có session hợp lệ).
+- Route crawl + browser crawl (Playwright) trên toàn bộ trang storefront và admin — 0 lỗi console, không có route nào trả 500.
+- `db/schema.sql` không đổi trong suốt Sprint 8 (`git diff` từ đầu Sprint đến cuối Requirement #5 — rỗng).
+- Không tìm thấy AI Framework, Queue, Plugin Manager, Provider Manager, AI Task Router, `AI_RULES.md` nào trong repo để có thể vô tình đụng vào — xác nhận bằng `grep` toàn bộ `src/`.
+
+### Ghi nhận (không tự sửa)
+- Không có rate limiting trên `POST /api/admin/login`; có timing side-channel nhỏ khi dò email admin hợp lệ trong `verifyAdminPassword()`. Xem `docs/SPRINT_8_FINAL_REPORT.md` mục 5 và `ROADMAP.md`.
+- Regression end-to-end với MySQL thật chưa chạy được trong session này do môi trường sandbox không có DB server và không kéo được Docker image (chính sách egress chặn). Xem `docs/SPRINT_8_FINAL_REPORT.md` mục 3.
+
 ## Sprint 8 - Requirement #5: CMS Dashboard Experience 2.0 — 2026-07-07
 
 ### Added
