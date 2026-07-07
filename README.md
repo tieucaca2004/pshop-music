@@ -20,7 +20,9 @@ js/site-content-seed.js Dữ liệu mặc định (seed) cho toàn bộ site —
 js/products-seed.js     42 sản phẩm gốc trích từ pshopmusic.html
 js/site-chrome.js       Render menu + footer động trên mọi trang khách (dùng chung)
 js/admin-auth.js        Firebase Auth guard + sidebar dùng chung cho mọi trang admin/*.html
-js/storage-upload.js    Helper upload ảnh lên Firebase Storage
+js/storage-upload.js    Helper upload ảnh lên Firebase Storage (Sprint 1) — MediaLibrary.upload() vẫn dùng lại hàm này
+js/media-library.js     Media Library (Sprint 8) — kho ảnh dùng chung, duyệt/tìm/xóa trực tiếp trên Firebase Storage
+js/media-library-picker.js  Giao diện chọn ảnh dùng chung cho Product/Blog/Banner/Slider/Category — thay việc gõ URL thủ công
 js/video-utils.js       Parse link YouTube/Vimeo → embed URL + thumbnail
 js/ai/                  AI Assistant (Workflow Engine) — xem mục "AI Assistant" bên dưới
 admin/ai/               Giao diện quản trị AI Assistant — xem mục "AI Assistant" bên dưới
@@ -29,6 +31,8 @@ scripts/extract.js      Script trích xuất sản phẩm từ pshopmusic.html g
 scripts/generate-sitemap.js  Tạo lại sitemap.xml từ dữ liệu Firebase thật — chạy: node scripts/generate-sitemap.js
 robots.txt, sitemap.xml SEO
 netlify.toml            Cấu hình deploy Netlify (tắt pretty_urls để giữ query string ?cat=...)
+database.rules.json     Firebase Realtime Database Security Rules (Sprint 8) — nguồn sự thật duy nhất, deploy qua `firebase deploy --only database`
+firebase.json           Cấu hình Firebase CLI (trỏ tới `database.rules.json`, Cloud Functions trong `functions/`)
 ```
 
 ## Running locally
@@ -57,11 +61,18 @@ npx serve .
 | `admin/settings.html` | **Admin** | Cài đặt chung — thông tin liên hệ, nội dung mục Dịch vụ. |
 | `admin/users.html` | **Admin** | Người dùng & Phân quyền — tạo tài khoản, gán vai trò, thu hồi quyền. |
 | `admin/ai/index.html` | Editor/Admin | AI Assistant Dashboard — chạy từng module (Blog Writer, SEO Generator...). |
+| `admin/ai/assistant.html` | Editor/Admin | AI Assistant hội thoại (Sprint 4) — điểm tương tác dạng chat, định tuyến qua `AITaskRouter` cho các plugin nhắm 1 Product/Blog Post cụ thể. |
 | `admin/ai/drafts.html` | Editor/Admin | Duyệt nội dung AI — xem trước, Duyệt & Publish, hoặc Từ chối. |
 | `admin/ai/jobs.html` | Editor/Admin | Job Queue — theo dõi tiến độ, hủy job đang chạy. |
 | `admin/ai/logs.html` | **Admin** | Nhật ký mọi lượt gọi AI (thời gian, người thực hiện, provider, thành/bại). Hỗ trợ lọc `?module=<id>`. |
-| `admin/ai/providers.html` | **Admin** | Chọn/bật nhà cung cấp AI (chưa tích hợp API thật — xem mục AI Assistant). |
-| `admin/ai/plugins.html` | Editor/Admin | Plugin Manager (Sprint 2) — bật/tắt, version, gán provider riêng từng plugin. |
+| `admin/ai/providers.html` | **Admin** | Chọn/bật nhà cung cấp AI (OpenAI tích hợp thật qua Cloud Function Proxy từ Sprint 3 — xem mục AI Assistant; Claude/Gemini/DeepSeek vẫn là stub). |
+| `admin/ai/plugins.html` | Editor/Admin | Plugin Manager (Sprint 2) — bật/tắt, version, gán provider riêng từng plugin. Cả 8/8 plugin viết từ Sprint 1 đã Production từ Sprint 6. |
+| `admin/ai/health.html` | **Admin** | Health Check (Sprint 5) — tình trạng kết nối Provider đang active + Queue + Draft Workflow. |
+| `admin/ai/context-builder.html` | **Admin** | Context Builder Preview (Sprint 7) — xem thử Context Package (`DataProvider` → prompt text) cho 1 Product/Blog Post, hạ tầng dùng chung, chưa Plugin nào áp dụng. |
+| `admin/ai/workflow.html` | **Admin** | Workflow Automation (Sprint 7) — ghép nhiều Plugin chạy tuần tự thủ công (Admin tự bấm "Chạy Workflow"), không lưu lại định nghĩa Workflow. |
+| `admin/ai/workflow-insights.html` | **Admin** | Workflow Insights (Sprint 7) — Timeline từng AI Request (Context → Queue → Provider → Draft → Human Review), chỉ đọc. |
+| `admin/ai/cost-tracking.html` | **Admin** | Cost Tracking (Sprint 7) — chi phí ƯỚC TÍNH theo Provider/Plugin (số lượt Generate thành công × đơn giá tham khảo tĩnh), KHÔNG phải Billing/token thật. |
+| `admin/ai/observability.html` | **Admin** | Observability Dashboard (Sprint 7) — gộp Health/Provider/Queue/Plugin/Usage/Draft vào 1 màn hình, chỉ đọc. |
 
 Vai trò: **Admin** (toàn quyền) và **Editor** (không vào được Menu/Footer/SEO/Cài đặt/Người dùng). Vai trò lưu trong node `roles/{uid}` của Realtime Database, gán khi tạo tài khoản.
 
@@ -71,32 +82,14 @@ Dự án Firebase hiện tại (`pshop-music`) đã có **Realtime Database**. C
 
 1. **Authentication** → Sign-in method → bật **Email/Password**.
 2. **Storage** → bật Storage (có thể yêu cầu nâng lên gói Blaze — vẫn miễn phí trong hạn mức, chỉ tính phí nếu vượt).
-3. Vào **Realtime Database → Rules**, thay bằng:
-   ```json
-   {
-     "rules": {
-       "products": { ".read": true, ".write": "auth != null && root.child('roles').child(auth.uid).exists()" },
-       "categories": { ".read": true, ".write": "auth != null && root.child('roles').child(auth.uid).exists()" },
-       "banners": { ".read": true, ".write": "auth != null && root.child('roles').child(auth.uid).exists()" },
-       "siteContent": { ".read": true, ".write": "auth != null && root.child('roles').child(auth.uid).exists()" },
-       "blogPosts": { ".read": true, ".write": "auth != null && root.child('roles').child(auth.uid).exists()" },
-       "videos": { ".read": true, ".write": "auth != null && root.child('roles').child(auth.uid).exists()" },
-       "seoSettings": { ".read": true, ".write": "auth != null && root.child('roles').child(auth.uid).exists()" },
-       "aiDrafts": { ".read": "auth != null && root.child('roles').child(auth.uid).exists()", ".write": "auth != null && root.child('roles').child(auth.uid).exists()" },
-       "aiJobs": { ".read": "auth != null && root.child('roles').child(auth.uid).exists()", ".write": "auth != null && root.child('roles').child(auth.uid).exists()" },
-       "aiLogs": { ".read": "auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin'", ".write": "auth != null && root.child('roles').child(auth.uid).exists()" },
-       "aiProviderConfig": { ".read": "auth != null && root.child('roles').child(auth.uid).exists()", ".write": "auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin'" },
-       "aiPlugins": { ".read": "auth != null && root.child('roles').child(auth.uid).exists()", ".write": "auth != null && root.child('roles').child(auth.uid).exists()" },
-       "roles": {
-         ".read": true,
-         "$uid": {
-           ".write": "auth != null && ((!root.child('roles').exists() && auth.uid === $uid) || root.child('roles').child(auth.uid).child('role').val() === 'admin')"
-         }
-       }
-     }
-   }
+3. **Realtime Database Rules**: KHÔNG copy tay vào Console — dùng đúng file đã version-control trong repo, `database.rules.json` (Sprint 8 Requirement #1), là nguồn sự thật duy nhất, đã đối chiếu với RBAC thật trong `js/ai/permission-service.js` và có bộ kiểm thử riêng (xem `CHANGELOG.md` Sprint 8 Requirement #1 và #4). Deploy bằng Firebase CLI:
    ```
-4. Vào **Storage → Rules**, thay bằng:
+   firebase deploy --only database
+   ```
+   (yêu cầu đã cài Firebase CLI + `firebase login`, đúng project với Firebase Console.)
+
+   ⚠️ **Quan trọng**: `database.rules.json` **chưa từng được deploy** lên môi trường thật tính đến thời điểm này (xem `ROADMAP.md` mục "Firebase Database Rules"). Rules đang chạy thật trên Firebase Console hiện tại có thể vẫn là một bản cấu hình cũ hơn/kém an toàn hơn (không phân biệt vai trò Admin/Editor, để lộ node `roles` công khai vĩnh viễn) — **hãy vào Firebase Console → Realtime Database → Rules để đối chiếu trước khi giả định Rules đã đúng**, rồi deploy bản trong repo.
+4. **Storage Rules**: khác Database Rules, `storage.rules` **hiện chưa tồn tại trong repo** (chưa version-control, chưa được review) — vẫn cấu hình thủ công trong **Storage → Rules** trên Firebase Console. Ruleset tối thiểu để CMS hoạt động:
    ```
    rules_version = '2';
    service firebase.storage {
@@ -108,6 +101,7 @@ Dự án Firebase hiện tại (`pshop-music`) đã có **Realtime Database**. C
      }
    }
    ```
+   ⚠️ Ruleset này **không phân biệt vai trò** — bất kỳ ai đã đăng nhập CMS (kể cả Editor) đều liệt kê/xóa được toàn bộ ảnh trong Storage qua Media Library (Sprint 8 Requirement #2). Xem `ROADMAP.md` mục "Firebase Storage Security Rules" — đây là một khoảng trống production đã ghi nhận, chưa có Requirement nào xử lý.
 5. Truy cập `/admin/login.html` lần đầu → tạo tài khoản Admin đầu tiên ngay trên form (không cần vào Console tạo user).
 
 ⚠️ Trước khi 2 bước 1–4 hoàn tất, các trang admin mới (ngoài Product Manager cũ) và các node mới (banner/category/blog/video) sẽ báo lỗi kết nối rõ ràng trên console — trang khách vẫn chạy bình thường, không vỡ giao diện.
@@ -132,17 +126,22 @@ Dự án Firebase hiện tại (`pshop-music`) đã có **Realtime Database**. C
 
 ## AI Assistant (Workflow Engine)
 
-Kiến trúc: **CMS → AI Assistant → Draft → Review → Publish** — KHÔNG phải chatbot, AI không tự chạy, không tự publish, không tự bịa dữ liệu. Tài liệu chi tiết: `PROJECT_ARCHITECTURE.md` (kiến trúc tổng thể), `AI_RULES.md` (quy tắc bắt buộc), `ROADMAP.md` (việc chưa làm), `CHANGELOG.md` (lịch sử thay đổi), `docs/SPRINT_2_PROGRESS.md` (tiến độ Sprint hiện tại).
+Kiến trúc: **CMS → AI Assistant → Draft → Review → Publish** — KHÔNG phải chatbot, AI không tự chạy, không tự publish, không tự bịa dữ liệu. Tài liệu chi tiết: `PROJECT_ARCHITECTURE.md` (kiến trúc tổng thể), `AI_RULES.md` (quy tắc bắt buộc), `ROADMAP.md` (việc chưa làm), `CHANGELOG.md` (lịch sử thay đổi, Sprint 2 → Sprint 9), `SPRINT_9_PLANNING.md` (kế hoạch Sprint đang chờ phê duyệt), `docs/SPRINT_8_FINAL_REPORT.md` (báo cáo Sprint gần nhất đã đóng).
 
 - **Chỉ đọc dữ liệu CMS thật** qua đúng `DB`/`CategoryDB`/`BlogDB`/... đã có, không tạo dữ liệu giả định.
 - Mọi kết quả sinh ra lưu vào node **`aiDrafts`** riêng biệt — không bao giờ ghi thẳng vào `products`/`blogPosts`/`siteContent`/... Chỉ khi Admin bấm **Duyệt & Publish** ở `admin/ai/drafts.html` thì mới ghi vào dữ liệu thật, và luôn tái sử dụng đúng hàm ghi dữ liệu có sẵn (`BlogDB.add`, `DB.update`, `BannerDB.add`...).
-- **Provider độc lập** (`js/ai/provider-registry.js` + `js/ai/providers/{openai,claude,gemini,deepseek}.js`) — đổi nhà cung cấp AI chỉ cần đổi `activeProvider` trong `admin/ai/providers.html`, không đụng Workflow/UI. **Chưa tích hợp API AI thật** — mọi provider hiện là stub, luôn trả lỗi rõ ràng "chưa cấu hình" khi chạy thử (đây là thiết kế của giai đoạn này, không phải lỗi).
-- **Module/Plugin độc lập** (`js/ai/module-registry.js` + `js/ai/modules/*.js`): Blog Writer, Product Description Writer, SEO Generator, FAQ Generator, Facebook Post Generator, Image Prompt Generator, Slider Generator, Banner Generator — mỗi module 1 file, thêm/gỡ không ảnh hưởng module khác.
-- **Job Queue** (`js/ai/job-queue.js`, node `aiJobs`) xử lý tuần tự từng mục — trên Dashboard, nhập nhiều dòng vào ô chủ đề = tạo hàng loạt (vd 100 dòng = 100 bài).
+- **Provider độc lập** (`js/ai/provider-registry.js` + `js/ai/providers/{openai,claude,gemini,deepseek}.js`) — đổi nhà cung cấp AI chỉ cần đổi `activeProvider` trong `admin/ai/providers.html`, không đụng Workflow/UI. **OpenAI đã tích hợp API thật từ Sprint 3** qua Cloud Function Proxy (`functions/openaiProxy` — API key giữ trong Secret Manager, không lộ ra client; xem `ARCHITECTURE_REVIEW_SPRINT3.md`), tuy Cloud Function này chưa được deploy lên môi trường thật (thao tác vận hành, xem `ROADMAP.md`). Claude/Gemini/DeepSeek vẫn là stub, luôn trả lỗi rõ ràng "chưa cấu hình" khi chạy thử.
+- **Module/Plugin độc lập** (`js/ai/module-registry.js` + `js/ai/modules/*.js`): Blog Writer, Product Description Writer, SEO Generator, FAQ Generator, Facebook Post Generator, Image Prompt Generator, Slider Generator, Banner Generator — mỗi module 1 file, thêm/gỡ không ảnh hưởng module khác. Cả 8/8 plugin đã Production từ Sprint 6 (không còn plugin "coming soon").
+- **Job Queue** (`js/ai/job-queue.js`, node `aiJobs`) xử lý tuần tự từng mục — trên Dashboard, nhập nhiều dòng vào ô chủ đề = tạo hàng loạt (vd 100 dòng = 100 bài). Từ Sprint 8 Requirement #3, Queue có thêm khoá mềm (`aiJobs/{jobId}/lock`, qua Firebase `transaction()`) chống 2 tab/2 Admin cùng xử lý trùng 1 Job.
   - ⚠️ **V1 (hiện tại): chạy phía trình duyệt Admin** — giữ đúng kiến trúc site tĩnh hiện có (Frontend + Firebase Auth/Database/Storage), không thêm Cloud Functions/backend. Nếu đóng tab `admin/ai/jobs.html` giữa chừng, job dở sẽ tiếp tục khi mở lại trang đó. Thiết kế sau interface (`enqueue/resume/cancel`) để thay implementation mà không đổi API/UI khi nâng cấp.
   - **Roadmap V2**: chuyển xử lý sang Firebase Cloud Functions (trigger theo `aiJobs`) — xử lý tuần tự thật, không phụ thuộc trình duyệt Admin còn mở; đồng thời proxy lời gọi AI thật qua Cloud Function để API key nhà cung cấp không lộ ra client.
   - **Roadmap V3**: dedicated queue service (vd Cloud Tasks) khi quy mô lớn hơn.
 - **Log đầy đủ** (`aiLogs`, xem tại `admin/ai/logs.html`, Admin-only): thời gian, người thực hiện, module, provider, thời gian xử lý, thành/bại — ghi cả khi thất bại vì chưa cấu hình provider.
+- **Đã bổ sung từ Sprint 5-7** (đọc, không thay đổi luồng bắt buộc ở trên): Health Check (`admin/ai/health.html`), Cost Tracking ước tính (`admin/ai/cost-tracking.html`), Context Builder — Context Package dùng chung từ `DataProvider` (`admin/ai/context-builder.html`, chưa Plugin nào dùng), Workflow Automation — ghép nhiều Plugin chạy tuần tự thủ công, không lưu lại định nghĩa (`admin/ai/workflow.html`), Workflow Insights — Timeline từng AI Request, chỉ đọc (`admin/ai/workflow-insights.html`), Observability Dashboard — gộp mọi trạng thái vào 1 màn hình (`admin/ai/observability.html`). Chi tiết đầy đủ: `PROJECT_ARCHITECTURE.md`, `CHANGELOG.md`.
+
+## Media Library (Sprint 8)
+
+Kho ảnh dùng chung cho Product/Blog/Banner/Slider/Category — xây hoàn toàn trên Firebase Storage đã có (`js/storage-upload.js`), không thêm Database node nào. `js/media-library.js` (duyệt đệ quy toàn bộ Storage Bucket, tìm theo tên, upload, xóa) + `js/media-library-picker.js` (Experience Layer: Preview thumbnail, chọn/thay/xóa ảnh, kéo thả để tải lên — không còn ô nhập URL thủ công trên giao diện mặc định). Ảnh mới tải qua Media Library gộp vào thư mục `media/`; ảnh cũ tải trước Sprint 8 (rải rác ở `products/`, `banners/`...) vẫn hiển thị đầy đủ vì Media Library đọc trực tiếp từ Storage, không cần migrate. `js/ai/data-provider.js` (AI Framework) **chưa đọc từ Media Library này** — vẫn suy ra ảnh từ `product.images` của từng sản phẩm như trước (xem `ROADMAP.md`).
 
 ## Notes
 

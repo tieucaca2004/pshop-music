@@ -2,6 +2,19 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 9 — Documentation Integrity Restoration (Requirement #1)
+
+Chỉ sửa tài liệu — không sửa mã nguồn, không đổi Database/Firebase Rules/AI Framework/Workflow/Plugin. Mục tiêu: đồng bộ `README.md`/`AI_RULES.md` với trạng thái thực tế của hệ thống sau khi rà soát ở `SPRINT_9_PLANNING.md`.
+
+- **`README.md` — sửa 1 phát hiện nghiêm trọng**: khối Rules Realtime Database nhúng trong hướng dẫn "Thiết lập Firebase" (trước đây ở dòng 74-98) **khác và kém an toàn hơn** `database.rules.json` thật đã review ở Sprint 8 Requirement #1 (không phân biệt vai trò Admin/Editor; để `roles` đọc công khai vĩnh viễn thay vì chỉ lúc bootstrap). Thay bằng hướng dẫn deploy đúng file `database.rules.json` qua `firebase deploy --only database`, kèm cảnh báo rõ Rules này **chưa từng được deploy** nên cần đối chiếu thủ công với Rules đang chạy thật trên Firebase Console trước khi giả định đã đúng.
+- **`README.md` — Storage Rules**: giữ nguyên nội dung ruleset hiện tại (không tự viết `storage.rules` mới — đó là phạm vi Sprint 9 Requirement #3, chưa được giao), nhưng thêm cảnh báo rõ ruleset này không phân biệt vai trò và chưa được version-control/review, trỏ tới `ROADMAP.md`.
+- **`README.md` — sửa các claim đã lỗi thời khác**: "mọi provider hiện là stub" (sai từ Sprint 3 — OpenAI đã tích hợp thật qua Cloud Function Proxy); bảng "CMS Admin" thiếu 7 trang AI thêm từ Sprint 4-7 (`assistant.html`, `health.html`, `context-builder.html`, `workflow.html`, `workflow-insights.html`, `cost-tracking.html`, `observability.html`) — đã bổ sung đủ kèm vai trò yêu cầu chính xác (đối chiếu `requiredRole` thật trong từng `js/admin-ai-*.js`); tham chiếu tài liệu tiến độ trỏ tới `docs/SPRINT_2_PROGRESS.md` (lạc hậu) — đổi sang `CHANGELOG.md`/`SPRINT_9_PLANNING.md`/`docs/SPRINT_8_FINAL_REPORT.md`. Bổ sung mục "Structure" còn thiếu `js/media-library.js`/`js/media-library-picker.js`/`database.rules.json`/`firebase.json`, thêm 1 mục "Media Library" mới và ghi chú Job Queue Concurrency Safety (Sprint 8) vào mục "AI Assistant".
+- **`AI_RULES.md` — gộp 2 cặp mục bị đánh trùng số**: "## 7. Log bắt buộc..." xuất hiện 2 lần (bản cũ dùng thuật ngữ lỗi thời `success`/`failure`, mâu thuẫn bản đã cập nhật ở Requirement #7 dùng `completed`/`failed`/`cancelled`) — xoá bản cũ, giữ đúng 1 bản. "## 8. Giới hạn phạm vi hiện tại (Sprint 2)" trùng số với "## 8. Permission & Safety Layer" — đổi thành "## 9.", nội dung cập nhật đúng thực tế (8/8 plugin Production từ Sprint 6, thay vì "chỉ 3 plugin Enable" của Sprint 2). Mục "Giới hạn kiến trúc phát hiện khi triển khai Sprint 2" đổi tên thành "Giới hạn kiến trúc đã biết (cập nhật liên tục qua các Sprint)", sửa claim "Media Library chưa tồn tại" (sai từ Sprint 8 Requirement #2) thành ghi nhận đúng: Media Library đã có, nhưng `DataProvider.getMedia()` chưa đọc từ đó. Bảng `DataProvider` (mục 2b) cũng sửa dòng `getMedia()` theo đúng thực tế này.
+- **Không đổi bất kỳ quy tắc/ràng buộc nào ở `AI_RULES.md`** (mục 1-8: Workflow bắt buộc, Data Provider, User-triggered, Provider độc lập, Plugin độc lập, Plugin Manager, Job Queue, Log, Permission) — chỉ sửa phần mô tả trạng thái/phạm vi đã lỗi thời, không sửa Constitution.
+- **Phát hiện mới, ghi vào `ROADMAP.md`, không tự sửa ở Requirement này**: con số nợ kỹ thuật `escapeHtml()` trùng lặp trước đây ghi "10 file" — grep lại cho thấy con số thật là **26 file** trên toàn bộ `js/` (không chỉ `admin-ai*.js`).
+- Cập nhật `CHANGELOG.md` (mục này), `PROJECT_ARCHITECTURE.md`.
+- **Không làm Requirement #2.**
+
 ## Sprint 8 — Kiểm tra toàn diện + Đóng Sprint (Requirement #4) — SPRINT 8 COMPLETED
 
 Sprint Review cuối cùng của Sprint 8 — không thêm tính năng, chỉ kiểm thử/xác minh/đánh giá toàn bộ 3 Requirement trước khi đóng Sprint.

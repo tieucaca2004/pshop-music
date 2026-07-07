@@ -186,7 +186,7 @@ Log phục vụ theo dõi tiến trình/debug/audit/kiểm tra lỗi qua `admin/
 
 Luồng bắt buộc: **User → Permission → Queue → AI Provider → Draft**. Kiểm tra quyền diễn ra ở lớp UI (`js/admin-ai.js`, hàm `runModule()`) **TRƯỚC khi** gọi `PluginManager.loadPlugin(id).execute()` — cố tình đặt ở đây thay vì sửa `job-queue.js`/`plugin-manager.js`, đúng yêu cầu giữ nguyên 2 module đó trong Requirement #8. Nếu bị từ chối quyền: không gọi `execute()` → không tạo Job → không vào Queue → không gọi AI Provider → không tạo Draft — chỉ ghi 1 dòng Log `permission_denied` (qua `LogDB` có sẵn).
 
-Quyền hỗ trợ (`AI_PERMISSIONS`): `ai.generate.product`, `ai.generate.slider`, `ai.generate.seo` (ứng với 3 plugin đang Enable), `ai.manage.providers`, `ai.manage.plugins`. Vai trò `admin` có toàn bộ quyền; vai trò `editor` chỉ có 3 quyền `ai.generate.*` — không có `ai.manage.providers`/`ai.manage.plugins`, đúng yêu cầu "chỉ Admin mới được đổi AI Provider và Plugin Settings". Đã bổ sung `requiredRole:'admin'` còn thiếu ở `admin/ai/plugins.html` (đã có sẵn ở `admin/ai/providers.html` từ trước) để khớp đúng quy tắc này ở cấp trang.
+Quyền hỗ trợ (`AI_PERMISSIONS`): `ai.generate.{product,slider,seo,faq,blog,facebook,banner,imagePrompt}` (8 quyền, ứng với 8/8 plugin đã Production — 3 quyền đầu từ Sprint 2, 5 quyền sau thêm dần ở Sprint 5-6 khi từng plugin được kích hoạt), `ai.manage.providers`, `ai.manage.plugins` — 10 quyền tổng cộng *(số liệu cập nhật ở Sprint 9 Requirement #1, trước đó tài liệu ghi thiếu 5 quyền generate thêm từ Sprint 5-6)*. Vai trò `admin` có toàn bộ 10 quyền; vai trò `editor` có 8 quyền `ai.generate.*` — không có `ai.manage.providers`/`ai.manage.plugins`, đúng yêu cầu "chỉ Admin mới được đổi AI Provider và Plugin Settings". Đã bổ sung `requiredRole:'admin'` còn thiếu ở `admin/ai/plugins.html` (đã có sẵn ở `admin/ai/providers.html` từ trước) để khớp đúng quy tắc này ở cấp trang.
 
 ⚠️ **Giới hạn đã biết**: kiểm tra quyền hiện chỉ áp dụng tại điểm gọi duy nhất hiện có (`admin-ai.js` → `PluginManager.execute()`). Nếu sau này có thêm nơi khác gọi thẳng `PluginManager.execute()`, nơi đó cũng phải tự gọi `PermissionService.checkPluginExecution()` trước — không có tầng chặn tự động bên trong `plugin-manager.js`/`job-queue.js` (cố tình, theo đúng yêu cầu không sửa 2 module này ở Requirement #8).
 
@@ -609,6 +609,15 @@ Administrator → admin/ai/observability.html (js/admin-ai-observability.js)
 Sprint Review cuối Sprint 8 — không thêm kiến trúc mới, chỉ tái xác nhận 3 Requirement (#1-#3) bằng cách chạy lại **mã nguồn thật** (không phải mô tả lại) — 41/41 kịch bản kiểm thử PASS (15 Database Rules + 11 Media Library core + 10 Media Library Picker qua Chromium thật + 5 Job Queue Concurrency). Chi tiết đầy đủ: `docs/SPRINT_8_FINAL_REPORT.md`.
 
 Phát hiện đáng chú ý nhất của Requirement #4: **1 kết luận bảo mật của Requirement #1 bị đính chính**. Ghi nhận ban đầu cho rằng `js/admin-users.js` sẽ gãy sau khi deploy `database.rules.json` (vì `createUserWithEmailAndPassword()` được cho là hijack phiên đăng nhập Admin đang thao tác). Đọc lại đúng mã nguồn thật cho thấy hàm `createUser()` đã dùng 1 Firebase App phụ (`secondaryApp`, có sẵn từ Sprint 1, đúng mục đích tránh hijack phiên) — phiên đăng nhập CHÍNH (nơi ghi `roles/{uid mới}` thật sự chạy) không hề bị ảnh hưởng. Đây là minh chứng cụ thể cho lý do "kiểm thử bằng mã nguồn thật" là một bước bắt buộc của Sprint Review, không phải chỉ tái khẳng định tài liệu cũ. Xem `ROADMAP.md` mục "Firebase Database Rules" cho phân tích đầy đủ.
+
+## Sprint 9 — Documentation Integrity Restoration (Requirement #1)
+
+Requirement thuần tài liệu — không đổi kiến trúc/mã nguồn/Database/Firebase Rules. Rà soát lại `README.md`/`AI_RULES.md` cho khớp trạng thái thực tế, phát hiện đáng chú ý nhất:
+
+- **`README.md`** hướng dẫn cấu hình Firebase Realtime Database Rules thủ công (copy tay vào Console) bằng 1 bản Rules **khác và kém an toàn hơn** `database.rules.json` đã review ở Sprint 8 Requirement #1 (không phân biệt Admin/Editor; để `roles` đọc công khai vĩnh viễn). Vì Rules thật chưa từng được `firebase deploy`, có khả năng hệ thống đang chạy đúng bản kém an toàn này. Đã sửa README trỏ về `database.rules.json` + `firebase deploy --only database` làm nguồn sự thật duy nhất, kèm cảnh báo cần đối chiếu thủ công trước khi giả định Rules đã đúng.
+- **`AI_RULES.md`** có 2 mục bị đánh trùng số ("§7"/"§8" xuất hiện 2 lần, bản cũ mâu thuẫn bản mới) và bảng `AI_PERMISSIONS` chỉ liệt kê 3/8 quyền `ai.generate.*` thật sự có trong `js/ai/permission-service.js` (5 quyền thêm ở Sprint 5-6 khi kích hoạt FAQ/Blog/Facebook/Banner/Image Prompt Generator chưa từng được ghi vào Constitution). Đã gộp mục trùng số, cập nhật đủ 10 quyền — không đổi bất kỳ quy tắc/ràng buộc nào, chỉ cập nhật phần mô tả trạng thái cho khớp code đã có sẵn.
+
+Chi tiết đầy đủ: `CHANGELOG.md` mục "Sprint 9 — Documentation Integrity Restoration".
 
 ## Lịch sử phát triển
 

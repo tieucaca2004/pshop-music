@@ -36,7 +36,7 @@ AI Plugin → DataProvider (IDataProvider) → CMS Database → Context → AI P
 | `getProduct(id)` / `getProducts()` | `DB` (Products) |
 | `getCategories()` | `CategoryDB` (Categories) |
 | `getBrands()` | Suy ra từ field `brand` trên Products — chưa có CMS module Brand riêng |
-| `getMedia(productId)` | Ảnh có sẵn của chính Product (`images`) — chưa có Media Library CMS module riêng |
+| `getMedia(productId)` | Ảnh có sẵn của chính Product (`images`) — CHƯA đọc từ Media Library dùng chung đã có từ Sprint 8 Requirement #2 (xem mục "Giới hạn kiến trúc đã biết" cuối file) |
 | `getBlogPost(id)` / `getBlogPosts()` | `BlogDB` (Blog) |
 | `getSEO()` | `SeoDB` (SEO) |
 | `getSettings()` | `SiteContentDB.settings` (Settings) |
@@ -140,10 +140,17 @@ Mọi AI Plugin **phải kiểm tra quyền trước khi thực thi**. AI Plugin
 - `ai.generate.product` — chạy Product Description Generator
 - `ai.generate.slider` — chạy Slider Generator
 - `ai.generate.seo` — chạy SEO Generator
+- `ai.generate.faq` — chạy FAQ Generator *(thêm ở Sprint 5, Requirement #3)*
+- `ai.generate.blog` — chạy Blog Writer *(thêm ở Sprint 6, Requirement #1)*
+- `ai.generate.facebook` — chạy Facebook Post Generator *(thêm ở Sprint 6, Requirement #2)*
+- `ai.generate.banner` — chạy Banner Generator *(thêm ở Sprint 6, Requirement #3)*
+- `ai.generate.imagePrompt` — chạy Image Prompt Generator *(thêm ở Sprint 6, Requirement #4)*
 - `ai.manage.providers` — đổi AI Provider (`admin/ai/providers.html`)
 - `ai.manage.plugins` — đổi Plugin Settings (`admin/ai/plugins.html`)
 
-**Vai trò → quyền** (`ROLE_PERMISSIONS`): `admin` có toàn bộ 5 quyền; `editor` chỉ có 3 quyền `ai.generate.*` — **không có** `ai.manage.providers`/`ai.manage.plugins`, đúng yêu cầu "chỉ Admin mới được thay đổi AI Provider và Plugin Settings". Thực thi ở cấp trang qua `AdminAuth.init({requiredRole:'admin'})` — đã có sẵn ở `admin/ai/providers.html` từ trước, bổ sung thêm ở `admin/ai/plugins.html` (trước đây thiếu, là 1 lỗ hổng thực sự so với yêu cầu này).
+*(Danh sách 5 quyền `ai.generate.*` được cập nhật đầy đủ ở Sprint 9 Requirement #1 — Documentation Integrity Restoration; trước đó chỉ ghi 3 quyền đầu tiên từ Sprint 2, dù mã nguồn `js/ai/permission-service.js` đã có đủ cả 8 từ Sprint 6. Đây là cập nhật tài liệu cho khớp code đã có sẵn, KHÔNG phải thêm quyền mới.)*
+
+**Vai trò → quyền** (`ROLE_PERMISSIONS`): `admin` có toàn bộ 10 quyền; `editor` có 8 quyền `ai.generate.*` (toàn bộ plugin generate, kể cả 5 plugin kích hoạt ở Sprint 5-6) — **không có** `ai.manage.providers`/`ai.manage.plugins`, đúng yêu cầu "chỉ Admin mới được thay đổi AI Provider và Plugin Settings". Thực thi ở cấp trang qua `AdminAuth.init({requiredRole:'admin'})` — đã có sẵn ở `admin/ai/providers.html` từ trước, bổ sung thêm ở `admin/ai/plugins.html` (trước đây thiếu, là 1 lỗ hổng thực sự so với yêu cầu này).
 
 **Luồng bắt buộc**: `User → Permission → Queue → AI Provider → Draft`. Kiểm tra quyền diễn ra ở lớp UI (`js/admin-ai.js`, hàm `runModule()`) **TRƯỚC KHI** gọi `PluginManager.loadPlugin(id).execute()` — cố tình đặt tại đây thay vì sửa `js/ai/job-queue.js` hay `js/ai/plugin-manager.js`, đúng yêu cầu **giữ nguyên Queue và Plugin Manager** ở Requirement #8. Nếu bị từ chối quyền:
 - **Không tạo Job** — `execute()` (dẫn tới `AIJobQueue.enqueue()`) không bao giờ được gọi.
@@ -154,19 +161,19 @@ Mọi AI Plugin **phải kiểm tra quyền trước khi thực thi**. AI Plugin
 
 ⚠️ **Giới hạn đã biết**: việc kiểm tra quyền hiện chỉ nằm ở điểm gọi duy nhất (`admin-ai.js`). Nếu sau này có thêm nơi khác gọi `PluginManager.execute()` trực tiếp, nơi đó cũng phải tự gọi `PermissionService.checkPluginExecution()` — không có tầng chặn tự động bên trong `plugin-manager.js`/`job-queue.js` (cố tình, vì Requirement #8 yêu cầu không sửa 2 module đó).
 
-## 7. Log bắt buộc cho mọi lượt chạy
+## 9. Giới hạn phạm vi hiện tại
 
-Mỗi item xử lý (kể cả thất bại vì chưa cấu hình provider) đều ghi 1 dòng vào `aiLogs` (`LogDB`) gồm: thời gian, người thực hiện (uid + email), plugin, provider, `jobId`, thời gian xử lý (`durationMs`), trạng thái (`success`/`failure`), thông báo lỗi nếu có. Không được bỏ log ở bất kỳ nhánh nào của `processItem()`.
+*(Cập nhật ở Sprint 9 Requirement #1 — Documentation Integrity Restoration. Mục này trước đây đánh trùng số "## 8" với mục 8 "Permission & Safety Layer" ở trên và có 1 bản nháp Sprint 2 cũ (thuật ngữ `success`/`failure` đã lỗi thời, xem mục 7 mới ở trên dùng đúng `completed`/`failed`/`cancelled`) — đã gộp lại thành đúng 1 mục duy nhất, cập nhật đúng thực tế hiện tại, KHÔNG đổi bất kỳ quy tắc/ràng buộc nào ở mục 1-8.)*
 
-## 8. Giới hạn phạm vi hiện tại (Sprint 2)
+Cả 8/8 plugin viết từ Sprint 1 (Blog Writer, Product Description Generator, SEO Generator, FAQ Generator, Facebook Post Generator, Image Prompt Generator, Slider Generator, Banner Generator) đã **Production** từ Sprint 6 — không còn plugin nào ở trạng thái Disabled/Coming Soon (xem `CHANGELOG.md` Sprint 5/6, `ROADMAP.md` mục "AI Assistant").
 
-Chỉ 3 plugin đang **Enable**: Product Description Generator, Slider Generator, SEO Generator. 5 plugin viết ở Sprint 1 (Blog Writer, Facebook Post Generator, Banner Generator, FAQ Generator, Image Prompt Generator) giữ nguyên code, đánh dấu **Disabled/Coming Soon** trong Plugin Manager — không xóa, không refactor, sẽ bật ở sprint sau (xem `ROADMAP.md`).
+Chưa tích hợp AI Image Generation / AI Video ở bất kỳ hình thức nào (kể cả gọi thử) — các module liên quan (`image-prompt-generator`) chỉ sinh **văn bản prompt** để người dùng tự dùng ở công cụ khác. Vẫn đúng tính đến Sprint 9.
 
-Chưa tích hợp AI Image Generation / AI Video ở bất kỳ hình thức nào (kể cả gọi thử) — các module liên quan (`image-prompt-generator`) chỉ sinh **văn bản prompt** để người dùng tự dùng ở công cụ khác.
+## Giới hạn kiến trúc đã biết (cập nhật liên tục qua các Sprint)
 
-## Giới hạn kiến trúc phát hiện khi triển khai Sprint 2
+*(Mục này trước đây tên "Giới hạn kiến trúc phát hiện khi triển khai Sprint 2" — đổi tên cho đúng bản chất là 1 danh sách cập nhật liên tục, không chỉ riêng Sprint 2.)*
 
-- **Media Library chưa tồn tại**: Slider Generator dùng tạm `product.images` của chính sản phẩm đang xử lý làm nguồn ảnh, thay vì đọc 1 Media Library tổng.
-- **Sản phẩm không có trang riêng**: SEO Generator Sprint 2 chỉ nhắm **Blog Post** (nơi `blog-post.html` đã có cơ chế set Meta/OG động sẵn) — chưa áp dụng cho Product.
+- ~~Media Library chưa tồn tại~~ — **đã xây từ Sprint 8 Requirement #2** (`js/media-library.js`/`js/media-library-picker.js`, kho ảnh dùng chung cho Product/Blog/Banner/Slider/Category). Tuy nhiên `DataProvider.getMedia()` (mục 2b ở trên) **CHƯA đọc từ Media Library này** — vẫn suy ra ảnh từ `product.images` của chính sản phẩm đang xử lý, đúng Architectural Constraint "Không đổi Data Provider" của Requirement #2 (xem `ROADMAP.md` mục "Media Library").
+- **Sản phẩm không có trang riêng**: SEO Generator chỉ nhắm **Blog Post** (nơi `blog-post.html` đã có cơ chế set Meta/OG động sẵn) — chưa áp dụng cho Product. Vẫn đúng tính đến Sprint 9.
 
-Hai điểm trên đã ghi vào `ROADMAP.md`, không tự ý xây thêm Media Library hay trang sản phẩm riêng nếu chưa được yêu cầu.
+Cả 2 điểm trên đã ghi vào `ROADMAP.md` — không tự ý xây thêm (sửa `DataProvider.getMedia()`, hay trang sản phẩm riêng) nếu chưa được yêu cầu rõ ràng ở 1 Requirement riêng.
