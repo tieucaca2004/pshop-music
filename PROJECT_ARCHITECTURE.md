@@ -598,6 +598,47 @@ Administrator → admin/ai/observability.html (js/admin-ai-observability.js)
 - **Không đổi Database Structure**: không thêm Field/Collection nào — toàn bộ dữ liệu đọc từ `aiLogs`/`aiJobs`/`aiDrafts`/`aiPlugins`/`aiProviderConfig` đã có.
 - **Có thể mở rộng thành Monitoring Dashboard sau này** (NFR) — `compute()` tách biệt hoàn toàn khỏi phần render, dễ thêm auto-refresh/ngưỡng cảnh báo ở Requirement sau mà không đổi cấu trúc hiện tại.
 
+## Business Manager Foundation (Sprint 10, Requirement #1)
+
+**Chỉ là nền tảng phân tích + thiết kế — KHÔNG có code Multi-tenant nào được triển khai ở Requirement này.** Đúng Architectural Constraint: mọi thay đổi Database Structure/Data Provider/Authentication Model cần thiết cho Multi-tenant đều bị khoá lại, chờ Decision Record được phê duyệt (xem `docs/DECISION_RECORD_BUSINESS_MANAGER.md`).
+
+### Audit — PSH Platform hiện tại là single-tenant ở MỌI tầng, không chỉ Database
+
+| Tầng | Bằng chứng cụ thể | Ảnh hưởng Multi-tenant |
+|---|---|---|
+| **Deployment** | `js/firebase-config.js` trỏ đúng 1 project Firebase (`pshop-music`) — 1 Realtime Database, 1 Storage bucket, 1 Auth instance cho TOÀN BỘ app; `netlify.toml` là cấu hình 1 site tĩnh = 1 domain | Toàn bộ app boot cứng vào 1 backend — thêm doanh nghiệp mới hiện đòi hỏi deploy 1 bộ code + Firebase project MỚI HOÀN TOÀN, không phải "tạo trong app" |
+| **Database Structure** | Toàn bộ 13 node CMS/AI (`products`/`categories`/`banners`/`blogPosts`/`videos`/`siteContent`/`seoSettings`/`aiDrafts`/`aiJobs`/`aiLogs`/`aiProviderConfig`/`aiPlugins`) đều là node TOÀN CỤC, không có field/namespace phân biệt doanh nghiệp | Không thể lưu dữ liệu 2 doanh nghiệp mà không trộn lẫn |
+| **Authentication Model** | `roles/{uid}` là 1 node toàn cục duy nhất — 1 user có ĐÚNG 1 vai trò cho TOÀN BỘ hệ thống, không có khái niệm "vai trò theo từng doanh nghiệp". Xác nhận cả `js/admin-auth.js`, `js/admin-login.js`, `js/ai/permission-service.js`, VÀ `functions/index.js` (Cloud Function, dòng 38: `admin.database().ref('roles/' + decoded.uid)`) đều đọc đúng node toàn cục này | Không thể cho 1 người có quyền khác nhau ở 2 doanh nghiệp |
+| **Firebase Rules** | `database.rules.json`/`storage.rules` viết cứng theo đúng danh sách node cố định ở trên | Cần viết lại hoàn toàn nếu đổi cấu trúc Database (xem Quyết định #1 trong Decision Record) |
+| **Static Site / Branding** | `index.html`/`category.html`/`blog.html`/`videos.html` có `<title>`/meta/OG/JSON-LD/footer hard-code text "Pshop Music" (48 file trong repo chứa chuỗi "Pshop Music", phần lớn là các trang admin/AI dùng chung tiêu đề `<title>...- Pshop Music Admin</title>`) | Đây là vấn đề KHÁC với Database — cần templating Site Shell theo từng doanh nghiệp, không chỉ đổi nguồn dữ liệu |
+| **Seed/Fallback Data** | `js/products-seed.js` (42 sản phẩm gốc Pshop Music), `js/site-content-seed.js` (địa chỉ/giới thiệu/copyright Pshop Music) — chỉ là fallback khi Firebase rỗng, dữ liệu thật vẫn ở Firebase | Rủi ro thấp (đã editable qua CMS), nhưng vẫn là 1 bộ seed giả định 1 doanh nghiệp |
+| **AI Framework** | `aiProviderConfig`/`aiPlugins` là cấu hình TOÀN CỤC (1 Provider/Plugin setting cho cả hệ thống); `DataProvider`/`ContextBuilder` không có khái niệm "đang phục vụ doanh nghiệp nào" | Cả AI Context lẫn cấu hình Provider/Plugin đều cần biết doanh nghiệp hiện tại nếu muốn tách biệt |
+
+### Business Abstraction — thiết kế khái niệm (chưa triển khai)
+
+```
+Business (thực thể hạng nhất — CHƯA tồn tại trong Database hiện tại)
+ ├─ id, name, domain, branding (logo/màu/liên hệ)
+ ├─ Website   — Site Shell (title/meta/branding) → hiện hard-code trong HTML, cần templating hoá
+ ├─ CMS       — products/categories/banners/blogPosts/videos/siteContent/seoSettings → hiện node toàn cục
+ ├─ Media     — Media Library (Storage) → hiện đọc toàn bộ 1 Bucket, cần phân vùng theo doanh nghiệp
+ ├─ AI        — aiDrafts/aiJobs/aiLogs/aiProviderConfig/aiPlugins + DataProvider/ContextBuilder → hiện node toàn cục
+ ├─ Workflow  — Định nghĩa Workflow (Sprint 7 #4, hiện không lưu trữ) → nếu lưu lại sau này cũng cần scope theo doanh nghiệp
+ └─ Settings  — SiteContentDB.settings (liên hệ/địa chỉ) → hiện 1 node duy nhất, cần 1-per-business
+```
+
+### Business Manager Layer — đề xuất (chỉ là đề xuất, KHÔNG triển khai)
+
+Nếu được phê duyệt, `BusinessManager` sẽ đóng vai trò tương tự `PluginManager` (Sprint 2 #4) — 1 lớp trung gian DUY NHẤT giữa UI và toàn bộ Data Layer, chịu trách nhiệm biết "đang thao tác cho doanh nghiệp nào" và inject đúng ngữ cảnh đó vào mọi lời gọi `DB`/`CategoryDB`/`DataProvider`/... — **không phá kiến trúc hiện tại** (Plugin Manager/Provider Manager/Permission Service/Queue/AI Task Router giữ nguyên hoàn toàn, chỉ thêm 1 tầng resolve "current business" phía trước Data Layer). Thiết kế cụ thể (Option A/B cho từng phần) nằm trong `docs/DECISION_RECORD_BUSINESS_MANAGER.md` — CHƯA chọn phương án nào.
+
+### Founder Experience — xác nhận rõ: CHƯA đủ điều kiện triển khai
+
+Theo đúng yêu cầu "Nếu chưa đủ điều kiện triển khai. Phải ghi rõ.": **"Tạo Business mới"/"Đổi Business"/"Xem danh sách Business" đều CHƯA thể triển khai** ở Requirement này. Cả 3 tính năng này đòi hỏi tối thiểu 1 node Firebase mới để lưu danh sách doanh nghiệp — bản thân việc "tạo 1 node mới" đã là thay đổi Database Structure, đúng loại thay đổi bị khoá bởi Architectural Constraint của Requirement này. Không có cách nào triển khai 3 tính năng này mà không vi phạm ràng buộc "Không tự triển khai Database Structure — Tạo Decision Record — Chờ phê duyệt". Xem `docs/DECISION_RECORD_BUSINESS_MANAGER.md` để biết chính xác quyết định nào cần Chief Architect chọn trước khi các tính năng này có thể bắt đầu code.
+
+### Không migrate dữ liệu
+
+Đúng yêu cầu — Requirement này KHÔNG chạm vào bất kỳ dữ liệu Pshop Music nào, không tạo doanh nghiệp "A Tiểu" nào (kể cả dưới dạng thử nghiệm), không thêm field/node mới vào Database thật. Toàn bộ nội dung ở đây là phân tích + thiết kế + Decision Record.
+
 ## Giới hạn kiến trúc đã biết (không tự ý "vá" bằng cách thêm hạ tầng mới)
 
 - **Job Queue vẫn không có backend riêng (V1)** — `AIJobQueue` xử lý tuần tự phía trình duyệt Admin, không đổi ở Sprint 3. Cloud Function duy nhất hiện có (`openaiProxy`, xem mục "Cloud Function Proxy Layer") chỉ là proxy gọi OpenAI API, KHÔNG phải backend xử lý Queue — nâng Job Queue lên Cloud Functions (Job Queue V2, xem `ROADMAP.md`) vẫn là quyết định kiến trúc cần người phụ trách xác nhận trước, chưa triển khai. Từ Sprint 8 Requirement #3, Queue có thêm khoá mềm chống xử lý trùng giữa nhiều tab (xem mục "Concurrency Safety" ở "Queue Layer") — vẫn KHÔNG phải backend riêng, chỉ là 1 lớp phòng vệ bổ sung phía client.
