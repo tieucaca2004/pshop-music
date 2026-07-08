@@ -9,6 +9,7 @@
 // này còn được dùng lại ở admin/ai/*.html (lồng sâu hơn 1 cấp thư mục), href
 // tương đối sẽ bị sai đường dẫn nếu render từ thư mục con.
 const ADMIN_NAV = [
+  { key: 'founder-home', label: 'Trang chủ', href: '/admin/home.html', icon: '&#127968;' },
   { key: 'dashboard', label: 'Dashboard', href: '/admin/index.html', icon: '&#9776;' },
   { key: 'products', label: 'Sản phẩm', href: '/admin/products.html', icon: '&#127925;' },
   { key: 'categories', label: 'Danh mục', href: '/admin/categories.html', icon: '&#128193;' },
@@ -16,6 +17,7 @@ const ADMIN_NAV = [
   { key: 'sliders', label: 'Slider', href: '/admin/sliders.html', icon: '&#127909;' },
   { key: 'blog', label: 'Blog', href: '/admin/blog.html', icon: '&#128221;' },
   { key: 'videos', label: 'Video', href: '/admin/videos.html', icon: '&#127916;' },
+  { key: 'media-library', label: 'Thư viện ảnh', href: '/admin/media-library.html', icon: '&#128444;' },
   { key: 'ai-assistant', label: 'Trợ lý AI', href: '/admin/ai/assistant.html', icon: '&#129302;' },
   { key: 'ai', label: 'AI Assistant', href: '/admin/ai/index.html', icon: '&#129302;' },
   { key: 'menu', label: 'Menu', href: '/admin/menu.html', icon: '&#9776;', role: 'admin' },

@@ -631,6 +631,33 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Founder Daily Workflow (Sprint 10, Requirement #5)
+
+Experience Layer CAO NHẤT của PSH — Founder mở PSH để hoàn thành công việc (Thêm sản phẩm/Tạo Marketing Package/Review/Generate), KHÔNG để quản trị AI. Trang này không hiển thị thuật ngữ Queue/Plugin/Provider/Prompt/Workflow/Cost:
+
+```
+Founder → admin/home.html (js/admin-home.js)
+       → Current Business (SiteContentDB.settings — KHÔNG chọn nhiều doanh nghiệp)
+       → Quick Actions (7 mục, không Queue/Plugin/Provider/Prompt/Cost/Debug):
+            Thêm sản phẩm → products.html
+            One Click Marketing → ai/one-click-marketing.html
+            Media Library → media-library.html (trang MỚI)
+            AI Content → ai/index.html
+            AI Image → ai/index.html
+            AI Video → "Sắp có" (disabled, không href — chưa có năng lực)
+            Marketing Drafts → ai/drafts.html
+       → Recent Products/Marketing Drafts/AI Jobs/Media (mỗi mục 5-6 bản ghi mới nhất,
+            nhãn Plugin/Trạng thái thân thiện qua AIModuleRegistry — không lộ moduleId/status code)
+       → Recent Activities (gộp CẢ 4 nguồn trên thành 1 dòng thời gian, không đọc thêm nguồn nào mới)
+```
+
+- **Không phát sinh Business Logic/Database Structure mới** — `js/admin-home.js` chỉ gọi lại đúng các hàm đọc đã có (`DB.getAll()`/`DraftDB.getAll()`/`JobDB.getAll()`/`MediaLibrary.list()`/`SiteContentDB.get()`), không ghi bất kỳ đâu — cùng nguyên tắc tổng hợp nhiều nguồn đã dùng ở Observability Dashboard (Sprint 7 #1).
+- **Recent Activities không đọc thêm dữ liệu** — chỉ tái sắp xếp (theo `createdAt`/`timeCreated`) kết quả CÙNG 1 lượt gọi `Promise.all()` đã tải cho 4 mục Recent phía trên, giữ số lượng round-trip Firebase/Storage tối thiểu.
+- **Media Library có trang duyệt độc lập lần đầu tiên** (`admin/media-library.html` + `js/admin-media-library.js`) — trước đây (Sprint 8) `MediaLibrary`/`MediaLibraryPicker` chỉ tồn tại dạng Modal gắn vào 1 field cụ thể trên form CMS, không có nơi duyệt/quản lý độc lập. Trang mới gọi lại nguyên vẹn `MediaLibrary.list()/upload()/remove()` (Sprint 8, không sửa).
+- **`ADMIN_NAV`** (`js/admin-auth.js`) thêm 2 mục mới ("Trang chủ" đầu danh sách, "Thư viện ảnh") — chỉ thêm, không sửa/xoá mục nào khác.
+- **Product Experience — 2 giới hạn đã biết, không tự mở rộng sửa** (xem `ROADMAP.md` mục "Founder Daily Workflow"): "AI Content"/"AI Image" cùng trỏ `admin/ai/index.html` (còn hiện tên Plugin kỹ thuật); "Marketing Drafts" hiển thị TẤT CẢ `aiDrafts` (hệ thống hiện không phân biệt Draft nào là "marketing" — cần field phân loại mới nếu muốn tách riêng, là Database Structure change, chưa làm).
+- **"Ready To Publish" không phải màn hình mới** — chính là Review Center đã có từ Requirement #3/#4 (nút "GENERATE" đã hiển thị rõ "chưa kết nối AI thật"). Không tuyên bố Publish tự động ở bất kỳ đâu trong Founder Home.
+
 ## Business Manager Foundation (Sprint 10, Requirement #1)
 
 **Chỉ là nền tảng phân tích + thiết kế — KHÔNG có code Multi-tenant nào được triển khai ở Requirement này.** Đúng Architectural Constraint: mọi thay đổi Database Structure/Data Provider/Authentication Model cần thiết cho Multi-tenant đều bị khoá lại, chờ Decision Record được phê duyệt (xem `docs/DECISION_RECORD_BUSINESS_MANAGER.md`).
