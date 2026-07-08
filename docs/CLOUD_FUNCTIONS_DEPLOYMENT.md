@@ -6,6 +6,8 @@ Sprint 11 Requirement #3 (AI Provider Runtime Activation). Tài liệu này chu�
 
 **Cập nhật (Sprint 11 Requirement #3, đợt Deployment Phase)** — đã xác minh CHÍNH XÁC hơn (không chỉ "không có CLI" chung chung như trước) bằng `gcloud` CLI (đã có sẵn, đã đăng nhập account `tieucaca2012@gmail.com` — xem mục 0). Chỉ đọc thông tin (mọi lệnh đều là `describe`/`list`, KHÔNG deploy/KHÔNG tạo/KHÔNG sửa gì trên project thật), để biết CHÍNH XÁC còn thiếu gì thay vì suy đoán chung chung.
 
+**Cập nhật (đợt Blocker Resolution, cùng Requirement #3)** — Chief Architect đã xác nhận cho phép bật 2 API còn thiếu. Đã bật thành công `cloudfunctions.googleapis.com` và `secretmanager.googleapis.com` (`gcloud services enable` — cả 2 lệnh báo "finished successfully"). Trong lúc xác minh lại, phát hiện **1 blocker MỚI, nghiêm trọng hơn 2 API đã bật**: **Billing Account "Firebase Payment" (`01B88C-CA9680-D7BE63`) đang ở trạng thái ĐÓNG (`open: false`)** — xem mục 0. Đây là lý do thật khiến `gcloud secrets list` vẫn báo lỗi `BILLING_DISABLED` ngay cả sau khi Secret Manager API đã bật. Khắc phục billing account đóng là hành động quản lý tài khoản/thanh toán — **tuyệt đối ngoài phạm vi tự động hoá được, không ai (kể cả Chief Architect qua Claude) nên xử lý thay** — chỉ chủ tài khoản Google Cloud Billing mới mở lại được qua Console.
+
 ---
 
 ## 0. Tình trạng hiện tại (đã xác nhận bằng lệnh thật, không suy đoán)
@@ -21,9 +23,10 @@ Sprint 11 Requirement #3 (AI Provider Runtime Activation). Tài liệu này chu�
 | gcloud CLI (Google Cloud SDK, độc lập với Firebase CLI) có xác thực không? | ✅ **Có** — `gcloud auth list` xác nhận account đang đăng nhập: `tieucaca2012@gmail.com`. Đây là phát hiện MỚI ở đợt này — xác nhận đúng account người vận hành có quyền thật trên Google Cloud, nhưng **KHÔNG thay thế được `firebase login`** (2 kho thông tin xác thực độc lập với nhau). |
 | Account này có quyền truy cập project `pshop-music` thật không? | ✅ **Có** — `gcloud projects describe pshop-music` trả về project THẬT, tồn tại, `lifecycleState: ACTIVE`, `labels.firebase: enabled`. |
 | Billing (gói trả phí, bắt buộc cho Cloud Functions v2) đã bật chưa? | ✅ **Đã bật** — `gcloud billing projects describe pshop-music` → `billingEnabled: true`. Không còn là điều kiện tiên quyết cần lo — đã thoả. |
-| **Cloud Functions API (`cloudfunctions.googleapis.com`) đã bật trên project chưa?** | ❌ **CHƯA — xác nhận bằng lỗi thật**: `gcloud functions list --project=pshop-music` → `SERVICE_DISABLED`. Đây là 1 trong 2 lý do chính Requirement #3 chưa thể PASS. |
-| **Secret Manager API (`secretmanager.googleapis.com`) đã bật trên project chưa?** | ❌ **CHƯA — xác nhận bằng lỗi thật**: `gcloud secrets list --project=pshop-music` → `SERVICE_DISABLED`. Lý do thứ 2 khiến Requirement #3 chưa thể PASS. |
-| **`OPENAI_API_KEY` đã được thiết lập trong Firebase Secret Manager chưa?** | ❌ **CHƯA** — không thể có (API Secret Manager còn tắt) VÀ chưa có giá trị Key thật nào được cung cấp bởi người vận hành. |
+| **Cloud Functions API (`cloudfunctions.googleapis.com`) đã bật trên project chưa?** | ✅ **ĐÃ BẬT** (đợt Blocker Resolution, Chief Architect đã xác nhận) — `gcloud services enable cloudfunctions.googleapis.com --project=pshop-music` → "finished successfully". Xác nhận lại bằng `gcloud functions list --project=pshop-music` → "Listed 0 items" (không còn lỗi `SERVICE_DISABLED`). |
+| **Secret Manager API (`secretmanager.googleapis.com`) đã bật trên project chưa?** | ⚠️ **Lệnh bật API đã "finished successfully"**, NHƯNG gọi thật (`gcloud secrets list`) vẫn báo lỗi **`BILLING_DISABLED`** — nguyên nhân THẬT không phải API chưa bật, mà là **Billing Account đang đóng** (xem dòng "Billing Account" bên dưới). API đã bật đúng nghĩa, nhưng KHÔNG dùng được cho tới khi billing account được mở lại. |
+| **Billing Account thật sự có "mở" (open) không — không chỉ "đã liên kết"?** | ❌ **ĐÓNG — phát hiện MỚI, quan trọng nhất đợt này.** `gcloud billing projects describe pshop-music` báo `billingEnabled: true` (chỉ có nghĩa "có liên kết 1 billing account"), nhưng `gcloud billing accounts describe 01B88C-CA9680-D7BE63` (tên: "Firebase Payment") trả về **`open: false`**. Đây là lý do thật khiến Secret Manager (và nhiều khả năng cả bước Cloud Build/deploy sau này) từ chối hoạt động dù API đã bật. **Chỉ chủ tài khoản Google Cloud Billing mới mở lại được** (Console → Billing → có thể do phương thức thanh toán hết hạn/bị từ chối, hoặc tài khoản bị đóng thủ công) — ngoài phạm vi tự động hoá, không xử lý thay. |
+| **`OPENAI_API_KEY` đã được thiết lập trong Firebase Secret Manager chưa?** | ❌ **CHƯA** — dù Secret Manager API đã bật, KHÔNG THỂ tạo Secret cho tới khi Billing Account được mở lại (xem trên) VÀ chưa có giá trị Key thật nào được cung cấp bởi người vận hành. |
 | **`OPENAI_PROXY_URL` trong `js/ai/providers/openai.js` (hiện là `https://us-central1-pshop-music.cloudfunctions.net/openaiProxy`) đã được xác nhận là URL THẬT chưa?** | ❓ **CHƯA XÁC NHẬN** — URL suy ra theo đúng quy ước đặt tên Cloud Functions v2, chưa xác nhận thật vì Function chưa deploy. |
 | Claude/Gemini/DeepSeek Provider có tích hợp thật chưa? | ❌ Vẫn là stub CỐ Ý — quyết định kinh doanh "có cần đa dạng Provider hay không" chưa từng được đưa ra (Sprint 8 Architecture Challenge #5). Ngoài phạm vi Requirement #3. |
 
@@ -35,15 +38,10 @@ Sprint 11 Requirement #3 (AI Provider Runtime Activation). Tài liệu này chu�
 
 ## 1. Điều kiện tiên quyết (người vận hành cần chuẩn bị)
 
-1. **Bật 2 API còn thiếu trên project `pshop-music`** (đã xác nhận tài khoản `tieucaca2012@gmail.com` có quyền, chỉ cần xác nhận bật):
-   ```bash
-   gcloud services enable cloudfunctions.googleapis.com --project=pshop-music
-   gcloud services enable secretmanager.googleapis.com --project=pshop-music
-   ```
-   (Hoặc bật qua Console theo 2 link lỗi đã in ra: `https://console.developers.google.com/apis/api/cloudfunctions.googleapis.com/overview?project=pshop-music` và tương tự cho `secretmanager`.)
-2. **`firebase login`** (luồng OAuth mở trình duyệt, làm thủ công 1 lần — gcloud đã đăng nhập KHÔNG thay thế được bước này, 2 hệ xác thực độc lập).
-3. ~~Project `pshop-music` phải ở gói Blaze~~ — **đã xác nhận đủ điều kiện** (Billing đã bật).
-4. **1 API Key OpenAI thật** (tạo tại https://platform.openai.com/api-keys) — **tuyệt đối không dán API Key vào bất kỳ file nào trong repo, không gửi qua chat, chỉ nhập trực tiếp qua lệnh CLI ở mục 2** (Secret Manager mã hoá khi lưu, không ai — kể cả người có quyền Owner project — đọc lại được giá trị gốc sau khi thiết lập, chỉ có thể "set" giá trị mới).
+1. ~~Bật 2 API còn thiếu trên project `pshop-music`~~ — **✅ ĐÃ BẬT** (Chief Architect xác nhận, `gcloud services enable cloudfunctions.googleapis.com secretmanager.googleapis.com --project=pshop-music` — cả 2 "finished successfully").
+2. **⚠️ MỞ LẠI Billing Account "Firebase Payment" (`01B88C-CA9680-D7BE63`)** — hiện đang **ĐÓNG** (`gcloud billing accounts describe 01B88C-CA9680-D7BE63` → `open: false`). Đây là blocker MỚI PHÁT HIỆN, chặn Secret Manager hoạt động dù API đã bật. **Chỉ chủ tài khoản Google Cloud Billing thực hiện được** — đăng nhập https://console.cloud.google.com/billing → chọn billing account "Firebase Payment" → kiểm tra phương thức thanh toán (thẻ hết hạn/bị từ chối là nguyên nhân phổ biến nhất) → mở lại. KHÔNG thể tự động hoá, không xử lý thay (liên quan thanh toán thật).
+3. **`firebase login`** (luồng OAuth mở trình duyệt, làm thủ công 1 lần — gcloud đã đăng nhập KHÔNG thay thế được bước này, 2 hệ xác thực độc lập).
+4. **1 API Key OpenAI thật** (tạo tại https://platform.openai.com/api-keys) — **tuyệt đối không dán API Key vào bất kỳ file nào trong repo, không gửi qua chat, chỉ nhập trực tiếp qua lệnh CLI ở mục 2** (Secret Manager mã hoá khi lưu, không ai — kể cả người có quyền Owner project — đọc lại được giá trị gốc sau khi thiết lập, chỉ có thể "set" giá trị mới). **Chỉ tạo/dùng Key sau khi Billing Account đã mở lại** (mục 2), nếu không `firebase functions:secrets:set` sẽ tiếp tục báo lỗi `BILLING_DISABLED`.
 
 ---
 

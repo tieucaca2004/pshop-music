@@ -2,6 +2,20 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 11 — Requirement #3 (Blocker Resolution): 2 API đã bật, phát hiện Billing Account ĐÓNG — VẪN FAILED
+
+**Vẫn không có code nào thay đổi.** Chief Architect đã xác nhận cho phép bật 2 Google Cloud API còn thiếu (hành động thật trên project Production `pshop-music`, có xác nhận trước khi thực hiện, đúng nguyên tắc "affects shared systems — always confirm first").
+
+- ✅ **Đã bật thành công** `cloudfunctions.googleapis.com` và `secretmanager.googleapis.com` (`gcloud services enable`, cả 2 "finished successfully"). Xác nhận lại: `gcloud functions list` không còn báo `SERVICE_DISABLED` (trả về "Listed 0 items" — đúng, chưa deploy function nào).
+- ❌ **Phát hiện blocker MỚI, nghiêm trọng hơn**: `gcloud secrets list` vẫn báo lỗi `BILLING_DISABLED` dù Secret Manager API đã bật. Điều tra tiếp (`gcloud billing accounts describe`) xác nhận: **Billing Account "Firebase Payment" (`01B88C-CA9680-D7BE63`) đang ở trạng thái ĐÓNG (`open: false`)** — `gcloud billing projects describe` báo `billingEnabled: true` chỉ có nghĩa "có liên kết billing account", KHÔNG có nghĩa billing account đó đang hoạt động.
+- **Không tự xử lý billing account đóng** — đây là hành động quản lý tài khoản/thanh toán (thường do phương thức thanh toán hết hạn/bị từ chối), tuyệt đối ngoài phạm vi tự động hoá, chỉ chủ tài khoản Google Cloud Billing mới mở lại được qua Console (`https://console.cloud.google.com/billing`).
+- **`firebase login` vẫn chưa hoàn tất** — không đổi so với đợt trước, gcloud đã đăng nhập không thay thế được (2 hệ xác thực độc lập).
+- **`OPENAI_API_KEY` vẫn không có giá trị nào** — không thể tạo được cho tới khi Billing Account mở lại, và vẫn cần người vận hành tự cung cấp Key qua CLI (không qua chat).
+- **Cập nhật `docs/CLOUD_FUNCTIONS_DEPLOYMENT.md`** mục 0/1 — đánh dấu 2 API đã bật, thêm bước mới "Mở lại Billing Account" làm điều kiện tiên quyết trước khi tạo Secret.
+- **0 sửa đổi code** — chỉ 2 lệnh `gcloud services enable` (hạ tầng, không phải file trong repo) + cập nhật tài liệu.
+- Cập nhật `ROADMAP.md`.
+- **Requirement #3 vẫn FAILED** — 2/5 blocker đã giải quyết (Cloud Functions API, Secret Manager API), 1 blocker MỚI phát hiện (Billing Account đóng) thay thế phần còn lại của Blocker #4, cộng 2 blocker cũ vẫn còn (`firebase login`, giá trị API Key). Không bắt đầu Requirement #4.
+
 ## Sprint 11 — Requirement #3 (Deployment Phase): AI Provider Runtime Activation — VẪN FAILED, xác minh chính xác hơn khối lượng còn thiếu
 
 **Vẫn không có code nào thay đổi.** Đợt này chỉ chạy các lệnh READ-ONLY (`describe`/`list`, không deploy/không tạo/không sửa gì trên project thật) để biết CHÍNH XÁC còn thiếu gì, thay vì chỉ nói chung chung "không có Firebase CLI" như đợt Audit trước.
