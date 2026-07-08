@@ -30,6 +30,27 @@
  *       cần bấm "TRƯỚC" nhiều lần. Bước "Gói Marketing" (bước 5) chỉ bấm
  *       được sau khi đã Generate ít nhất 1 lần (tránh nhảy tới màn hình
  *       trống chưa có Gói Marketing).
+ *
+ * Sprint 11 Requirement #1 (One Click Marketing: Cầu nối Generate Thật) —
+ * nút "GENERATE" giờ tạo Job AI THẬT cho 4/6 output, gọi qua
+ * PluginManager/AIJobQueue/PermissionService HIỆN CÓ (đúng luồng
+ * admin-ai.js đã dùng: Permission → PluginManager.loadPlugin().execute()
+ * → AIJobQueue.resume()) — KHÔNG sửa plugin-manager.js/job-queue.js/
+ * provider-registry.js/permission-service.js:
+ *   websiteArticle  -> Plugin "blog-writer"            (topic/tone/keywords)
+ *   facebookPost    -> Plugin "facebook-post-generator" (productId?/message)
+ *   bannerRequest   -> Plugin "banner-generator"        (theme/link)
+ *   aiImageRequest  -> Plugin "image-prompt-generator"  (subject/style)
+ * "SEO Metadata" KHÔNG nối được ở Requirement này: Plugin "seo-generator"
+ * bắt buộc 1 Blog Post ĐÃ TỒN TẠI THẬT trong CMS (đọc qua
+ * DataProvider.getBlogPost(postId)), trong khi One Click Marketing chưa
+ * tạo Blog Post nào — vẫn giữ dạng mẫu/Foundation, đã ghi vào ROADMAP.md,
+ * không ép nối sai chỗ. "Video Request" vẫn chưa có Plugin AI Video nào,
+ * giữ nguyên "chưa có năng lực" như Requirement #3.
+ * Kết quả Generate thật vẫn dừng ở Draft (`aiDrafts`) — Founder vẫn phải tự
+ * Review & Publish qua admin/ai/drafts.html, KHÔNG tự Publish ở đây.
+ * `js/one-click-marketing.js` (hàm thuần buildMarketingPackage()) KHÔNG bị
+ * sửa — toàn bộ logic gọi AI nằm ở lớp Experience Layer này.
  */
 const AdminOneClickMarketing = (function () {
   const STORAGE_KEY = 'oneClickMarketingDraft_v1';
@@ -41,6 +62,7 @@ const AdminOneClickMarketing = (function () {
   let currentStep = 0;
   let packageResult = null;
   let mediaPicker = null;
+  let pollTimer = null;
 
   function defaultState() {
     return {
@@ -71,6 +93,118 @@ const AdminOneClickMarketing = (function () {
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ }
   }
 
+  // buildAIJobPlan(state) — hàm THUẦN: map dữ liệu Wizard sang đúng
+  // inputParams của 4 Plugin AI đã Production tương ứng (xem docstring đầu
+  // file). Chỉ trả về kế hoạch khi đã có tên sản phẩm (Bước 2) — thiếu tên
+  // sản phẩm thì không đủ nội dung có nghĩa để Generate bất kỳ output nào.
+  // Field bắt buộc của Plugin mà Wizard không thu thập (tone/style) dùng
+  // giá trị mặc định hợp lý, không bịa thêm dữ kiện nào về sản phẩm/khuyến
+  // mãi ngoài input Founder đã nhập (đúng tinh thần AI_RULES.md mục 2).
+  function buildAIJobPlan(s) {
+    if (!s.productName) return [];
+    const productLabel = [s.productName, s.promotion].filter(Boolean).join(' - ');
+    const link = s.category ? ('category.html?cat=' + encodeURIComponent(s.category)) : 'index.html';
+    return [
+      {
+        outputKey: 'websiteArticle', moduleId: 'blog-writer', label: 'Website Draft',
+        inputParams: { topic: productLabel, tone: 'Chuyên nghiệp', keywords: s.category || s.productName }
+      },
+      {
+        outputKey: 'facebookPost', moduleId: 'facebook-post-generator', label: 'Facebook Draft',
+        inputParams: { productId: s.productId || '', message: s.promotion || productLabel }
+      },
+      {
+        outputKey: 'bannerRequest', moduleId: 'banner-generator', label: 'Banner Request',
+        inputParams: { theme: s.promotion || s.productName, link }
+      },
+      {
+        outputKey: 'aiImageRequest', moduleId: 'image-prompt-generator', label: 'Image Request',
+        inputParams: { subject: productLabel, style: 'Ảnh sản phẩm studio' }
+      }
+    ];
+  }
+
+  function jobStatusLabel(status) {
+    return {
+      queued: 'Đang chờ xử lý', running: 'Đang xử lý',
+      completed: 'Hoàn tất — xem "Marketing Drafts" để Review & Publish',
+      failed: 'Thất bại', cancelled: 'Đã hủy'
+    }[status] || status;
+  }
+
+  // runOnePluginJob — đúng luồng admin-ai.js: Permission → PluginManager →
+  // AIJobQueue. Mỗi output là 1 Job RIÊNG (không gộp batch) để 1 output lỗi
+  // không chặn các output còn lại.
+  function runOnePluginJob(entry, user) {
+    return PermissionService.checkPluginExecution(user.uid, user.email, entry.moduleId).then(check => {
+      if (!check.granted) {
+        state.generatedJobs[entry.outputKey] = { error: `Không có quyền chạy "${entry.label}" (thiếu "${check.permission || 'quyền chưa được gán'}").` };
+        return;
+      }
+      return PluginManager.loadPlugin(entry.moduleId).then(plugin => {
+        if (!plugin) {
+          state.generatedJobs[entry.outputKey] = { error: 'Không tìm thấy plugin.' };
+          return;
+        }
+        return plugin.execute([entry.inputParams], user.uid, user.email)
+          .then(job => {
+            state.generatedJobs[entry.outputKey] = { jobId: job.id, status: job.status, moduleId: entry.moduleId };
+            return AIJobQueue.resume(user.uid, user.email);
+          })
+          .catch(err => { state.generatedJobs[entry.outputKey] = { error: err.message }; });
+      });
+    });
+  }
+
+  function triggerRealGeneration() {
+    const user = AdminAuth.getUser();
+    const plan = buildAIJobPlan(state);
+    const noteEl = document.getElementById('ocmGenerateNote');
+    if (!plan.length) {
+      if (noteEl) noteEl.textContent = 'Cần nhập Tên sản phẩm (Bước 2) trước khi Generate AI thật.';
+      return;
+    }
+    state.generatedJobs = state.generatedJobs || {};
+    if (noteEl) noteEl.textContent = 'Đang gửi yêu cầu AI thật...';
+    // PluginManager.loadPlugin(id) (khac voi loadPlugins()) KHONG tu seed
+    // aiPlugins/{id} - viec seed chi xay ra trong PluginDB.getAll() (xem
+    // js/ai/plugin-db.js). Cac trang admin/ai/*.html khac luon goi
+    // loadPlugins() truoc (render dashboard) nen aiPlugins da co san; One
+    // Click Marketing la trang AI DAU TIEN 1 Founder co the mo ma chua tung
+    // qua Dashboard ky thuat, nen phai tu dam bao seed truoc - goi dung
+    // PluginManager.loadPlugins() (method cong khai co san, KHONG sua
+    // plugin-manager.js/plugin-db.js) 1 lan truoc khi loadPlugin(id) tung
+    // Plugin.
+    PluginManager.loadPlugins().then(() => Promise.all(plan.map(entry => runOnePluginJob(entry, user)))).then(() => {
+      saveDraft();
+      render();
+      startPolling();
+    });
+  }
+
+  function startPolling() {
+    if (pollTimer) return;
+    pollTimer = setInterval(() => {
+      const jobs = state.generatedJobs || {};
+      const ids = Object.keys(jobs).filter(k => jobs[k] && jobs[k].jobId);
+      if (!ids.length) { stopPolling(); return; }
+      Promise.all(ids.map(k => JobDB.get(jobs[k].jobId).then(job => { if (job) jobs[k].status = job.status; }))).then(() => {
+        saveDraft();
+        if (currentStep === STEP_LABELS.length - 1) render();
+        const allDone = ids.every(k => ['completed', 'failed', 'cancelled'].includes(jobs[k].status));
+        if (allDone) stopPolling();
+      });
+    }, 3000);
+  }
+
+  function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  }
+
+  function hasPendingOrDoneJobs(s) {
+    return !!(s.generatedJobs && Object.keys(s.generatedJobs).some(k => s.generatedJobs[k] && s.generatedJobs[k].jobId));
+  }
+
   function init() {
     AdminAuth.init({ page: 'ai-one-click-marketing', title: 'ONE CLICK MARKETING' }).then(() => {
       Promise.all([DB.getAll(), CategoryDB.getAll(), SiteContentDB.get()]).then(([p, c, content]) => {
@@ -89,6 +223,10 @@ const AdminOneClickMarketing = (function () {
           state.address = settings.address || '';
         }
         render();
+        // Neu ban nhap khoi phuc dang co Job AI that chua xong (queued/
+        // running), tiep tuc poll trang thai thay vi bo do sau khi tai lai
+        // trang.
+        if (hasPendingOrDoneJobs(state)) startPolling();
       });
     });
   }
@@ -99,6 +237,7 @@ const AdminOneClickMarketing = (function () {
     banner.innerHTML = `<p class="small-muted">Có 1 bản nháp chưa hoàn tất — đang tiếp tục từ bước "${escapeHtml(STEP_LABELS[currentStep])}". <a href="#" id="ocmStartOver" style="color:var(--gold-ink)">Bắt đầu lại từ đầu</a></p>`;
     document.getElementById('ocmStartOver').addEventListener('click', e => {
       e.preventDefault();
+      stopPolling();
       clearDraft();
       state = defaultState();
       currentStep = 0;
@@ -189,13 +328,28 @@ const AdminOneClickMarketing = (function () {
     return `<div class="panel"><h4 style="margin:0 0 0.5rem">${escapeHtml(label)}</h4><div class="small-muted" style="white-space:pre-wrap">${escapeHtml(content)}</div></div>`;
   }
 
+  // outputRowWithStatus — giống outputRow() nhưng thêm 1 dòng trạng thái
+  // Job AI THẬT (nếu đã bấm GENERATE) cho 4 output đã nối Plugin (Sprint 11
+  // Requirement #1). Không đổi hiển thị bản xem trước dạng mẫu bên trên.
+  function outputRowWithStatus(label, content, outputKey) {
+    const info = state.generatedJobs && state.generatedJobs[outputKey];
+    let statusHtml = '';
+    if (info) {
+      statusHtml = info.error
+        ? `<p class="small-muted" style="color:#b3261e;margin:0.4rem 0 0">AI thật: ${escapeHtml(info.error)}</p>`
+        : `<p class="small-muted" style="margin:0.4rem 0 0">AI thật: ${escapeHtml(jobStatusLabel(info.status))}</p>`;
+    }
+    return `<div class="panel"><h4 style="margin:0 0 0.5rem">${escapeHtml(label)}</h4><div class="small-muted" style="white-space:pre-wrap">${escapeHtml(content)}</div>${statusHtml}</div>`;
+  }
+
   function stepGenerateHtml() {
     if (!packageResult) {
       return `<div class="panel"><p class="small-muted">Bấm "Sinh Gói Marketing" để tạo bản xem trước dạng mẫu — CHƯA gọi AI thật.</p></div>`;
     }
     const p = packageResult;
+    const jobsStarted = hasPendingOrDoneJobs(state);
     return `
-      <p style="margin-bottom:1rem"><strong style="color:var(--gold-ink)">Review Center — Gói Marketing (bản xem trước dạng mẫu — KHÔNG phải nội dung AI đã sinh thật)</strong></p>
+      <p style="margin-bottom:1rem"><strong style="color:var(--gold-ink)">Review Center — Gói Marketing (bản xem trước dạng mẫu bên dưới mỗi mục; trạng thái "AI thật" chỉ xuất hiện sau khi bấm GENERATE)</strong></p>
       <div class="panel"><h4 style="margin:0 0 0.5rem">Doanh nghiệp / Sản phẩm / Giá / Khuyến mãi</h4>
         <table class="admin-table"><tbody>
           ${reviewRow('Doanh nghiệp', state.businessName)}
@@ -204,15 +358,16 @@ const AdminOneClickMarketing = (function () {
           ${reviewRow('Khuyến mãi', state.promotion)}
         </tbody></table>
       </div>
-      ${outputRow('Website Draft', p.websiteArticle.title + '\n\n' + p.websiteArticle.body)}
-      ${outputRow('Facebook Draft', p.facebookPost.text)}
+      ${outputRowWithStatus('Website Draft', p.websiteArticle.title + '\n\n' + p.websiteArticle.body, 'websiteArticle')}
+      ${outputRowWithStatus('Facebook Draft', p.facebookPost.text, 'facebookPost')}
       ${outputRow('SEO Metadata', 'Title: ' + p.seoMetadata.title + '\nDescription: ' + p.seoMetadata.description)}
-      ${outputRow('Banner Request', 'Chủ đề: ' + p.bannerRequest.theme + '\nLink: ' + (p.bannerRequest.link || '(chưa có)'))}
-      ${outputRow('Image Request', p.aiImageRequest.note)}
+      <p class="small-muted" style="margin:-0.5rem 0 0.8rem">SEO Metadata chưa kết nối AI thật — Plugin "SEO Generator" cần 1 Bài viết đã tồn tại thật trong CMS, One Click Marketing chưa tạo Bài viết nào (xem ROADMAP.md).</p>
+      ${outputRowWithStatus('Banner Request', 'Chủ đề: ' + p.bannerRequest.theme + '\nLink: ' + (p.bannerRequest.link || '(chưa có)'), 'bannerRequest')}
+      ${outputRowWithStatus('Image Request', p.aiImageRequest.note, 'aiImageRequest')}
       ${outputRow('Video Request', p.aiVideoRequest.note)}
       <div class="admin-actions" style="margin-top:1rem">
         <button class="submit-btn" id="ocmEditBtn" style="background:var(--bg-alt);color:var(--ink)">SỬA LẠI (EDIT)</button>
-        <button class="submit-btn" id="ocmGenerateRealBtn">GENERATE</button>
+        <button class="submit-btn" id="ocmGenerateRealBtn" ${jobsStarted ? 'disabled' : ''}>${jobsStarted ? 'ĐÃ GỬI YÊU CẦU AI' : 'GENERATE'}</button>
       </div>
       <p class="small-muted" id="ocmGenerateNote" style="margin-top:0.5rem"></p>`;
   }
@@ -309,7 +464,8 @@ const AdminOneClickMarketing = (function () {
 
     const generateRealBtn = document.getElementById('ocmGenerateRealBtn');
     if (generateRealBtn) generateRealBtn.addEventListener('click', () => {
-      document.getElementById('ocmGenerateNote').textContent = 'Sinh nội dung AI thật CHƯA được kết nối ở Requirement này (Foundation only) — đây chỉ là bản xem trước dạng mẫu. Xem ROADMAP.md cho Requirement kết nối AI Provider thật.';
+      if (generateRealBtn.disabled) return;
+      triggerRealGeneration();
     });
   }
 

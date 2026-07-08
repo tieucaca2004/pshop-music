@@ -631,6 +631,33 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## One Click Marketing — Cầu nối Generate Thật (Sprint 11, Requirement #1)
+
+Lấp khoảng hở "Generate giả" đã ghi nhận ở `docs/SPRINT_10_FINAL_REPORT.md` — nối 4/6 output của Gói Marketing với đúng Plugin AI đã Production, tái sử dụng NGUYÊN VẸN `PluginManager`/`AIJobQueue`/`PermissionService`/`AIProviderRegistry` (0 sửa đổi các file này). `js/one-click-marketing.js` (hàm thuần `buildMarketingPackage()`) cũng giữ nguyên — toàn bộ logic gọi AI mới nằm ở lớp Experience (`js/admin-one-click-marketing.js`):
+
+```
+Founder → Review Center (Bước 5) → bấm "GENERATE"
+       → PluginManager.loadPlugins() (đảm bảo aiPlugins đã seed — xem "Phát hiện khi triển khai" bên dưới)
+       → với từng output có Plugin tương ứng (song song, KHÔNG batch chung 1 Job):
+            PermissionService.checkPluginExecution(uid, email, moduleId)
+                 → PluginManager.loadPlugin(moduleId).execute([inputParams], uid, email)
+                 → AIJobQueue.resume(uid, email)  (đúng luồng js/admin-ai.js đã dùng)
+       → Trạng thái Job (queued/running/completed/failed) hiển thị ngay dưới mỗi output,
+            poll 3 giây (cùng chu kỳ admin/ai/jobs.html), dừng khi mọi Job đã kết thúc
+       → Draft that (neu Provider da cau hinh/deploy) van chi vao aiDrafts — Publish
+            van qua admin/ai/drafts.html, KHONG tu Publish o day
+```
+
+- **Ánh xạ 4 output → Plugin** (`buildAIJobPlan()`, hàm thuần trong `js/admin-one-click-marketing.js`): Website Draft → `blog-writer` (`topic`=Tên sản phẩm+Khuyến mãi, `tone`='Chuyên nghiệp' mặc định, `keywords`=Danh mục hoặc Tên sản phẩm); Facebook Draft → `facebook-post-generator` (`productId` tuỳ chọn, `message`=Khuyến mãi); Banner Request → `banner-generator` (`theme`=Khuyến mãi/Tên sản phẩm, `link`=trang danh mục hoặc trang chủ); Image Request → `image-prompt-generator` (`subject`=Tên sản phẩm+Khuyến mãi, `style`='Ảnh sản phẩm studio' mặc định). Chỉ tạo kế hoạch khi đã có Tên sản phẩm (Bước 2) — thiếu thì không đủ nội dung có nghĩa để Generate.
+- **"SEO Metadata" KHÔNG nối được** — `js/ai/modules/seo-generator.js` bắt buộc 1 `postId` của Blog Post ĐÃ TỒN TẠI THẬT (đọc qua `DataProvider.getBlogPost()`), trong khi One Click Marketing chưa từng tạo Blog Post nào. Giữ nguyên dạng mẫu/Foundation, có ghi chú rõ trong Review Center — không ép nối sai chỗ, không redesign `seo-generator.js`.
+- **"Video Request" vẫn chưa có Plugin AI Video** — không đổi so với Requirement #3.
+- **Mỗi output là 1 Job riêng** (không gộp `items` batch) — 1 output lỗi (vd thiếu quyền) không chặn các output còn lại tạo Job.
+- **Không đổi Permission**: gọi đúng `PermissionService.checkPluginExecution()` (cùng hàm `admin-ai.js` dùng) trước MỖI Job — không có đường tắt bỏ qua RBAC dù gọi từ Wizard thay vì Dashboard.
+- **Phát hiện khi triển khai — seeding `aiPlugins`**: `PluginDB.get(id)` (dùng trong `PluginManager.loadPlugin()`) KHÔNG tự seed — seeding mặc định chỉ chạy trong `PluginDB.getAll()`. Vì One Click Marketing có thể là trang AI đầu tiên 1 Founder mở (chưa từng qua `admin/ai/index.html`), Requirement này gọi thêm `PluginManager.loadPlugins()` (method công khai có sẵn) 1 lần trước khi generate để đảm bảo `aiPlugins` đã seed — không sửa `plugin-manager.js`/`plugin-db.js`.
+- **Nút GENERATE tự vô hiệu hoá sau khi gửi** (đổi nhãn "ĐÃ GỬI YÊU CẦU AI") — tránh tạo trùng Job nếu Founder bấm nhiều lần.
+- **Trạng thái Job lưu kèm bản nháp `localStorage`** (`state.generatedJobs`) — tải lại trang giữa chừng vẫn tiếp tục poll đúng, không mất dấu vết đã Generate. Không đổi Database Structure (chỉ thêm field vào object đã lưu `localStorage`, không phải Firebase).
+- **Kiểm thử xác nhận**: harness trình duyệt tạm thời (mock Firebase, đã xoá) — 4 Job tạo đúng `inputParams`, `aiLogs` ghi đúng qua Queue (không đổi nguyên tắc "chỉ Queue ghi Log"), Job kết thúc `failed` với lý do "Chưa chọn nhà cung cấp AI nào" (đúng — chưa cấu hình Provider/chưa deploy Cloud Function `openaiProxy`, không phải lỗi code, không có cuộc gọi mạng nào xảy ra vì `resolveForPlugin()` reject sớm), 0 Draft tạo sai, 0 lỗi console mới.
+
 ## Smart CMS — Smart Mode ↔ Advanced Mode (Sprint 10.x, Smart CMS Completion)
 
 Hoàn thành hạng mục Smart CMS còn thiếu từ Sprint 10 (đã ghi nhận rõ ở `docs/SPRINT_10_FINAL_REPORT.md`, không sửa lại báo cáo đó). Chỉ Experience Layer — nav sidebar, không đổi Permission/RBAC:
