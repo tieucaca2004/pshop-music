@@ -1,12 +1,14 @@
 # Cloud Function `openaiProxy` — AI Provider Runtime Activation Guide
 
-Sprint 11 Requirement #3 (AI Provider Runtime Activation). Tài liệu này chuẩn bị đầy đủ để người vận hành (người có quyền truy cập Firebase Console/CLI thật + 1 API Key OpenAI thật) kích hoạt AI Runtime thật lần đầu tiên — môi trường phát triển hiện tại **không có Firebase CLI cài đặt, không có phiên đăng nhập, không có API Key nào** (đã xác nhận: `firebase` không tồn tại trong PATH, xem mục 0), nên bước deploy/kích hoạt thật sự **chưa được thực hiện và không được giả lập là đã thực hiện**.
+Sprint 11 Requirement #3 (AI Provider Runtime Activation). Tài liệu này chuẩn bị đầy đủ để người vận hành (người có quyền truy cập Firebase Console/CLI thật + 1 API Key OpenAI thật) kích hoạt AI Runtime thật lần đầu tiên — bước deploy/kích hoạt thật sự **chưa được thực hiện và không được giả lập là đã thực hiện**.
 
-Đây là khoảng hở đã biết, xuyên suốt từ Sprint 3 (`ARCHITECTURE_REVIEW_SPRINT3.md`, `functions/index.js` tạo lần đầu) — mọi Sprint từ đó tới nay đều ghi nhận lại đúng tình trạng này, không có gì thay đổi.
+Đây là khoảng hở đã biết, xuyên suốt từ Sprint 3 (`ARCHITECTURE_REVIEW_SPRINT3.md`, `functions/index.js` tạo lần đầu) — mọi Sprint từ đó tới nay đều ghi nhận lại đúng tình trạng này.
+
+**Cập nhật (Sprint 11 Requirement #3, đợt Deployment Phase)** — đã xác minh CHÍNH XÁC hơn (không chỉ "không có CLI" chung chung như trước) bằng `gcloud` CLI (đã có sẵn, đã đăng nhập account `tieucaca2012@gmail.com` — xem mục 0). Chỉ đọc thông tin (mọi lệnh đều là `describe`/`list`, KHÔNG deploy/KHÔNG tạo/KHÔNG sửa gì trên project thật), để biết CHÍNH XÁC còn thiếu gì thay vì suy đoán chung chung.
 
 ---
 
-## 0. Tình trạng hiện tại (đã xác nhận, không suy đoán)
+## 0. Tình trạng hiện tại (đã xác nhận bằng lệnh thật, không suy đoán)
 
 | Câu hỏi | Trả lời |
 |---|---|
@@ -15,20 +17,33 @@ Sprint 11 Requirement #3 (AI Provider Runtime Activation). Tài liệu này chu�
 | `firebase.json` có wiring đúng `functions`? | ✅ Có — `{"source": "functions", "codebase": "default", ...}`. |
 | `.firebaserc` có trỏ đúng project? | ✅ Có — `"default": "pshop-music"`. |
 | `js/ai/providers/openai.js` (Provider phía client) có gọi đúng qua Cloud Function Proxy (không gọi thẳng OpenAI)? | ✅ Có — `callOpenAiProxy()` lấy Firebase ID token, gọi `OPENAI_PROXY_URL` (hằng số, xem mục 2). |
-| **Cloud Function `openaiProxy` đã từng được deploy lên Firebase thật chưa?** | ❌ **CHƯA — xác nhận, không suy đoán.** Môi trường này không có `firebase` CLI (kiểm tra `command -v firebase` → không tìm thấy), nên không thể tự deploy hay xác minh trạng thái deploy thật. |
-| **`OPENAI_API_KEY` đã được thiết lập trong Firebase Secret Manager chưa?** | ❌ **CHƯA — không thể xác nhận từ môi trường này**, vì chưa từng deploy nên Secret cũng chưa từng được yêu cầu thiết lập. |
-| **`OPENAI_PROXY_URL` trong `js/ai/providers/openai.js` (hiện là `https://us-central1-pshop-music.cloudfunctions.net/openaiProxy`) đã được xác nhận là URL THẬT chưa?** | ❓ **CHƯA XÁC NHẬN** — đây là URL suy ra theo đúng quy ước đặt tên Cloud Functions v2 của Firebase (region + project id + tên function), NHƯNG chưa từng được xác nhận thật vì Function chưa deploy. Comment TODO ngay trong file đã ghi rõ: "thay đúng URL thật (Firebase CLI in ra sau khi `firebase deploy --only functions` chạy xong) vào hằng số này." |
-| Claude/Gemini/DeepSeek Provider có tích hợp thật chưa? | ❌ Vẫn là stub CỐ Ý (`generate()` luôn reject rõ ràng, không bịa nội dung) — quyết định kinh doanh "có cần đa dạng Provider hay không" **chưa từng được đưa ra** (ghi nhận từ Sprint 8 Architecture Challenge #5, `ROADMAP.md`). Đây KHÔNG phải lỗi/thiếu sót của Requirement này — mở rộng 3 Provider này là 1 quyết định kinh doanh + kỹ thuật riêng (cần API Key Anthropic/Google thật), ngoài phạm vi "kích hoạt Runtime đã có" của Requirement #3. |
+| Firebase CLI (`firebase`) có cài đặt sẵn/xác thực không? | ⚠️ Không cài cố định trong PATH, nhưng chạy được qua `npx firebase-tools` — **CHƯA đăng nhập** (`npx firebase-tools projects:list` → `Error: Failed to authenticate, have you run firebase login?`). `firebase login` là luồng OAuth mở trình duyệt, phải làm thủ công 1 lần bởi người vận hành — không thể tự động hoá từ môi trường này. |
+| gcloud CLI (Google Cloud SDK, độc lập với Firebase CLI) có xác thực không? | ✅ **Có** — `gcloud auth list` xác nhận account đang đăng nhập: `tieucaca2012@gmail.com`. Đây là phát hiện MỚI ở đợt này — xác nhận đúng account người vận hành có quyền thật trên Google Cloud, nhưng **KHÔNG thay thế được `firebase login`** (2 kho thông tin xác thực độc lập với nhau). |
+| Account này có quyền truy cập project `pshop-music` thật không? | ✅ **Có** — `gcloud projects describe pshop-music` trả về project THẬT, tồn tại, `lifecycleState: ACTIVE`, `labels.firebase: enabled`. |
+| Billing (gói trả phí, bắt buộc cho Cloud Functions v2) đã bật chưa? | ✅ **Đã bật** — `gcloud billing projects describe pshop-music` → `billingEnabled: true`. Không còn là điều kiện tiên quyết cần lo — đã thoả. |
+| **Cloud Functions API (`cloudfunctions.googleapis.com`) đã bật trên project chưa?** | ❌ **CHƯA — xác nhận bằng lỗi thật**: `gcloud functions list --project=pshop-music` → `SERVICE_DISABLED`. Đây là 1 trong 2 lý do chính Requirement #3 chưa thể PASS. |
+| **Secret Manager API (`secretmanager.googleapis.com`) đã bật trên project chưa?** | ❌ **CHƯA — xác nhận bằng lỗi thật**: `gcloud secrets list --project=pshop-music` → `SERVICE_DISABLED`. Lý do thứ 2 khiến Requirement #3 chưa thể PASS. |
+| **`OPENAI_API_KEY` đã được thiết lập trong Firebase Secret Manager chưa?** | ❌ **CHƯA** — không thể có (API Secret Manager còn tắt) VÀ chưa có giá trị Key thật nào được cung cấp bởi người vận hành. |
+| **`OPENAI_PROXY_URL` trong `js/ai/providers/openai.js` (hiện là `https://us-central1-pshop-music.cloudfunctions.net/openaiProxy`) đã được xác nhận là URL THẬT chưa?** | ❓ **CHƯA XÁC NHẬN** — URL suy ra theo đúng quy ước đặt tên Cloud Functions v2, chưa xác nhận thật vì Function chưa deploy. |
+| Claude/Gemini/DeepSeek Provider có tích hợp thật chưa? | ❌ Vẫn là stub CỐ Ý — quyết định kinh doanh "có cần đa dạng Provider hay không" chưa từng được đưa ra (Sprint 8 Architecture Challenge #5). Ngoài phạm vi Requirement #3. |
 
-**Không tuyên bố "AI Runtime đã hoạt động thật"/"Provider đã kích hoạt"/"Generate thành công thật" — vì chưa từng deploy, chưa có Secret, chưa gọi được API OpenAI thật từ môi trường này.**
+**Không tuyên bố "AI Runtime đã hoạt động thật"/"Provider đã kích hoạt"/"Generate thành công thật" — vì Cloud Functions API/Secret Manager API còn tắt, chưa deploy, chưa có Secret, chưa gọi được API OpenAI thật.**
+
+**Quan trọng — vì sao KHÔNG tự động bật 2 API còn thiếu dù đã có quyền gcloud**: bật `cloudfunctions.googleapis.com`/`secretmanager.googleapis.com` là hành động thật trên 1 project Production đã bật Billing (có thể phát sinh chi phí khi các API này được SỬ DỤNG sau đó) — đây là hành động ảnh hưởng hạ tầng thật ngoài phạm vi máy cục bộ, cần Chief Architect/người vận hành xác nhận rõ ràng trước khi bật, đúng nguyên tắc "affects shared systems beyond local environment — always confirm first". Lệnh `gcloud functions list`/`gcloud secrets list` ở trên đã tự hỏi "(y/N)" để bật kèm theo — đã KHÔNG xác nhận, chỉ dùng để xác minh trạng thái (read-only).
 
 ---
 
 ## 1. Điều kiện tiên quyết (người vận hành cần chuẩn bị)
 
-1. **Tài khoản Firebase có quyền Owner/Editor trên project `pshop-music`**, đã cài `firebase-tools` (`npm install -g firebase-tools`) và đăng nhập (`firebase login` — luồng OAuth mở trình duyệt, phải làm thủ công, không thể tự động hoá).
-2. **Project `pshop-music` phải ở gói Blaze (Pay as you go)** — Cloud Functions v2 (dùng `onRequest` từ `firebase-functions/v2/https`, đã có sẵn trong `functions/index.js`) yêu cầu gói Blaze, không chạy được ở gói Spark miễn phí. Đây là yêu cầu của Firebase, không phải của PSH Platform.
-3. **1 API Key OpenAI thật** (tạo tại https://platform.openai.com/api-keys) — **tuyệt đối không dán API Key vào bất kỳ file nào trong repo, không gửi qua chat, chỉ nhập trực tiếp qua lệnh CLI ở mục 2** (Secret Manager mã hoá khi lưu, không ai — kể cả người có quyền Owner project — đọc lại được giá trị gốc sau khi thiết lập, chỉ có thể "set" giá trị mới).
+1. **Bật 2 API còn thiếu trên project `pshop-music`** (đã xác nhận tài khoản `tieucaca2012@gmail.com` có quyền, chỉ cần xác nhận bật):
+   ```bash
+   gcloud services enable cloudfunctions.googleapis.com --project=pshop-music
+   gcloud services enable secretmanager.googleapis.com --project=pshop-music
+   ```
+   (Hoặc bật qua Console theo 2 link lỗi đã in ra: `https://console.developers.google.com/apis/api/cloudfunctions.googleapis.com/overview?project=pshop-music` và tương tự cho `secretmanager`.)
+2. **`firebase login`** (luồng OAuth mở trình duyệt, làm thủ công 1 lần — gcloud đã đăng nhập KHÔNG thay thế được bước này, 2 hệ xác thực độc lập).
+3. ~~Project `pshop-music` phải ở gói Blaze~~ — **đã xác nhận đủ điều kiện** (Billing đã bật).
+4. **1 API Key OpenAI thật** (tạo tại https://platform.openai.com/api-keys) — **tuyệt đối không dán API Key vào bất kỳ file nào trong repo, không gửi qua chat, chỉ nhập trực tiếp qua lệnh CLI ở mục 2** (Secret Manager mã hoá khi lưu, không ai — kể cả người có quyền Owner project — đọc lại được giá trị gốc sau khi thiết lập, chỉ có thể "set" giá trị mới).
 
 ---
 

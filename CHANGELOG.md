@@ -2,6 +2,20 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 11 — Requirement #3 (Deployment Phase): AI Provider Runtime Activation — VẪN FAILED, xác minh chính xác hơn khối lượng còn thiếu
+
+**Vẫn không có code nào thay đổi.** Đợt này chỉ chạy các lệnh READ-ONLY (`describe`/`list`, không deploy/không tạo/không sửa gì trên project thật) để biết CHÍNH XÁC còn thiếu gì, thay vì chỉ nói chung chung "không có Firebase CLI" như đợt Audit trước.
+
+- **Phát hiện mới**: `gcloud` CLI (độc lập với `firebase` CLI) ĐÃ đăng nhập sẵn (`tieucaca2012@gmail.com`), VÀ account này CÓ quyền truy cập thật vào project `pshop-music` (`gcloud projects describe pshop-music` xác nhận project tồn tại, `ACTIVE`, Firebase-enabled). Billing của project đã bật (`billingEnabled: true`) — không còn là điều kiện tiên quyết cần lo.
+- **2 lý do CHÍNH XÁC khiến chưa deploy được** (xác nhận bằng lỗi thật, không suy đoán): `cloudfunctions.googleapis.com` (Cloud Functions API) và `secretmanager.googleapis.com` (Secret Manager API) đều **CHƯA được bật** trên project `pshop-music`.
+- **Cố ý KHÔNG tự bật 2 API này** dù đã có quyền gcloud — bật API trên 1 project Production đã bật Billing là hành động thật ảnh hưởng hạ tầng ngoài phạm vi máy cục bộ (có thể phát sinh chi phí khi API được dùng sau đó), cần Chief Architect/người vận hành xác nhận rõ ràng trước, đúng nguyên tắc "affects shared systems beyond local environment — always confirm first". Lệnh gcloud tự hỏi "(y/N)" để bật kèm — đã KHÔNG xác nhận.
+- **`firebase login` vẫn chưa thực hiện được** — `npx firebase-tools projects:list` xác nhận "Failed to authenticate". Đây là hệ xác thực ĐỘC LẬP với gcloud (dù cùng 1 tài khoản Google) — gcloud đã đăng nhập KHÔNG thay thế được bước `firebase login` (luồng OAuth mở trình duyệt, phải làm thủ công).
+- **`OPENAI_API_KEY` vẫn KHÔNG có giá trị nào** — kể cả nếu Secret Manager API được bật, vẫn cần người vận hành tự chạy `firebase functions:secrets:set OPENAI_API_KEY` VÀ tự nhập Key thật vào đúng lệnh CLI đó (không dán vào file/chat) — đúng nguyên tắc không xử lý bí mật/API Key thay người dùng.
+- **Cập nhật `docs/CLOUD_FUNCTIONS_DEPLOYMENT.md` mục 0/1** với danh sách chính xác 2 API còn thiếu + lệnh `gcloud services enable` sẵn sàng cho người vận hành xác nhận và tự chạy.
+- **0 sửa đổi code** — mọi lệnh chạy đều read-only, xác nhận qua `git diff --stat` không có file `.js`/`.html`/`.json` nào thay đổi.
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+- **Requirement #3 vẫn FAILED** — chờ Chief Architect xác nhận bật 2 API còn thiếu + tự chạy `firebase login` + cung cấp API Key OpenAI thật (qua CLI, không qua chat) trước khi có thể chạy lại và PASS. Không bắt đầu Requirement #4.
+
 ## Sprint 11 — Requirement #3: AI Provider Runtime Activation — AUDIT, KHÔNG THỂ HOÀN THÀNH TRONG MÔI TRƯỜNG NÀY
 
 **Không có code mới nào thay đổi hành vi runtime.** Requirement này yêu cầu kích hoạt AI Runtime THẬT (deploy Cloud Function `openaiProxy`, thiết lập Secret `OPENAI_API_KEY`, xác nhận Generate thật thành công) — cả 3 việc này đòi hỏi Firebase CLI đã đăng nhập với quyền Owner/Editor trên project `pshop-music` thật + 1 API Key OpenAI thật, **không tồn tại trong môi trường phát triển hiện tại** (xác nhận: `firebase` không có trong PATH — thậm chí chưa từng cài, không chỉ chưa đăng nhập như các Sprint trước).
