@@ -598,6 +598,30 @@ Administrator → admin/ai/observability.html (js/admin-ai-observability.js)
 - **Không đổi Database Structure**: không thêm Field/Collection nào — toàn bộ dữ liệu đọc từ `aiLogs`/`aiJobs`/`aiDrafts`/`aiPlugins`/`aiProviderConfig` đã có.
 - **Có thể mở rộng thành Monitoring Dashboard sau này** (NFR) — `compute()` tách biệt hoàn toàn khỏi phần render, dễ thêm auto-refresh/ngưỡng cảnh báo ở Requirement sau mà không đổi cấu trúc hiện tại.
 
+## One Click Marketing Foundation (Sprint 10, Requirement #3)
+
+Hero Feature của PSH — hiện thực hoá đúng Philosophy "1 lần nhập dữ liệu → AI xử lý → Sinh nhiều đầu ra → Review → Publish" thành 1 module cụ thể. **Chỉ là Foundation** — Card Wizard + Review Screen, KHÔNG gọi AI Provider, KHÔNG Generate thật:
+
+```
+Founder → admin/ai/one-click-marketing.html (js/admin-one-click-marketing.js)
+       → Card Wizard 5 bước:
+            Bước 1: Business   (prefill SiteContentDB.settings — KHÔNG chọn nhiều doanh nghiệp)
+            Bước 2: Product    (chọn DB.getAll() có sẵn hoặc nhập tay + MediaLibraryPicker cho ảnh)
+            Bước 3: Marketing Goal (Khuyến mãi)
+            Bước 4: Review     (xem lại input)
+            Bước 5: Generate Marketing Package
+                 → OneClickMarketing.buildMarketingPackage(input) (js/one-click-marketing.js — hàm THUẦN, không AI)
+       → Review Screen: Product/Business/Price/Promotion + 6 output (Website Article/
+                 Facebook Post/SEO Metadata/Banner Request/AI Image Request/AI Video Request)
+       → Edit (quay lại Wizard) / Generate (hiển thị rõ: CHƯA kết nối AI thật — Foundation only)
+```
+
+- **Module hoàn toàn độc lập với AI Framework** — `js/one-click-marketing.js` không import/gọi `AIModuleRegistry`/`PluginManager`/`AIProviderRegistry`/`AIJobQueue`/`AITaskRouter` — không tạo Job, không qua Queue, không gọi OpenAI. Đây là điểm khác biệt cốt lõi với mọi Plugin AI đã có (Sprint 3/5/6): Marketing Package là TEMPLATE ghép trực tiếp từ input người dùng nhập, không phải nội dung AI sinh ra.
+- **Không đổi Database Structure**: không thêm Field/Collection Firebase nào — Wizard đọc dữ liệu qua `DB.getAll()`/`CategoryDB.getAll()`/`SiteContentDB.get()` đã có (Sprint 1/2), chọn ảnh qua `MediaLibraryPicker.mount()` đã có (Sprint 8). "Lưu nháp" dùng `localStorage`, không ghi Firebase — cùng nguyên tắc Workflow Automation (Sprint 7 #4) không lưu định nghĩa Workflow vào Firebase.
+- **"Business" ở Bước 1 không phải Multi-tenant thật** — Business Manager (Sprint 10 Requirement #1) mới là Foundation (audit + Decision Record, chưa có nhiều doanh nghiệp thật) — Bước 1 chỉ xác nhận/ghi đè thông tin doanh nghiệp hiện có, không phải bộ chọn doanh nghiệp.
+- **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
+- **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
+
 ## Business Manager Foundation (Sprint 10, Requirement #1)
 
 **Chỉ là nền tảng phân tích + thiết kế — KHÔNG có code Multi-tenant nào được triển khai ở Requirement này.** Đúng Architectural Constraint: mọi thay đổi Database Structure/Data Provider/Authentication Model cần thiết cho Multi-tenant đều bị khoá lại, chờ Decision Record được phê duyệt (xem `docs/DECISION_RECORD_BUSINESS_MANAGER.md`).
