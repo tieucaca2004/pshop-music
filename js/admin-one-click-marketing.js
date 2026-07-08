@@ -1,11 +1,13 @@
 /*
  * One Click Marketing Wizard (admin/ai/one-click-marketing.html) — Sprint 10
- * Requirement #3 (Foundation). Card Wizard 5 bước (Business → Product →
- * Marketing Goal → Review → Generate Marketing Package) + Review Screen
- * hiển thị Gói Marketing (6 mục output dạng mẫu). CHỈ là Experience Layer —
- * gọi OneClickMarketing.buildMarketingPackage() (js/one-click-marketing.js,
- * hàm thuần, không AI) để dựng Gói Marketing. KHÔNG gọi PluginManager/
- * AIJobQueue/AIProviderRegistry — không tạo Job, không Generate AI thật.
+ * Requirement #3 (Foundation) + Requirement #4 (Card Wizard Experience &
+ * Review Center — hoàn thiện UX, KHÔNG đổi Workflow Engine/AI). Card Wizard
+ * 5 bước (Business → Product → Marketing Goal → Review → Generate Marketing
+ * Package) + Review Center hiển thị Gói Marketing (6 mục output dạng mẫu).
+ * CHỈ là Experience Layer — gọi OneClickMarketing.buildMarketingPackage()
+ * (js/one-click-marketing.js, hàm thuần, không AI) để dựng Gói Marketing.
+ * KHÔNG gọi PluginManager/AIJobQueue/AIProviderRegistry — không tạo Job,
+ * không Generate AI thật.
  *
  * "Business" ở Bước 1 KHÔNG phải chọn giữa nhiều doanh nghiệp — Business
  * Manager (Sprint 10 Requirement #1) mới chỉ là Foundation, chưa có nhiều
@@ -15,6 +17,19 @@
  * "Lưu nháp" dùng localStorage (KHÔNG ghi vào Firebase) — đúng Architectural
  * Constraint "không đổi Database Structure", cùng lý do Workflow Automation
  * (Sprint 7 #4) không lưu định nghĩa Workflow vào Firebase.
+ *
+ * Sprint 10 Requirement #4 — 2 "thao tác thừa" phát hiện qua rà soát +
+ * kiểm thử click-through thật của Requirement #3, đã sửa (chỉ Experience
+ * Layer, không đổi số bước/cấu trúc Workflow):
+ *   (1) "SỬA LẠI" trước đây luôn nhảy về Bước 1 — buộc bấm lại "TIẾP THEO"
+ *       3 lần để quay lại Review Center dù chỉ cần sửa 1 chi tiết nhỏ (vd
+ *       Khuyến mãi). Nay nhảy thẳng về Bước 4 "Xem lại" (bước gần Review
+ *       Center nhất, vẫn còn nút "TRƯỚC" nếu cần lùi xa hơn).
+ *   (2) Progress Indicator trước đây chỉ là nhãn tĩnh — nay các bước ĐÃ ĐI
+ *       QUA (kể cả bước hiện tại) có thể bấm trực tiếp để nhảy tới, không
+ *       cần bấm "TRƯỚC" nhiều lần. Bước "Gói Marketing" (bước 5) chỉ bấm
+ *       được sau khi đã Generate ít nhất 1 lần (tránh nhảy tới màn hình
+ *       trống chưa có Gói Marketing).
  */
 const AdminOneClickMarketing = (function () {
   const STORAGE_KEY = 'oneClickMarketingDraft_v1';
@@ -93,8 +108,20 @@ const AdminOneClickMarketing = (function () {
   }
 
   function progressHtml() {
+    // Buoc da di qua (i <= currentStep) co the bam thang toi - tru buoc
+    // cuoi "Goi Marketing" (index STEP_LABELS.length-1) chi bam duoc SAU KHI
+    // da Generate it nhat 1 lan (packageResult ton tai), tranh nhay toi man
+    // hinh trong.
     return `<div class="admin-actions" style="gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem">
-      ${STEP_LABELS.map((label, i) => `<span style="padding:0.3rem 0.8rem;border-radius:999px;font-size:0.85rem;${i === currentStep ? 'background:var(--gold-ink);color:#fff' : (i < currentStep ? 'background:var(--bg-alt);color:var(--gold-ink)' : 'background:var(--bg-alt);color:var(--ink-mute)')}">${i + 1}. ${escapeHtml(label)}</span>`).join('')}
+      ${STEP_LABELS.map((label, i) => {
+        const isLastStep = i === STEP_LABELS.length - 1;
+        const clickable = i <= currentStep && (!isLastStep || packageResult);
+        const style = i === currentStep ? 'background:var(--gold-ink);color:#fff' : (i < currentStep ? 'background:var(--bg-alt);color:var(--gold-ink)' : 'background:var(--bg-alt);color:var(--ink-mute)');
+        const cursor = clickable && i !== currentStep ? 'cursor:pointer' : '';
+        const tag = clickable && i !== currentStep ? 'button' : 'span';
+        const attrs = tag === 'button' ? `class="ocmStepBadge" data-step="${i}" style="border:none;padding:0.3rem 0.8rem;border-radius:999px;font-size:0.85rem;${style};${cursor}"` : `style="padding:0.3rem 0.8rem;border-radius:999px;font-size:0.85rem;${style}"`;
+        return `<${tag} ${attrs}>${i + 1}. ${escapeHtml(label)}</${tag}>`;
+      }).join('')}
     </div>`;
   }
 
@@ -168,21 +195,21 @@ const AdminOneClickMarketing = (function () {
     }
     const p = packageResult;
     return `
-      <p style="margin-bottom:1rem"><strong style="color:var(--gold-ink)">Gói Marketing (bản xem trước dạng mẫu — KHÔNG phải nội dung AI đã sinh thật)</strong></p>
-      <div class="panel"><h4 style="margin:0 0 0.5rem">Sản phẩm / Doanh nghiệp / Giá / Khuyến mãi</h4>
+      <p style="margin-bottom:1rem"><strong style="color:var(--gold-ink)">Review Center — Gói Marketing (bản xem trước dạng mẫu — KHÔNG phải nội dung AI đã sinh thật)</strong></p>
+      <div class="panel"><h4 style="margin:0 0 0.5rem">Doanh nghiệp / Sản phẩm / Giá / Khuyến mãi</h4>
         <table class="admin-table"><tbody>
-          ${reviewRow('Sản phẩm', state.productName)}
           ${reviewRow('Doanh nghiệp', state.businessName)}
+          ${reviewRow('Sản phẩm', state.productName)}
           ${reviewRow('Giá', state.price)}
           ${reviewRow('Khuyến mãi', state.promotion)}
         </tbody></table>
       </div>
-      ${outputRow('Website Article', p.websiteArticle.title + '\n\n' + p.websiteArticle.body)}
-      ${outputRow('Facebook Post', p.facebookPost.text)}
+      ${outputRow('Website Draft', p.websiteArticle.title + '\n\n' + p.websiteArticle.body)}
+      ${outputRow('Facebook Draft', p.facebookPost.text)}
       ${outputRow('SEO Metadata', 'Title: ' + p.seoMetadata.title + '\nDescription: ' + p.seoMetadata.description)}
       ${outputRow('Banner Request', 'Chủ đề: ' + p.bannerRequest.theme + '\nLink: ' + (p.bannerRequest.link || '(chưa có)'))}
-      ${outputRow('AI Image Request', p.aiImageRequest.note)}
-      ${outputRow('AI Video Request', p.aiVideoRequest.note)}
+      ${outputRow('Image Request', p.aiImageRequest.note)}
+      ${outputRow('Video Request', p.aiVideoRequest.note)}
       <div class="admin-actions" style="margin-top:1rem">
         <button class="submit-btn" id="ocmEditBtn" style="background:var(--bg-alt);color:var(--ink)">SỬA LẠI (EDIT)</button>
         <button class="submit-btn" id="ocmGenerateRealBtn">GENERATE</button>
@@ -229,6 +256,14 @@ const AdminOneClickMarketing = (function () {
   }
 
   function attachStepHandlers() {
+    document.querySelectorAll('.ocmStepBadge').forEach(btn => {
+      btn.addEventListener('click', () => {
+        readStepInputs();
+        currentStep = parseInt(btn.dataset.step, 10);
+        render();
+      });
+    });
+
     if (currentStep === 1) {
       const select = document.getElementById('ocmProductSelect');
       select.addEventListener('change', () => {
@@ -267,7 +302,10 @@ const AdminOneClickMarketing = (function () {
     if (saveDraftBtn) saveDraftBtn.addEventListener('click', () => { readStepInputs(); saveDraft(); saveDraftBtn.textContent = 'ĐÃ LƯU'; setTimeout(() => { saveDraftBtn.textContent = 'LƯU NHÁP'; }, 1500); });
 
     const editBtn = document.getElementById('ocmEditBtn');
-    if (editBtn) editBtn.addEventListener('click', () => { currentStep = 0; render(); });
+    // Sprint 10 Requirement #4: nhay ve Buoc 4 "Xem lai" (gan Review Center
+    // nhat) thay vi Buoc 1 - tranh phai bam lai "TIEP THEO" 3 lan chi de sua
+    // 1 chi tiet nho. Van con nut "TRUOC" tu Buoc 4 neu can lui xa hon.
+    if (editBtn) editBtn.addEventListener('click', () => { currentStep = 3; render(); });
 
     const generateRealBtn = document.getElementById('ocmGenerateRealBtn');
     if (generateRealBtn) generateRealBtn.addEventListener('click', () => {

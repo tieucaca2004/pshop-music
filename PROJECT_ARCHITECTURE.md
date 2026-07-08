@@ -611,10 +611,19 @@ Founder → admin/ai/one-click-marketing.html (js/admin-one-click-marketing.js)
             Bước 4: Review     (xem lại input)
             Bước 5: Generate Marketing Package
                  → OneClickMarketing.buildMarketingPackage(input) (js/one-click-marketing.js — hàm THUẦN, không AI)
-       → Review Screen: Product/Business/Price/Promotion + 6 output (Website Article/
-                 Facebook Post/SEO Metadata/Banner Request/AI Image Request/AI Video Request)
-       → Edit (quay lại Wizard) / Generate (hiển thị rõ: CHƯA kết nối AI thật — Foundation only)
+       → Review Center: Doanh nghiệp/Sản phẩm/Giá/Khuyến mãi + 6 output (Website Draft/
+                 Facebook Draft/SEO Metadata/Banner Request/Image Request/Video Request)
+       → Edit (quay về Bước 4 "Xem lại", KHÔNG phải Bước 1 — xem Requirement #4) / Generate (hiển thị rõ: CHƯA kết nối AI thật — Foundation only)
 ```
+
+### Card Wizard Experience & Review Center (Sprint 10, Requirement #4)
+
+Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu trúc Workflow 5 bước, không mở rộng AI:
+
+- **Progress Indicator có thể bấm trực tiếp**: các bước ĐÃ ĐI QUA (`i <= currentStep`) hiển thị dạng nút bấm được (`.ocmStepBadge`) thay vì nhãn tĩnh — nhảy thẳng tới bước đã qua mà không cần bấm "TRƯỚC" nhiều lần. Bước 5 "Gói Marketing" chỉ bấm được sau khi đã Generate ít nhất 1 lần (`packageResult` tồn tại), tránh nhảy tới màn hình trống.
+- **"SỬA LẠI" (Edit) nhảy về Bước 4 "Xem lại"** thay vì Bước 1 — sửa 1 "thao tác thừa" phát hiện qua kiểm thử click-through thật của Requirement #3 (trước đây phải bấm "TIẾP THEO" 3 lần để quay lại Review Center dù chỉ sửa 1 chi tiết nhỏ). Vẫn còn nút "TRƯỚC" từ Bước 4 nếu Founder cần lùi xa hơn.
+- **Review Center đổi tên hiển thị khớp đúng thuật ngữ đã giao** ("Website Draft"/"Facebook Draft"/"Image Request"/"Video Request" — chỉ đổi nhãn hiển thị trong `js/admin-one-click-marketing.js`, KHÔNG đổi tên field bên trong `OneClickMarketing.buildMarketingPackage()` đã kiểm thử ở Requirement #3), sắp lại thứ tự tóm tắt Doanh nghiệp → Sản phẩm → Giá → Khuyến mãi.
+- **Ước tính thời gian hoàn thành ("≤ 2 phút")**: đường đi nhanh nhất (chọn sản phẩm có sẵn) = 5 lượt bấm + 1 đoạn gõ ngắn, không có bước nào bắt nhập lại dữ liệu đã có — không phát hiện "thao tác thừa" nào khác ngoài 2 điểm đã sửa ở trên.
 
 - **Module hoàn toàn độc lập với AI Framework** — `js/one-click-marketing.js` không import/gọi `AIModuleRegistry`/`PluginManager`/`AIProviderRegistry`/`AIJobQueue`/`AITaskRouter` — không tạo Job, không qua Queue, không gọi OpenAI. Đây là điểm khác biệt cốt lõi với mọi Plugin AI đã có (Sprint 3/5/6): Marketing Package là TEMPLATE ghép trực tiếp từ input người dùng nhập, không phải nội dung AI sinh ra.
 - **Không đổi Database Structure**: không thêm Field/Collection Firebase nào — Wizard đọc dữ liệu qua `DB.getAll()`/`CategoryDB.getAll()`/`SiteContentDB.get()` đã có (Sprint 1/2), chọn ảnh qua `MediaLibraryPicker.mount()` đã có (Sprint 8). "Lưu nháp" dùng `localStorage`, không ghi Firebase — cùng nguyên tắc Workflow Automation (Sprint 7 #4) không lưu định nghĩa Workflow vào Firebase.

@@ -2,6 +2,21 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 10 — Card Wizard Experience & Review Center (Requirement #4)
+
+Hoàn thiện UX của Card Wizard + Review Center (Requirement #3) — CHỈ Experience Layer, không mở rộng AI, không đổi Workflow Engine (số bước/cấu trúc 5 bước giữ nguyên).
+
+- **Không cần Decision Record**: chỉ sửa `js/admin-one-click-marketing.js` — không đổi `js/one-click-marketing.js` (hàm thuần `buildMarketingPackage()` giữ nguyên, tái xác nhận qua Node `vm` — 4/4 kịch bản PASS như Requirement #3, không đổi kết quả), không đổi Database/Firebase Rules/AI Framework.
+- **Rà soát tìm "thao tác thừa" (Founder Experience)** — qua đọc lại mã nguồn + kiểm thử click-through thật, phát hiện và sửa đúng 2 điểm:
+  1. **"SỬA LẠI" trước đây luôn nhảy về Bước 1** — buộc bấm lại "TIẾP THEO" 3 lần để quay lại Review Center dù chỉ cần sửa 1 chi tiết nhỏ (vd Khuyến mãi). Đã sửa: nhảy thẳng về Bước 4 "Xem lại" (gần Review Center nhất, vẫn còn nút "TRƯỚC" nếu cần lùi xa hơn).
+  2. **Progress Indicator trước đây chỉ là nhãn tĩnh** — nay các bước ĐÃ ĐI QUA có thể bấm trực tiếp để nhảy tới (`.ocmStepBadge`), không cần bấm "TRƯỚC" nhiều lần. Bước "Gói Marketing" (bước 5) chỉ bấm được sau khi đã Generate ít nhất 1 lần (`packageResult` tồn tại) — tránh nhảy tới màn hình trống.
+- **Ước tính thời gian hoàn thành Wizard**: đường đi nhanh nhất (chọn sản phẩm có sẵn) = 5 lượt bấm (Tiếp theo×4 + chọn sản phẩm) + 1 đoạn gõ ngắn (Khuyến mãi) — không có bước nào yêu cầu nhập lại dữ liệu đã có, phù hợp mục tiêu "≤ 2 phút". Không có "thao tác thừa" nào khác được phát hiện ngoài 2 điểm đã sửa ở trên — không tự mở rộng Requirement để thêm/bớt bước Workflow.
+- **Review Center — khớp đúng nhãn/thứ tự đã giao**: đổi tên hiển thị "Website Article"→"Website Draft", "Facebook Post"→"Facebook Draft", "AI Image Request"→"Image Request", "AI Video Request"→"Video Request" (chỉ đổi nhãn hiển thị, KHÔNG đổi tên field trong `buildMarketingPackage()` đã kiểm thử ở Requirement #3); sắp lại thứ tự bảng tóm tắt đúng Doanh nghiệp → Sản phẩm → Giá → Khuyến mãi.
+- **Xác nhận không đổi**: `job-queue.js`, `plugin-manager.js`, `provider-registry.js`, `permission-service.js`, `task-router.js`, `workflow-engine.js`, `database.rules.json`, `storage.rules`, `AI_RULES.md`, `js/one-click-marketing.js`.
+- **Kiểm thử**: chạy lại 4/4 kịch bản Node `vm` cho `buildMarketingPackage()` (Requirement #3) — PASS, không đổi kết quả (Regression). Kiểm thử click-through THẬT qua trình duyệt (harness tạm thời, đã xoá, không commit) cho đúng 2 thay đổi: "SỬA LẠI" nhảy đúng về Bước 4 (không phải Bước 1); bấm badge Bước 2 từ Bước 4 nhảy đúng, dữ liệu đã nhập (Tên sản phẩm) vẫn giữ nguyên; Review Center hiển thị đúng nhãn/thứ tự mới. Kiểm tra `admin/ai/one-click-marketing.html` qua static server — 0 lỗi console. **Không tuyên bố AI PASS** — không có lượt Generate AI thật nào ở Requirement này.
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+- Chưa triển khai Requirement #5.
+
 ## Sprint 10 — One Click Marketing Foundation (Requirement #3)
 
 **Lưu ý sai lệch trong Context (không tự suy diễn)**: Requirement này ghi "Requirement #2 (Smart CMS) đã hoàn thành" — xác nhận qua `git log --oneline --all` rằng **không có commit "Sprint 10 Requirement #2" nào tồn tại** — Smart CMS chưa từng được triển khai. Đã tiếp tục Requirement #3 vì One Click Marketing Wizard đọc dữ liệu Product/Category/Settings trực tiếp qua `DB`/`CategoryDB`/`SiteContentDB` đã có (không phụ thuộc việc Product Manager có "Smart Mode" hay chưa) — không có rủi ro kỹ thuật khi bỏ qua thứ tự. Cần Chief Architect xác nhận có muốn quay lại làm Smart CMS sau không.
