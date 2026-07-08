@@ -2,6 +2,23 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 11 — Requirement #2: AI Assist Inline CMS Forms
+
+Đưa AI vào thẳng form Sản phẩm (`admin/products.html`) — Founder không còn phải rời trang sang AI Center để viết mô tả bằng AI. Chỉ Experience Layer — tái sử dụng NGUYÊN VẸN `PermissionService`/`PluginManager`/`AIJobQueue`/Draft Workflow (kể cả `AdminAI.publishDraftById`/`rejectDraftById` đã có từ Sprint 4 Requirement #2), không sửa bất kỳ file nào trong AI Framework, không tạo Plugin/Provider/Queue/Workflow mới.
+
+- **File mới `js/admin-products-ai-assist.js`** (`ProductAIAssist`) — hoàn toàn KHÔNG tham chiếu biến nội bộ của `AdminApp` (`js/admin-products.js`, IIFE riêng) — đọc/ghi qua DOM (`#pId`, `#pDescriptionEditor .ql-editor`) giống đúng cách `admin-products.js` tự làm (`editProduct()` gán `quill.root.innerHTML` trực tiếp) — **0 sửa đổi `js/admin-products.js`**.
+- **Luồng**: nút "✨ VIẾT MÔ TẢ BẰNG AI" (cạnh Quill editor) → `PermissionService.checkPluginExecution()` → `PluginManager.loadPlugins()` (đảm bảo seed `aiPlugins`, cùng phát hiện ở Requirement #1) → `PluginManager.loadPlugin('product-description-writer').execute([{productId, tone:'Chuyên nghiệp'}], uid, email)` → `AIJobQueue.resume()` — đúng luồng `js/admin-ai.js` đã dùng.
+- **Review Center thu nhỏ NGAY TRONG form** — trạng thái Job (đang xử lý/thất bại/hoàn tất) hiển thị dưới nút, poll 3 giây. Khi hoàn tất, hiển thị bản xem trước nội dung Draft + 2 nút "ÁP DỤNG VÀO MÔ TẢ" (gọi `AdminAI.publishDraftById()` — tái sử dụng nguyên vẹn Publish flow, ghi `DB.update()` qua `publishToTarget()` đã có) / "TỪ CHỐI" (`AdminAI.rejectDraftById()`) — Founder LUÔN review trước khi áp dụng, không tự động ghi đè mô tả.
+- **Retry/Cancel tái sử dụng `AIJobQueue.retryFailed()`/`AIJobQueue.cancel()`** đã có sẵn — không viết logic Queue mới.
+- **Lỗi thật, không bịa nội dung**: nếu Job thất bại (vd chưa cấu hình AI Provider/chưa deploy Cloud Function), hiển thị đúng nguyên văn lỗi từ Queue kèm nút "THỬ LẠI" — không tạo placeholder text.
+- **Chỉ hỗ trợ Mô tả sản phẩm** (`product-description-writer`) ở Requirement này — kiến trúc đủ mở rộng cho Tên sản phẩm/Mô tả ngắn/SEO Title/SEO Description/Keywords sau này (chỉ cần thêm entry moduleId + field DOM tương ứng) nhưng KHÔNG tự làm thêm (chưa được giao).
+- **Nút chỉ hoạt động với sản phẩm ĐÃ LƯU** (`#pId` có giá trị) — Plugin bắt buộc `productId` có thật trong Product Manager; sản phẩm mới chưa lưu hiển thị hướng dẫn "Lưu sản phẩm trước" thay vì lỗi khó hiểu.
+- Nạp thêm bộ script AI Framework + `js/admin-ai.js` vào `admin/products.html` (đúng bộ 5 trang `admin/ai/*.html` đã dùng, cộng `admin-ai.js` để tái sử dụng `publishDraftById`/`rejectDraftById` — đúng cách `admin/ai/assistant.html` đã làm từ Sprint 4 Requirement #2, không gọi `AdminAI.initDashboard()` nên không có tác dụng phụ ngoài ý muốn).
+- **Kiểm thử**: harness trình duyệt tạm thời (mock Firebase, đã xoá, không commit) — chạy đúng Product Manager thật (42 sản phẩm từ seed), mở sản phẩm có sẵn → bấm Generate → Job tạo đúng `inputParams`, thất bại đúng lý do "Chưa chọn nhà cung cấp AI" (chưa deploy Cloud Function, không phải lỗi code) → đăng ký tạm 1 Provider giả lập qua `AIProviderRegistry.register()` (chỉ để kiểm thử luồng thành công thật, không phải code Production) → bấm "THỬ LẠI" → Job hoàn tất, Draft tạo thật → bấm "ÁP DỤNG" → xác nhận `AdminAI.publishDraftById()` ghi đúng `description` vào `products/{id}` VÀ đồng bộ hiển thị Quill editor; bấm "TỪ CHỐI" ở 1 sản phẩm khác → xác nhận Draft chuyển `rejected`, KHÔNG đổi `description` sản phẩm đó. Nút Generate hiển thị đúng hướng dẫn khi chưa lưu sản phẩm. 0 lỗi console trong suốt kiểm thử.
+- Xác nhận qua `git diff`: 0 thay đổi ở `js/admin-products.js`, `js/admin-ai.js`, toàn bộ `admin/ai/*.html`, và mọi file gated (`plugin-manager.js`/`job-queue.js`/`provider-registry.js`/`permission-service.js`/`database.rules.json`/`storage.rules`/`AI_RULES.md`) — AI Center (`admin/ai/*.html`) tiếp tục hoạt động bình thường, không regression.
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+- **Chỉ hoàn thành đúng Requirement #2 của Sprint 11 Planning. Không bắt đầu Requirement #3. Không tự tạo Requirement mới.**
+
 ## Sprint 11 — Requirement #1: One Click Marketing — Cầu nối Generate Thật
 
 Nối 4/6 output của Gói Marketing (One Click Marketing, Sprint 10 Requirement #3) với đúng Plugin AI đã Production tương ứng, gọi qua `PluginManager`/`AIJobQueue`/`PermissionService` HIỆN CÓ — đúng luồng `js/admin-ai.js` đã dùng (Permission → PluginManager.loadPlugin().execute() → AIJobQueue.resume()). KHÔNG sửa `plugin-manager.js`/`job-queue.js`/`provider-registry.js`/`permission-service.js`/`js/one-click-marketing.js` (hàm thuần `buildMarketingPackage()` giữ nguyên).
