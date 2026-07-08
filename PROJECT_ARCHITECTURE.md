@@ -631,6 +631,26 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Smart CMS — Smart Mode ↔ Advanced Mode (Sprint 10.x, Smart CMS Completion)
+
+Hoàn thành hạng mục Smart CMS còn thiếu từ Sprint 10 (đã ghi nhận rõ ở `docs/SPRINT_10_FINAL_REPORT.md`, không sửa lại báo cáo đó). Chỉ Experience Layer — nav sidebar, không đổi Permission/RBAC:
+
+```
+Founder/Editor/Admin → js/admin-auth.js renderShell()
+       → getUiMode() (localStorage 'pshopAdminUiMode', mặc định 'smart')
+       → navSource = mode === 'advanced' ? ADMIN_NAV : FOUNDER_SMART_NAV
+       → items = navSource.filter(i => !i.role || currentRole === 'admin')
+              (CÙNG 1 điều kiện lọc vai trò cho CẢ HAI chế độ — không đổi Security)
+       → render sidebar + nút "Smart Mode ↔ Advanced Mode" (topbar)
+       → bấm nút → toggleUiMode() → setUiMode() (localStorage) → renderShell() lại (không tải lại trang)
+```
+
+- **`FOUNDER_SMART_NAV` là danh sách RIÊNG, không phải bản lọc từ `ADMIN_NAV`** — Smart Mode cố tình đưa lên sidebar các lối tắt AI (One Click Marketing/AI Content/AI Image/Marketing Drafts) mà Advanced Mode xưa nay chỉ có dạng liên kết chéo bên trong `admin/ai/*.html`, chưa từng có trong `ADMIN_NAV`. Đúng 13 mục đã giao: Trang chủ, Dashboard, Sản phẩm, Danh mục, Blog, Banner, Thư viện ảnh, One Click Marketing, AI Content, AI Image, AI Video, Marketing Drafts, Cài đặt (Admin-only, giữ đúng `role:'admin'` như Advanced Mode).
+- **`ADMIN_NAV` (Advanced Mode) giữ nguyên vẹn** — xác nhận qua `git diff`, không dòng nào trong 16 mục bị sửa/xoá. "Advanced Mode hiển thị toàn bộ chức năng hiện có, không loại bỏ" — đúng nghĩa đen.
+- **"AI Content"/"AI Image" cùng trỏ `admin/ai/index.html`** — cùng giới hạn đã ghi nhận ở Founder Home (Sprint 10 Requirement #5), chưa có 2 trang Founder-friendly riêng biệt. **"AI Video" không có `href`** — hiển thị `<span>` vô hiệu hoá rõ ràng, không phải liên kết giả (hệ thống chưa có năng lực AI Video nào).
+- **Không đổi Permission/Security**: `renderShell()` áp dụng đúng 1 điều kiện lọc vai trò `!i.role || currentRole === 'admin'` cho CẢ `ADMIN_NAV` lẫn `FOUNDER_SMART_NAV` — Editor không bao giờ thấy "Cài đặt" ở bất kỳ chế độ nào. `init()`'s kiểm tra `requiredRole` (bảo vệ TỪNG TRANG khi truy cập trực tiếp bằng URL, độc lập hoàn toàn với sidebar) không bị chạm tới — ẩn 1 mục khỏi sidebar không làm mất bảo vệ của trang đó.
+- **Lựa chọn Smart/Advanced lưu `localStorage`** (không ghi Firebase, không đổi Database Structure, không cần Decision Record) — cùng nguyên tắc "Lưu nháp" của One Click Marketing (Sprint 10 Requirement #3). Giới hạn đã biết: gắn theo trình duyệt, không theo tài khoản.
+
 ## Kiểm tra toàn diện + Đóng Sprint (Sprint 10, Final Review & Close — SPRINT 10 COMPLETED với 1 khoảng hở đã biết)
 
 Sprint Review cuối cùng của Sprint 10 — xác minh trên Git thật (không dựa vào hội thoại), không thêm tính năng. Báo cáo đầy đủ: xem `docs/SPRINT_10_FINAL_REPORT.md`.
