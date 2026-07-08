@@ -631,6 +631,17 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Kiểm tra toàn diện + Đóng Sprint (Sprint 10, Final Review & Close — SPRINT 10 COMPLETED với 1 khoảng hở đã biết)
+
+Sprint Review cuối cùng của Sprint 10 — xác minh trên Git thật (không dựa vào hội thoại), không thêm tính năng. Báo cáo đầy đủ: xem `docs/SPRINT_10_FINAL_REPORT.md`.
+
+- **Verify Requirements**: Requirement #1/#3/#4/#5 xác nhận tồn tại qua `git log` (`d40bf4c`/`c72637f`/`a203ddb`/`5f73ac0`). **Requirement #2 (Smart CMS) KHÔNG TỒN TẠI** — không commit, không file nào — ghi rõ, không tự đánh dấu hoàn thành.
+- **Regression Review**: `git log a360a6c..5f73ac0 -- <file>` xác nhận 0 commit cho toàn bộ file lõi (Plugin Manager/Queue/Provider Manager/Permission Service/AI Task Router/Data Provider/Firebase Database+Storage Rules/Workflow Engine/`AI_RULES.md`) trong suốt Sprint 10.
+- **Architecture Review**: không phá kiến trúc, Decision Record đúng chỗ cần (Requirement #1) và đúng chỗ không cần (Requirement #3/#4/#5).
+- **Security Review**: 0 lỗ hổng mới, 0 secret lộ, Auth gate đầy đủ ở cả 3 trang mới, RBAC nhất quán với Sprint 8.
+- **Product Review — phát hiện MỚI**: Gói Marketing từ One Click Marketing hoàn toàn vô hình trên Founder Home (chỉ lưu `localStorage`, không bao giờ xuất hiện ở "Recent Marketing Drafts"/"Recent Activities") — xem `ROADMAP.md` mục "Founder Daily Workflow", không sửa ở Requirement này.
+- **Sprint Health Score ~8.5/10** — kỷ luật kiến trúc/bảo mật rất tốt (10/10 cả hai), điểm trừ chính đến từ khoảng hở sản phẩm (Requirement #2 chưa từng được giao) chứ không phải chất lượng thực thi.
+
 ## Founder Daily Workflow (Sprint 10, Requirement #5)
 
 Experience Layer CAO NHẤT của PSH — Founder mở PSH để hoàn thành công việc (Thêm sản phẩm/Tạo Marketing Package/Review/Generate), KHÔNG để quản trị AI. Trang này không hiển thị thuật ngữ Queue/Plugin/Provider/Prompt/Workflow/Cost:

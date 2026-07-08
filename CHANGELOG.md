@@ -2,6 +2,19 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 10 — Final Review & Close — SPRINT 10 COMPLETED (với 1 khoảng hở đã biết)
+
+Sprint Review cuối cùng của Sprint 10 — không thêm tính năng, chỉ xác minh/đánh giá/đóng Sprint theo đúng dữ liệu Git thật, không dựa vào hội thoại.
+
+- **Verify Requirements (xác minh trên Git)**: `git log --oneline --all | grep -i "sprint 10"` + `git fetch origin` (xác nhận local khớp remote) — Requirement #1 (`d40bf4c`), #3 (`c72637f`), #4 (`a203ddb`), #5 (`5f73ac0`) đều tồn tại, đã push. **Requirement #2 (Smart CMS) KHÔNG TỒN TẠI** — không có commit, không có file nào (`find . -iname "*smart*"` rỗng) — ghi rõ, không tự đánh dấu hoàn thành.
+- **Regression Review**: `git log --oneline a360a6c..5f73ac0 -- <file>` xác nhận 0 commit trong suốt Sprint 10 cho toàn bộ file lõi bị khoá (`job-queue.js`/`plugin-manager.js`/`provider-registry.js`/`provider-interface.js`/`permission-service.js`/`task-router.js`/`data-provider.js`/`module-registry.js`/`database.rules.json`/`storage.rules`/`workflow-engine.js`/`AI_RULES.md`). `one-click-marketing.js` chỉ 1 commit (Requirement #3); `admin-one-click-marketing.js` đúng 2 commit (#3 tạo mới, #4 polish); `media-library.js` (Sprint 8) 0 commit trong Sprint 10 — Requirement #5 chỉ gọi lại, không sửa.
+- **Architecture Review**: không phá kiến trúc, không thay đổi ngoài phạm vi. Decision Record đúng chỗ cần (Requirement #1 — `docs/DECISION_RECORD_BUSINESS_MANAGER.md`, 3 quyết định Database Structure/Data Provider/Authentication Model, chưa được chọn) và đúng chỗ không cần (Requirement #3/#4/#5 — đã audit xác nhận không đụng Database Structure/Data Provider/Auth Model).
+- **Security Review**: grep xác nhận không có API Key/secret nào trong file mới Sprint 10; cả 3 trang mới (`one-click-marketing.html`/`home.html`/`media-library.html`) đều gọi `AdminAuth.init()` — không trang nào bỏ qua Auth gate; RBAC nhất quán (Editor+Admin, khớp mức truy cập Product/Blog/Banner Manager, Media Library cho Editor xoá ảnh đúng thiết kế Sprint 8). Không phát hiện lỗ hổng mới.
+- **Product Review — Founder Journey**: Home → Product → Marketing → Review → Generate → Ready To Publish đều hoạt động đúng phạm vi Foundation (Generate/Ready To Publish không tuyên bố tự động). **Phát hiện MỚI**: Gói Marketing từ One Click Marketing hoàn toàn vô hình trên Founder Home (chỉ lưu `localStorage`, không bao giờ xuất hiện ở "Recent Marketing Drafts"/"Recent Activities") — ghi vào `ROADMAP.md`, không sửa.
+- Lập `docs/SPRINT_10_FINAL_REPORT.md` (Verify Requirements, Regression/Architecture/Security/Product Review, Output: hoàn thành/chưa hoàn thành/Technical Debt/Future Improvements/Sprint Health Score ~8.5/10).
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md` (ghi nhận phát hiện mới ở Product Review).
+- **SPRINT 10 COMPLETED (Requirement #1, #3, #4, #5 — Requirement #2 chưa từng được giao/triển khai, ghi nhận rõ). Không bắt đầu Sprint 11. Không tự viết Sprint 11 Planning.**
+
 ## Sprint 10 — Founder Daily Workflow (Requirement #5)
 
 Thiết kế + triển khai Founder Home — Experience Layer CAO NHẤT của PSH, nơi Founder mở PSH để hoàn thành công việc, không phải để quản trị AI. Chỉ Experience Layer, không đổi AI Framework/Queue/Plugin Manager/Provider Manager/Permission Service/AI Task Router/Firebase Rules/Database Structure.
