@@ -2,6 +2,18 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 11 — Requirement #3: AI Provider Runtime Activation — AUDIT, KHÔNG THỂ HOÀN THÀNH TRONG MÔI TRƯỜNG NÀY
+
+**Không có code mới nào thay đổi hành vi runtime.** Requirement này yêu cầu kích hoạt AI Runtime THẬT (deploy Cloud Function `openaiProxy`, thiết lập Secret `OPENAI_API_KEY`, xác nhận Generate thật thành công) — cả 3 việc này đòi hỏi Firebase CLI đã đăng nhập với quyền Owner/Editor trên project `pshop-music` thật + 1 API Key OpenAI thật, **không tồn tại trong môi trường phát triển hiện tại** (xác nhận: `firebase` không có trong PATH — thậm chí chưa từng cài, không chỉ chưa đăng nhập như các Sprint trước).
+
+- **Audit đầy đủ** (không suy đoán, xem `docs/CLOUD_FUNCTIONS_DEPLOYMENT.md` mục 0): `functions/index.js` (Cloud Function `openaiProxy`) đúng kiến trúc Proxy an toàn (Secret Manager, xác thực qua `roles/{uid}` có sẵn) và syntactically hợp lệ (`node -c` PASS, dependencies đã có trong `node_modules`); `firebase.json`/`.firebaserc` wiring đúng; `js/ai/providers/openai.js` gọi đúng qua Proxy — **code đã sẵn sàng deploy, chỉ chưa từng được deploy** (xác nhận xuyên suốt từ Sprint 3 tới nay, không đổi).
+- **Claude/Gemini/DeepSeek vẫn là stub CỐ Ý** — `generate()` luôn reject rõ ràng (không bịa nội dung), đúng quyết định đã ghi từ Sprint 8 Architecture Challenge #5 ("chờ quyết định kinh doanh có cần đa dạng Provider hay không" — vẫn chưa có quyết định). Không tự viết `generate()` thật cho 3 Provider này — cần API Key thật của từng bên + 1 quyết định kinh doanh riêng, ngoài phạm vi "kích hoạt Runtime ĐÃ CÓ" của Requirement #3.
+- **Tạo mới `docs/CLOUD_FUNCTIONS_DEPLOYMENT.md`** — runbook đầy đủ cho người vận hành có thật quyền truy cập: điều kiện tiên quyết (gói Blaze, API Key OpenAI), lệnh `firebase functions:secrets:set`/`firebase deploy --only functions`, cách đối chiếu URL Cloud Function thật với hằng số `OPENAI_PROXY_URL`, kích hoạt qua `admin/ai/providers.html`, checklist xác minh 8 mục, rollback (`firebase functions:delete`) — cùng cấu trúc `docs/FIREBASE_RULES_DEPLOYMENT.md` (Sprint 9) đã dùng cho khoảng hở tương tự.
+- **KHÔNG tuyên bố** bất kỳ Acceptance Criteria nào đòi hỏi Runtime thật đã đạt: "Provider hoạt động thật", "Product AI Generation end-to-end thật", "One Click Marketing sinh Draft AI thật" — cả 3 đều **CHƯA XÁC MINH ĐƯỢC**, đúng Honesty Rule "Never report AI working/Provider activated/end-to-end success unless verified".
+- **0 sửa đổi** `js/ai/plugin-manager.js`/`js/ai/job-queue.js`/`js/ai/provider-interface.js`/`js/ai/workflow-engine.js`/`functions/index.js`/bất kỳ file Provider nào (`js/ai/providers/*.js`) — đúng Architecture Rule "Do NOT modify PluginManager/Queue/Provider Interface/Workflow Engine", không cần Decision Record vì không có thay đổi kiến trúc nào được đề xuất (chỉ là audit + tài liệu vận hành).
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+- **Requirement #3 CHƯA THỂ ĐÓNG với kết quả "hoàn thành"** — chờ Chief Architect/người vận hành tự thực hiện `docs/CLOUD_FUNCTIONS_DEPLOYMENT.md`, sau đó xác nhận lại. Không bắt đầu Requirement #4. Không tự tạo Requirement mới.
+
 ## Sprint 11 — Requirement #2: AI Assist Inline CMS Forms
 
 Đưa AI vào thẳng form Sản phẩm (`admin/products.html`) — Founder không còn phải rời trang sang AI Center để viết mô tả bằng AI. Chỉ Experience Layer — tái sử dụng NGUYÊN VẸN `PermissionService`/`PluginManager`/`AIJobQueue`/Draft Workflow (kể cả `AdminAI.publishDraftById`/`rejectDraftById` đã có từ Sprint 4 Requirement #2), không sửa bất kỳ file nào trong AI Framework, không tạo Plugin/Provider/Queue/Workflow mới.
