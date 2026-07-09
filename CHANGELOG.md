@@ -2,6 +2,22 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 11 — Requirement #3.2: Natural Language Entity Resolution (AI Assistant hội thoại)
+
+Root Cause đã xác nhận ở đợt trước: AI Assistant hội thoại (`admin/ai/assistant.html`) dừng lại đúng ở `AITaskRouter.matchTarget()` — bắt buộc câu gõ chứa NGUYÊN VĂN tên đầy đủ sản phẩm/bài viết, chưa từng chạm tới PermissionService/PluginManager/Queue/Provider (khác với Product AI Assist — không qua bước "xác định đối tượng" tự do, đọc thẳng `productId` từ dropdown).
+
+- **Sửa DUY NHẤT `matchTarget()` trong `js/ai/task-router.js`** — nâng cấp từ "phải khớp nguyên văn tên đầy đủ" sang so khớp NHIỀU TẦNG, ưu tiên rõ ràng, vẫn HOÀN TOÀN rule-based (không AI/LLM, không gọi OpenAI, không embedding/vector search — đúng ràng buộc Sprint 4 Requirement #8):
+  1. **EXACT** — câu gõ (đã chuẩn hoá dấu câu/gạch nối → khoảng trắng) chứa nguyên tên đã chuẩn hoá tương tự (nâng cấp từ hành vi cũ, chỉ chuẩn hoá tốt hơn — "XDJ-RX3" và "XDJ RX3" nay coi là như nhau).
+  2. **TOKEN OVERLAP** — mọi từ có nghĩa trong câu gõ (sau khi loại từ thuộc "từ khóa ý định" của MỌI route + từ nối chung, không phải danh sách tay cố định) đều khớp ĐÚNG 1 từ trong tên sản phẩm/bài viết.
+  3. **ALIAS** — giống Token Overlap nhưng so thêm với `brand`/`specs` ĐÃ CÓ SẴN trên Product (KHÔNG thêm field/Database mới) — cho phép gõ theo thương hiệu/mã tắt không nằm trong tên chính.
+  4. **PARTIAL** — mỗi từ trong câu gõ là chuỗi con của 1 từ trong tên/brand/specs (vd "8050" khớp "8050B").
+  - Ngưỡng khớp tối thiểu (`MIN_TOKEN_OVERLAP_RATIO`) là hằng số riêng, dễ chỉnh sau này.
+  - **Không bao giờ đoán mò**: nếu nhiều ứng viên CÙNG đạt tầng cao nhất + độ khớp cao nhất → trả về danh sách mơ hồ (`target_ambiguous`, cơ chế đã có từ Sprint 4 Requirement #3), KHÔNG tự chọn 1 trong số đó.
+- **0 sửa đổi** `matchRoute()`/`route()`/`dispatch()`/`AI_TASK_ROUTES` (chữ ký hàm, hành vi routing theo từ khóa giữ nguyên) và 0 sửa đổi mọi file khác trong AI Framework (`plugin-manager.js`/`job-queue.js`/`provider-registry.js`/`permission-service.js`/`functions/index.js`) — đúng phạm vi "Improve ONLY the entity matching algorithm".
+- **Kiểm thử**: Node `vm` load thẳng mã nguồn thật (`js/ai/task-router.js`), 11/11 kịch bản PASS — cả 4 ví dụ Validation chính thức ("AlphaTheta XDJ AN"→"AlphaTheta XDJ-AN", "RX3"→"PIONEER XDJ-RX3...", "FLX4"→"DDJ-FLX4", "8050"→"Genelec 8050B") lẫn hồi quy: khớp nguyên tên đầy đủ (hành vi cũ) vẫn đúng cho cả route Product Description/Slider/SEO; câu không khớp từ khóa nào vẫn trả `plugin_not_found`; 2 sản phẩm cùng khớp "KRK" vẫn trả về danh sách mơ hồ thay vì tự chọn; tầng EXACT vẫn thắng đúng khi có ứng viên khác cùng chứa 1 phần tên tương tự (không lẫn "XDJ-RX2" khi gõ đúng tên "XDJ-RX2" dù "XDJ-RX3" cũng có mặt trong danh sách).
+- **Giới hạn đã biết, ngoài phạm vi Requirement này**: `matchRoute()` (chọn Plugin theo từ khóa Ý ĐỊNH, vd "seo"/"mô tả"/"slide") vẫn chưa cải thiện — câu gõ dùng từ đồng nghĩa không có trong danh sách `keywords` (vd "content" thay vì "mô tả") vẫn không nhận diện được Ý ĐỊNH (khác với vấn đề ĐỐI TƯỢNG đã sửa ở đây). SEO Generator vẫn chỉ nhắm Blog Post (không phải Product) — giới hạn kiến trúc đã biết từ Sprint 3, không đổi.
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+
 ## Sprint 11 — Requirement #3.2: Deployment — pshopmusic.com đã cập nhật lên feature/cms-ai-sprint2
 
 **Root Cause thật sự của "AI Assistant vẫn báo lỗi cũ" (Requirement #3.1 trở về trước): KHÔNG phải code, KHÔNG phải hạ tầng Firebase — mà là DEPLOYMENT.** `pshopmusic.com` chưa từng được kết nối Git Continuous Deployment trên Netlify — được deploy thủ công qua Netlify CLI/Drop, đứng yên tại 1 bản build cũ từ khoảng giữa Sprint 2 (xác nhận bằng `git log -S` + so sánh nội dung thật: thiếu script `js/ai/permission-service.js` (thêm ở Sprint 2 Requirement #8) và vẫn còn đoạn text đã được sửa từ Sprint 3 Requirement #5). Toàn bộ Sprint 2 (nửa sau) → Sprint 11 chưa từng lên Production dù đã commit/push đầy đủ lên `feature/cms-ai-sprint2`.

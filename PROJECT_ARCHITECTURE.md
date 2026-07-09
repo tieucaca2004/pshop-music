@@ -631,6 +631,32 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Natural Language Entity Resolution (Sprint 11, Requirement #3.2) — nâng cấp `AITaskRouter.matchTarget()`
+
+Đóng khoảng hở phát hiện qua Founder Acceptance Test thật: AI Assistant hội thoại (`admin/ai/assistant.html`) báo "không xác định được đúng sản phẩm" ngay cả khi ý định đã hiểu đúng, vì `matchTarget()` (Sprint 4) bắt buộc câu gõ chứa NGUYÊN VĂN tên đầy đủ — không tới lượt `PermissionService`/`PluginManager`/`Queue`/`Provider` được gọi tới.
+
+```
+matchTarget(text, route, candidates) — so khớp 4 tầng, ưu tiên rõ ràng,
+KHÔNG BAO GIỜ đoán mò (nhiều ứng viên cùng tầng/độ khớp cao nhất → trả về
+danh sách mơ hồ, giữ nguyên cơ chế Sprint 4 Requirement #3):
+
+  Tầng 4 EXACT          — câu gõ (chuẩn hoá dấu câu/gạch nối → khoảng
+                           trắng) chứa nguyên tên (chuẩn hoá tương tự)
+  Tầng 3 TOKEN OVERLAP   — mọi từ có nghĩa trong câu gõ khớp ĐÚNG 1 từ
+                           trong tên (loại từ thuộc "từ khóa ý định" của
+                           MỌI route + từ nối chung trước khi so khớp)
+  Tầng 2 ALIAS           — giống Token Overlap, so thêm brand/specs ĐÃ
+                           CÓ SẴN trên Product (không thêm field mới)
+  Tầng 1 PARTIAL         — từ trong câu gõ là chuỗi con của 1 từ trong
+                           tên/brand/specs (vd "8050" khớp "8050B")
+```
+
+- **Vẫn HOÀN TOÀN rule-based** — không AI/LLM, không gọi OpenAI, không embedding/vector search, đúng ràng buộc Sprint 4 Requirement #8 ("Router không thể dùng AI thật để phân loại ý định"). Chỉ nâng cấp thuật toán so khớp CHUỖI/TỪ xác định (deterministic).
+- **`ROUTE_KEYWORD_WORDS`** — tự tính từ TOÀN BỘ `keywords` của mọi route trong `AI_TASK_ROUTES` (không phải danh sách stopword tay cố định) — tránh các từ mô tả Ý ĐỊNH ("mô", "tả", "sản", "phẩm", "seo"...) bị hiểu nhầm là 1 phần TÊN thực thể cần tìm. Tự cập nhật khi có route/từ khóa mới, không cần sửa tay.
+- **0 sửa đổi** `matchRoute()`/`route()`/`dispatch()`/`AI_TASK_ROUTES` (chữ ký + hành vi chọn Plugin theo từ khóa giữ nguyên hoàn toàn) và 0 sửa đổi bất kỳ file nào khác trong AI Framework (`plugin-manager.js`/`job-queue.js`/`provider-registry.js`/`permission-service.js`/`functions/index.js`) — đúng phạm vi "Improve ONLY the entity matching algorithm".
+- **Kiểm thử**: Node `vm` load thẳng `js/ai/task-router.js` thật — 11/11 kịch bản PASS, gồm 4 ví dụ Validation chính thức + hồi quy đầy đủ (khớp tên đầy đủ cũ vẫn đúng cho cả 3 route Product/SEO/Slider; câu không khớp từ khóa nào vẫn `plugin_not_found`; nhiều ứng viên cùng khớp vẫn trả `target_ambiguous` thay vì tự chọn; tầng EXACT luôn thắng đúng, không lẫn giữa các sản phẩm có tên gần giống nhau).
+- **Giới hạn còn lại, ngoài phạm vi Requirement này**: `matchRoute()` (nhận diện Ý ĐỊNH qua `keywords`) chưa cải thiện — từ đồng nghĩa ngoài danh sách (vd "content" thay "mô tả") vẫn không nhận diện được Ý ĐỊNH. SEO Generator vẫn chỉ nhắm Blog Post, không nhắm Product — giới hạn kiến trúc kế thừa từ Sprint 3, không đổi ở đây.
+
 ## Deployment thật của `pshopmusic.com` (Sprint 11, Requirement #3.2) — GHI NHỚ cho mọi Sprint sau
 
 **Quan trọng — đọc mục này TRƯỚC khi cho rằng "đã push lên `feature/cms-ai-sprint2` là site Production sẽ tự cập nhật".** Không đúng: `pshopmusic.com` KHÔNG kết nối Git Continuous Deployment trên Netlify.
