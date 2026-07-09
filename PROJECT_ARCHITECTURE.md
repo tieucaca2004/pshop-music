@@ -631,6 +631,33 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## AI Provider Initial Setup (Sprint 11, Requirement #3.1)
+
+Đóng khoảng cách cuối cùng giữa "hạ tầng đã kích hoạt thật" (Requirement #3) và "Founder Generate được ngay, không cần tự cấu hình Provider" (Product Constitution: Founder không cần hiểu Provider/Plugin/Queue/Workflow):
+
+```
+ProviderConfigDB.get() (js/ai/ai-db.js)
+   → đọc aiProviderConfig thật từ Firebase
+   → NẾU chưa từng cấu hình (node rỗng HOẶC activeProvider:'none'
+      HOẶC activeProvider:'openai' nhưng enabled:false — trạng thái
+      không nhất quán)
+        → tự khởi tạo activeProvider:'openai', providers.openai:
+           {enabled:true, model:'gpt-4o-mini'}, LƯU THẬT vào Firebase
+           (không chỉ trả về mặc định tạm như trước) — chỉ 1 lần, điều
+           kiện tự triệt tiêu sau khi đã khởi tạo
+   → NẾU Founder đã chủ động chọn Provider khác (Claude/Gemini/DeepSeek)
+      HOẶC đã tự chỉnh model OpenAI khác mặc định → giữ NGUYÊN, không đụng
+   → trả về config cho AIProviderRegistry.getActive()/resolveForPlugin()
+      (js/ai/provider-registry.js, KHÔNG sửa) như cũ
+```
+
+- **Root Cause đã xác nhận (Requirement #3, đợt trước)**: hạ tầng (Cloud Function `openaiProxy`, Secret `OPENAI_API_KEY`, Billing) đã hoạt động thật — nhưng `aiProviderConfig` chưa từng được ghi vào Firebase, vì `ProviderConfigDB.get()` (bản cũ) chỉ TRẢ VỀ 1 object mặc định `activeProvider:'none'` ở bộ nhớ khi node rỗng, không bao giờ tự lưu — nên `AIProviderRegistry.getActive()` luôn reject "Chưa chọn nhà cung cấp AI nào" cho tới khi Founder tự tay vào `admin/ai/providers.html` bật OpenAI + bấm Lưu.
+- **Cùng pattern `ensureSeeded()` đã có** (`CategoryDB`/`PluginDB` trong `js/cms-db.js`/`js/ai/plugin-db.js`) — ghi thật vào Firebase khi node rỗng, không phải kỹ thuật mới, không tạo Database node mới (vẫn đúng `aiProviderConfig`).
+- **An toàn tuyệt đối với lựa chọn thật của Founder**: điều kiện tự khởi tạo CHỈ kích hoạt khi chưa có cấu hình ý nghĩa nào — Founder tự đổi Provider active hoặc tự chỉnh model OpenAI đều được tôn trọng nguyên vẹn, không bao giờ bị ghi đè.
+- **0 sửa đổi** `js/ai/provider-registry.js`, `js/ai/provider-interface.js`, `js/ai/plugin-manager.js`, `js/ai/job-queue.js`, `js/ai/permission-service.js`, `js/ai/providers/*.js`, `functions/index.js` — chỉ đúng 1 file `js/ai/ai-db.js` (data layer, không phải Framework core) thay đổi.
+- **Kiểm thử**: 11/11 assertion PASS qua harness tạm thời (đã xoá) — node rỗng tự khởi tạo + ghi thật; ổn định qua nhiều lần gọi; `activeProvider:'none'` tường minh vẫn tự khởi tạo; lựa chọn Claude/model OpenAI tuỳ chỉnh của Founder được giữ nguyên; trạng thái không nhất quán (`openai` active nhưng `enabled:false`) tự "chữa lành" đúng.
+- **Chưa xác minh Generate thật end-to-end trên Production** — cần Chief Architect tự thử trên CMS thật (môi trường này không có đăng nhập CMS Production). Đã xác nhận riêng, đọc-only: cả URL cũ lẫn URL Cloud Run thật của `openaiProxy` đều phản hồi đúng (HTTP 405 cho GET) — không cần sửa `OPENAI_PROXY_URL`.
+
 ## AI Provider Runtime Activation — Audit (Sprint 11, Requirement #3)
 
 **Không có thay đổi runtime nào ở Requirement này** — chỉ audit trạng thái sẵn sàng deploy + tạo tài liệu vận hành. Xem `docs/CLOUD_FUNCTIONS_DEPLOYMENT.md` cho đầy đủ.

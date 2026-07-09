@@ -2,6 +2,18 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 11 — Requirement #3.1: AI Provider Initial Setup (Application Configuration Layer)
+
+Sau khi hạ tầng (Cloud Function `openaiProxy`, Secret `OPENAI_API_KEY`, Billing) đã kích hoạt thật, AI Assistant vẫn báo "Chưa chọn nhà cung cấp AI nào" — Root Cause xác nhận KHÔNG phải hạ tầng: node `aiProviderConfig` (Firebase RTDB) chưa từng được ghi, `ProviderConfigDB.get()` chỉ TRẢ VỀ giá trị mặc định `activeProvider:'none'` ở bộ nhớ (không tự lưu) — Founder phải tự tay vào `admin/ai/providers.html` bật OpenAI + Lưu mới xong. Đúng Product Constitution "Founder không cần hiểu Provider/Plugin/Queue/Workflow để dùng AI" — không nên bắt Founder làm bước cấu hình kỹ thuật này.
+
+- **Sửa `js/ai/ai-db.js` (`ProviderConfigDB.get()`)** — tự động khởi tạo (và LƯU THẬT vào Firebase, không chỉ trả về mặc định tạm) về `activeProvider: 'openai'`, `providers.openai: {enabled: true, model: 'gpt-4o-mini'}` khi: (a) node chưa tồn tại, HOẶC (b) `activeProvider` vẫn còn `'none'`, HOẶC (c) `activeProvider === 'openai'` nhưng `enabled` vẫn `false` (trạng thái không nhất quán, tự "chữa lành"). Cùng pattern `ensureSeeded()` đã có ở `CategoryDB`/`PluginDB` (`js/cms-db.js`/`js/ai/plugin-db.js`) — không phải kỹ thuật mới.
+- **An toàn tuyệt đối với cấu hình Founder đã tự chọn**: nếu `activeProvider` là `'claude'`/`'gemini'`/`'deepseek'` (Founder đã chủ động đổi Provider active, dù các Provider đó còn là stub) — KHÔNG đụng tới, giữ nguyên. Nếu Founder đã tự chỉnh `model` của OpenAI (vd `'gpt-4o'` thay vì mặc định `'gpt-4o-mini'`) trong lúc OpenAI đã bật — KHÔNG ghi đè `model`. Chỉ tự khởi tạo đúng 1 lần cho tới khi có 1 lựa chọn thật của Founder — điều kiện tự triệt tiêu (không cần cờ `initialized` riêng).
+- **Không tạo Provider system mới, không tạo Database node mới** — vẫn đúng `aiProviderConfig` đã có, vẫn đúng `ProviderRegistry`/`PermissionService`/`PluginManager`/`AIJobQueue` không đổi (0 sửa đổi các file này).
+- **Kiểm thử**: harness Node/browser tạm thời (đã xoá, không commit) — 11/11 assertion PASS: node rỗng → tự khởi tạo `openai`/`enabled=true`/`model='gpt-4o-mini'` VÀ ghi thật vào tree giả lập; gọi `get()` lần 2 không đổi (ổn định); `activeProvider:'none'` tường minh vẫn tự khởi tạo; Founder đã chọn `claude` làm active → giữ nguyên, không đổi; Founder đã tự chỉnh model OpenAI khác mặc định → giữ nguyên; trạng thái `activeProvider:'openai'` nhưng `enabled:false` → tự "chữa lành" đúng.
+- **Chưa xác minh được (Honesty Rule)**: Generate thật end-to-end (`openaiProxy` → OpenAI → Draft → Review) trên môi trường Production — cần Chief Architect tự mở CMS thật (đã có Firebase Auth) và thử lại, vì môi trường này không có đăng nhập vào CMS thật để tự kiểm tra trên dữ liệu Production. Đã xác nhận riêng (đọc-only, không đổi hạ tầng): cả URL kiểu cũ `https://us-central1-pshop-music.cloudfunctions.net/openaiProxy` lẫn URL Cloud Run thật `https://openaiproxy-bv5kqilcaa-uc.a.run.app` đều trả về HTTP 405 cho GET (đúng — function chỉ nhận POST) — hằng số `OPENAI_PROXY_URL` trong `js/ai/providers/openai.js` KHÔNG cần sửa.
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+- **Chưa tự tuyên bố Requirement #3 PASS** — chờ Chief Architect xác nhận Generate thật thành công trên CMS Production. Không bắt đầu Requirement #4.
+
 ## Sprint 11 — Requirement #3 (Blocker Resolution): 2 API đã bật, phát hiện Billing Account ĐÓNG — VẪN FAILED
 
 **Vẫn không có code nào thay đổi.** Chief Architect đã xác nhận cho phép bật 2 Google Cloud API còn thiếu (hành động thật trên project Production `pshop-music`, có xác nhận trước khi thực hiện, đúng nguyên tắc "affects shared systems — always confirm first").
