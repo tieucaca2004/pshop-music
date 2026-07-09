@@ -200,8 +200,13 @@ const AdminAI = (function () {
     const target = draft.targetCollection;
     if (!target) return Promise.resolve(); // Facebook Post / Image Prompt — chỉ để xem/copy, không có nơi ghi
     if (target === 'blogPosts') {
-      if (draft.targetId) return BlogDB.update(draft.targetId, draft.content);
-      const content = Object.assign({}, draft.content);
+      // Sprint 12 Requirement #3 fix: module.mapToDraftContent() (blog-writer/
+      // faq-generator) sets status:'draft' as the DRAFT-preview representation
+      // — that value must not survive into the live record, or the public
+      // blog (js/cms-db.js BlogDB.getAll() filters status==='published') never
+      // shows it despite the write succeeding. Force published status here.
+      const content = Object.assign({}, draft.content, { status: 'published' });
+      if (draft.targetId) return BlogDB.update(draft.targetId, content);
       if (!content.slug) content.slug = slugifyForPublish(content.title);
       return BlogDB.add(content);
     }
