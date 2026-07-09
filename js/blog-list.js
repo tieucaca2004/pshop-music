@@ -7,21 +7,58 @@
     }[c]));
   }
 
-  function formatDate(ts) {
-    if (!ts) return '';
-    return new Date(ts).toLocaleDateString('vi-VN');
+  // AI-generated post đôi khi tự bọc cả phản hồi trong 1 khối code markdown
+  // (```html ... ```) dù Prompt không yêu cầu — loại bỏ trước khi hiển thị.
+  function stripCodeFence(str) {
+    return String(str || '')
+      .replace(/^\s*```[a-zA-Z]*\s*\n?/, '')
+      .replace(/\n?\s*```\s*$/, '')
+      .trim();
+  }
+
+  function stripHtmlTags(str) {
+    return String(str || '').replace(/<[^>]+>/g, '').trim();
+  }
+
+  // Nếu AI trả lời không đúng định dạng "dòng đầu = tiêu đề" đã yêu cầu (tự
+  // bọc cả bài trong 1 khối code, đặt tiêu đề trong thẻ <h1> ở dòng sau thay
+  // vì dòng đầu dạng chữ thường) — mapToDraftContent() (js/ai/modules/
+  // blog-writer.js) tách nhầm dòng khối code fence (vd "```html") thành title.
+  // Khôi phục tiêu đề thật từ thẻ <h1> nếu có trong excerpt/nội dung.
+  function looksLikeFenceGarbage(title) {
+    const t = String(title || '').trim();
+    return !t || /^```/.test(t);
+  }
+
+  function recoverTitle(p) {
+    if (!looksLikeFenceGarbage(p.title)) return p.title;
+    const source = stripCodeFence(p.excerpt) || stripCodeFence(p.contentHtml) || '';
+    const m = source.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+    if (m) return stripHtmlTags(m[1]);
+    if (p.slug) return p.slug.replace(/-/g, ' ');
+    return 'Bài viết';
+  }
+
+  function displayExcerpt(p, title) {
+    const cleaned = stripCodeFence(p.excerpt);
+    // excerpt bị lẫn nguyên thẻ <h1> tiêu đề (thay vì 1-2 câu mô tả ngắn như
+    // Prompt yêu cầu) — cùng nội dung vừa dùng để khôi phục title ở trên,
+    // không nên hiển thị lặp lại dạng thẻ HTML thô.
+    if (/^<h1[\s>]/i.test(cleaned) || stripHtmlTags(cleaned) === title) return '';
+    return stripHtmlTags(cleaned);
   }
 
   function cardHtml(p) {
+    const title = recoverTitle(p);
     const img = p.coverImage
-      ? `<div class="blog-card-img"><img src="${escapeHtml(p.coverImage)}" alt="${escapeHtml(p.title)}" loading="lazy"></div>`
+      ? `<div class="blog-card-img"><img src="${escapeHtml(p.coverImage)}" alt="${escapeHtml(title)}" loading="lazy"></div>`
       : '';
     return `
       <a class="blog-card" href="blog-post.html?slug=${encodeURIComponent(p.slug)}">
         ${img}
         ${p.tags && p.tags.length ? `<div class="blog-card-tags">${escapeHtml(p.tags[0])}</div>` : ''}
-        <div class="blog-card-title">${escapeHtml(p.title)}</div>
-        <div class="blog-card-excerpt">${escapeHtml(p.excerpt || '')}</div>
+        <div class="blog-card-title">${escapeHtml(title)}</div>
+        <div class="blog-card-excerpt">${escapeHtml(displayExcerpt(p, title))}</div>
         <div class="blog-card-meta">${escapeHtml(p.author || 'Pshop Music')} · ${formatDate(p.publishedAt)}</div>
       </a>`;
   }

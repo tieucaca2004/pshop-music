@@ -7,6 +7,44 @@
     }[c]));
   }
 
+  // AI-generated post đôi khi tự bọc cả phản hồi trong 1 khối code markdown
+  // (```html ... ```) dù Prompt không yêu cầu — loại bỏ trước khi hiển thị.
+  function stripCodeFence(str) {
+    return String(str || '')
+      .replace(/^\s*```[a-zA-Z]*\s*\n?/, '')
+      .replace(/\n?\s*```\s*$/, '')
+      .trim();
+  }
+
+  function stripHtmlTags(str) {
+    return String(str || '').replace(/<[^>]+>/g, '').trim();
+  }
+
+  // Nếu AI trả lời không đúng định dạng "dòng đầu = tiêu đề" đã yêu cầu (tự
+  // bọc cả bài trong 1 khối code, đặt tiêu đề trong thẻ <h1> ở dòng sau thay
+  // vì dòng đầu dạng chữ thường) — mapToDraftContent() (js/ai/modules/
+  // blog-writer.js) tách nhầm dòng khối code fence (vd "```html") thành title.
+  // Khôi phục tiêu đề thật từ thẻ <h1> nếu có trong excerpt/nội dung.
+  function looksLikeFenceGarbage(title) {
+    const t = String(title || '').trim();
+    return !t || /^```/.test(t);
+  }
+
+  function recoverTitle(p) {
+    if (!looksLikeFenceGarbage(p.title)) return p.title;
+    const source = stripCodeFence(p.excerpt) || stripCodeFence(p.contentHtml) || '';
+    const m = source.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+    if (m) return stripHtmlTags(m[1]);
+    if (p.slug) return p.slug.replace(/-/g, ' ');
+    return 'Bài viết';
+  }
+
+  function displayExcerpt(p, title) {
+    const cleaned = stripCodeFence(p.excerpt);
+    if (/^<h1[\s>]/i.test(cleaned) || stripHtmlTags(cleaned) === title) return '';
+    return stripHtmlTags(cleaned);
+  }
+
   function formatDate(ts) {
     if (!ts) return '';
     return new Date(ts).toLocaleDateString('vi-VN');
@@ -24,8 +62,9 @@
   }
 
   function renderPost(p) {
-    const title = p.seoTitle || p.title;
-    const description = p.seoDescription || p.excerpt || '';
+    const realTitle = recoverTitle(p);
+    const title = p.seoTitle || realTitle;
+    const description = p.seoDescription || displayExcerpt(p, realTitle) || '';
     document.title = title + ' - Pshop Music';
     setMeta('description', description);
     setMeta('og:title', p.ogTitle || title, true);
@@ -37,13 +76,13 @@
     let canonical = document.querySelector('link[rel="canonical"]');
     if (canonical) canonical.href = 'https://pshopmusic.com/blog-post.html?slug=' + encodeURIComponent(p.slug);
 
-    document.getElementById('breadcrumbTitle').textContent = p.title;
-    document.getElementById('postTitle').textContent = p.title;
+    document.getElementById('breadcrumbTitle').textContent = realTitle;
+    document.getElementById('postTitle').textContent = realTitle;
     document.getElementById('postMeta').textContent = `${p.author || 'Pshop Music'} · ${formatDate(p.publishedAt)}`;
     if (p.coverImage) {
-      document.getElementById('postCoverWrap').innerHTML = `<img src="${escapeHtml(p.coverImage)}" alt="${escapeHtml(p.title)}">`;
+      document.getElementById('postCoverWrap').innerHTML = `<img src="${escapeHtml(p.coverImage)}" alt="${escapeHtml(realTitle)}">`;
     }
-    document.getElementById('postBody').innerHTML = p.contentHtml || '';
+    document.getElementById('postBody').innerHTML = stripCodeFence(p.contentHtml);
     const tagsEl = document.getElementById('postTags');
     if (p.tags && p.tags.length) {
       tagsEl.innerHTML = p.tags.map(t => `<span class="blog-tag">${escapeHtml(t)}</span>`).join('');
@@ -54,7 +93,7 @@
     ld.textContent = JSON.stringify({
       '@context': 'https://schema.org',
       '@type': 'BlogPosting',
-      headline: p.title,
+      headline: realTitle,
       description,
       image: p.coverImage || undefined,
       author: { '@type': 'Organization', name: p.author || 'Pshop Music' },

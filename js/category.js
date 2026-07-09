@@ -27,6 +27,17 @@
     }[c]));
   }
 
+  // AI-generated description đôi khi tự bọc cả phản hồi trong 1 khối code
+  // markdown (```html ... ```) dù Prompt không yêu cầu — không phải thẻ HTML
+  // thật, hiển thị nguyên văn "```html"/"```" nếu không loại bỏ trước khi
+  // render qua innerHTML.
+  function stripCodeFence(str) {
+    return String(str || '')
+      .replace(/^\s*```[a-zA-Z]*\s*\n?/, '')
+      .replace(/\n?\s*```\s*$/, '')
+      .trim();
+  }
+
   window.pshopImgFail = function (img) {
     const wrap = img.parentElement;
     const name = img.alt || '';
@@ -221,7 +232,7 @@
     document.getElementById('modalCat').textContent = p.categoryLabel || '';
     document.getElementById('modalName').textContent = p.name;
     document.getElementById('modalBrand').textContent = p.specs;
-    document.getElementById('modalDesc').innerHTML = p.description;
+    document.getElementById('modalDesc').innerHTML = stripCodeFence(p.description);
 
     const priceEl = document.getElementById('modalPrice');
     if (p.price) {

@@ -15,6 +15,52 @@ const AdminAI = (function () {
     }[c]));
   }
 
+  // Sprint 12 Requirement #3 (Media Content Rendering) — OpenAI đôi khi tự bọc
+  // cả phản hồi trong 1 khối code markdown (```html ... ```) dù Prompt không
+  // yêu cầu, và/hoặc đặt tiêu đề trong thẻ <h1> ở dòng sau thay vì dòng đầu
+  // dạng chữ thường như module.buildPrompt() đã yêu cầu — khiến
+  // mapToDraftContent() (js/ai/modules/blog-writer.js, faq-generator.js) tách
+  // nhầm dòng khối code fence (vd "```html") thành title. Sanitize CHỈ áp
+  // dụng cho bản ghi sắp ghi vào collection thật (products/blogPosts) — không
+  // sửa draft.content gốc trong aiDrafts (không đổi Draft System).
+  function stripCodeFence(str) {
+    return String(str || '')
+      .replace(/^\s*```[a-zA-Z]*\s*\n?/, '')
+      .replace(/\n?\s*```\s*$/, '')
+      .trim();
+  }
+
+  function stripHtmlTags(str) {
+    return String(str || '').replace(/<[^>]+>/g, '').trim();
+  }
+
+  function looksLikeFenceGarbage(title) {
+    const t = String(title || '').trim();
+    return !t || /^```/.test(t);
+  }
+
+  // Khôi phục tiêu đề thật từ thẻ <h1> nếu title bị tách nhầm thành fence rác
+  // — nơi AI đã vô tình đặt tiêu đề vào (xem comment stripCodeFence ở trên).
+  function sanitizeBlogContentForPublish(content, inputParams) {
+    const cleanedContentHtml = stripCodeFence(content.contentHtml);
+    const cleanedExcerptRaw = stripCodeFence(content.excerpt);
+    let title = content.title;
+    if (looksLikeFenceGarbage(title)) {
+      const source = cleanedExcerptRaw || cleanedContentHtml;
+      const m = source.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+      title = m ? stripHtmlTags(m[1]) : ((inputParams && inputParams.topic) || 'Bài viết');
+    }
+    let excerpt = cleanedExcerptRaw;
+    if (/^<h1[\s>]/i.test(excerpt) || stripHtmlTags(excerpt) === title) excerpt = '';
+    else excerpt = stripHtmlTags(excerpt);
+    return Object.assign({}, content, {
+      title,
+      excerpt,
+      contentHtml: cleanedContentHtml,
+      slug: looksLikeFenceGarbage(content.title) ? '' : content.slug
+    });
+  }
+
   function formatDate(ts) {
     return ts ? new Date(ts).toLocaleString('vi-VN') : '';
   }
@@ -200,18 +246,20 @@ const AdminAI = (function () {
     const target = draft.targetCollection;
     if (!target) return Promise.resolve(); // Facebook Post / Image Prompt — chỉ để xem/copy, không có nơi ghi
     if (target === 'blogPosts') {
-      // Sprint 12 Requirement #3 fix: module.mapToDraftContent() (blog-writer/
-      // faq-generator) sets status:'draft' as the DRAFT-preview representation
-      // — that value must not survive into the live record, or the public
-      // blog (js/cms-db.js BlogDB.getAll() filters status==='published') never
-      // shows it despite the write succeeding. Force published status here.
-      const content = Object.assign({}, draft.content, { status: 'published' });
+      // Sprint 12 Requirement #3 fix (status): module.mapToDraftContent()
+      // (blog-writer/faq-generator) sets status:'draft' as the DRAFT-preview
+      // representation — that value must not survive into the live record, or
+      // the public blog (js/cms-db.js BlogDB.getAll() filters
+      // status==='published') never shows it despite the write succeeding.
+      const sanitized = sanitizeBlogContentForPublish(draft.content, draft.inputParams);
+      const content = Object.assign({}, sanitized, { status: 'published' });
       if (draft.targetId) return BlogDB.update(draft.targetId, content);
       if (!content.slug) content.slug = slugifyForPublish(content.title);
       return BlogDB.add(content);
     }
     if (target === 'products') {
-      return DB.update(draft.targetId, draft.content);
+      const content = Object.assign({}, draft.content, { description: stripCodeFence(draft.content.description) });
+      return DB.update(draft.targetId, content);
     }
     if (target === 'banners') {
       return BannerDB.add(draft.content);
