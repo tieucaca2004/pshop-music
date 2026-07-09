@@ -2,6 +2,21 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 12 — Requirement #1: Founder AI Assistant First
+
+Mở rộng AI Assistant hội thoại (`admin/ai/assistant.html`) để Founder không cần biết Plugin/Queue/Provider/Module/Product AI/One Click Marketing là gì — chỉ cần gõ tự nhiên. Toàn bộ thay đổi nằm trong `js/ai/task-router.js` (đã sửa ở Sprint 11 #3.2) + 1 dòng gate trong `js/admin-ai-assistant.js` — **0 sửa đổi Firebase/Cloud Functions/Provider Registry/Queue/PluginManager/Security/PermissionService**.
+
+- **Thêm 3 route mới vào `AI_TASK_ROUTES`** (`js/ai/task-router.js`): `facebook-post-generator` (targetType `'product'`, `targetRequired:false` — vì `productId` của Plugin này vốn tuỳ chọn), `blog-writer` và `banner-generator` (targetType `'freeText'` mới — 2 Plugin này viết nội dung MỚI theo chủ đề tự do, không nhắm 1 thực thể CMS có sẵn, đúng thiết kế gốc của Plugin, không sửa Plugin).
+- **`route()` mở rộng xử lý 2 dạng targeting mới**: `targetType:'freeText'` bỏ qua bước xác định thực thể hoàn toàn, dùng nguyên văn phần câu còn lại (sau khi loại từ khóa ý định) làm input tự do; `targetRequired:false` vẫn thử xác định thực thể như bình thường nhưng KHÔNG chặn nếu không tìm thấy (tiếp tục với nội dung tự do) — **vẫn KHÔNG BAO GIỜ đoán mò**: nếu có NHIỀU thực thể cùng khớp (mơ hồ), luôn dừng lại hỏi Founder, kể cả với route không bắt buộc target.
+- **`dispatch()` đổi điều kiện chặn** từ "`!targetId`" sang "`reason !== 'ok'`" — vì giờ đây `targetId: null` có thể là kết quả HỢP LỆ (route freeText/optional), khác với "chưa xác định được" thật sự. Không đổi cách gọi `PermissionService`/`PluginManager` (vẫn đúng thứ tự, đúng tham số).
+- **`js/admin-ai-assistant.js`**: sửa đúng 1 điều kiện ở `handleSend()` (cùng lý do `!targetId` → `reason !== 'ok'`) — nếu không sửa, mọi route mới (freeText/optional) sẽ bị chặn nhầm ở tầng UI dù Router đã xử lý đúng.
+- **Requirement #2 (danh sách xác nhận khi mơ hồ) và #3 (báo rõ khi không tìm thấy) đã có sẵn từ Sprint 4 Requirement #3** (`showAmbiguousPicker()`/`reasonMessage()`) — hoạt động đúng tự động cho cả 3 route mới, không cần sửa thêm.
+- **Requirement #4/#5 (tự chọn Plugin, tự thực thi Plugin→Queue→Provider→OpenAI→Draft→Review)** đã có sẵn từ Sprint 4 + đã hoạt động thật từ Sprint 11 #3.1 (Provider Runtime) — không có gì mới cần làm, chỉ xác nhận vẫn đúng qua kiểm thử.
+- **Requirement #6 (hiểu thêm từ)**: thêm `'product description'`/`'meta title'`/`'meta description'` vào 2 route đã có; 3 route mới nhận `'facebook'`, `'blog'`/`'website'`, `'banner'`. **Không thêm** `'rewrite'`/`'translate'` làm từ khóa dùng chung — không có Plugin dịch thuật/viết-lại-chuyên-biệt nào tồn tại, gán 2 từ này vào Plugin gần giống sẽ là AI "tự bịa" khả năng chưa có (vi phạm AI_RULES.md mục 2) — ghi vào `ROADMAP.md` như giới hạn đã biết.
+- **Kiểm thử**: Node `vm` load thẳng mã nguồn thật — 18/18 kịch bản PASS, gồm 4 ví dụ Validation chính thức (RX3/FLX4/8050/XDJ AN), 6 ví dụ Goal (Facebook có/không sản phẩm, Blog, Banner, SEO — phát hiện & xác nhận đúng giới hạn kiến trúc "SEO chỉ nhắm Blog Post" thay vì ép sai), ambiguity cho cả route optional lẫn required, "không tìm thấy" báo rõ, và toàn bộ hồi quy Sprint 11 #3.2 (khớp tên đầy đủ, route SEO/Slider cũ, không khớp keyword, `dispatch()` vẫn gọi đúng PermissionService→PluginManager cho route mới).
+- **Giới hạn đã biết, ghi vào `ROADMAP.md`**: "SEO FLX4" không tự động hoạt động — SEO Generator chỉ nhắm Blog Post (giới hạn kiến trúc từ Sprint 3, không đổi ở đây); "Rewrite"/"Translate" chưa có Plugin tương ứng, không ép gán.
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+
 ## Sprint 11 — Requirement #3.2: Natural Language Entity Resolution (AI Assistant hội thoại)
 
 Root Cause đã xác nhận ở đợt trước: AI Assistant hội thoại (`admin/ai/assistant.html`) dừng lại đúng ở `AITaskRouter.matchTarget()` — bắt buộc câu gõ chứa NGUYÊN VĂN tên đầy đủ sản phẩm/bài viết, chưa từng chạm tới PermissionService/PluginManager/Queue/Provider (khác với Product AI Assist — không qua bước "xác định đối tượng" tự do, đọc thẳng `productId` từ dropdown).

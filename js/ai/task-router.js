@@ -22,14 +22,14 @@ const AI_TASK_ROUTES = [
   {
     pluginId: 'product-description-writer',
     outcomeLabel: 'Mô tả sản phẩm',
-    keywords: ['mô tả sản phẩm', 'mô tả', 'description', 'viết mô tả', 'giới thiệu sản phẩm'],
+    keywords: ['mô tả sản phẩm', 'mô tả', 'description', 'viết mô tả', 'giới thiệu sản phẩm', 'product description'],
     targetType: 'product',
     buildInputParams: targetId => ({ productId: targetId, tone: 'Chuyên nghiệp' })
   },
   {
     pluginId: 'seo-generator',
     outcomeLabel: 'Gói SEO cho bài viết',
-    keywords: ['seo', 'từ khóa', 'meta description', 'tối ưu tìm kiếm', 'tiêu đề seo'],
+    keywords: ['seo', 'từ khóa', 'meta description', 'meta title', 'tối ưu tìm kiếm', 'tiêu đề seo'],
     targetType: 'blogPost',
     buildInputParams: targetId => ({ postId: targetId })
   },
@@ -39,6 +39,40 @@ const AI_TASK_ROUTES = [
     keywords: ['slide', 'slider', 'banner trang chủ', 'quảng cáo trang chủ', 'hero'],
     targetType: 'product',
     buildInputParams: targetId => ({ productId: targetId, ctaStyle: 'Xem chi tiết' })
+  },
+  // Sprint 12 Requirement #1 — 3 route mới, đúng "chỉ cải thiện AI Assistant
+  // hội thoại", không sửa Plugin/Queue/Provider Registry/PermissionService.
+  {
+    pluginId: 'facebook-post-generator',
+    outcomeLabel: 'Bài đăng Facebook',
+    keywords: ['facebook', 'bài facebook', 'viết facebook', 'post facebook'],
+    targetType: 'product',
+    targetRequired: false, // productId của Plugin này vốn optional (xem js/ai/modules/facebook-post-generator.js) — Founder có thể không nhắc sản phẩm cụ thể
+    buildInputParams: (targetId, freeText, targetLabel) => ({
+      productId: targetId || '',
+      message: freeText || (targetLabel ? ('Giới thiệu ' + targetLabel) : 'Nội dung quảng bá mới')
+    })
+  },
+  {
+    pluginId: 'blog-writer',
+    outcomeLabel: 'Bài blog',
+    keywords: ['blog', 'viết blog', 'bài blog', 'website'],
+    targetType: 'freeText', // Blog Writer viết bài MỚI theo chủ đề tự do, không nhắm 1 thực thể CMS có sẵn (xem js/ai/modules/blog-writer.js)
+    buildInputParams: (targetId, freeText) => ({
+      topic: freeText || 'Chủ đề mới',
+      tone: 'Chuyên nghiệp',
+      keywords: freeText || ''
+    })
+  },
+  {
+    pluginId: 'banner-generator',
+    outcomeLabel: 'Banner quảng cáo',
+    keywords: ['banner', 'tạo banner', 'làm banner'],
+    targetType: 'freeText', // Banner Generator không có khái niệm target CMS (xem js/ai/modules/banner-generator.js)
+    buildInputParams: (targetId, freeText) => ({
+      theme: freeText || 'Khuyến mãi mới',
+      link: 'index.html'
+    })
   }
 ];
 
@@ -95,7 +129,7 @@ const AITaskRouter = (function () {
   // gõ có nhiều hơn 1 từ nhận diện sản phẩm).
   const MIN_TOKEN_OVERLAP_RATIO = 1;
   const MATCH_TIER = { NONE: 0, PARTIAL: 1, ALIAS: 2, TOKEN_OVERLAP: 3, EXACT: 4 };
-  const GENERIC_STOPWORDS = ['cho', 'của', 'là', 'và', 'làm', 'tạo', 'giúp', 'với', 'các', 'một', 'hãy'];
+  const GENERIC_STOPWORDS = ['cho', 'của', 'là', 'và', 'làm', 'tạo', 'giúp', 'với', 'các', 'một', 'hãy', 'về', 'tại', 'trong'];
 
   // normalizeLoose — giống normalize() nhưng thay mọi ký tự không phải
   // chữ/số (gạch nối, dấu câu...) bằng khoảng trắng rồi gộp khoảng trắng
@@ -122,6 +156,27 @@ const AITaskRouter = (function () {
 
   function meaningfulQueryTokens(text) {
     return tokenize(text).filter(t => !ROUTE_KEYWORD_WORDS[t] && GENERIC_STOPWORDS.indexOf(t) === -1);
+  }
+
+  // extractFreeText — dùng cho route targetType:'freeText' (Blog/Banner,
+  // không có thực thể CMS để nhắm) hoặc route targetType:'product' với
+  // targetRequired:false (Facebook, sản phẩm là tuỳ chọn) khi KHÔNG có ứng
+  // viên nào khớp. Loại bỏ từng TỪ ĐƠN thuộc "từ khóa ý định" của mọi route
+  // + từ nối chung + (nếu có) tên đối tượng đã nhận diện được — GIỮ NGUYÊN
+  // chữ hoa/thường gốc của phần còn lại (khác meaningfulQueryTokens(), vốn
+  // chỉ dùng nội bộ để SO KHỚP, không dùng để hiển thị/làm input Prompt).
+  function extractFreeText(text, excludeLabel) {
+    const excludeTokens = excludeLabel ? tokenize(excludeLabel) : [];
+    const words = String(text || '').split(/\s+/).filter(Boolean);
+    const kept = words.filter(w => {
+      const norm = tokenize(w)[0];
+      if (!norm) return false;
+      if (ROUTE_KEYWORD_WORDS[norm]) return false;
+      if (GENERIC_STOPWORDS.indexOf(norm) !== -1) return false;
+      if (excludeTokens.indexOf(norm) !== -1) return false;
+      return true;
+    });
+    return kept.join(' ').trim();
   }
 
   // scoreItem — chấm 1 ứng viên theo 4 tầng ở trên. Trả { tier, ratio }.
@@ -199,24 +254,78 @@ const AITaskRouter = (function () {
 
   // route(text, candidates) — hàm THUẦN (pure), không side effect, không I/O.
   // candidates: { products: [{id,name,...}], posts: [{id,title,...}] }
+  //
+  // Sprint 12 Requirement #1 — mở rộng để hỗ trợ 2 dạng route KHÔNG bắt
+  // buộc phải xác định 1 thực thể CMS có sẵn (Blog Writer/Banner Generator
+  // viết nội dung MỚI theo chủ đề tự do; Facebook Post Generator có
+  // productId TUỲ CHỌN — xem inputFields của từng module):
+  //   - targetType:'freeText'      → bỏ qua matchTarget() hoàn toàn, dùng
+  //     nguyên văn phần còn lại của câu (sau khi loại từ khóa ý định) làm
+  //     input tự do.
+  //   - targetRequired:false       → vẫn thử matchTarget() như route
+  //     product/blogPost thường; nếu KHÔNG có ứng viên nào khớp (không
+  //     phải mơ hồ) thì vẫn tiếp tục (dùng phần văn bản còn lại), CHỈ dừng
+  //     lại nếu có NHIỀU ứng viên cùng khớp (target_ambiguous — không bao
+  //     giờ đoán mò, giữ nguyên nguyên tắc Sprint 4 Requirement #3).
+  // 3 route cũ (Product/SEO/Slider) không khai báo 2 thuộc tính này nên
+  // targetRequired mặc định coi như true — hành vi giữ NGUYÊN VẸN.
   function route(text, candidates) {
     const matched = matchRoute(text);
     if (!matched.route) {
       return { pluginId: null, outcomeLabel: null, confidence: 0, targetId: null, targetLabel: null, ambiguous: [], reason: 'plugin_not_found' };
     }
-    const targetMatch = matchTarget(text, matched.route, candidates || {});
-    const confidence = Math.round(((matched.pluginScore * 0.5) + (targetMatch.targetScore * 0.5)) * 100);
-    if (!targetMatch.targetId) {
+
+    if (matched.route.targetType === 'freeText') {
+      const freeText = extractFreeText(text);
+      const confidence = Math.round(matched.pluginScore * 100);
       return {
         pluginId: matched.route.pluginId,
         outcomeLabel: matched.route.outcomeLabel,
         confidence,
         targetId: null,
-        targetLabel: null,
-        ambiguous: targetMatch.ambiguous,
-        reason: targetMatch.ambiguous.length ? 'target_ambiguous' : 'target_not_found'
+        targetLabel: freeText || null,
+        ambiguous: [],
+        inputParams: matched.route.buildInputParams(null, freeText),
+        reason: 'ok'
       };
     }
+
+    const targetRequired = matched.route.targetRequired !== false;
+    const targetMatch = matchTarget(text, matched.route, candidates || {});
+    const confidence = Math.round(((matched.pluginScore * 0.5) + (targetMatch.targetScore * 0.5)) * 100);
+
+    if (!targetMatch.targetId) {
+      if (targetRequired || targetMatch.ambiguous.length) {
+        // Bắt buộc phải có target (Product/SEO/Slider, hành vi cũ) HOẶC
+        // đang mơ hồ giữa nhiều ứng viên (dù target không bắt buộc, KHÔNG
+        // được tự đoán 1 trong số đó — Founder phải xác nhận).
+        return {
+          pluginId: matched.route.pluginId,
+          outcomeLabel: matched.route.outcomeLabel,
+          confidence,
+          targetId: null,
+          targetLabel: null,
+          ambiguous: targetMatch.ambiguous,
+          reason: targetMatch.ambiguous.length ? 'target_ambiguous' : 'target_not_found'
+        };
+      }
+      // targetRequired:false + không có ứng viên nào (không phải mơ hồ) —
+      // tiếp tục với nội dung tự do còn lại (vd Facebook không nhắc sản
+      // phẩm cụ thể vẫn hợp lệ).
+      const freeText = extractFreeText(text);
+      return {
+        pluginId: matched.route.pluginId,
+        outcomeLabel: matched.route.outcomeLabel,
+        confidence,
+        targetId: null,
+        targetLabel: freeText || null,
+        ambiguous: [],
+        inputParams: matched.route.buildInputParams(null, freeText, null),
+        reason: 'ok'
+      };
+    }
+
+    const freeTextRemainder = targetRequired ? undefined : extractFreeText(text, targetMatch.targetLabel);
     return {
       pluginId: matched.route.pluginId,
       outcomeLabel: matched.route.outcomeLabel,
@@ -224,21 +333,28 @@ const AITaskRouter = (function () {
       targetId: targetMatch.targetId,
       targetLabel: targetMatch.targetLabel,
       ambiguous: [],
-      inputParams: matched.route.buildInputParams(targetMatch.targetId),
+      inputParams: matched.route.buildInputParams(targetMatch.targetId, freeTextRemainder, targetMatch.targetLabel),
       reason: 'ok'
     };
   }
 
   // dispatch() — điểm DUY NHẤT Router được phép gây side-effect, và CHỈ theo
   // đúng thứ tự PermissionService -> PluginManager.execute() (Requirement #3).
-  // Không tạo Job nếu: không xác định được Plugin, không xác định được đối
-  // tượng, hoặc Permission không đạt (Requirement #6).
+  // Không tạo Job nếu: không xác định được Plugin, chưa sẵn sàng thực thi
+  // (reason khác 'ok' — bao gồm cả trường hợp cũ "không xác định được đối
+  // tượng" lẫn "đang mơ hồ chờ Founder chọn"), hoặc Permission không đạt
+  // (Requirement #6, Sprint 4). Sprint 12 Requirement #1: đổi điều kiện
+  // chặn từ "!targetId" sang "reason !== 'ok'" — route targetType:'freeText'
+  // hoặc targetRequired:false hợp lệ có thể có targetId=null nhưng
+  // reason='ok' (đã có đủ inputParams để chạy), khác hẳn target thật sự
+  // chưa xác định được — không đổi cách gọi PermissionService/PluginManager.
   function dispatch(routeResult, userId, userEmail) {
-    if (!routeResult || !routeResult.pluginId) {
-      return Promise.resolve({ dispatched: false, reason: 'plugin_not_found' });
-    }
-    if (!routeResult.targetId) {
-      return Promise.resolve({ dispatched: false, reason: routeResult.reason || 'target_not_found', ambiguous: routeResult.ambiguous || [] });
+    if (!routeResult || !routeResult.pluginId || routeResult.reason !== 'ok') {
+      return Promise.resolve({
+        dispatched: false,
+        reason: (routeResult && routeResult.reason) || 'plugin_not_found',
+        ambiguous: (routeResult && routeResult.ambiguous) || []
+      });
     }
     return PermissionService.checkPluginExecution(userId, userEmail, routeResult.pluginId).then(check => {
       if (!check.granted) {

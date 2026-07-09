@@ -347,7 +347,12 @@ const AdminAIAssistant = (function () {
         showAmbiguousPicker(routeResult, candidates);
         return;
       }
-      if (!routeResult.pluginId || !routeResult.targetId) {
+      // Sprint 12 Requirement #1: route targetType:'freeText' (Blog/Banner)
+      // hoặc targetRequired:false (Facebook không nhắc sản phẩm cụ thể) trả
+      // về targetId=null NHƯNG reason='ok' hợp lệ (đã đủ inputParams) — kiểm
+      // tra đúng theo reason thay vì suy luận từ targetId có/không, tránh
+      // chặn nhầm các route hợp lệ này (dispatch() cũng đã đổi tương tự).
+      if (!routeResult.pluginId || routeResult.reason !== 'ok') {
         setResult('<p style="color:#c0392b">' + reasonMessage(routeResult) + '</p>');
         return;
       }

@@ -631,6 +631,36 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Founder AI Assistant First (Sprint 12, Requirement #1) — mở rộng `AITaskRouter` sang 3 Plugin mới + targeting tuỳ chọn
+
+Tiếp tục tinh thần "Founder không cần hiểu Provider/Plugin/Queue/Workflow" — AI Assistant hội thoại (`admin/ai/assistant.html`) trước đây chỉ định tuyến được 3/8 Plugin (Product Description/SEO/Slider, mọi route đều BẮT BUỘC xác định 1 thực thể CMS có sẵn). Sprint 12 mở rộng sang Facebook Post Generator/Blog Writer/Banner Generator — 3 Plugin có bản chất khác: Blog Writer/Banner Generator viết nội dung MỚI theo chủ đề tự do (không nhắm thực thể có sẵn), Facebook Post Generator có `productId` TUỲ CHỌN (xem `js/ai/modules/*.js` — không sửa các file Plugin này).
+
+```
+AI_TASK_ROUTES (js/ai/task-router.js) — mỗi route khai báo thêm 2 thuộc
+tính TUỲ CHỌN (route cũ không khai báo = giữ nguyên hành vi bắt buộc):
+
+  targetType: 'freeText'   → route() bỏ qua matchTarget() hoàn toàn,
+                              dùng nguyên văn phần câu còn lại (sau khi
+                              loại từ khóa ý định của MỌI route +
+                              extractFreeText()) làm input tự do —
+                              dùng cho blog-writer/banner-generator.
+  targetRequired: false    → route() vẫn thử matchTarget() bình thường;
+                              nếu KHÔNG có ứng viên nào (không phải mơ
+                              hồ) vẫn tiếp tục với nội dung tự do còn
+                              lại; nếu MƠ HỒ (nhiều ứng viên cùng khớp)
+                              vẫn dừng lại hỏi Founder như route bắt
+                              buộc — KHÔNG BAO GIỜ đoán mò dù target là
+                              tuỳ chọn — dùng cho facebook-post-generator.
+```
+
+- **`dispatch()` đổi điều kiện chặn** từ `!routeResult.targetId` sang `routeResult.reason !== 'ok'` — vì `targetId: null` giờ có thể là kết quả HỢP LỆ (route freeText/optional đã đủ `inputParams` để chạy), không còn đồng nghĩa với "chưa xác định được đối tượng" như trước. Không đổi cách gọi `PermissionService.checkPluginExecution()` → `PluginManager.loadPlugin().execute()` (đúng thứ tự, đúng tham số, 0 sửa 2 file đó).
+- **`js/admin-ai-assistant.js` sửa đúng 1 điều kiện tương tự** ở `handleSend()` (cùng lý do) — nếu không sửa, UI sẽ tự chặn nhầm các route mới ngay cả khi Router đã xử lý đúng và trả `reason:'ok'`.
+- **Requirement #2 (danh sách xác nhận khi mơ hồ)/#3 (báo rõ khi không tìm thấy) đã có sẵn từ Sprint 4 Requirement #3** (`showAmbiguousPicker()`, `reasonMessage()`) — hoạt động đúng ngay với 3 route mới mà không cần sửa thêm, vì cả 2 hàm đều đọc `routeResult.ambiguous`/`routeResult.reason` một cách tổng quát, không hardcode theo route cụ thể.
+- **Từ khóa ý định mở rộng** (Requirement #6): `product-description-writer` thêm `'product description'`; `seo-generator` thêm `'meta title'`/`'meta description'`; 3 route mới nhận `'facebook'`/`'blog'`/`'website'`/`'banner'`. **Cố tình KHÔNG thêm** `'rewrite'`/`'translate'` — chưa có Plugin dịch thuật/viết-lại thật sự, gán những từ này vào 1 Plugin gần giống sẽ là tự nhận có khả năng chưa tồn tại (vi phạm AI_RULES.md mục 2 "AI không được tự bịa") — ghi vào `ROADMAP.md`.
+- **Giới hạn kiến trúc xác nhận lại (không phải lỗi mới)**: "SEO [tên sản phẩm]" không tự hoạt động — `seo-generator` chỉ nhắm Blog Post (`targetType:'blogPost'`), không nhắm Product, đúng thiết kế từ Sprint 3 (Product chưa có trang riêng để gắn Meta/OG/Schema). Route vẫn chọn đúng Plugin SEO nhưng `matchTarget()` tìm trong danh sách Blog Post nên không thấy sản phẩm — trả `target_not_found` đúng, KHÔNG ép sai entity type.
+- **0 sửa đổi**: Firebase, Cloud Functions, `js/ai/provider-registry.js`, `js/ai/provider-interface.js`, `js/ai/plugin-manager.js`, `js/ai/job-queue.js`, `js/ai/permission-service.js`, mọi file Plugin (`js/ai/modules/*.js`) — đúng phạm vi "Improve ONLY the conversational AI Assistant".
+- **Kiểm thử**: Node `vm` load thẳng `js/ai/task-router.js` thật — 18/18 kịch bản PASS (4 Validation chính thức + 6 Goal examples + ambiguity cho cả 2 kiểu targeting + "không tìm thấy" + toàn bộ hồi quy Sprint 11 #3.2 + xác nhận `dispatch()` vẫn gọi đúng `PermissionService`→`PluginManager` cho route freeText mới).
+
 ## Natural Language Entity Resolution (Sprint 11, Requirement #3.2) — nâng cấp `AITaskRouter.matchTarget()`
 
 Đóng khoảng hở phát hiện qua Founder Acceptance Test thật: AI Assistant hội thoại (`admin/ai/assistant.html`) báo "không xác định được đúng sản phẩm" ngay cả khi ý định đã hiểu đúng, vì `matchTarget()` (Sprint 4) bắt buộc câu gõ chứa NGUYÊN VĂN tên đầy đủ — không tới lượt `PermissionService`/`PluginManager`/`Queue`/`Provider` được gọi tới.
