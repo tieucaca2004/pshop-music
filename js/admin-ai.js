@@ -32,7 +32,7 @@ const AdminAI = (function () {
   /* ============== DASHBOARD (admin/ai/index.html) ============== */
 
   function initDashboard() {
-    AdminAuth.init({ page: 'ai', title: 'AI ASSISTANT' }).then(() => renderModuleCards());
+    AdminAuth.init({ page: 'ai', title: 'PLUGIN AI' }).then(() => renderModuleCards());
   }
 
   function fieldOptionsIfNeeded(field) {
@@ -164,7 +164,7 @@ const AdminAI = (function () {
   /* ============== DRAFTS / REVIEW QUEUE (admin/ai/drafts.html) ============== */
 
   function initDrafts() {
-    AdminAuth.init({ page: 'ai', title: 'AI ASSISTANT — DUYỆT NỘI DUNG' }).then(loadDrafts);
+    AdminAuth.init({ page: 'ai', title: 'PLUGIN AI — DUYỆT NỘI DUNG' }).then(loadDrafts);
   }
 
   function loadDrafts() {
@@ -256,7 +256,7 @@ const AdminAI = (function () {
   /* ============== JOB QUEUE MONITOR (admin/ai/jobs.html) ============== */
 
   function initJobs() {
-    AdminAuth.init({ page: 'ai', title: 'AI ASSISTANT — JOB QUEUE' }).then(({ user }) => {
+    AdminAuth.init({ page: 'ai', title: 'PLUGIN AI — JOB QUEUE' }).then(({ user }) => {
       AIJobQueue.resume(user.uid, user.email).then(loadJobs);
       loadJobs();
       setInterval(loadJobs, 3000);
@@ -320,7 +320,7 @@ const AdminAI = (function () {
   /* ============== LOGS (admin/ai/logs.html) ============== */
 
   function initLogs() {
-    AdminAuth.init({ page: 'ai', title: 'AI ASSISTANT — NHẬT KÝ', requiredRole: 'admin' }).then(loadLogs);
+    AdminAuth.init({ page: 'ai', title: 'PLUGIN AI — NHẬT KÝ', requiredRole: 'admin' }).then(loadLogs);
   }
 
   function loadLogs() {

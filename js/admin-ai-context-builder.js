@@ -19,7 +19,7 @@ const AdminAIContextBuilder = (function () {
   }
 
   function init() {
-    AdminAuth.init({ page: 'ai-context-builder', title: 'AI ASSISTANT — CONTEXT BUILDER', requiredRole: 'admin' }).then(() => {
+    AdminAuth.init({ page: 'ai-context-builder', title: 'PLUGIN AI — CONTEXT BUILDER', requiredRole: 'admin' }).then(() => {
       document.getElementById('cbPluginSelect').addEventListener('change', onPluginChange);
       document.getElementById('cbBuildBtn').addEventListener('click', onBuild);
       loadPlugins();

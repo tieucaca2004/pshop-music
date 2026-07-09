@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Plugin Settings" — trang này thiếu requiredRole:'admin' từ trước, khác
   // với admin/ai/providers.html đã có đúng guard này ngay từ đầu. Bổ sung
   // cho nhất quán, dùng đúng cơ chế AdminAuth.requiredRole đã có sẵn.
-  AdminAuth.init({ page: 'ai', title: 'AI ASSISTANT — PLUGIN MANAGER', requiredRole: 'admin' }).then(load);
+  AdminAuth.init({ page: 'ai', title: 'PLUGIN AI — PLUGIN MANAGER', requiredRole: 'admin' }).then(load);
 
   let plugins = [];
 

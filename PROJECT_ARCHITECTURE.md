@@ -631,6 +631,33 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Sửa lỗi thật phát hiện qua điều tra Production (Sprint 12, Requirement #2) — Entity Near-Miss, 2 Route còn thiếu, Nhầm lẫn tên Sidebar
+
+Founder Acceptance Test của Requirement #3.2 (Sprint 11) ban đầu báo PASS, sau đó Founder tự phát hiện + báo lại THẤT BẠI thật trên `pshopmusic.com` với đúng câu gốc "Viết mô tả cho AlphaTheta XDJ AN". Điều tra bắt buộc dùng dữ liệu Firebase THẬT (đọc trực tiếp `products.json` qua REST công khai, KHÔNG dùng mock) theo đúng yêu cầu — xác nhận Root Cause: sản phẩm thật tên `"PIONEER XDJ-RX3 ALL-IN-ONE DJ SYSTEM"` (brand `"AlphaTheta"`), KHÔNG hề có sản phẩm "XDJ-AN" trong 42 sản phẩm thật. Ví dụ Validation "XDJ AN→AlphaTheta XDJ-AN" ở Requirement #3.2 trước đó chỉ là dữ liệu MOCK để test — chưa từng khớp với dữ liệu thật. Token "an" trong câu gõ không khớp bất kỳ token nào trong `name`/`brand`/`specs` thật của sản phẩm → cả 4 tầng thất bại đúng thiết kế (2/3 token "alphatheta"+"xdj" khớp qua tầng ALIAS, thiếu 1/3 nên không đủ `MIN_TOKEN_OVERLAP_RATIO = 1`). Không phải lỗi thuật toán, nhưng trải nghiệm "báo thẳng không tìm thấy" khi đã khớp đa số từ chưa tối ưu — bổ sung near-miss fallback bên dưới.
+
+```
+scoreItem() (js/ai/task-router.js) — bổ sung field weakRatio bên cạnh
+{tier, ratio} đã có:
+  weakRatio = max(nameRatio, aliasRatio)   // CHỈ tính khớp ĐÚNG 1 token
+                                            // trọn vẹn — KHÔNG tính
+                                            // partialRatio (chuỗi con) vì
+                                            // dễ trùng giả (vd "an" là
+                                            // chuỗi con của "sandisk").
+
+matchTarget() — thêm NEAR_MISS_THRESHOLD = 0.5:
+  Không ứng viên nào đạt đủ 100% ở tầng nào (scored rỗng)
+    NHƯNG có ứng viên weakRatio >= 0.5
+      → trả reason: 'target_ambiguous' với ứng viên đó (dù chỉ 1)
+      → tái dùng NGUYÊN VẸN showAmbiguousPicker() đã có (Sprint 4 #3)
+      → Founder bấm "Chọn" để xác nhận — KHÔNG BAO GIỜ tự chọn/tự chạy.
+```
+
+- **Near-Miss Fallback**: xem khối trên. Founder gõ tên viết tắt/nhớ nhầm 1 phần (như "XDJ AN" cho "XDJ-RX3") giờ nhận được 1 đề xuất xác nhận thay vì báo thẳng thất bại, vẫn giữ nguyên tắc "không đoán mò" (yêu cầu xác nhận qua UI, không tự thực thi).
+- **2 route còn thiếu — `faq-generator`/`image-prompt-generator`**: cả 2 Plugin đã tồn tại từ Sprint 5/6 (đã có trên `admin/ai/index.html`, đã có Permission `ai.generate.faq`/`ai.generate.imagePrompt` từ trước) nhưng CHƯA TỪNG được đăng ký trong `AI_TASK_ROUTES` — AI Assistant hội thoại luôn trả `plugin_not_found` cho MỌI câu về ảnh/FAQ, không liên quan gì đến entity matching. Thêm 2 route mới, `targetType:'freeText'` (giống Blog Writer/Banner Generator — không nhắm thực thể CMS có sẵn). Lưu ý: `image-prompt-generator` CHỈ sinh văn bản prompt mô tả ảnh (để dùng ở công cụ tạo ảnh AI khác) — KHÔNG sinh ảnh thật, đúng thiết kế gốc từ Sprint 6, không đổi ở đây.
+- **Nhầm lẫn tên Sidebar**: `ADMIN_NAV` (`js/admin-auth.js`) có 2 mục gần trùng tên trỏ 2 trang hoàn toàn khác nhau — `"Trợ lý AI"` (ô chat hội thoại thật) và `"AI Assistant"` (Plugin Dashboard thủ công) — Founder xác nhận đã bấm nhầm mục thứ 2. Đổi label thành `"Plugin AI (Thủ công)"`; đồng bộ đổi `title` hiển thị trên cả cụm 13 trang Plugin/Engineering Framework (`index/drafts/jobs/logs/providers/plugins/cost-tracking/context-builder/observability/health/workflow-insights/usage/workflow.html`) từ tiền tố `"AI ASSISTANT — ..."` sang `"PLUGIN AI — ..."` (cùng nguyên nhân gốc: share tiêu đề với đúng trang Trợ lý AI hội thoại, `js/admin-ai-assistant.js` không đổi); đổi thêm 1 quick-link tương tự ở `admin/index.html`. **`FOUNDER_SMART_NAV`'s "AI Content"/"AI Image" cùng trỏ `index.html` là giới hạn ĐÃ GHI NHẬN từ Sprint 10 Requirement #5 — KHÔNG thuộc phạm vi sửa lần này.**
+- **0 sửa đổi**: Firebase, Cloud Functions, `provider-registry.js`, `provider-interface.js`, `plugin-manager.js`, `job-queue.js`, `permission-service.js`, mọi file Plugin (`js/ai/modules/*.js`), `js/admin-ai-assistant.js` (near-miss tái dùng nguyên cơ chế `target_ambiguous` đã có, không cần sửa Experience Layer).
+- **Kiểm thử**: Node `vm` load thẳng mã nguồn thật + dữ liệu Firebase THẬT (42 sản phẩm thật qua REST công khai, không mock) — 0/42 hồi quy khi gõ đúng tên đầy đủ; câu gốc bug report nay trả `target_ambiguous` với ĐÚNG 1 đề xuất; câu hoàn toàn không liên quan vẫn đúng `target_not_found`; phát hiện + sửa 1 false-positive khi test với TOÀN BỘ 42 sản phẩm thật (near-miss ban đầu đề xuất nhầm thêm "SANDISK EXTREME PRO CZ880" vì "an" là chuỗi con của "sandisk" — sửa bằng cách loại `partialRatio` khỏi `weakRatio`); "RX3" viết tắt (hồi quy Requirement #3.2) vẫn đúng; 2 route mới trả `reason:'ok'` cho nhiều cách diễn đạt. Kiểm tra qua Preview (dev server local) xác nhận 0 lỗi console khi tải `admin/index.html`/`admin/ai/assistant.html` với toàn bộ script đã sửa — **chưa kiểm thử được qua UI thật có đăng nhập** (cần tài khoản Founder thật).
+
 ## Founder AI Assistant First (Sprint 12, Requirement #1) — mở rộng `AITaskRouter` sang 3 Plugin mới + targeting tuỳ chọn
 
 Tiếp tục tinh thần "Founder không cần hiểu Provider/Plugin/Queue/Workflow" — AI Assistant hội thoại (`admin/ai/assistant.html`) trước đây chỉ định tuyến được 3/8 Plugin (Product Description/SEO/Slider, mọi route đều BẮT BUỘC xác định 1 thực thể CMS có sẵn). Sprint 12 mở rộng sang Facebook Post Generator/Blog Writer/Banner Generator — 3 Plugin có bản chất khác: Blog Writer/Banner Generator viết nội dung MỚI theo chủ đề tự do (không nhắm thực thể có sẵn), Facebook Post Generator có `productId` TUỲ CHỌN (xem `js/ai/modules/*.js` — không sửa các file Plugin này).

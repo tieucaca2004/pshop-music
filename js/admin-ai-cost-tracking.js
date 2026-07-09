@@ -16,7 +16,7 @@ const AdminAICostTracking = (function () {
   }
 
   function init() {
-    AdminAuth.init({ page: 'ai-cost-tracking', title: 'AI ASSISTANT — COST TRACKING', requiredRole: 'admin' }).then(() => {
+    AdminAuth.init({ page: 'ai-cost-tracking', title: 'PLUGIN AI — COST TRACKING', requiredRole: 'admin' }).then(() => {
       document.getElementById('costRangeFilter').addEventListener('change', renderReport);
       renderReport();
     });

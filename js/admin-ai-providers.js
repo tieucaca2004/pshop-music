@@ -5,7 +5,7 @@
  * trong Secret Manager phía server (xem functions/index.js).
  */
 document.addEventListener('DOMContentLoaded', () => {
-  AdminAuth.init({ page: 'ai', title: 'AI ASSISTANT — NHÀ CUNG CẤP AI', requiredRole: 'admin' }).then(load);
+  AdminAuth.init({ page: 'ai', title: 'PLUGIN AI — NHÀ CUNG CẤP AI', requiredRole: 'admin' }).then(load);
 
   const PROVIDER_IDS = ['openai', 'claude', 'gemini', 'deepseek'];
 

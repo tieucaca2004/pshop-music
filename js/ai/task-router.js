@@ -73,6 +73,30 @@ const AI_TASK_ROUTES = [
       theme: freeText || 'Khuyến mãi mới',
       link: 'index.html'
     })
+  },
+  // Sprint 12 Requirement #2 — 2 route còn thiếu (Plugin đã có sẵn trong
+  // js/ai/modules/ và trên admin/ai/index.html từ trước, nhưng chưa từng
+  // được đăng ký route ở đây — AI Assistant hội thoại trả "plugin_not_found"
+  // cho MỌI câu liên quan tới ảnh/FAQ, bất kể diễn đạt thế nào).
+  {
+    pluginId: 'faq-generator',
+    outcomeLabel: 'Bài FAQ',
+    keywords: ['faq', 'câu hỏi thường gặp', 'hỏi đáp'],
+    targetType: 'freeText', // FAQ Generator viết bài MỚI theo chủ đề tự do, không nhắm 1 thực thể CMS có sẵn (xem js/ai/modules/faq-generator.js)
+    buildInputParams: (targetId, freeText) => ({
+      topic: freeText || 'Chủ đề mới',
+      questionCount: '5'
+    })
+  },
+  {
+    pluginId: 'image-prompt-generator',
+    outcomeLabel: 'Prompt tạo ảnh AI',
+    keywords: ['tạo ảnh', 'vẽ ảnh', 'vẽ hình', 'prompt ảnh', 'ảnh ai', 'image prompt'],
+    targetType: 'freeText', // Image Prompt Generator không có khái niệm target CMS — chỉ sinh văn bản prompt (xem js/ai/modules/image-prompt-generator.js)
+    buildInputParams: (targetId, freeText) => ({
+      subject: freeText || 'Sản phẩm âm thanh',
+      style: 'Ảnh sản phẩm studio'
+    })
   }
 ];
 
@@ -128,6 +152,17 @@ const AITaskRouter = (function () {
   // cầu khớp ĐỦ 100% số từ có nghĩa trong câu gõ, tránh khớp nhầm khi câu
   // gõ có nhiều hơn 1 từ nhận diện sản phẩm).
   const MIN_TOKEN_OVERLAP_RATIO = 1;
+  // NEAR_MISS_THRESHOLD — Sprint 12 Requirement #2. Khi KHÔNG ứng viên nào
+  // đạt đủ MIN_TOKEN_OVERLAP_RATIO (100%) ở bất kỳ tầng nào, nhưng có ứng
+  // viên khớp được phần lớn số từ có nghĩa (vd Founder gõ tên viết tắt/nhớ
+  // nhầm 1 phần model — "AlphaTheta XDJ AN" cho sản phẩm thật "PIONEER
+  // XDJ-RX3 ALL-IN-ONE DJ SYSTEM", brand AlphaTheta — khớp 2/3 từ), đưa ứng
+  // viên đó vào "ambiguous" (danh sách mơ hồ) để Founder TỰ XÁC NHẬN qua
+  // picker đã có sẵn (js/admin-ai-assistant.js showAmbiguousPicker) — KHÔNG
+  // BAO GIỜ tự chọn/tự chạy Plugin trên ứng viên chưa đủ 100% (vẫn đúng
+  // nguyên tắc "không đoán mò" của Requirement #3.2). Ngưỡng 0.5 nghĩa là ít
+  // nhất một nửa số từ có nghĩa trong câu gõ phải khớp được thì mới đề xuất.
+  const NEAR_MISS_THRESHOLD = 0.5;
   const MATCH_TIER = { NONE: 0, PARTIAL: 1, ALIAS: 2, TOKEN_OVERLAP: 3, EXACT: 4 };
   const GENERIC_STOPWORDS = ['cho', 'của', 'là', 'và', 'làm', 'tạo', 'giúp', 'với', 'các', 'một', 'hãy', 'về', 'tại', 'trong'];
 
@@ -179,38 +214,52 @@ const AITaskRouter = (function () {
     return kept.join(' ').trim();
   }
 
-  // scoreItem — chấm 1 ứng viên theo 4 tầng ở trên. Trả { tier, ratio }.
+  // scoreItem — chấm 1 ứng viên theo 4 tầng ở trên. Trả { tier, ratio,
+  // weakRatio }. weakRatio (Sprint 12 Requirement #2) luôn phản ánh tỷ lệ
+  // khớp CAO NHẤT đạt được ở bất kỳ tầng nào — kể cả khi chưa đủ
+  // MIN_TOKEN_OVERLAP_RATIO để "thắng" tầng đó — để matchTarget() có dữ
+  // liệu đề xuất "gần đúng" (near-miss) khi không ứng viên nào đạt đủ 100%.
   function scoreItem(rawTextLoose, queryTokens, item, nameKey) {
     const name = item[nameKey] || '';
     const nameLoose = normalizeLoose(name);
-    if (!nameLoose) return { tier: MATCH_TIER.NONE, ratio: 0 };
+    if (!nameLoose) return { tier: MATCH_TIER.NONE, ratio: 0, weakRatio: 0 };
 
-    if (rawTextLoose.indexOf(nameLoose) !== -1) return { tier: MATCH_TIER.EXACT, ratio: 1 };
-    if (!queryTokens.length) return { tier: MATCH_TIER.NONE, ratio: 0 };
+    if (rawTextLoose.indexOf(nameLoose) !== -1) return { tier: MATCH_TIER.EXACT, ratio: 1, weakRatio: 1 };
+    if (!queryTokens.length) return { tier: MATCH_TIER.NONE, ratio: 0, weakRatio: 0 };
 
     const nameTokens = tokenize(name);
     const nameHits = queryTokens.filter(t => nameTokens.indexOf(t) !== -1).length;
-    if (nameHits / queryTokens.length >= MIN_TOKEN_OVERLAP_RATIO) {
-      return { tier: MATCH_TIER.TOKEN_OVERLAP, ratio: nameHits / queryTokens.length };
+    const nameRatio = nameHits / queryTokens.length;
+    if (nameRatio >= MIN_TOKEN_OVERLAP_RATIO) {
+      return { tier: MATCH_TIER.TOKEN_OVERLAP, ratio: nameRatio, weakRatio: nameRatio };
     }
 
     // Alias — chỉ Product mới có brand/specs (Blog Post không có) — dùng
     // đúng field đã có sẵn, không thêm field/Database mới.
     const aliasTokens = tokenize([item.brand, item.specs].filter(Boolean).join(' '));
+    let aliasRatio = 0;
     if (aliasTokens.length) {
       const aliasHits = queryTokens.filter(t => nameTokens.indexOf(t) !== -1 || aliasTokens.indexOf(t) !== -1).length;
-      if (aliasHits / queryTokens.length >= MIN_TOKEN_OVERLAP_RATIO) {
-        return { tier: MATCH_TIER.ALIAS, ratio: aliasHits / queryTokens.length };
+      aliasRatio = aliasHits / queryTokens.length;
+      if (aliasRatio >= MIN_TOKEN_OVERLAP_RATIO) {
+        return { tier: MATCH_TIER.ALIAS, ratio: aliasRatio, weakRatio: aliasRatio };
       }
     }
 
     const allTokens = nameTokens.concat(aliasTokens);
     const partialHits = queryTokens.filter(t => allTokens.some(nt => nt.indexOf(t) !== -1)).length;
-    if (partialHits / queryTokens.length >= MIN_TOKEN_OVERLAP_RATIO) {
-      return { tier: MATCH_TIER.PARTIAL, ratio: partialHits / queryTokens.length };
+    const partialRatio = partialHits / queryTokens.length;
+    if (partialRatio >= MIN_TOKEN_OVERLAP_RATIO) {
+      return { tier: MATCH_TIER.PARTIAL, ratio: partialRatio, weakRatio: partialRatio };
     }
 
-    return { tier: MATCH_TIER.NONE, ratio: 0 };
+    // weakRatio (near-miss) CHỈ tính từ nameRatio/aliasRatio (khớp ĐÚNG 1 từ
+    // trọn vẹn) — cố tình KHÔNG tính partialRatio (khớp chuỗi con) vào đây.
+    // Lý do: chuỗi con dễ trùng giả với từ ngắn (vd "an" là chuỗi con của
+    // "sandisk") — nếu tính cả partialRatio, near-miss sẽ đề xuất nhầm sản
+    // phẩm không liên quan. nameRatio/aliasRatio đáng tin hơn vì đòi hỏi
+    // khớp ĐÚNG 1 token, không chỉ là chuỗi con.
+    return { tier: MATCH_TIER.NONE, ratio: 0, weakRatio: Math.max(nameRatio, aliasRatio) };
   }
 
   // "Xác định đối tượng" — so khớp tên sản phẩm/tiêu đề bài viết xuất hiện
@@ -226,15 +275,27 @@ const AITaskRouter = (function () {
 
     let bestTier = MATCH_TIER.NONE;
     const scored = [];
+    const nearMisses = [];
     list.forEach(item => {
       const s = scoreItem(rawTextLoose, queryTokens, item, nameKey);
       if (s.tier > MATCH_TIER.NONE) {
         scored.push({ item, tier: s.tier, ratio: s.ratio });
         if (s.tier > bestTier) bestTier = s.tier;
+      } else if (s.weakRatio >= NEAR_MISS_THRESHOLD) {
+        nearMisses.push({ item, ratio: s.weakRatio });
       }
     });
 
-    if (!scored.length) return { targetId: null, targetLabel: null, targetScore: 0, ambiguous: [] };
+    if (!scored.length) {
+      if (!nearMisses.length) return { targetId: null, targetLabel: null, targetScore: 0, ambiguous: [] };
+      // Không ứng viên nào đạt đủ 100% ở tầng nào, nhưng có ứng viên khớp
+      // được phần lớn — đề xuất qua picker "mơ hồ" đã có sẵn thay vì báo
+      // thẳng "không tìm thấy" (Sprint 12 Requirement #2). Vẫn KHÔNG tự chọn
+      // — trả về ambiguous để Founder xác nhận, kể cả khi chỉ có 1 đề xuất.
+      const bestWeakRatio = Math.max.apply(null, nearMisses.map(w => w.ratio));
+      const topNearMisses = nearMisses.filter(w => w.ratio === bestWeakRatio);
+      return { targetId: null, targetLabel: null, targetScore: 0.4, ambiguous: topNearMisses.map(w => ({ id: w.item.id, label: w.item[nameKey] })) };
+    }
 
     // Chỉ so trong đúng tầng cao nhất đã đạt được — không bao giờ để 1 ứng
     // viên tầng thấp hơn (vd Partial) thắng 1 ứng viên tầng cao hơn (vd

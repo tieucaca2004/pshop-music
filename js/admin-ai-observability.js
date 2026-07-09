@@ -18,7 +18,7 @@ const AdminAIObservability = (function () {
   }
 
   function init() {
-    AdminAuth.init({ page: 'ai-observability', title: 'AI ASSISTANT — OBSERVABILITY DASHBOARD', requiredRole: 'admin' }).then(() => {
+    AdminAuth.init({ page: 'ai-observability', title: 'PLUGIN AI — OBSERVABILITY DASHBOARD', requiredRole: 'admin' }).then(() => {
       document.getElementById('observabilityRefreshBtn').addEventListener('click', load);
       document.getElementById('observabilityRangeFilter').addEventListener('change', load);
       load();

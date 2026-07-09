@@ -12,7 +12,7 @@ const AdminAIHealth = (function () {
   }
 
   function init() {
-    AdminAuth.init({ page: 'ai-health', title: 'AI ASSISTANT — HEALTH CHECK', requiredRole: 'admin' }).then(() => {
+    AdminAuth.init({ page: 'ai-health', title: 'PLUGIN AI — HEALTH CHECK', requiredRole: 'admin' }).then(() => {
       document.getElementById('healthCheckRunBtn').addEventListener('click', runCheck);
     });
   }

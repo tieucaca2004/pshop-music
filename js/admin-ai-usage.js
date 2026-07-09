@@ -15,7 +15,7 @@ const AdminAIUsage = (function () {
   }
 
   function init() {
-    AdminAuth.init({ page: 'ai-usage', title: 'AI ASSISTANT — USAGE VISIBILITY', requiredRole: 'admin' }).then(() => {
+    AdminAuth.init({ page: 'ai-usage', title: 'PLUGIN AI — USAGE VISIBILITY', requiredRole: 'admin' }).then(() => {
       document.getElementById('usageRangeFilter').addEventListener('change', renderReport);
       renderReport();
     });

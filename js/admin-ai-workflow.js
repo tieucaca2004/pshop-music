@@ -31,7 +31,7 @@ const AdminAIWorkflow = (function () {
   }
 
   function init() {
-    AdminAuth.init({ page: 'ai-workflow', title: 'AI ASSISTANT — WORKFLOW AUTOMATION', requiredRole: 'admin' }).then(() => {
+    AdminAuth.init({ page: 'ai-workflow', title: 'PLUGIN AI — WORKFLOW AUTOMATION', requiredRole: 'admin' }).then(() => {
       document.getElementById('wfAddStepBtn').addEventListener('click', addStep);
       document.getElementById('wfRunBtn').addEventListener('click', onRunWorkflow);
       return PluginManager.loadPlugins().then(plugins => {

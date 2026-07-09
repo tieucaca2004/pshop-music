@@ -33,7 +33,7 @@ const AdminAIWorkflowInsights = (function () {
   }
 
   function init() {
-    AdminAuth.init({ page: 'ai-workflow-insights', title: 'AI ASSISTANT — WORKFLOW INSIGHTS', requiredRole: 'admin' }).then(() => {
+    AdminAuth.init({ page: 'ai-workflow-insights', title: 'PLUGIN AI — WORKFLOW INSIGHTS', requiredRole: 'admin' }).then(() => {
       document.getElementById('wiRangeFilter').addEventListener('change', renderReport);
       document.getElementById('wiRefreshBtn').addEventListener('click', renderReport);
       renderReport();
