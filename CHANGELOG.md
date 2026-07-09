@@ -2,6 +2,17 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 11 — Requirement #3.2: Deployment — pshopmusic.com đã cập nhật lên feature/cms-ai-sprint2
+
+**Root Cause thật sự của "AI Assistant vẫn báo lỗi cũ" (Requirement #3.1 trở về trước): KHÔNG phải code, KHÔNG phải hạ tầng Firebase — mà là DEPLOYMENT.** `pshopmusic.com` chưa từng được kết nối Git Continuous Deployment trên Netlify — được deploy thủ công qua Netlify CLI/Drop, đứng yên tại 1 bản build cũ từ khoảng giữa Sprint 2 (xác nhận bằng `git log -S` + so sánh nội dung thật: thiếu script `js/ai/permission-service.js` (thêm ở Sprint 2 Requirement #8) và vẫn còn đoạn text đã được sửa từ Sprint 3 Requirement #5). Toàn bộ Sprint 2 (nửa sau) → Sprint 11 chưa từng lên Production dù đã commit/push đầy đủ lên `feature/cms-ai-sprint2`.
+
+- **Xác nhận qua Netlify CLI** (đã đăng nhập sẵn, project đã link sẵn `.netlify/state.json`, không tạo mới): `netlify api listSiteDeploys` xác nhận `deploy_source: "cli"`, `commit_ref: null`, `build_id: null` — đúng như Chief Architect quan sát trên Dashboard: không Repository, không Production Branch, không Build Configuration.
+- **Đã deploy thật lên Production** (`beautiful-pixie-427b63`, alias `pshopmusic.com`) — export đúng nội dung ĐÃ COMMIT của `feature/cms-ai-sprint2` (`git archive HEAD`, không lẫn file chưa commit/draft), loại bỏ các phần KHÔNG phải nội dung web (`functions/` — mã nguồn Cloud Function Firebase, deploy riêng qua `firebase deploy`, không phải Netlify Function; `docs/`, `*.md` gốc, `firebase.json`/`.firebaserc`/`database.rules.json`/`storage.rules` — file cấu hình CLI, không trang nào tải lúc chạy; `scripts/`, `wordpress-theme/`, `data/` — di sản không liên quan, xác nhận không HTML/JS nào tham chiếu tới trước khi loại bỏ). Deploy DRAFT trước để kiểm tra, xác nhận đúng nội dung mới, rồi mới `--prod` lên `pshopmusic.com` thật.
+- **Xác nhận SAU deploy (đọc-only GET, không đổi gì thêm)**: `https://pshopmusic.com/admin/ai/index.html` đã hiện đúng bản text mới ("Cần cấu hình + gán đúng nhà cung cấp AI..."), có `permission-service.js`, có link `one-click-marketing.html`; `https://pshopmusic.com/admin/products.html` đã có nút `pAiAssistBtn` (Requirement #2); `https://pshopmusic.com/admin/ai/one-click-marketing.html` tồn tại (HTTP 200).
+- **Chưa xác minh được Founder Acceptance Test thật** (Product AI Generate → Draft → Review; One Click Marketing Generate → Draft → Review) — cần Chief Architect tự đăng nhập CMS thật (Firebase Auth) và bấm Generate, vì môi trường này không có tài khoản Admin thật để tự đăng nhập. **Chưa tự tuyên bố Requirement #3 PASS** cho tới khi có xác nhận đó, đúng Honesty Rule.
+- 0 sửa code — chỉ hành động deploy (Netlify) + cập nhật tài liệu.
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+
 ## Sprint 11 — Requirement #3.1: AI Provider Initial Setup (Application Configuration Layer)
 
 Sau khi hạ tầng (Cloud Function `openaiProxy`, Secret `OPENAI_API_KEY`, Billing) đã kích hoạt thật, AI Assistant vẫn báo "Chưa chọn nhà cung cấp AI nào" — Root Cause xác nhận KHÔNG phải hạ tầng: node `aiProviderConfig` (Firebase RTDB) chưa từng được ghi, `ProviderConfigDB.get()` chỉ TRẢ VỀ giá trị mặc định `activeProvider:'none'` ở bộ nhớ (không tự lưu) — Founder phải tự tay vào `admin/ai/providers.html` bật OpenAI + Lưu mới xong. Đúng Product Constitution "Founder không cần hiểu Provider/Plugin/Queue/Workflow để dùng AI" — không nên bắt Founder làm bước cấu hình kỹ thuật này.

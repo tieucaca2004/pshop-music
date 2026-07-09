@@ -631,6 +631,39 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Deployment thật của `pshopmusic.com` (Sprint 11, Requirement #3.2) — GHI NHỚ cho mọi Sprint sau
+
+**Quan trọng — đọc mục này TRƯỚC khi cho rằng "đã push lên `feature/cms-ai-sprint2` là site Production sẽ tự cập nhật".** Không đúng: `pshopmusic.com` KHÔNG kết nối Git Continuous Deployment trên Netlify.
+
+```
+Netlify account tieucaca2004@gmail.com có 4 site:
+  beautiful-pixie-427b63  → pshopmusic.com          ← site THẬT đang public, KHÔNG git-linked
+  pshop-music             → pshop-music.netlify.app ← 1 project Next.js/MySQL KHÁC hoàn toàn (Sprint 10 Planning nhầm branch?), không liên quan CMS Firebase này
+  elaborate-sunburst-...  → *.netlify.app            (chưa xác định mục đích)
+  kaleidoscopic-figolla-. → atieu.com                 (không liên quan)
+```
+
+- `pshopmusic.com` = site `beautiful-pixie-427b63`, deploy qua **Netlify CLI thủ công** (`netlify deploy`), KHÔNG có Repository/Production Branch/Build Configuration trong Netlify Dashboard — xác nhận qua `netlify api listSiteDeploys`: `deploy_source:"cli"`, `commit_ref:null`, `build_id:null` cho mọi bản deploy trước đó.
+- Vì vậy: **mọi lần `git push` lên `feature/cms-ai-sprint2` từ Sprint 2 (nửa sau) tới Sprint 11 KHÔNG hề tự động lên Production** — site đứng yên ở 1 bản build cũ (~giữa Sprint 2) suốt gần 9 Sprint, cho tới khi phát hiện + deploy thật ở Requirement #3.2.
+- **Quy trình deploy đúng (cho tới khi có Decision Record đổi sang Git-linked deploy)**:
+  ```bash
+  # 1. Export ĐÚNG nội dung đã commit (không lẫn file chưa commit/draft):
+  git archive HEAD | tar -x -C <thư mục tạm>
+  # 2. Loại bỏ phần KHÔNG phải nội dung web (Cloud Function Firebase deploy
+  #    riêng qua `firebase deploy`, không phải Netlify Function; docs/tài
+  #    liệu nội bộ; file cấu hình CLI; di sản wordpress-theme/data/scripts
+  #    không trang nào tham chiếu):
+  rm -rf functions docs scripts wordpress-theme data
+  rm -f *.md firebase.json .firebaserc database.rules.json storage.rules .gitignore
+  # 3. Draft deploy trước để kiểm tra (KHÔNG --prod):
+  netlify deploy --dir=<thư mục tạm> --no-build
+  # 4. Sau khi xác nhận đúng nội dung → promote lên Production:
+  netlify deploy --dir=<thư mục tạm> --no-build --prod
+  ```
+  Project đã sẵn `netlify link` (file `.netlify/state.json`, gitignored, KHÔNG commit) trỏ đúng `beautiful-pixie-427b63` — không cần `netlify link` lại.
+- **Site `pshop-music` (`pshop-music.netlify.app`) là 1 project HOÀN TOÀN KHÁC** — Next.js + MySQL (Aiven), có `admin/` riêng, không liên quan gì tới CMS Firebase/AI Framework của dự án này. Nằm trên nhánh `main`/`master` của CÙNG repo GitHub (khác hẳn nội dung `feature/cms-ai-sprint2`) — **KHÔNG merge `feature/cms-ai-sprint2` vào `main`**, không động vào `main` — đúng nguyên tắc xuyên suốt dự án.
+- **Đề xuất cho tương lai (chỉ ghi nhận, chưa quyết định)**: cân nhắc kết nối `pshopmusic.com` với Git Continuous Deployment thật (trỏ đúng `feature/cms-ai-sprint2`, hoặc 1 nhánh Production riêng), để không phải deploy tay mỗi lần — cần Chief Architect quyết định (ảnh hưởng vận hành, không phải quyết định kỹ thuật đơn thuần).
+
 ## AI Provider Initial Setup (Sprint 11, Requirement #3.1)
 
 Đóng khoảng cách cuối cùng giữa "hạ tầng đã kích hoạt thật" (Requirement #3) và "Founder Generate được ngay, không cần tự cấu hình Provider" (Product Constitution: Founder không cần hiểu Provider/Plugin/Queue/Workflow):
