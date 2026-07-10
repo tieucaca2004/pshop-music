@@ -48,6 +48,11 @@
     return stripHtmlTags(cleaned);
   }
 
+  function formatDate(ts) {
+    if (!ts) return '';
+    return new Date(ts).toLocaleDateString('vi-VN');
+  }
+
   function cardHtml(p) {
     const title = recoverTitle(p);
     const img = p.coverImage
