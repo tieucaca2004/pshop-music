@@ -631,6 +631,39 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Media AI V2 — Requirement 2: Product & Blog Media (Sprint 12, Requirement #5)
+
+Founder muốn Product/Blog do AI sinh ra trông giống 1 website công nghệ bình thường — có ảnh, có video, có link liên kết — nhưng KHÔNG sinh ảnh/video bằng AI (chưa tới giai đoạn Image AI/Video AI), chỉ tự động dùng đúng media THẬT đã có sẵn trong Firebase.
+
+```
+Product: youtubeUrl (Admin tự nhập, admin/products.html) → getYoutubeEmbedUrl()
+         (js/category.js) → hiển thị player dưới gallery ảnh, tự ẩn nếu
+         không có link. Gallery ảnh (Featured Image + ảnh phụ) đã có sẵn từ
+         trước Sprint 12 — không cần sửa.
+
+Blog: blog-writer.js thêm field productId (tuỳ chọn). buildPrompt() yêu cầu
+      AI trả JSON {title, intro, sections:[{heading,paragraph}], conclusion}
+      — CHỈ VĂN BẢN, cấm AI tự chèn <img>/<iframe> hay tự bịa URL.
+      mapToDraftContent() tự lắp cấu trúc:
+
+        Title → Featured Image (ảnh đầu của Product) → Intro →
+        (H2 → Paragraph → Image xen kẽ các ảnh còn lại) × N →
+        YouTube Video (nếu Product có youtubeUrl) → Conclusion →
+        "Sản phẩm liên quan" (link category.html?product={id} thật)
+
+      Ảnh/video CHỈ lấy từ DataProvider.getProduct() (dữ liệu Firebase
+      thật) — không có productId → Blog Writer hoạt động y hệt trước (0
+      regression); có productId nhưng thiếu ảnh/video → tự bỏ qua đúng
+      phần đó, không lỗi/không để trống (đúng "skip that section
+      gracefully").
+```
+
+- **`category.html`/`js/category.js`**: `#modalVideo` đặt trong `modal-img-side` (cần `flex-direction:column` để xếp đúng dưới gallery, không xếp ngang). Thêm hỗ trợ `?product={id}` — tự mở đúng modal khi tải trang (đọc thêm 1 query param có sẵn trên CÙNG URL `category.html`, không thêm route/trang mới) — để "Sản phẩm liên quan" cuối bài Blog có link THẬT dẫn đúng sản phẩm, không chỉ trỏ về trang danh mục chung chung (Product chưa có URL riêng từng sản phẩm, xem Requirement #4).
+- **`js/ai/modules/blog-writer.js`**: cùng pattern JSON + `parseJsonResponse()` khoan dung/an toàn tuyệt đối đã dùng ở Product AI V2 (Requirement #4) — học từ đúng lỗi đã sửa ở Requirement #3 (tách theo dòng cố định dễ vỡ khi AI không theo đúng định dạng).
+- **"Never invent image URLs. Never invent YouTube links."**: thực thi bằng kiến trúc, không chỉ bằng Prompt — mọi `<img>`/`<iframe>` trong `contentHtml` được CODE tự chèn từ dữ liệu Product thật đọc qua DataProvider, AI không có cách nào tự ý thêm URL media vào bài (Prompt chỉ yêu cầu văn bản thuần, không có chỗ nào cho AI trả về URL).
+- **0 sửa đổi**: Queue/Provider/Plugin Framework/`js/ai/task-router.js` (AI routing)/Workflow/Image AI.
+- **Kiểm thử**: Node `vm` load mã nguồn thật — lắp ráp media đúng thứ tự khi đủ ảnh/video; bỏ qua đúng từng phần khi thiếu (không lỗi); hồi quy đầy đủ luồng Blog Writer không chọn sản phẩm; JSON bọc fence/parse thất bại có fallback đúng; `getYoutubeEmbedUrl()` đúng 8/8 test case (kể cả URL không hợp lệ). Xác nhận qua Preview (dev server local, dữ liệu Firebase thật, thao tác click thật) — `?product=id` tự mở đúng modal, không ảnh hưởng field Requirement #4.
+
 ## Media AI V2 — Requirement 1: Product AI V2 (Sprint 12, Requirement #4)
 
 Mục tiêu Sprint: Founder vận hành platform với nội dung AI THẬT, publish-ready — không chỉ 1 trường Mô tả. Nâng cấp `product-description-writer` (giữ nguyên `id`, không tạo Plugin mới) để sinh đầy đủ: Tên/Mô tả ngắn/Mô tả dài/Thông số chi tiết/Tính năng/FAQ/SEO Title/Meta Description/SEO Keywords/Slug/Tags/Danh mục/ALT Text — tái sử dụng NGUYÊN VẸN Plugin Framework/Queue/Provider/Draft System/Publish Pipeline (0 sửa `plugin-manager.js`/`job-queue.js`/`provider-registry.js`/`permission-service.js`).

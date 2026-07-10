@@ -150,6 +150,12 @@ nav{position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop
 .blog-post-content h3{font-size:1.2rem;font-weight:700;color:var(--black);margin:1.5rem 0 0.75rem}
 .blog-post-content img{max-width:100%;height:auto;margin:1.5rem 0}
 .blog-post-content p{margin-bottom:1.2rem}
+.blog-post-content .blog-featured-image{border-radius:8px;margin-bottom:2rem}
+.blog-post-content .blog-inline-image{border-radius:8px}
+.blog-post-content .blog-video-embed{position:relative;padding-top:56.25%;height:0;overflow:hidden;border-radius:8px;margin:1.5rem 0}
+.blog-post-content .blog-video-embed iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0}
+.blog-post-content .blog-related-product{margin-top:2rem;padding:1rem 1.2rem;background:var(--bg-alt);border-radius:8px;border-left:3px solid var(--gold-ink)}
+.blog-post-content .blog-related-product a{color:var(--gold-ink);font-weight:600;text-decoration:underline}
 .blog-post-tags{margin-top:2rem;display:flex;gap:0.5rem;flex-wrap:wrap}
 .blog-tag{font-size:0.72rem;letter-spacing:0.04em;text-transform:uppercase;color:var(--gold-ink);background:var(--gold-soft);padding:0.3rem 0.7rem}
 
@@ -226,7 +232,9 @@ footer{background:#0a0a0a;padding:4rem 0 1.5rem;margin-top:2rem}
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(20,18,15,0.7);z-index:500;align-items:center;justify-content:center;padding:1rem}
 .modal-overlay.open{display:flex}
 .modal-box{background:var(--bg);border:1px solid var(--line);max-width:1180px;width:100%;max-height:92vh;overflow:hidden;position:relative;display:grid;grid-template-columns:1.25fr 1fr;gap:0}
-.modal-img-side{background:var(--bg-alt);display:flex;align-items:center;justify-content:center;min-height:480px;padding:3rem;overflow:hidden;position:relative}
+.modal-img-side{background:var(--bg-alt);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:480px;padding:3rem;overflow:hidden;position:relative}
+.modal-video{width:100%;margin-top:1.5rem;position:relative;padding-top:56.25%;height:0;overflow:hidden;border-radius:8px}
+.modal-video iframe{position:absolute;top:0;left:0;width:100%;height:100%;border:0}
 .modal-gallery-nav{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;background:#fff;border:1px solid var(--line);color:var(--ink);font-size:1.3rem;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;z-index:3}
 .modal-gallery-nav:hover{background:var(--black);color:#fff;border-color:var(--black)}
 .modal-gallery-prev{left:1rem}

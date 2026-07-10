@@ -119,6 +119,7 @@ const AdminApp = (function () {
     document.getElementById('pOldPrice').value = p.oldPrice || '';
     document.getElementById('pSpecs').value = p.specs || '';
     document.getElementById('pBadgeText').value = p.badgeText || '';
+    document.getElementById('pYoutubeUrl').value = p.youtubeUrl || '';
     if (quill) quill.root.innerHTML = p.description || '';
     const images = Array.isArray(p.images) && p.images.length ? p.images : (p.image ? [p.image] : []);
     document.getElementById('pImages').value = images.join('\n');
@@ -141,7 +142,7 @@ const AdminApp = (function () {
   function resetForm() {
     editingId = null;
     document.getElementById('pId').value = '';
-    ['pName', 'pPrice', 'pOldPrice', 'pSpecs', 'pBadgeText', 'pImages'].forEach(id => {
+    ['pName', 'pPrice', 'pOldPrice', 'pSpecs', 'pBadgeText', 'pImages', 'pYoutubeUrl'].forEach(id => {
       document.getElementById(id).value = '';
     });
     pImagesPicker.refresh();
@@ -171,6 +172,7 @@ const AdminApp = (function () {
       oldPrice: document.getElementById('pOldPrice').value.trim(),
       specs: document.getElementById('pSpecs').value.trim(),
       badgeText: document.getElementById('pBadgeText').value.trim(),
+      youtubeUrl: document.getElementById('pYoutubeUrl').value.trim(),
       description: quill && quill.getText().trim() ? quill.root.innerHTML : '',
       images: images,
       image: images[0] || ''

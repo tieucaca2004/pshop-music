@@ -38,6 +38,23 @@
       .trim();
   }
 
+  // Sprint 12 Requirement #5 (Media AI — Product & Blog Media) — Product
+  // KHÔNG có video AI sinh ra, chỉ dùng link YouTube Admin tự nhập thủ công
+  // (pYoutubeUrl, admin/products.html). Nhận nhiều dạng URL YouTube phổ biến
+  // (watch?v=, youtu.be/, đã ở dạng embed, Shorts) — trả về '' nếu không
+  // nhận diện được, để phần video tự ẩn (đúng "skip that section gracefully").
+  function getYoutubeEmbedUrl(url) {
+    const str = String(url || '').trim();
+    if (!str) return '';
+    let id = '';
+    let m = str.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+    if (m) id = m[1];
+    if (!id) { m = str.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/); if (m) id = m[1]; }
+    if (!id) { m = str.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/); if (m) id = m[1]; }
+    if (!id) { m = str.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/); if (m) id = m[1]; }
+    return id ? `https://www.youtube.com/embed/${id}` : '';
+  }
+
   // Sprint 12 Requirement #1 (Product AI V2) — render Mô tả ngắn/Thông số
   // chi tiết/Tính năng/FAQ do Product AI sinh ra, khi có. Không có dữ liệu
   // (sản phẩm chưa chạy Product AI V2) thì các khối này tự ẩn — không đổi
@@ -68,6 +85,19 @@
         </div>`).join('');
       faqEl.style.display = 'block';
     } else faqEl.style.display = 'none';
+
+    // Sprint 12 Requirement #5 — video KHÔNG do AI sinh ra, chỉ hiển thị nếu
+    // Admin đã tự nhập link YouTube thật (p.youtubeUrl) — ẩn hoàn toàn nếu
+    // không có, đúng "If no YouTube URL exists: Hide the video section."
+    const videoEl = document.getElementById('modalVideo');
+    const embedUrl = getYoutubeEmbedUrl(p.youtubeUrl);
+    if (embedUrl) {
+      videoEl.innerHTML = `<iframe src="${escapeHtml(embedUrl)}" title="${escapeHtml(p.name || '')}" allowfullscreen loading="lazy"></iframe>`;
+      videoEl.style.display = 'block';
+    } else {
+      videoEl.innerHTML = '';
+      videoEl.style.display = 'none';
+    }
   }
 
   window.pshopImgFail = function (img) {
@@ -350,6 +380,17 @@
   withTimeout(DB.getAll(), 10000).then(products => {
     allProducts = products;
     render();
+    // Sprint 12 Requirement #5 (Media AI — Product & Blog Media) — "Sản phẩm
+    // liên quan" cuối bài Blog cần 1 link thật mở đúng sản phẩm, không chỉ
+    // trỏ về trang danh mục chung chung. Product chưa có URL/trang riêng
+    // (xem PROJECT_ARCHITECTURE.md mục Product AI V2) nên dùng query param
+    // ?product=ID để tự mở đúng modal khi tải trang — không thêm route/
+    // trang mới, chỉ đọc thêm 1 param có sẵn trên cùng URL category.html.
+    const productParam = new URLSearchParams(location.search).get('product');
+    if (productParam) {
+      const p = allProducts.find(x => x.id === productParam);
+      if (p) openModal(p);
+    }
   }).catch(err => {
     console.error('Không tải được dữ liệu sản phẩm:', err);
     grid.innerHTML = '<div class="empty-state">Không tải được dữ liệu sản phẩm. Vui lòng thử tải lại trang, hoặc liên hệ <a href="tel:0901952999" style="color:var(--gold-ink);font-weight:600">0901 952 999</a> nếu vẫn lỗi.</div>';
