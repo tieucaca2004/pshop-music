@@ -225,9 +225,105 @@ const AdminAI = (function () {
   // (hook/mainContent/cta/hashtags/ảnh/video/link) — hiển thị raw JSON như
   // mọi Plugin khác sẽ khó đọc. CHỈ đổi cách hiển thị cho đúng moduleId này
   // — mọi Plugin khác vẫn giữ NGUYÊN VẸN <pre>JSON</pre> như cũ (0 regression).
+  // Sprint 12 Requirement #7 (Facebook AI V3) — mediaBlockHtml() dùng
+  // CHUNG cho cả 3 phiên bản (Featured Image/Gallery/YouTube/Product Link
+  // đều gắn theo Sản phẩm, không đổi theo từng phiên bản A/B/C) — hiển thị
+  // đúng 1 lần, không lặp lại 3 lần cho mỗi bản.
+  function mediaBlockHtml(c) {
+    const imgHtml = c.featuredImage
+      ? `<a href="${escapeHtml(c.featuredImage)}" download target="_blank" rel="noopener"><img src="${escapeHtml(c.featuredImage)}" style="max-width:280px;width:100%;border-radius:8px;margin-bottom:0.4rem;display:block" alt=""></a>`
+      : '';
+    const galleryHtml = Array.isArray(c.galleryImages) && c.galleryImages.length
+      ? `<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin:0.4rem 0 0.4rem">${c.galleryImages.map(g => `<a href="${escapeHtml(g)}" download target="_blank" rel="noopener"><img src="${escapeHtml(g)}" style="width:72px;height:72px;object-fit:cover;border-radius:6px"></a>`).join('')}</div>`
+      : '';
+    // "Download Images" — trình duyệt chỉ ép tải xuống thật khi ảnh cùng
+    // origin; ảnh lưu ngoài (Cloudinary...) trình duyệt có thể vẫn chỉ mở
+    // tab mới do giới hạn bảo mật cross-origin — không có cách khắc phục
+    // thuần client-side, đã ghi rõ giới hạn này trong CHANGELOG.md.
+    const downloadLinksHtml = (c.featuredImage || (Array.isArray(c.galleryImages) && c.galleryImages.length))
+      ? `<p style="font-size:0.78rem;color:var(--ink-mute);margin-bottom:0.6rem">Bấm vào ảnh để tải xuống (ảnh lưu ngoài có thể mở tab mới thay vì tải trực tiếp, tuỳ trình duyệt).</p>`
+      : '';
+    const videoHtml = c.youtubeEmbedUrl
+      ? `<div style="position:relative;padding-top:56.25%;height:0;max-width:360px;margin-bottom:0.6rem;border-radius:8px;overflow:hidden"><iframe src="${escapeHtml(c.youtubeEmbedUrl)}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0" allowfullscreen loading="lazy"></iframe></div>`
+      : '';
+    const highlightsHtml = Array.isArray(c.productHighlights) && c.productHighlights.length
+      ? `<ul style="margin:0.3rem 0 0.6rem 1.2rem">${c.productHighlights.map(h => `<li>${escapeHtml(h)}</li>`).join('')}</ul>`
+      : '';
+    const linkHtml = c.productLink
+      ? `<p><a href="${escapeHtml(c.productLink)}" target="_blank" rel="noopener" style="color:var(--gold-ink)">Xem sản phẩm →</a></p>`
+      : '';
+    if (!imgHtml && !galleryHtml && !videoHtml && !highlightsHtml && !linkHtml) return '';
+    return `<div style="margin-bottom:1rem">${imgHtml}${downloadLinksHtml}${galleryHtml}${highlightsHtml}${videoHtml}${linkHtml}</div>`;
+  }
+
+  // versionCardHtml() — "Facebook Preview" mô phỏng giao diện 1 bài đăng
+  // Facebook thật (Requirement #7: "Draft preview should support: Facebook
+  // Preview, Copy Caption, Copy Hashtags") + nút Copy dùng data-copy-text
+  // (trình duyệt tự giải mã HTML entity khi đọc lại qua getAttribute, không
+  // cần tự decode) để tránh vỡ khi caption có ký tự đặc biệt.
+  function versionCardHtml(v) {
+    const hashtagsText = (v.hashtags || []).map(h => (h.indexOf('#') === 0 ? h : '#' + h)).join(' ');
+    return `
+      <div class="panel" style="margin-top:0.8rem">
+        <h4 style="margin-bottom:0.5rem">Phiên bản ${escapeHtml(v.label)}</h4>
+        <div style="border:1px solid var(--line);border-radius:8px;overflow:hidden;max-width:420px;background:#fff;color:#1c1c1c">
+          <div style="display:flex;align-items:center;gap:0.5rem;padding:0.7rem">
+            <div style="width:36px;height:36px;border-radius:50%;background:var(--gold-ink);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0">P</div>
+            <div>
+              <div style="font-weight:700;font-size:0.85rem">Pshop Music</div>
+              <div style="font-size:0.72rem;color:#65676b">Được tài trợ · 🌐</div>
+            </div>
+          </div>
+          <div style="padding:0 0.7rem 0.7rem;font-size:0.85rem;white-space:pre-wrap">${v.hook ? `<strong>${escapeHtml(v.hook)}</strong>\n\n` : ''}${escapeHtml(v.caption)}</div>
+          ${hashtagsText ? `<div style="padding:0 0.7rem 0.7rem;font-size:0.8rem;color:#1877f2">${escapeHtml(hashtagsText)}</div>` : ''}
+          ${v.cta ? `<div style="padding:0.7rem;font-weight:600;font-size:0.85rem;border-top:1px solid #eee">${escapeHtml(v.cta)}</div>` : ''}
+        </div>
+        <div class="admin-actions" style="margin-top:0.6rem">
+          <button type="button" class="btn-secondary" data-copy-text="${escapeHtml(v.postText)}" onclick="AdminAI.copyDraftText(this)">📋 Copy Caption</button>
+          ${hashtagsText ? `<button type="button" class="btn-secondary" data-copy-text="${escapeHtml(hashtagsText)}" onclick="AdminAI.copyDraftText(this)">#️⃣ Copy Hashtags</button>` : ''}
+        </div>
+      </div>`;
+  }
+
+  // copyDraftText() — Clipboard API (yêu cầu HTTPS, pshopmusic.com đã có) +
+  // fallback execCommand('copy') cho trình duyệt cũ hơn — không thêm phụ
+  // thuộc/thư viện mới nào.
+  function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); } catch (e) { /* bỏ qua — nút vẫn không báo lỗi ra người dùng */ }
+    document.body.removeChild(ta);
+  }
+
+  function copyDraftText(btn) {
+    const text = btn.getAttribute('data-copy-text') || '';
+    const showCopied = () => {
+      const old = btn.textContent;
+      btn.textContent = '✅ Đã copy!';
+      setTimeout(() => { btn.textContent = old; }, 1500);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(showCopied).catch(() => { fallbackCopy(text); showCopied(); });
+    } else {
+      fallbackCopy(text);
+      showCopied();
+    }
+  }
+
   function draftBodyHtml(d) {
     if (d.moduleId === 'facebook-post-generator') {
       const c = d.content || {};
+      // Facebook AI V3 (Requirement #7) — nhiều phiên bản (content.versions).
+      if (Array.isArray(c.versions) && c.versions.length) {
+        return `<div>${mediaBlockHtml(c)}${c.versions.map(versionCardHtml).join('')}</div>`;
+      }
+      // Hồi quy: Draft cũ từ Facebook AI V2 (Requirement #6, trước khi có
+      // "versions") — giữ NGUYÊN VẸN cách hiển thị cũ, không phá dữ liệu đã
+      // tạo trước đó còn nằm trong aiDrafts.
       const imgHtml = c.featuredImage
         ? `<img src="${escapeHtml(c.featuredImage)}" style="max-width:280px;width:100%;border-radius:8px;margin-bottom:0.8rem;display:block" alt="">`
         : '';
@@ -473,5 +569,5 @@ const AdminAI = (function () {
     }).join('');
   }
 
-  return { initDashboard, runModule, initDrafts, publishDraft, rejectDraft, publishDraftById, rejectDraftById, initJobs, cancelJob, retryJob, initLogs };
+  return { initDashboard, runModule, initDrafts, publishDraft, rejectDraft, publishDraftById, rejectDraftById, initJobs, cancelJob, retryJob, initLogs, copyDraftText };
 })();

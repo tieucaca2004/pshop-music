@@ -631,6 +631,29 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Facebook AI V3 (Sprint 12, Requirement #7)
+
+Nâng Facebook AI V2 (Requirement #6) lên mức dùng được cho marketing thật: 3 nguồn input thay vì chỉ Sản phẩm, và 3 phiên bản để so sánh thay vì 1 bản duy nhất.
+
+```
+inputFields: productId/topic/promotion — CẢ 3 đều optional, Founder điền
+đúng 1 trong 3. buildPrompt() chọn grounding theo thứ tự ưu tiên: có Sản
+phẩm > có Khuyến mãi > có Chủ đề > fallback "giới thiệu chung" nếu không
+điền gì (không bao giờ để Prompt trống/vô nghĩa).
+
+Yêu cầu AI trả về {"versions": [{hook,caption,cta,hashtags} x3]} — 3 góc
+tiếp cận khác nhau. mapToDraftContent() lắp postText riêng cho MỖI phiên
+bản, nhưng media (featuredImage/galleryImages/youtubeEmbedUrl/productLink/
+productHighlights) DÙNG CHUNG ở cấp content (không lặp theo từng bản, vì
+cùng 1 Sản phẩm) — chỉ gắn khi có productId, đúng "If no Product selected:
+Generate text only."
+```
+
+- **"Draft preview should support: Facebook Preview, Copy Caption, Download Images, Copy Hashtags"**: `js/admin-ai.js`'s `draftBodyHtml()` render 3 khối mô phỏng giao diện bài đăng Facebook thật (avatar/tên trang/hook/caption/hashtags xanh/CTA), mỗi khối có nút Copy Caption (copy `postText` đầy đủ) + Copy Hashtags (Clipboard API + fallback `execCommand`), ảnh Featured/Gallery bọc trong link `download`. **Giới hạn đã biết**: "Download Images" chỉ ép tải thật khi ảnh cùng origin — ảnh lưu ngoài (Cloudinary...) trình duyệt có thể chỉ mở tab mới do giới hạn bảo mật cross-origin, cần proxy server để khắc phục triệt để (ngoài phạm vi Requirement này — không thêm hạ tầng mới).
+- **Hồi quy đảm bảo**: `draftBodyHtml()` phân biệt `content.versions` (V3, mới) với cấu trúc phẳng cũ (V2, `content.hook`/`content.mainContent` trực tiếp) — Draft V2 đã tạo trước đó (Requirement #6) vẫn hiển thị đúng y hệt cách cũ, không bị vỡ khi nâng cấp lên V3. Mọi Plugin khác vẫn giữ nguyên `<pre>JSON</pre>` như từ đầu.
+- **0 sửa đổi**: Queue/Provider/Workflow/Plugin Framework. Không có tích hợp Facebook API (chưa từng tồn tại, không thêm mới — "No Facebook API yet"/"Publish manually" giữ nguyên bằng cách không đổi `targetCollection: null`).
+- **Kiểm thử**: Node `vm` load mã nguồn thật — cả 3 nguồn input đều ground đúng, kể cả không điền gì; đúng 3 phiên bản + đầy đủ media khi có Sản phẩm; đúng "text only" khi không có Sản phẩm; fallback an toàn khi JSON hỏng/thiếu field (không bao giờ Draft rỗng); xác nhận media hiển thị đúng 1 lần qua đếm số thẻ `<img>`/`<iframe>` thật (không suy đoán); Draft V2 cũ vẫn hiển thị đúng cách cũ.
+
 ## Media AI V2 — Requirement 3: Facebook AI V2 (Sprint 12, Requirement #6)
 
 Founder muốn Facebook AI sinh bài đăng publish-ready CHỈ từ 1 Sản phẩm có sẵn — Founder chỉ chọn Sản phẩm, Caption/Hook/CTA/Hashtags do AI viết, Featured Image/Gallery/Video/Product Link đều tự động lấy từ dữ liệu Product thật (cùng kiến trúc "AI chỉ viết văn bản, code tự chèn media thật" đã dùng ở Blog AI V2, Requirement #5).
