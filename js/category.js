@@ -38,6 +38,38 @@
       .trim();
   }
 
+  // Sprint 12 Requirement #1 (Product AI V2) — render Mô tả ngắn/Thông số
+  // chi tiết/Tính năng/FAQ do Product AI sinh ra, khi có. Không có dữ liệu
+  // (sản phẩm chưa chạy Product AI V2) thì các khối này tự ẩn — không đổi
+  // giao diện của sản phẩm cũ.
+  function renderProductExtras(p) {
+    const shortDescEl = document.getElementById('modalShortDesc');
+    const cleanShort = stripCodeFence(p.shortDescription);
+    if (cleanShort) { shortDescEl.textContent = cleanShort; shortDescEl.style.display = 'block'; }
+    else shortDescEl.style.display = 'none';
+
+    const specsEl = document.getElementById('modalSpecs');
+    const cleanSpecs = stripCodeFence(p.specifications);
+    if (cleanSpecs) { specsEl.innerHTML = cleanSpecs; specsEl.style.display = 'block'; }
+    else specsEl.style.display = 'none';
+
+    const featuresEl = document.getElementById('modalFeatures');
+    if (Array.isArray(p.features) && p.features.length) {
+      featuresEl.innerHTML = p.features.map(f => `<li>${escapeHtml(f)}</li>`).join('');
+      featuresEl.style.display = 'flex';
+    } else featuresEl.style.display = 'none';
+
+    const faqEl = document.getElementById('modalFaq');
+    if (Array.isArray(p.faq) && p.faq.length) {
+      faqEl.innerHTML = p.faq.map(item => `
+        <div class="modal-faq-item">
+          <div class="modal-faq-q">${escapeHtml(item.question || '')}</div>
+          <div class="modal-faq-a">${escapeHtml(item.answer || '')}</div>
+        </div>`).join('');
+      faqEl.style.display = 'block';
+    } else faqEl.style.display = 'none';
+  }
+
   window.pshopImgFail = function (img) {
     const wrap = img.parentElement;
     const name = img.alt || '';
@@ -65,7 +97,7 @@
 
   function cardHtml(p) {
     const imgHtml = p.image
-      ? `<div class="prod-img-wrap"><img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name)}" loading="lazy" onerror="window.pshopImgFail(this)"></div>`
+      ? `<div class="prod-img-wrap"><img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.altText || p.name)}" loading="lazy" onerror="window.pshopImgFail(this)"></div>`
       : `<div class="prod-noimg-tile"><span class="tile-name">${escapeHtml(p.name)}</span></div>`;
     const priceHtml = p.price
       ? `<div class="prod-price">${p.oldPrice ? `<span class="prod-price-old">${escapeHtml(p.oldPrice)}</span> ` : ''}${escapeHtml(p.price)}</div>`
@@ -186,7 +218,7 @@
       let current = 0;
 
       const img = document.createElement('img');
-      img.alt = p.name;
+      img.alt = p.altText || p.name;
       img.onerror = function () { noImg.style.display = 'block'; this.remove(); };
       imgSide.insertBefore(img, noImg);
 
@@ -233,6 +265,7 @@
     document.getElementById('modalName').textContent = p.name;
     document.getElementById('modalBrand').textContent = p.specs;
     document.getElementById('modalDesc').innerHTML = stripCodeFence(p.description);
+    renderProductExtras(p);
 
     const priceEl = document.getElementById('modalPrice');
     if (p.price) {

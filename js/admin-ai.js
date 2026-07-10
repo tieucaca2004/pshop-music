@@ -258,8 +258,24 @@ const AdminAI = (function () {
       return BlogDB.add(content);
     }
     if (target === 'products') {
-      const content = Object.assign({}, draft.content, { description: stripCodeFence(draft.content.description) });
-      return DB.update(draft.targetId, content);
+      // Sprint 12 Requirement #1 (Product AI V2): sản phẩm giờ có thêm
+      // "category" do AI tự đề xuất — AI có thể trả về 1 mã không tồn tại
+      // trong CategoryDB thật (hoặc bỏ trống nếu không chắc) — phải validate
+      // trước khi ghi, không được để sai lệch điều hướng category.html thật.
+      const content = Object.assign({}, draft.content, {
+        description: stripCodeFence(draft.content.description),
+        specifications: stripCodeFence(draft.content.specifications)
+      });
+      return CategoryDB.getAll().then(categories => {
+        // Cùng điều kiện "active !== false" category.html thật đang dùng
+        // (js/category.js loadCategories()) — tránh gán category còn tồn tại
+        // trong CategoryDB nhưng đã bị Admin tắt hiển thị.
+        const validCodes = categories.filter(c => c.active !== false).map(c => c.code);
+        if (!content.category || validCodes.indexOf(content.category) === -1) {
+          delete content.category; // giữ nguyên category hiện tại của sản phẩm, không ghi đè bằng mã không hợp lệ
+        }
+        return DB.update(draft.targetId, content);
+      });
     }
     if (target === 'banners') {
       return BannerDB.add(draft.content);

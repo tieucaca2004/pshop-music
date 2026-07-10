@@ -631,6 +631,39 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Media AI V2 — Requirement 1: Product AI V2 (Sprint 12, Requirement #4)
+
+Mục tiêu Sprint: Founder vận hành platform với nội dung AI THẬT, publish-ready — không chỉ 1 trường Mô tả. Nâng cấp `product-description-writer` (giữ nguyên `id`, không tạo Plugin mới) để sinh đầy đủ: Tên/Mô tả ngắn/Mô tả dài/Thông số chi tiết/Tính năng/FAQ/SEO Title/Meta Description/SEO Keywords/Slug/Tags/Danh mục/ALT Text — tái sử dụng NGUYÊN VẸN Plugin Framework/Queue/Provider/Draft System/Publish Pipeline (0 sửa `plugin-manager.js`/`job-queue.js`/`provider-registry.js`/`permission-service.js`).
+
+```
+buildPrompt() (js/ai/modules/product-description-writer.js) — yêu cầu AI
+trả về ĐÚNG 1 khối JSON (khác hẳn cách tách theo dòng cố định của bản cũ —
+chính cách tách dòng đó đã gây lỗi title/slug ở Blog AI, xem Requirement
+#3) kèm danh sách mã category HỢP LỆ THẬT (DataProvider.getCategories())
+để AI không tự bịa mã category không tồn tại.
+
+parseJsonResponse() — tự loại code fence AI có thể tự thêm dù Prompt đã
+yêu cầu không dùng (cùng nguyên nhân đã sửa ở Requirement #3), fallback
+khoan dung (tìm khối {...} đầu tiên nếu AI chèn thêm câu giải thích), và
+fallback AN TOÀN TUYỆT ĐỐI: JSON không parse được vẫn giữ nguyên toàn văn
+làm Mô tả dài — không bao giờ để Draft rỗng ("Empty content after
+Publish" không thể xảy ra dù AI trả lời sai định dạng thế nào).
+```
+
+- **Category validation khi Publish** (`js/admin-ai.js`, `publishToTarget()` nhánh `products`): chỉ chấp nhận mã category AI đề xuất nếu tồn tại VÀ đang `active` trong `CategoryDB` thật — cùng điều kiện `active !== false` mà `category.html` công khai đang dùng (`loadCategories()`). Nếu AI trả về mã không hợp lệ/đã tắt, bỏ field đó (giữ nguyên category hiện tại của sản phẩm) — không được để AI tự ý làm sai điều hướng category.html thật.
+- **Rendering** (`js/category.js`/`category.html`/`css/style.css`): modal chi tiết sản phẩm thêm khối Mô tả ngắn/Thông số chi tiết/Tính năng (danh sách)/FAQ — TỰ ẨN hoàn toàn nếu sản phẩm chưa từng chạy Product AI V2 (0 sửa đổi trải nghiệm của toàn bộ sản phẩm cũ chưa generate lại). ALT Text dùng cho thuộc tính `alt` của ảnh (cả card lưới lẫn ảnh trong modal), fallback về tên sản phẩm nếu trống.
+- **Giới hạn có chủ đích, không phải thiếu sót**: SEO Title/Meta Description/SEO Keywords/Slug được sinh và lưu đúng vào Product (đúng yêu cầu "Save all fields into Product") nhưng KHÔNG áp động vào `<title>`/`<meta>` — Product hiện chỉ có 1 modal dùng chung trên `category.html`, không có URL/trang riêng từng sản phẩm để 2 field này phát huy giá trị SEO thật (crawler không tương tác với modal JS) — lưu lại sẵn cho khi Product có trang chi tiết riêng, cố tình KHÔNG tự thêm route/trang mới (ngoài phạm vi "Do NOT redesign the architecture").
+- **Kiểm thử**: Node `vm` load mã nguồn thật — JSON sạch/JSON bọc fence/JSON kèm câu giải thích thừa đều parse đúng; phản hồi hoàn toàn không phải JSON vẫn có fallback không rỗng; category không tồn tại hoặc đã tắt đều bị loại đúng, category hợp lệ giữ nguyên. Xác nhận qua Preview (dev server local, dữ liệu Firebase thật, thao tác click thật — không suy đoán): sản phẩm CŨ (chưa chạy Product AI V2) hiển thị đúng y hệt trước, không lộ khối trống nào.
+
+## Media Content Rendering (Sprint 12, Requirement #3) — Blog List/Detail, Product Detail, Draft → Publish → Frontend
+
+Founder báo Blog hiển thị `title:"```html"` (do OpenAI tự bọc cả phản hồi trong 1 khối code markdown và đặt tiêu đề trong thẻ `<h1>` ở dòng 2 thay vì dòng 1 dạng chữ thường như Prompt yêu cầu — `mapToDraftContent()` tách theo dòng cố định của `blog-writer.js`/`faq-generator.js` tách nhầm dòng fence thành title, tiêu đề thật lọt vào "excerpt"), `slug:"html"` (dễ đụng nhau giữa nhiều bài lỗi cùng kiểu), thân bài dính `` ``` `` thừa; Product mô tả cũng dính `` ```html ``/`` ``` `` ở đầu/cuối.
+
+- **`js/admin-ai.js` (`publishToTarget`, "before saving")**: strip code fence khỏi `contentHtml`/`description`; khôi phục tiêu đề thật từ thẻ `<h1>` lộ trong excerpt/nội dung nếu `title` là fence rác; dọn excerpt; tái tạo slug từ tiêu đề ĐÃ SỬA. Chỉ áp dụng cho bản ghi sắp ghi vào `products`/`blogPosts` — không sửa `aiDrafts` gốc (không đổi Draft System).
+- **`js/blog-list.js`/`js/blog-post.js`/`js/category.js` ("before rendering")**: cùng logic strip fence/khôi phục title áp dụng phòng thủ tại thời điểm hiển thị — bản ghi ĐÃ publish trước khi sửa (dữ liệu cũ đã hỏng) cũng hiển thị đúng ngay, không cần publish lại.
+- **0 sửa đổi** AI generation/Queue/Provider/Plugin Framework.
+- **Kiểm thử**: Node `vm` load mã nguồn thật + dữ liệu Firebase thật (bản ghi hỏng thật đã publish trước đó) — khôi phục đúng tiêu đề thật từ thẻ `<h1>` lộ trong dữ liệu thật, nội dung sạch đi qua không đổi (0 hồi quy trên toàn bộ sản phẩm/bài viết thật). Xác nhận qua Preview (dev server local, dữ liệu Firebase thật, thao tác click thật).
+
 ## Sửa lỗi thật phát hiện qua điều tra Production (Sprint 12, Requirement #2) — Entity Near-Miss, 2 Route còn thiếu, Nhầm lẫn tên Sidebar
 
 Founder Acceptance Test của Requirement #3.2 (Sprint 11) ban đầu báo PASS, sau đó Founder tự phát hiện + báo lại THẤT BẠI thật trên `pshopmusic.com` với đúng câu gốc "Viết mô tả cho AlphaTheta XDJ AN". Điều tra bắt buộc dùng dữ liệu Firebase THẬT (đọc trực tiếp `products.json` qua REST công khai, KHÔNG dùng mock) theo đúng yêu cầu — xác nhận Root Cause: sản phẩm thật tên `"PIONEER XDJ-RX3 ALL-IN-ONE DJ SYSTEM"` (brand `"AlphaTheta"`), KHÔNG hề có sản phẩm "XDJ-AN" trong 42 sản phẩm thật. Ví dụ Validation "XDJ AN→AlphaTheta XDJ-AN" ở Requirement #3.2 trước đó chỉ là dữ liệu MOCK để test — chưa từng khớp với dữ liệu thật. Token "an" trong câu gõ không khớp bất kỳ token nào trong `name`/`brand`/`specs` thật của sản phẩm → cả 4 tầng thất bại đúng thiết kế (2/3 token "alphatheta"+"xdj" khớp qua tầng ALIAS, thiếu 1/3 nên không đủ `MIN_TOKEN_OVERLAP_RATIO = 1`). Không phải lỗi thuật toán, nhưng trải nghiệm "báo thẳng không tìm thấy" khi đã khớp đa số từ chưa tối ưu — bổ sung near-miss fallback bên dưới.
