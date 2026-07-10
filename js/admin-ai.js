@@ -220,6 +220,48 @@ const AdminAI = (function () {
     });
   }
 
+  // Sprint 12 Requirement #6 (Media AI — Facebook AI V2) — "Content displays
+  // correctly inside the CMS": Facebook AI V2 sinh nhiều field có cấu trúc
+  // (hook/mainContent/cta/hashtags/ảnh/video/link) — hiển thị raw JSON như
+  // mọi Plugin khác sẽ khó đọc. CHỈ đổi cách hiển thị cho đúng moduleId này
+  // — mọi Plugin khác vẫn giữ NGUYÊN VẸN <pre>JSON</pre> như cũ (0 regression).
+  function draftBodyHtml(d) {
+    if (d.moduleId === 'facebook-post-generator') {
+      const c = d.content || {};
+      const imgHtml = c.featuredImage
+        ? `<img src="${escapeHtml(c.featuredImage)}" style="max-width:280px;width:100%;border-radius:8px;margin-bottom:0.8rem;display:block" alt="">`
+        : '';
+      const galleryHtml = Array.isArray(c.galleryImages) && c.galleryImages.length
+        ? `<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.8rem">${c.galleryImages.map(g => `<img src="${escapeHtml(g)}" style="width:72px;height:72px;object-fit:cover;border-radius:6px">`).join('')}</div>`
+        : '';
+      const videoHtml = c.youtubeEmbedUrl
+        ? `<div style="position:relative;padding-top:56.25%;height:0;max-width:360px;margin-bottom:0.8rem;border-radius:8px;overflow:hidden"><iframe src="${escapeHtml(c.youtubeEmbedUrl)}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0" allowfullscreen loading="lazy"></iframe></div>`
+        : '';
+      const highlightsHtml = Array.isArray(c.productHighlights) && c.productHighlights.length
+        ? `<ul style="margin:0.3rem 0 0.8rem 1.2rem">${c.productHighlights.map(h => `<li>${escapeHtml(h)}</li>`).join('')}</ul>`
+        : '';
+      const linkHtml = c.productLink
+        ? `<p><a href="${escapeHtml(c.productLink)}" target="_blank" rel="noopener" style="color:var(--gold-ink)">Xem sản phẩm →</a></p>`
+        : '';
+      const hashtagsHtml = Array.isArray(c.hashtags) && c.hashtags.length
+        ? `<p style="color:var(--gold-ink)">${c.hashtags.map(h => escapeHtml(h.indexOf('#') === 0 ? h : '#' + h)).join(' ')}</p>`
+        : '';
+      return `
+        <div style="background:var(--bg-alt);padding:1rem;border-radius:8px">
+          ${imgHtml}
+          ${c.hook ? `<p style="font-weight:700">${escapeHtml(c.hook)}</p>` : ''}
+          ${c.mainContent ? `<p style="white-space:pre-wrap">${escapeHtml(c.mainContent)}</p>` : ''}
+          ${highlightsHtml}
+          ${galleryHtml}
+          ${videoHtml}
+          ${c.cta ? `<p style="font-weight:600">${escapeHtml(c.cta)}</p>` : ''}
+          ${hashtagsHtml}
+          ${linkHtml}
+        </div>`;
+    }
+    return `<pre style="white-space:pre-wrap;background:var(--bg-alt);padding:1rem;font-size:0.82rem;max-height:260px;overflow:auto">${escapeHtml(JSON.stringify(d.content, null, 2))}</pre>`;
+  }
+
   function renderDrafts() {
     const wrap = document.getElementById('draftsList');
     if (!wrap) return;
@@ -233,7 +275,7 @@ const AdminAI = (function () {
       <div class="panel" data-id="${d.id}">
         <h3>${escapeHtml(module ? module.label : d.moduleId)}</h3>
         <p class="small-muted">Tạo lúc ${formatDate(d.createdAt)} · Provider: ${escapeHtml(d.providerUsed || '—')} · Đích: ${escapeHtml(d.targetCollection || '(chỉ xem/copy)')}</p>
-        <pre style="white-space:pre-wrap;background:var(--bg-alt);padding:1rem;font-size:0.82rem;max-height:260px;overflow:auto">${escapeHtml(JSON.stringify(d.content, null, 2))}</pre>
+        ${draftBodyHtml(d)}
         <div class="admin-actions">
           <button class="submit-btn" onclick="AdminAI.publishDraft('${d.id}')">DUYỆT &amp; PUBLISH</button>
           <button class="btn-danger" onclick="AdminAI.rejectDraft('${d.id}')">TỪ CHỐI</button>

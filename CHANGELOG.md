@@ -2,6 +2,16 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 12 — Requirement #6: Media AI V2, Requirement 3 (Facebook AI V2)
+
+Founder muốn Facebook AI sinh bài đăng publish-ready từ đúng 1 Sản phẩm có sẵn — Founder CHỈ chọn Sản phẩm, mọi thứ khác tự động.
+
+- **`js/ai/modules/facebook-post-generator.js`**: bỏ field `message` (nhập tay) — giờ CHỈ còn `productId` (bắt buộc, trước đây tuỳ chọn). `buildPrompt()` yêu cầu AI trả JSON `{hook, mainContent, cta, hashtags}` — CHỈ văn bản thuần, cấm tuyệt đối AI tự chèn ảnh/link. `mapToDraftContent()` tự lắp: Featured Image + Gallery Images (ảnh còn lại) + YouTube embed (nếu sản phẩm có `youtubeUrl`) + Product Link (`category.html?product=id`, tái dùng route đã thêm ở Requirement #5) + Product Highlights (lấy từ `features` thật nếu Product AI V2 đã chạy, fallback `specs`, KHÔNG để AI tự nghĩ thêm) — đều lấy nguyên văn từ `DataProvider.getProduct()`, không có thì bỏ qua đúng phần đó. `postText` lắp sẵn bản văn bản thuần theo đúng POST FORMAT (Hook → Main Content → Highlights → CTA → Hashtags → Product Link) để Founder copy dán tay lên Facebook thật — `targetCollection` vẫn `null` như cũ, "Publish" chỉ đánh dấu Draft đã duyệt, KHÔNG tự động đăng lên Facebook (không có tích hợp API nào).
+- **`js/admin-ai.js` (`renderDrafts`, admin/ai/drafts.html)**: thêm `draftBodyHtml(d)` — CHỈ đổi cách hiển thị cho `moduleId === 'facebook-post-generator'` (ảnh/gallery/video/highlights/hashtags/link hiển thị trực quan thay vì JSON thô) để thoả "Content displays correctly inside the CMS" của Founder Acceptance Test — mọi Plugin khác vẫn giữ NGUYÊN VẸN `<pre>JSON</pre>` như cũ (0 regression, đã xác nhận qua test).
+- **0 sửa đổi**: Product AI/Blog AI/Queue/Provider/Workflow/Plugin Framework/tích hợp Facebook API (không tồn tại, không thêm mới).
+- **Kiểm thử**: Node `vm` load mã nguồn thật — lắp media đúng thứ tự khi đủ ảnh/video/features; bỏ qua đúng từng phần khi thiếu (không lỗi, không để trống); Product Highlights đúng lấy từ features thật, fallback specs, rỗng nếu không có gì; JSON bọc fence/parse thất bại có fallback an toàn (không bao giờ Draft rỗng); `draftBodyHtml()` hiển thị đẹp cho Facebook draft VÀ xác nhận không ảnh hưởng cách hiển thị JSON thô của mọi Plugin khác (test trực tiếp trên hàm thật, không giả lập). **Chưa kiểm thử được qua UI thật có đăng nhập** (cần tài khoản Founder thật, không nằm trong phạm vi cho phép của Assistant) — đã thử điều hướng `admin/ai/index.html` qua Preview nhưng bị chặn ở màn đăng nhập như mọi lần trước.
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+
 ## Sprint 12 — Requirement #5: Media AI V2, Requirement 2 (Product & Blog Media)
 
 Founder muốn Product và Blog do AI sinh ra trông giống 1 website công nghệ bình thường (có ảnh, có video, có link liên kết) — nhưng KHÔNG sinh ảnh/video bằng AI, chỉ tự động dùng đúng media THẬT đã có sẵn trong Firebase.

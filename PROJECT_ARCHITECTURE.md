@@ -631,6 +631,34 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Media AI V2 — Requirement 3: Facebook AI V2 (Sprint 12, Requirement #6)
+
+Founder muốn Facebook AI sinh bài đăng publish-ready CHỈ từ 1 Sản phẩm có sẵn — Founder chỉ chọn Sản phẩm, Caption/Hook/CTA/Hashtags do AI viết, Featured Image/Gallery/Video/Product Link đều tự động lấy từ dữ liệu Product thật (cùng kiến trúc "AI chỉ viết văn bản, code tự chèn media thật" đã dùng ở Blog AI V2, Requirement #5).
+
+```
+facebook-post-generator.js — inputFields chỉ còn productId (BẮT BUỘC, trước
+đây tuỳ chọn + có thêm field "message" nhập tay — đã bỏ, đúng "Founder only
+selects: Product").
+
+buildPrompt() → JSON {hook, mainContent, cta, hashtags} — CHỈ văn bản,
+cấm AI tự chèn ảnh/link.
+
+mapToDraftContent() tự lắp:
+  featuredImage    = images[0] (Product thật)
+  galleryImages    = images[1:] (Product thật)
+  youtubeEmbedUrl  = getYoutubeEmbedUrl(product.youtubeUrl) — rỗng nếu không có
+  productLink      = category.html?product={id} (route đã thêm ở Requirement #5)
+  productHighlights = product.features thật (Product AI V2) hoặc product.specs
+                       — KHÔNG để AI tự nghĩ thêm ("Use ONLY existing Product data")
+  postText         = bản text thuần lắp đúng POST FORMAT, để Founder copy tay
+                       — targetCollection vẫn null, "Publish" chỉ đánh dấu Draft
+                       đã duyệt, KHÔNG tự động đăng lên Facebook thật.
+```
+
+- **"Content displays correctly inside the CMS"** (Founder Acceptance Test): `js/admin-ai.js`'s `renderDrafts()` (`admin/ai/drafts.html`) thêm `draftBodyHtml(d)` — CHỈ đổi cách hiển thị cho `moduleId === 'facebook-post-generator'` (ảnh/gallery/video/highlights/hashtags/link hiển thị trực quan) — mọi Plugin khác vẫn giữ NGUYÊN VẸN `<pre>JSON</pre>` như cũ (0 regression, xác nhận qua test trực tiếp trên hàm thật).
+- **0 sửa đổi**: Product AI/Blog AI/Queue/Provider/Workflow/Plugin Framework/tích hợp Facebook API (chưa từng tồn tại, không thêm mới — "Do NOT auto-post to Facebook" giữ nguyên đúng bằng cách không đổi gì ở `targetCollection: null`).
+- **Kiểm thử**: Node `vm` load mã nguồn thật — lắp media đúng thứ tự khi đủ dữ liệu; bỏ qua đúng từng phần khi thiếu ảnh/video/features (fallback specs, rồi rỗng); JSON hỏng có fallback an toàn; `draftBodyHtml()` hiển thị đẹp cho Facebook, giữ nguyên JSON thô cho Plugin khác. **Chưa kiểm thử qua UI thật có đăng nhập** (cần tài khoản Founder thật) — đã thử qua Preview nhưng bị chặn ở màn đăng nhập, như mọi lần trước trong Sprint này.
+
 ## Media AI V2 — Requirement 2: Product & Blog Media (Sprint 12, Requirement #5)
 
 Founder muốn Product/Blog do AI sinh ra trông giống 1 website công nghệ bình thường — có ảnh, có video, có link liên kết — nhưng KHÔNG sinh ảnh/video bằng AI (chưa tới giai đoạn Image AI/Video AI), chỉ tự động dùng đúng media THẬT đã có sẵn trong Firebase.
