@@ -16,7 +16,7 @@ Mọi tính năng tồn tại để Founder (chủ shop) dùng được thật, 
 
 - Ưu tiên tính năng Founder chạm vào hàng ngày (Product/Blog/Banner/AI Assist ngay trong trang đang sửa) hơn hạ tầng kỹ thuật đẹp mà Founder không bao giờ thấy (Workflow Engine nội bộ, Observability Dashboard, Context Builder...).
 - Khi phải chọn giữa 1 giải pháp "đúng kiến trúc" nhưng khó dùng và 1 giải pháp đơn giản Founder hiểu ngay — chọn giải pháp Founder hiểu ngay.
-- UI/sidebar dùng đúng ngôn ngữ Founder hiểu (tiếng Việt, không thuật ngữ kỹ thuật) — nhãn gây nhầm lẫn từng xảy ra thật ("Trợ lý AI" và "AI Assistant" trỏ 2 trang khác nhau khiến Founder bấm nhầm) phải được coi là lỗi nghiêm trọng, không phải chi tiết nhỏ.
+- UI/sidebar dùng đúng ngôn ngữ Founder hiểu (tiếng Việt, không thuật ngữ kỹ thuật) — 2 nhãn gần giống nhau trỏ 2 trang khác nhau là lỗi nghiêm trọng (từng xảy ra thật), không phải chi tiết nhỏ.
 - "Smart Mode" của CMS tồn tại chính vì lý do này — Founder không cần thấy Queue/Plugin Manager/Provider Registry, chỉ Engineer (Advanced Mode) mới cần thấy.
 
 ### Business Value First
@@ -32,9 +32,9 @@ Không xây kiến trúc "cho tương lai" nếu chưa ai cần dùng hôm nay.
 
 Đây là site thật, không phải sandbox — mọi thay đổi phải giả định có dữ liệu thật đang chạy phía sau.
 
-- Trước khi đổi field/schema, luôn tự hỏi: "42+ sản phẩm thật hiện có sẽ ra sao nếu field mới này là `undefined`?" — câu trả lời bắt buộc phải là "vẫn hiển thị/hoạt động đúng như trước".
-- Trước khi báo hoàn tất, luôn xác minh bằng dữ liệu Production thật (`curl` production, đọc Firebase thật) — không chỉ tin "chạy được ở local/Preview" là đủ.
-- Firebase Rules/Cloud Functions ảnh hưởng trực tiếp toàn bộ site đang chạy cho khách thật — deploy các hạ tầng này luôn cần Chief Architect tự thao tác (xem mục Development Workflow).
+- Trước khi đổi field/schema, luôn tự hỏi: "dữ liệu thật hiện có sẽ ra sao nếu field mới này là `undefined`?" — câu trả lời bắt buộc phải là "vẫn hiển thị/hoạt động đúng như trước" (cách làm cụ thể ở mục 3, "Không Redesign Khi Chưa Cần").
+- Trước khi báo hoàn tất, luôn xác minh bằng dữ liệu Production thật — không chỉ tin "chạy được ở local/Preview" là đủ (quy trình cụ thể ở mục 7, Definition of Done).
+- Firebase Rules/Cloud Functions ảnh hưởng trực tiếp toàn bộ site đang chạy cho khách thật — deploy các hạ tầng này luôn cần Chief Architect tự thao tác (xem mục 6, Development Workflow).
 
 ---
 
@@ -54,7 +54,7 @@ Không có Requirement nào được coi là xong cho tới khi Founder tự xá
 
 - Sau khi code + kiểm thử + deploy + cập nhật tài liệu + commit + push → DỪNG LẠI, không tự ý bắt đầu Requirement tiếp theo trong ROADMAP dù đã biết rõ thứ tự ưu tiên tiếp theo.
 - "Deploy thành công, không lỗi console" **không phải** "PASS" — PASS chỉ có nghĩa khi Founder tự dùng thật trên Production và xác nhận.
-- Từng có tiền lệ PASS bị tự thu hồi thành FAILED sau khi Founder tự phát hiện lỗi thật (permission_denied ở `aiPlugins`, Publish Pipeline ghi dữ liệu nhưng không hiển thị công khai) — không lặp lại việc tuyên bố PASS sớm.
+- Đã từng có PASS bị tự thu hồi thành FAILED sau khi Founder tự phát hiện lỗi mà đáng lẽ phải tự kiểm thử ra được trước (xem lịch sử trong `CHANGELOG.md`) — không lặp lại việc tuyên bố PASS sớm.
 - Khi Founder chỉ hỏi tiến độ ("What step are you on?") → trả lời đúng câu hỏi, không tranh thủ làm thêm việc trong lúc trả lời.
 
 ### Root Cause First
@@ -62,9 +62,10 @@ Không có Requirement nào được coi là xong cho tới khi Founder tự xá
 Không sửa triệu chứng — luôn tìm nguyên nhân gốc bằng bằng chứng thật trước khi hành động.
 
 - Khi có báo lỗi, trace tới đúng file/đúng dòng/đúng lý do dừng lại trước khi đề xuất fix — không đoán, không sửa "thử xem có hết lỗi không".
-- Khi lời user mâu thuẫn với bằng chứng kỹ thuật quan sát được (vd "Cloud Function không nhận request nào" trong khi log thật cho thấy có nhận) → verify bằng công cụ thật (`curl`, `gcloud logging read`...) trước khi kết luận, kể cả khi kết luận đó ngược lại lời user.
-- Một lỗi tưởng như chỉ ở UI (Blog render sai) từng thật ra là lỗi ở tầng hoàn toàn khác (Firebase Rules thiếu node `aiPlugins`) — không dừng điều tra ở lớp đầu tiên nhìn thấy được.
+- Khi lời user mâu thuẫn với bằng chứng kỹ thuật quan sát được → verify bằng công cụ thật (`curl`, đọc log thật, đọc dữ liệu Firebase thật...) trước khi kết luận, kể cả khi kết luận đó ngược lại lời user.
+- Lỗi tưởng như chỉ nằm ở 1 tầng (vd UI) có thể thật ra nằm ở tầng hoàn toàn khác (vd Firebase Rules) — không dừng điều tra ở lớp đầu tiên nhìn thấy được.
 - Regression tự gây ra (vd lỡ xoá 1 hàm khi thay thế 1 khối code) phải tự phát hiện qua kiểm thử TRƯỚC khi lên Production — không để Founder là người phát hiện ra.
+- **Đào sâu nguyên nhân không đồng nghĩa với mở rộng phạm vi sửa** — điều tra tới gốc rễ để hiểu đúng vấn đề, nhưng chỉ sửa đúng phần nằm trong Requirement đang làm (xem "One Requirement = One Feature" ở trên); vấn đề khác phát hiện được trong lúc điều tra vẫn phải ghi vào ROADMAP/CHANGELOG thay vì tiện tay sửa luôn.
 
 ---
 
@@ -85,7 +86,7 @@ Không có nội dung AI nào được phép đi thẳng vào dữ liệu thật
 
 - Mọi kết quả AI sinh ra dừng lại ở `aiDrafts`, không bao giờ tự động publish — kể cả các luồng "1-click" trông có vẻ tức thời (Product AI Assist, Image AI).
 - Founder luôn phải chủ động bấm "Duyệt & Publish"/"Áp dụng"/"Save to..." — Claude không tự quyết định thay Founder nội dung nào đủ tốt để publish.
-- Trạng thái nội dung do module tự gán (vd `status:'draft'` bên trong `mapToDraftContent()`) KHÔNG được để sống sót vào bản ghi Publish thật — bài học thật: `blog-writer.js` hardcode `status:'draft'` từng khiến bài viết "Publish xong" vẫn không hiển thị công khai vì `BlogDB.getPublished()` lọc theo `status==='published'`.
+- Trạng thái nội dung do module tự gán bên trong `mapToDraftContent()` (vd `status:'draft'`) KHÔNG được để sống sót nguyên văn vào bản ghi Publish thật — pipeline Publish phải tự chuẩn hoá lại các field trạng thái trước khi ghi, không tin nguyên văn nội dung AI trả về.
 
 ### Reuse Existing Architecture — Không Duplicate Logic
 
@@ -100,8 +101,8 @@ Tái sử dụng luôn được ưu tiên hơn viết mới, kể cả khi viế
 Không tái cấu trúc kiến trúc đang chạy tốt chỉ vì đang sửa file gần đó.
 
 - Không "tiện thể" refactor code xung quanh khi đang fix 1 Requirement khác — kể cả khi thấy rõ chỗ có thể viết gọn hơn.
-- Field mới trùng ý nghĩa gần giống field cũ phải đặt tên MỚI, không tái dùng đè lên field cũ (vd `pubStatus` — trạng thái xuất bản — phải khác hẳn `status` — tình trạng Mới/Qua sử dụng — dù cả hai đều tên gần giống "status", ý nghĩa hoàn toàn khác nhau).
-- Field/flag mới luôn có giá trị mặc định an toàn cho dữ liệu CŨ chưa có field đó — lọc bằng điều kiện LOẠI TRỪ (`pubStatus !== 'draft' && !== 'hidden'`), không bao giờ lọc bằng điều kiện DƯƠNG TÍNH bắt buộc (`pubStatus === 'published'`), để dữ liệu cũ (`undefined`) mặc định vẫn hiển thị đúng.
+- Field mới có ý nghĩa gần giống field cũ nhưng mục đích khác phải đặt tên MỚI rõ ràng, không tái dùng đè lên field cũ dù tên nghe hợp lý (2 field cùng tên gốc "status" nhưng 1 cái là tình trạng sản phẩm, 1 cái là trạng thái xuất bản, là 2 khái niệm khác nhau).
+- Field/flag mới luôn có giá trị mặc định an toàn cho dữ liệu CŨ chưa có field đó — lọc bằng điều kiện LOẠI TRỪ (giá trị mới có ý nghĩa đặc biệt thì liệt kê rõ, còn lại coi là hợp lệ), không bao giờ lọc bằng điều kiện DƯƠNG TÍNH bắt buộc (yêu cầu đúng 1 giá trị cụ thể mới hợp lệ) — để dữ liệu cũ (`undefined`) mặc định vẫn hoạt động đúng như trước khi có field mới.
 - Giữ nguyên style code hiện có: DB layer Promise-based, module dạng IIFE (`const X = (function(){...})()`), tiếng Việt cho mọi chuỗi hiển thị ra UI và comment giải thích nghiệp vụ.
 
 ---
@@ -112,7 +113,7 @@ Không tái cấu trúc kiến trúc đang chạy tốt chỉ vì đang sửa fi
 
 AI không được bịa bất kỳ dữ liệu nào không có trong CMS thật.
 
-- Mọi Prompt gửi AI chỉ chứa dữ liệu thật đọc qua `DataProvider` — không suy diễn thông số/tính năng không có căn cứ để "cho đầy đủ".
+- Mọi Prompt gửi AI chỉ chứa dữ liệu thật (đọc qua `DataProvider`, xem mục 3) — không suy diễn thông số/tính năng không có căn cứ để "cho đầy đủ".
 - Ảnh/video/link chèn vào nội dung AI sinh ra luôn lấy nguyên văn từ dữ liệu Product/Blog thật — nguyên tắc xuyên suốt "AI chỉ viết văn bản, code mới được chèn media thật" (AI writes text only, code assembles real media).
 - Category/Product AI đề xuất phải được validate lại với dữ liệu thật đang active trước khi ghi — không chấp nhận nguyên văn đề xuất của AI nếu nó không tồn tại/không active trong CMS thật.
 
@@ -120,9 +121,9 @@ AI không được bịa bất kỳ dữ liệu nào không có trong CMS thật
 
 Không tuyên bố "hoàn tất"/"PASS"/"đã kết nối" nếu chưa thật sự đúng như vậy.
 
-- Không có tài khoản Founder đăng nhập được vào CMS trong môi trường phát triển — đây là giới hạn thật, phải NÓI RÕ ("Chưa kiểm thử qua UI thật có đăng nhập"), không giả vờ đã test hoặc lờ đi.
+- Nếu môi trường làm việc có giới hạn thật (không có tài khoản Founder để test qua UI, không có quyền deploy hạ tầng...) — nói rõ giới hạn đó, không giả vờ đã test hoặc lờ đi (chi tiết thành checklist ở mục 7, Definition of Done).
 - Khi 1 tích hợp thật (OAuth Facebook, Cloud Function OpenAI, Image AI Provider...) chưa có hạ tầng thật đứng sau — UI phải báo đúng trạng thái thật ("Chưa kết nối"/"Chưa cấu hình"), không bao giờ giả vờ hoạt động để "cho đẹp giao diện".
-- Sau khi deploy: luôn `curl` Production + byte-diff với commit vừa đẩy lên để xác nhận, không chỉ tin "lệnh deploy chạy xong không báo lỗi" là đủ.
+- Không tin "lệnh deploy chạy xong không báo lỗi" là đủ để coi là thành công — xác minh cụ thể ở mục 6 (Development Workflow) và mục 7 (Definition of Done).
 
 ---
 
@@ -147,10 +148,10 @@ Cách báo cáo cho Chief Architect — ngắn, đúng, không tô vẽ.
 - **Không sửa bug ngoài phạm vi Requirement** — kể cả khi bug đó rõ ràng và dễ sửa, nếu không nằm trong Requirement đang làm thì không tự sửa.
 - **Phát hiện bug/ý tưởng khác → ghi vào `ROADMAP.md` hoặc `CHANGELOG.md`** — không tự triển khai song song, không âm thầm gộp vào commit đang làm.
 - **Không chuyển sang Requirement tiếp theo khi Founder chưa xác nhận PASS** — kể cả khi ROADMAP đã liệt kê rõ thứ tự ưu tiên tiếp theo.
-- **Git**: luôn làm việc trên `feature/cms-ai-sprint2`, KHÔNG merge `main` trừ khi được yêu cầu rõ ràng; không `force-push`, không `--no-verify`, không `amend` commit đã push — luôn tạo commit mới khi cần sửa.
+- **Git**: làm việc trên branch feature hiện tại (`feature/cms-ai-sprint2` tại thời điểm viết tài liệu này — xác nhận lại bằng `git branch` nếu nghi ngờ đã đổi), KHÔNG merge `main` trừ khi được yêu cầu rõ ràng; không `force-push`, không `--no-verify`, không `amend` commit đã push — luôn tạo commit mới khi cần sửa.
 - **Firebase Rules (Database + Storage) chỉ Chief Architect tự deploy** (`firebase deploy --only database`/`--only storage`) — Claude chỉ sửa file rules trong repo, không bao giờ tự chạy lệnh deploy rules.
-- **Deploy Netlify luôn qua draft trước**: `git archive <commit>` → loại bỏ file nội bộ (`functions/docs/scripts/wordpress-theme/data/firebase.json/.firebaserc/database.rules.json/storage.rules/.gitignore/*.md`) → deploy draft (luôn kèm `--site=48256e20-1403-4017-af01-35588713a3a0` tường minh) → verify draft chứa đúng thay đổi → mới `--prod` → verify production.
-- **File thay đổi ngoài ý muốn** trong `git status` (vd `.firebaserc` tự đổi do lệnh `firebase`/`gcloud` chạy trước đó) → loại khỏi commit của Requirement đang làm, nêu rõ lý do loại trừ.
+- **Deploy Netlify luôn qua draft trước, không bao giờ thẳng lên `--prod`**: `git archive <commit>` → loại bỏ file không cần cho site tĩnh (cấu hình CLI/Cloud Functions/scripts/tài liệu nội bộ — không phải asset site thật serve cho khách) → deploy draft (site Production hiện tại là `pshopmusic.com`, Netlify site ID `48256e20-1403-4017-af01-35588713a3a0` — LUÔN truyền tường minh, xác nhận lại qua `netlify sites:list` nếu nghi ngờ đã đổi site/tên miền) → `curl` draft xác nhận chứa đúng thay đổi → mới `--prod` → `curl` production + byte-diff với commit vừa đẩy lên (bỏ qua khác biệt line-ending CRLF/LF nếu có) để xác nhận Production đúng y hệt — đây là bước bắt buộc duy nhất coi là "đã verify deploy", không có bước rút gọn nào khác.
+- **File thay đổi trong `git status` nhưng không do chính Requirement đang làm gây ra** (vd còn sót lại từ 1 lệnh CLI chạy trước đó) → loại khỏi commit, nêu rõ lý do loại trừ, không âm thầm gộp vào.
 
 ---
 
@@ -160,15 +161,14 @@ Một Requirement CHỈ được coi là hoàn thành khi có ĐỦ toàn bộ d
 
 1. **Code hoàn chỉnh** — đúng phạm vi Requirement, không thiếu field/luồng nào trong ACCEPTANCE TEST.
 2. **Regression test** — xác nhận các Plugin/trang KHÔNG liên quan vẫn hoạt động y hệt trước (Node `vm` chạy trực tiếp mã nguồn thật, không mock tách biệt).
-3. **Production deploy** — qua đúng quy trình draft → verify → prod đã mô tả ở mục Development Workflow.
-4. **Production verification** — `curl`/byte-diff xác nhận Production đúng commit vừa deploy; Preview thật xác nhận dữ liệu công khai (vd toàn bộ sản phẩm thật) không bị ảnh hưởng.
-5. **Founder Acceptance Test** — Founder tự dùng thật và xác nhận PASS; nếu môi trường không cho phép Claude tự đăng nhập test qua UI, phải nói rõ đây là bước còn thiếu, không tự nhận thay Founder.
-6. **Commit** — message rõ ràng, đúng file thay đổi, loại trừ file không liên quan tới Requirement.
-7. **Push** — lên đúng branch `feature/cms-ai-sprint2`.
-8. **CHANGELOG.md** — mục mới ở đầu file, có dòng "0 sửa đổi" + phần "Kiểm thử" ghi rõ đã test gì/chưa test gì.
-9. **ROADMAP.md** — cập nhật trạng thái Requirement tương ứng + log ý tưởng phát sinh (nếu có).
+3. **Production deploy + verification** — đúng quy trình draft → verify → prod → byte-diff đã mô tả ở mục 6 (Development Workflow); riêng thay đổi ảnh hưởng dữ liệu công khai còn cần Preview thật xác nhận dữ liệu hiện có (vd toàn bộ sản phẩm thật) không bị ảnh hưởng.
+4. **Founder Acceptance Test** — Founder tự dùng thật và xác nhận PASS; nếu môi trường không cho phép Claude tự đăng nhập test qua UI, phải nói rõ đây là bước còn thiếu, không tự nhận thay Founder.
+5. **Commit** — message rõ ràng, đúng file thay đổi, loại trừ file không liên quan tới Requirement.
+6. **Push** — lên đúng branch feature đang làm việc (xem mục 6, Development Workflow).
+7. **CHANGELOG.md** — mục mới ở đầu file, có dòng "0 sửa đổi" + phần "Kiểm thử" ghi rõ đã test gì/chưa test gì.
+8. **ROADMAP.md** — cập nhật trạng thái Requirement tương ứng + log ý tưởng phát sinh (nếu có).
 
-Không tuyên bố Requirement "PASS"/"hoàn tất" khi thiếu bất kỳ mục nào ở trên. (Ngoài 9 mục bắt buộc, cập nhật thêm `PROJECT_ARCHITECTURE.md` khi Requirement thêm 1 luồng/kiến trúc mới đáng ghi lại — thông lệ nhất quán trong suốt dự án dù không phải điều kiện chặn PASS.)
+Không tuyên bố Requirement "PASS"/"hoàn tất" khi thiếu bất kỳ mục nào ở trên. (Ngoài 8 mục bắt buộc, cập nhật thêm `PROJECT_ARCHITECTURE.md` khi Requirement thêm 1 luồng/kiến trúc mới đáng ghi lại — thông lệ nhất quán trong suốt dự án dù không phải điều kiện chặn PASS.)
 
 ---
 
