@@ -1,13 +1,19 @@
 # Facebook Page Integration — Runbook thiết lập hạ tầng thật
 
-Sprint 12 Requirement #9 (Facebook AI V4 — Facebook Page Integration) yêu cầu OAuth đăng nhập Facebook thật + đăng bài thật lên Fanpage. Phần này **KHÔNG THỂ triển khai chỉ bằng code** — cần Chief Architect (chủ tài khoản Facebook/Meta Business thật) tự thực hiện các bước dưới đây trước khi tính năng hoạt động được. Đây là lý do KHÔNG khác gì bài học đã gặp ở Sprint 3 với `OPENAI_API_KEY` (xem `docs/CLOUD_FUNCTIONS_DEPLOYMENT.md`) — chỉ khác là lần này còn có thêm bước **App Review** bắt buộc từ phía Meta, việc mà không ai làm thay chủ tài khoản được.
+**Cập nhật (Sprint 12 — Facebook AI V5, Facebook Configuration & Auto Publish):** TOÀN BỘ code thật đã được viết — OAuth flow thật (client + Cloud Function), Page Selection UI, quản lý Token, Publish thật lên Graph API (Caption/Ảnh/Hashtag/Product Link/YouTube link), theo dõi trạng thái Publishing/Published/Failed. **KHÔNG có gì trong danh sách dưới đây còn "chưa viết"** — chỉ còn đúng phần hạ tầng bên ngoài (Meta App thật + App ID/Secret + deploy) mà chỉ Chief Architect tự làm được, giống hệt bài học `OPENAI_API_KEY` ở Sprint 3. Xem mục "Việc cần Chief Architect tự làm" — đã cập nhật, không còn mục nào ghi "cần Requirement riêng sau" nữa.
 
-## Đã triển khai trong code (Sprint 12 Requirement #9)
+Sprint 12 Requirement #9 (Facebook AI V4) ban đầu CHỈ xây khung UI an toàn (theo đúng phạm vi Chief Architect chọn lúc đó). Facebook AI V5 nối tiếp bằng TOÀN BỘ code thật còn thiếu — do KHÔNG có Meta App nào tồn tại tại thời điểm viết Requirement này, phần OAuth/Graph API/Cloud Function **chưa thể chạy thử thật**, chỉ được kiểm thử bằng Node `vm` với Facebook Graph API giả lập (mock) theo đúng spec API chính thức của Meta.
 
-- **`js/admin-facebook-connect.js`** — card "📘 Đăng tự động lên Facebook" trên `admin/ai/index.html`, hiển thị đúng 4 trạng thái (🟢 Connected/⚪ Not Connected/🟠 Token Expiring/🔴 Token Expired), dialog xin phép đúng nội dung đã yêu cầu, nút Ngắt kết nối ghi thật vào Firebase (`facebookConnection`).
-- **`js/admin-ai.js`** — nút "📤 Đăng lên Facebook" trên mỗi phiên bản Draft Facebook AI V3 (`admin/ai/drafts.html`) — kiểm tra trạng thái kết nối thật, luôn báo rõ ràng thay vì giả vờ đăng thành công.
-- **`database.rules.json`** — đã thêm rule cho node `facebookConnection` (admin mới ghi được, đã đăng nhập mới đọc được) — **CHƯA deploy**, xem mục "Việc cần Chief Architect làm" bên dưới.
-- **KHÔNG có OAuth thật, KHÔNG gọi Facebook Graph API thật** — mọi hành động "Kết nối"/"Đổi Fanpage"/"Kết nối lại" đều hiển thị thông báo rõ ràng hướng dẫn hoàn tất các bước dưới đây, thay vì giả vờ hoạt động.
+## Đã triển khai trong code (Sprint 12 — Facebook AI V4 + V5)
+
+- **`js/admin-facebook-connect.js`** — card kết nối tại `admin/facebook-settings.html` (Settings > Facebook Configuration, trang MỚI — dọn khỏi `admin/ai/index.html` cũ), hiển thị đúng 4 trạng thái (🟢/⚪/🟠/🔴) — trạng thái Token Expiring/Expired giờ được TỰ TÍNH LẠI mỗi lần hiển thị (so `tokenExpiresAt` với đồng hồ hiện tại), không dựa vào giá trị tĩnh đã ghi từ trước. `proceedOAuth()` giờ redirect THẬT sang Facebook Login Dialog (dùng `state` nonce ghi vào `facebookOAuthState/{state}` để Cloud Function callback biết yêu cầu của Founder nào). Sau khi Facebook redirect về (`?oauth=success`), tự đọc `facebookPendingPages/{uid}` và hiển thị Page Selection (tên + ảnh đại diện) để Founder chọn Default Page, gọi Cloud Function `facebookSelectPage` khi bấm LƯU.
+- **`functions/index.js`** — 3 Cloud Function mới:
+  - `facebookOAuthCallback` — nhận redirect từ Facebook (code+state), đổi code → Short-Lived → Long-Lived User Token (~60 ngày) → lấy danh sách Fanpage + Page Access Token riêng từng Page qua `/me/accounts`. Token thật CHỈ ghi vào node server-only `facebookPageTokens/{uid}` — client chỉ nhận metadata (`facebookPendingPages/{uid}`).
+  - `facebookSelectPage` — Founder chọn 1 Page, copy đúng token của Page đó sang `facebookActiveToken` (server-only, node DUY NHẤT `facebookPublish` đọc), ghi `facebookConnection` (chỉ metadata).
+  - `facebookPublish` — đăng thật lên Graph API: nhiều ảnh dùng pattern `attached_media` (upload từng ảnh `published:false` lấy `media_fbid`, gộp vào 1 bài `/feed`), trả về `facebookPostId` thật.
+- **`js/admin-ai.js`** — `publishVersionToFacebook(draftId, versionLabel)` giờ đăng THẬT (không còn chỉ hiển thị thông báo "chưa triển khai"): tự lắp Caption+Highlights+CTA+Hashtags+Product Link (URL TUYỆT ĐỐI, không phải link tương đối trong Draft) + link YouTube THẬT (đọc trực tiếp `product.youtubeUrl`, KHÔNG dùng `youtubeEmbedUrl` — link embed không phù hợp để chia sẻ công khai) — theo dõi Publishing/Published (kèm Facebook Post ID thật)/Failed NGAY trên đúng phiên bản A/B/C vừa bấm, không ảnh hưởng 2 phiên bản còn lại.
+- **`database.rules.json`** — thêm rule cho `facebookOAuthState`/`facebookPendingPages`/`facebookPageTokens`/`facebookActiveToken` (2 node cuối `.read:false`/`.write:false` TUYỆT ĐỐI — không ai, kể cả Admin, đọc được qua client, chỉ Cloud Function Admin SDK bypass được) — **CHƯA deploy**, xem mục "Việc cần Chief Architect làm" bên dưới.
+- **Sidebar**: "Facebook Configuration" đã thêm vào cả Advanced Mode và Smart Mode (`js/admin-auth.js`), Founder tự vào được từ Cài đặt.
 
 ## Việc cần Chief Architect tự làm (không thể làm thay)
 
@@ -32,30 +38,34 @@ Sprint 12 Requirement #9 (Facebook AI V4 — Facebook Page Integration) yêu c�
 
 ### 5. Lấy App ID + App Secret
 - **App ID**: công khai, an toàn để đặt trong code phía client (tương tự cách các trang OAuth khác hoạt động).
-- **App Secret**: **TUYỆT ĐỐI KHÔNG đặt trong code/client** — phải lưu trong Google Secret Manager, chỉ Cloud Function phía server được đọc (giống hệt cách `OPENAI_API_KEY` đang được xử lý, xem `docs/CLOUD_FUNCTIONS_DEPLOYMENT.md`).
+- **App Secret**: **TUYỆT ĐỐI KHÔNG đặt trong code/client** — phải lưu trong Google Secret Manager qua `firebase functions:secrets:set FACEBOOK_APP_SECRET` (giống hệt cách `OPENAI_API_KEY` đang được xử lý, xem `docs/CLOUD_FUNCTIONS_DEPLOYMENT.md`).
 
-### 6. Deploy Cloud Function mới xử lý OAuth + Publish
-Cần thêm vào `functions/index.js` (chưa viết — sẽ cần 1 Requirement riêng sau khi có App ID/Secret thật để viết và test được):
-- `facebookOAuthCallback` — nhận `code` từ Facebook redirect, đổi lấy User Access Token → đổi tiếp lấy danh sách Page + Page Access Token (long-lived) → ghi metadata (không ghi token) vào `facebookConnection`, ghi token thật vào 1 node/collection server-only (Admin SDK, không có Client Rule nào cho phép đọc).
-- `facebookPublish` — nhận `draftId`, đọc token thật phía server, gọi `POST /{page-id}/feed` hoặc `/{page-id}/photos` (Graph API) để đăng Caption/Ảnh/Hashtags/Product Link/YouTube link, trả về `facebookPostId` để lưu lại vào Draft.
+### 6. Điền App ID vào code (2 chỗ) rồi deploy Cloud Function
+Cloud Function `facebookOAuthCallback`/`facebookSelectPage`/`facebookPublish` **ĐÃ VIẾT XONG** trong `functions/index.js` (Facebook AI V5) — chỉ còn:
+1. Điền App ID thật vào hằng số `FACEBOOK_APP_ID` ở ĐẦU `functions/index.js` VÀ đầu `js/admin-facebook-connect.js` (2 chỗ, tìm dòng có ghi chú `TODO`).
+2. `firebase functions:secrets:set FACEBOOK_APP_SECRET` (nhập App Secret thật, KHÔNG dán vào chat/file).
+3. `firebase deploy --only functions` — deploy cả 3 hàm `facebookOAuthCallback`/`facebookSelectPage`/`facebookPublish` cùng lúc với `openaiProxy` đã có.
 
 ### 7. Deploy Database Rules đã cập nhật
 ```
 firebase deploy --only database
 ```
-(rule cho `facebookConnection` đã có sẵn trong `database.rules.json`, chỉ cần deploy khi sẵn sàng dùng thật).
+(rule cho `facebookConnection`/`facebookOAuthState`/`facebookPendingPages`/`facebookPageTokens`/`facebookActiveToken` đã có sẵn trong `database.rules.json`, chỉ cần deploy khi sẵn sàng dùng thật).
 
-### 8. Cập nhật hằng số App ID trong code
-Sau khi có App ID thật, cần 1 dòng code nhỏ để bật OAuth thật thay vì thông báo "chưa cấu hình" — sẽ làm ở Requirement tiếp theo, sau khi có đủ App ID + Cloud Function đã deploy.
+### 8. Xác nhận URL Redirect khớp thật
+Sau khi deploy, Firebase CLI in ra URL Cloud Function thật cho `facebookOAuthCallback` — đối chiếu với URL đã đăng ký ở bước 4 (Valid OAuth Redirect URIs) VÀ với hằng số `FACEBOOK_OAUTH_CALLBACK_URL` trong cả `functions/index.js` và `js/admin-facebook-connect.js` — nếu khác (vd khác region), sửa lại cả 2 nơi cho khớp URL thật.
 
-## Checklist xác minh trước khi coi Facebook AI V4 là PASS thật
+## Checklist xác minh trước khi coi Facebook AI V5 là PASS thật
 
-- [ ] Facebook App đã tạo, có App ID thật.
-- [ ] App Secret đã lưu trong Secret Manager (KHÔNG trong code).
-- [ ] OAuth Redirect URI đã cấu hình đúng.
-- [ ] Cloud Function `facebookOAuthCallback` + `facebookPublish` đã viết + deploy.
-- [ ] `firebase deploy --only database` đã chạy (rule `facebookConnection` đã live).
-- [ ] Founder tự đăng nhập Facebook thật, chọn đúng Fanpage, thấy card chuyển 🟢 Connected.
-- [ ] Founder Generate 1 bài Facebook AI V3, bấm "Đăng lên Facebook" thật, xác nhận bài xuất hiện trên Fanpage thật + `facebookPostId` được lưu lại.
+- [ ] Facebook App đã tạo, có App ID thật — đã điền vào `functions/index.js` VÀ `js/admin-facebook-connect.js`.
+- [ ] App Secret đã lưu trong Secret Manager qua `firebase functions:secrets:set FACEBOOK_APP_SECRET` (KHÔNG trong code).
+- [ ] OAuth Redirect URI đã cấu hình đúng trong Facebook App Settings.
+- [ ] `firebase deploy --only functions` đã chạy (3 hàm `facebookOAuthCallback`/`facebookSelectPage`/`facebookPublish` deploy thành công).
+- [ ] `firebase deploy --only database` đã chạy (rule `facebookConnection`/`facebookOAuthState`/`facebookPendingPages`/`facebookPageTokens`/`facebookActiveToken` đã live).
+- [ ] Founder vào Cài đặt > Facebook Configuration, bấm Connect Facebook, đọc dialog xin phép, bấm Continue with Facebook.
+- [ ] Đăng nhập Facebook thật thành công, hệ thống TỰ ĐỘNG lấy đúng danh sách Fanpage — Founder KHÔNG tự gõ bất kỳ ID nào.
+- [ ] Founder chọn 1 Fanpage mặc định, bấm LƯU, card chuyển 🟢 Connected.
+- [ ] Founder Generate 1 bài Facebook AI V3 (chọn 1 Sản phẩm có sẵn), xem Draft, bấm "Đăng lên Facebook" thật.
+- [ ] Xác nhận: bài xuất hiện trên đúng Fanpage đã chọn, ảnh hiển thị đúng, Caption đúng, Hashtag đầy đủ, Product Link mở đúng sản phẩm, `facebookPostId` được lưu lại, CMS hiển thị "✅ Đã đăng".
 
-Cho tới khi checklist trên hoàn tất, Facebook AI V4 vẫn ở trạng thái **"Chỉ khung UI an toàn — chưa hoạt động thật"**, không được tuyên bố PASS.
+Cho tới khi checklist trên hoàn tất, Facebook AI V5 vẫn ở trạng thái **"Code thật đã viết xong — chưa xác nhận hoạt động thật"**, không được tuyên bố PASS.

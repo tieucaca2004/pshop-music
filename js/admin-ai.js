@@ -261,8 +261,21 @@ const AdminAI = (function () {
   // Preview, Copy Caption, Copy Hashtags") + nút Copy dùng data-copy-text
   // (trình duyệt tự giải mã HTML entity khi đọc lại qua getAttribute, không
   // cần tự decode) để tránh vỡ khi caption có ký tự đặc biệt.
-  function versionCardHtml(v) {
+  function versionCardHtml(v, draftId) {
     const hashtagsText = (v.hashtags || []).map(h => (h.indexOf('#') === 0 ? h : '#' + h)).join(' ');
+    const pubStatus = v.publishStatus || 'idle';
+    // Trạng thái Publish (Sprint 12, Facebook AI V5) — hiển thị NGAY DƯỚI
+    // preview, trước dãy nút — Publishing/Published/Failed đúng yêu cầu CMS
+    // "Display status". Published hiển thị đúng Facebook Post ID thật (bằng
+    // chứng đã đăng thật, không phải chỉ đổi label nút).
+    const statusHtml = pubStatus === 'publishing'
+      ? '<p class="small-muted">⏳ Đang đăng lên Facebook...</p>'
+      : pubStatus === 'published'
+        ? `<p class="small-muted" style="color:#2e7d32">✅ Đã đăng — Facebook Post ID: <code>${escapeHtml(v.facebookPostId || '')}</code> · ${formatDate(v.publishedAt)}${v.publishedBy ? ' · bởi ' + escapeHtml(v.publishedBy) : ''}</p>`
+        : pubStatus === 'failed'
+          ? `<p class="small-muted" style="color:#b3261e">❌ Đăng thất bại: ${escapeHtml(v.publishError || '')}</p>`
+          : '';
+    const publishBtnLabel = pubStatus === 'published' ? '📤 Đăng lại lên Facebook' : '📤 Đăng lên Facebook';
     return `
       <div class="panel" style="margin-top:0.8rem">
         <h4 style="margin-bottom:0.5rem">Phiên bản ${escapeHtml(v.label)}</h4>
@@ -278,30 +291,116 @@ const AdminAI = (function () {
           ${hashtagsText ? `<div style="padding:0 0.7rem 0.7rem;font-size:0.8rem;color:#1877f2">${escapeHtml(hashtagsText)}</div>` : ''}
           ${v.cta ? `<div style="padding:0.7rem;font-weight:600;font-size:0.85rem;border-top:1px solid #eee">${escapeHtml(v.cta)}</div>` : ''}
         </div>
+        ${statusHtml}
         <div class="admin-actions" style="margin-top:0.6rem">
           <button type="button" class="btn-secondary" data-copy-text="${escapeHtml(v.postText)}" onclick="AdminAI.copyDraftText(this)">📋 Copy Caption</button>
           ${hashtagsText ? `<button type="button" class="btn-secondary" data-copy-text="${escapeHtml(hashtagsText)}" onclick="AdminAI.copyDraftText(this)">#️⃣ Copy Hashtags</button>` : ''}
-          <button type="button" class="submit-btn" onclick="AdminAI.publishVersionToFacebook()">📤 Đăng lên Facebook</button>
+          <button type="button" class="submit-btn" ${pubStatus === 'publishing' ? 'disabled' : ''} onclick="AdminAI.publishVersionToFacebook('${draftId}', '${escapeHtml(v.label)}')">${publishBtnLabel}</button>
         </div>
       </div>`;
   }
 
-  // publishVersionToFacebook() — Sprint 12 Requirement #9 (Facebook AI V4).
-  // CHƯA có OAuth/Graph API thật (xem js/admin-facebook-connect.js) — luôn
-  // báo rõ trạng thái thật (chưa kết nối / đã kết nối nhưng publish thật
-  // chưa triển khai) thay vì giả vờ đăng bài thành công. Đọc thẳng node
-  // Firebase (không phụ thuộc AdminFacebookConnect đã init hay chưa, để
-  // hoạt động đúng trên mọi trang có Facebook draft, kể cả drafts.html).
-  function publishVersionToFacebook() {
-    const notConnectedMsg = 'Chưa kết nối Facebook. Vào "Plugin AI (Thủ công)" → mục "Đăng tự động lên Facebook" để kết nối trước khi đăng bài thật.';
+  const FACEBOOK_PUBLISH_URL = 'https://us-central1-pshop-music.cloudfunctions.net/facebookPublish';
+
+  // absolutizeLink()/buildFacebookPublishMessage() — Sprint 12, Facebook AI
+  // V5. Không sửa js/ai/modules/facebook-post-generator.js (Plugin — cấm sửa
+  // theo Requirement) để đổi productLink thành URL tuyệt đối hay thêm link
+  // YouTube thật — 2 việc đó lắp lại Ở ĐÂY (Publish Pipeline/Experience
+  // Layer, không phải Plugin) từ đúng dữ liệu draft.content/Product thật đã
+  // có, không bịa thêm gì.
+  function absolutizeLink(link) {
+    const str = String(link || '');
+    if (!str) return '';
+    return /^https?:\/\//i.test(str) ? str : 'https://pshopmusic.com/' + str.replace(/^\//, '');
+  }
+
+  function buildFacebookPublishMessage(draft, version, product) {
+    const c = draft.content || {};
+    const parts = [];
+    if (version.hook) parts.push(version.hook);
+    if (version.caption) parts.push(version.caption);
+    if (Array.isArray(c.productHighlights) && c.productHighlights.length) {
+      parts.push(c.productHighlights.map(h => '✓ ' + h).join('\n'));
+    }
+    if (version.cta) parts.push(version.cta);
+    if (Array.isArray(version.hashtags) && version.hashtags.length) {
+      parts.push(version.hashtags.map(h => (h.indexOf('#') === 0 ? h : '#' + h)).join(' '));
+    }
+    if (c.productLink) parts.push('Xem chi tiết: ' + absolutizeLink(c.productLink));
+    // "If Product contains a YouTube URL, append the YouTube link. Do NOT
+    // upload the video itself." — link THẬT (product.youtubeUrl, Admin tự
+    // nhập tay ở admin/products.html), KHÔNG phải youtubeEmbedUrl (dạng
+    // embed, không phải link xem trực tiếp phù hợp để chia sẻ công khai).
+    if (product && product.youtubeUrl) parts.push('Video: ' + product.youtubeUrl);
+    return parts.join('\n\n');
+  }
+
+  // publishVersionToFacebook() — Sprint 12, Facebook AI V5 (nâng cấp thật từ
+  // khung UI V4). Đăng THẬT lên Fanpage đã kết nối qua Cloud Function
+  // `facebookPublish` (functions/index.js) — token thật KHÔNG BAO GIỜ đi qua
+  // đây, chỉ Cloud Function (Admin SDK, node server-only `facebookActiveToken`)
+  // mới đọc được. Theo dõi trạng thái Publishing/Published/Failed NGAY trên
+  // đúng phiên bản (versions[].label) vừa bấm — không ảnh hưởng 2 phiên bản
+  // A/B/C còn lại, cho phép đăng nhiều phiên bản độc lập nếu Founder muốn.
+  function publishVersionToFacebook(draftId, versionLabel) {
+    const notConnectedMsg = 'Chưa kết nối Facebook. Vào "Cài đặt" → "Facebook Configuration" để kết nối trước khi đăng bài thật.';
     firebase.database().ref('facebookConnection').once('value').then(snap => {
-      const data = snap.val() || { status: 'not_connected' };
-      if (data.status === 'connected' || data.status === 'token_expiring') {
-        alert('Đăng bài thật lên Facebook chưa được triển khai trong bản này — mới có khung kết nối (xem docs/FACEBOOK_INTEGRATION_SETUP.md). Dùng "Copy Caption"/"Copy Hashtags" để đăng thủ công.');
-      } else {
+      const conn = snap.val() || { status: 'not_connected' };
+      if (conn.status !== 'connected' && conn.status !== 'token_expiring') {
         alert(notConnectedMsg);
+        return;
       }
-    }).catch(() => alert(notConnectedMsg));
+      return DraftDB.get(draftId).then(draft => {
+        if (!draft || !Array.isArray(draft.content.versions)) return;
+        const versions = draft.content.versions.slice();
+        const idx = versions.findIndex(v => v.label === versionLabel);
+        if (idx === -1) return;
+
+        // Cập nhật "Đang đăng..." ngay lập tức để Founder thấy phản hồi tức
+        // thời trong lúc chờ Graph API thật trả lời (có thể mất vài giây).
+        versions[idx] = Object.assign({}, versions[idx], { publishStatus: 'publishing', publishError: null });
+        return DraftDB.update(draftId, { content: Object.assign({}, draft.content, { versions }) }).then(() => {
+          if (typeof loadDrafts === 'function') loadDrafts();
+
+          const productLookup = (draft.inputParams && draft.inputParams.productId && typeof DB !== 'undefined')
+            ? DB.get(draft.inputParams.productId)
+            : Promise.resolve(null);
+
+          return productLookup.then(product => {
+            const message = buildFacebookPublishMessage(draft, versions[idx], product);
+            const c = draft.content;
+            const imageUrls = [c.featuredImage].concat(Array.isArray(c.galleryImages) ? c.galleryImages : []).filter(Boolean);
+            const user = AdminAuth.getUser();
+
+            return firebase.auth().currentUser.getIdToken().then(idToken => {
+              return fetch(FACEBOOK_PUBLISH_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
+                body: JSON.stringify({ message, imageUrls })
+              }).then(res => res.json().then(data => ({ ok: res.ok, data })));
+            }).then(({ ok, data }) => {
+              const finalVersions = versions.slice();
+              if (ok && data.success) {
+                finalVersions[idx] = Object.assign({}, finalVersions[idx], {
+                  publishStatus: 'published',
+                  facebookPostId: data.facebookPostId,
+                  publishedAt: Date.now(),
+                  publishedBy: user.email,
+                  selectedPage: conn.pageName || ''
+                });
+              } else {
+                finalVersions[idx] = Object.assign({}, finalVersions[idx], {
+                  publishStatus: 'failed',
+                  publishError: (data && data.error) || 'Không rõ nguyên nhân.'
+                });
+              }
+              return DraftDB.update(draftId, { content: Object.assign({}, draft.content, { versions: finalVersions }) })
+                .then(() => { if (typeof loadDrafts === 'function') loadDrafts(); });
+            });
+          });
+        });
+      });
+    }).catch(err => alert('Lỗi khi đăng bài: ' + err.message));
   }
 
   // copyDraftText() — Clipboard API (yêu cầu HTTPS, pshopmusic.com đã có) +
@@ -362,7 +461,7 @@ const AdminAI = (function () {
       const c = d.content || {};
       // Facebook AI V3 (Requirement #7) — nhiều phiên bản (content.versions).
       if (Array.isArray(c.versions) && c.versions.length) {
-        return `<div>${mediaBlockHtml(c)}${c.versions.map(versionCardHtml).join('')}</div>`;
+        return `<div>${mediaBlockHtml(c)}${c.versions.map(v => versionCardHtml(v, d.id)).join('')}</div>`;
       }
       // Hồi quy: Draft cũ từ Facebook AI V2 (Requirement #6, trước khi có
       // "versions") — giữ NGUYÊN VẸN cách hiển thị cũ, không phá dữ liệu đã

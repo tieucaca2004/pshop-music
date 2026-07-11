@@ -36,21 +36,25 @@ const ADMIN_NAV = [
   { key: 'footer', label: 'Footer', href: '/admin/footer.html', icon: '&#11015;', role: 'admin' },
   { key: 'seo', label: 'SEO', href: '/admin/seo.html', icon: '&#128269;', role: 'admin' },
   { key: 'settings', label: 'Cài đặt', href: '/admin/settings.html', icon: '&#9881;', role: 'admin' },
+  { key: 'facebook-settings', label: 'Facebook Configuration', href: '/admin/facebook-settings.html', icon: '&#128288;', role: 'admin' },
   { key: 'users', label: 'Người dùng', href: '/admin/users.html', icon: '&#128100;', role: 'admin' }
 ];
 
-// Smart Mode — đúng 13 mục Requirement đã liệt kê, KHÔNG hơn KHÔNG kém. Ẩn
-// hoàn toàn Slider/Video/Menu/Footer/SEO/Người dùng/Trợ lý AI kỹ thuật và
-// mọi trang Engineer-only (Queue/Workflow/Plugin Manager/Provider Manager/
-// Cost/Observability/Context Builder — vốn dĩ chưa từng có trong sidebar,
-// chỉ liên kết chéo nội bộ, nên "ẩn" ở đây nghĩa là KHÔNG thêm chúng vào
-// danh sách này). "AI Content" vẫn trỏ `admin/ai/index.html` (Plugin
-// Dashboard) — giới hạn đã ghi nhận ở Sprint 10 Requirement #5 (Founder Home
-// Quick Actions), chưa có trang Founder-friendly riêng cho nội dung văn bản.
-// "AI Image" (Sprint 12 Requirement #11) ĐÃ có trang riêng thật
-// (`admin/ai/images.html`) — không còn dùng chung Plugin Dashboard nữa.
-// "AI Video" chưa có `href` (chưa có năng lực AI Video nào) — hiển thị dạng
-// vô hiệu hoá, không phải liên kết giả.
+// Smart Mode — ban đầu đúng 13 mục Requirement Sprint 10.x đã liệt kê, nay
+// 14 mục sau khi thêm "Facebook Configuration" (Sprint 12, Facebook AI V5) —
+// Founder PHẢI tự kết nối Facebook thật được từ Smart Mode, không chỉ
+// Advanced Mode, nên đây là bổ sung có chủ đích theo đúng Requirement mới,
+// không phải scope creep. Ẩn hoàn toàn Slider/Video/Menu/Footer/SEO/Người
+// dùng/Trợ lý AI kỹ thuật và mọi trang Engineer-only (Queue/Workflow/Plugin
+// Manager/Provider Manager/Cost/Observability/Context Builder — vốn dĩ chưa
+// từng có trong sidebar, chỉ liên kết chéo nội bộ, nên "ẩn" ở đây nghĩa là
+// KHÔNG thêm chúng vào danh sách này). "AI Content" vẫn trỏ
+// `admin/ai/index.html` (Plugin Dashboard) — giới hạn đã ghi nhận ở Sprint 10
+// Requirement #5 (Founder Home Quick Actions), chưa có trang Founder-friendly
+// riêng cho nội dung văn bản. "AI Image" (Sprint 12 Requirement #11) ĐÃ có
+// trang riêng thật (`admin/ai/images.html`) — không còn dùng chung Plugin
+// Dashboard nữa. "AI Video" chưa có `href` (chưa có năng lực AI Video nào) —
+// hiển thị dạng vô hiệu hoá, không phải liên kết giả.
 const FOUNDER_SMART_NAV = [
   { key: 'founder-home', label: 'Trang chủ', href: '/admin/home.html', icon: '&#127968;' },
   { key: 'dashboard', label: 'Dashboard', href: '/admin/index.html', icon: '&#9776;' },
@@ -64,7 +68,8 @@ const FOUNDER_SMART_NAV = [
   { key: 'ai-image', label: 'AI Image', href: '/admin/ai/images.html', icon: '&#128444;' },
   { key: 'ai-video', label: 'AI Video (Sắp có)', href: null, icon: '&#127916;' },
   { key: 'marketing-drafts', label: 'Marketing Drafts', href: '/admin/ai/drafts.html', icon: '&#128203;' },
-  { key: 'settings', label: 'Cài đặt', href: '/admin/settings.html', icon: '&#9881;', role: 'admin' }
+  { key: 'settings', label: 'Cài đặt', href: '/admin/settings.html', icon: '&#9881;', role: 'admin' },
+  { key: 'facebook-settings', label: 'Facebook Configuration', href: '/admin/facebook-settings.html', icon: '&#128288;', role: 'admin' }
 ];
 
 const UI_MODE_STORAGE_KEY = 'pshopAdminUiMode';

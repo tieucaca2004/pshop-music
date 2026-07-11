@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Facebook Configuration - Pshop Music Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="adminSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-wrap">
+      <p class="small-muted" style="margin-bottom:1.5rem">Kết nối Fanpage Facebook thật để AI đăng bài tự động sau khi bạn duyệt — xem <a href="ai/drafts.html" style="color:var(--gold-ink)">Duyệt nội dung</a> để tạo và Publish bài Facebook.</p>
+
+      <div class="panel" id="fbConnectCard" style="margin-bottom:1.5rem">
+        <h3>📘 Facebook Configuration</h3>
+        <p id="fbConnectStatus">⚪ Chưa kết nối</p>
+        <div class="admin-actions">
+          <button type="button" class="submit-btn" id="fbConnectBtn">Connect Facebook</button>
+          <button type="button" class="btn-secondary" id="fbChangePageBtn" style="display:none">Đổi Fanpage</button>
+          <button type="button" class="btn-secondary" id="fbReconnectBtn" style="display:none">Kết nối lại</button>
+          <button type="button" class="btn-danger" id="fbDisconnectBtn" style="display:none">Ngắt kết nối</button>
+        </div>
+      </div>
+
+      <div id="fbPageSelectBox" style="display:none;margin-bottom:1.5rem"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Dialog xin phép trước khi đăng nhập Facebook — nội dung đúng theo yêu
+     cầu Requirement Facebook AI V5 (nhóm "Sẽ làm" / "Sẽ KHÔNG làm"), chỉ hiện
+     khi bấm "Connect Facebook". -->
+<div class="modal-overlay medialib-modal-overlay" id="fbConsentModal">
+  <div class="medialib-modal-box" style="max-width:480px">
+    <button type="button" class="medialib-modal-close" id="fbConsentCancelX">&times;</button>
+    <h3>Kết nối Facebook</h3>
+    <p>Để đăng bài Facebook tự động, PSH Platform cần được cấp quyền kết nối với tài khoản Facebook của bạn.</p>
+    <p><strong>Hệ thống SẼ:</strong></p>
+    <ul style="margin:0.5rem 0 1rem 1.2rem">
+      <li>Xác thực tài khoản Facebook của bạn.</li>
+      <li>Lấy danh sách Fanpage bạn đang quản lý.</li>
+      <li>Tự động lấy các API Token cần thiết.</li>
+      <li>Cho phép AI đăng bài — CHỈ sau khi bạn duyệt từng bài.</li>
+    </ul>
+    <p><strong>Hệ thống SẼ KHÔNG:</strong></p>
+    <ul style="margin:0.5rem 0 1rem 1.2rem">
+      <li>Đọc tin nhắn Messenger.</li>
+      <li>Đọc hội thoại riêng tư.</li>
+      <li>Truy cập thông tin ngoài phạm vi quyền đã cấp.</li>
+    </ul>
+    <p>Bạn có thể ngắt kết nối bất kỳ lúc nào.</p>
+    <div class="admin-actions">
+      <button type="button" class="btn-secondary" id="fbConsentCancel">Cancel</button>
+      <button type="button" class="submit-btn" id="fbConsentProceed">Continue with Facebook</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/products-seed.js"></script>
+<script src="../js/site-content-seed.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/cms-db.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script src="../js/admin-facebook-connect.js"></script>
+<script>
+  AdminAuth.init({ page: 'facebook-settings', title: 'FACEBOOK CONFIGURATION', requiredRole: 'admin' }).then(() => AdminFacebookConnect.init());
+</script>
+</body>
+</html>

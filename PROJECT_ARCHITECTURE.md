@@ -631,6 +631,63 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Facebook AI V5 — Facebook Configuration & Auto Publish (Sprint 12) — OAuth thật + Publish thật
+
+Nâng cấp "Facebook Page Integration — CHỈ khung UI an toàn" (mục bên dưới, Sprint 12 Requirement #9) lên code THẬT — vẫn chưa chạy thử được thật vì chưa có Meta App (Chief Architect xác nhận trước khi code: viết toàn bộ code thật, chờ App ID/Secret sau — không lặp lại lựa chọn "chỉ khung an toàn" của Requirement #9 nữa).
+
+```
+Founder → admin/facebook-settings.html (Settings > Facebook Configuration)
+       → "Connect Facebook" → đọc dialog xin phép ("Hệ thống SẼ" / "SẼ KHÔNG")
+       → "Continue with Facebook"
+       → js/admin-facebook-connect.js: ghi state nonce vào facebookOAuthState/{state}
+          (CÁCH DUY NHẤT xác định "yêu cầu này của Founder nào" — bước sau là
+          browser navigation thật, không phải fetch() có Firebase Auth header)
+       → redirect https://www.facebook.com/.../dialog/oauth?client_id=...&state=...
+       → Founder đăng nhập Facebook thật, cấp quyền
+       → Facebook redirect VỀ functions/index.js facebookOAuthCallback?code&state
+          → đọc facebookOAuthState/{state} (Admin SDK) → biết uid → xoá state (dùng 1 lần)
+          → đổi code → Short-Lived → Long-Lived User Token (~60 ngày)
+          → GET /me/accounts → danh sách Fanpage + Page Access Token riêng từng Page
+          → ghi facebookPendingPages/{uid} (metadata, KHÔNG token — client đọc để hiển thị)
+          → ghi facebookPageTokens/{uid} (token thật — node server-only .read:false/.write:false)
+          → redirect VỀ admin/facebook-settings.html?oauth=success
+       → client đọc facebookPendingPages/{uid} → hiển thị Page Selection (tên+ảnh)
+       → Founder chọn 1 Page, bấm LƯU
+       → fetch facebookSelectPage (Firebase Auth header thật, giống openaiProxy)
+          → copy đúng token của Page đã chọn: facebookPageTokens/{uid}/{pageId}
+            → facebookActiveToken (server-only, node DUY NHẤT facebookPublish đọc)
+          → ghi facebookConnection (CHỈ metadata: status/pageId/pageName/tokenExpiresAt)
+          → dọn facebookPendingPages/facebookPageTokens (không cần giữ sau khi đã copy)
+       → card chuyển 🟢 Connected
+
+Founder → admin/ai/drafts.html → Facebook AI V3 Draft (KHÔNG đổi Plugin) → bấm
+       "Đăng lên Facebook" (versionCardHtml, js/admin-ai.js)
+       → publishVersionToFacebook(draftId, versionLabel):
+          → kiểm tra facebookConnection.status thật trước (chưa kết nối → báo rõ, dừng)
+          → ghi versions[i].publishStatus='publishing' NGAY (phản hồi tức thời)
+          → lắp message: Hook+Caption+Highlights+CTA+Hashtags
+            + Product Link (absolutizeLink() — Draft chỉ lưu link TƯƠNG ĐỐI)
+            + YouTube link THẬT (DB.get(productId) → product.youtubeUrl,
+              KHÔNG dùng draft.content.youtubeEmbedUrl — dạng embed không hợp
+              để chia sẻ công khai) — cả 2 việc này KHÔNG sửa Plugin, lắp lại
+              ở đây (Publish Pipeline) từ dữ liệu draft.content/Product thật
+          → fetch facebookPublish (Firebase Auth header thật)
+             → Cloud Function đọc facebookActiveToken (server-only) → kiểm tra hết hạn
+             → có ảnh: POST từng ảnh /{page-id}/photos (published:false) lấy media_fbid
+             → POST /{page-id}/feed (message + attached_media nếu có ảnh)
+             → trả {success, facebookPostId} hoặc {success:false, error}
+          → ghi versions[i] = {publishStatus, facebookPostId, publishedAt, publishedBy,
+             selectedPage} (thành công) HOẶC {publishStatus:'failed', publishError} (lỗi)
+             — CHỈ phiên bản vừa bấm bị đổi, 2 phiên bản A/B/C còn lại giữ nguyên
+```
+
+- **Token thật KHÔNG BAO GIỜ đi qua client** — `facebookPageTokens`/`facebookActiveToken` có Database Rule `.read:false`/`.write:false` TUYỆT ĐỐI cho MỌI role (kể cả Admin) — chỉ Cloud Function (Admin SDK) bypass được. Client chỉ thấy `facebookConnection` (metadata) và `facebookPendingPages` (tên/ảnh Page, không token).
+- **`state` nonce giải quyết đúng 1 vấn đề kỹ thuật cụ thể**: `facebookOAuthCallback` là điểm ĐÍCH của 1 browser navigation thật (Facebook tự redirect trình duyệt tới), không phải 1 lượt `fetch()` có `Authorization` header như `openaiProxy` — nên không thể xác thực bằng Firebase ID token ở đây. `state` (ghi vào Firebase TRƯỚC khi rời trang, đọc lại bằng Admin SDK trong Cloud Function, xoá ngay sau khi dùng) là cách duy nhất nối lại "yêu cầu OAuth này của Founder nào".
+- **`js/ai/job-queue.js` không liên quan gì tới luồng này** — Facebook Publish KHÔNG đi qua Plugin Framework/Queue (không có "Generate ảnh"/"Generate văn bản" nào ở bước Publish, chỉ là gọi Graph API thật với nội dung ĐÃ có sẵn trong Draft) — đúng "Reuse... Publish Pipeline" của Requirement, không phải "Reuse Queue" cho hành động này.
+- **Không sửa `js/ai/modules/facebook-post-generator.js`** — Plugin vẫn y hệt Facebook AI V3 (Sprint 12 Requirement #7), chỉ sinh `draft.content` như cũ. Việc "URL tuyệt đối" + "YouTube link thật" hoàn toàn nằm ở `js/admin-ai.js` (Publish Pipeline), đọc dữ liệu Product thật độc lập qua `DB.get(draft.inputParams.productId)` khi cần.
+- **Theo dõi Publish độc lập theo từng phiên bản** — Facebook AI V3 sinh 3 phiên bản (A/B/C) trong 1 Draft; trạng thái Publishing/Published/Failed lưu trong `content.versions[i]` (không phải cấp Draft) — Founder có thể đăng thử nhiều phiên bản khác nhau mà không mất dấu vết phiên bản nào đã đăng.
+- **Sidebar "Facebook Configuration"** thêm mới ở cả `ADMIN_NAV` và `FOUNDER_SMART_NAV` (`js/admin-auth.js`, admin-only — nới lệ "Smart Mode đúng 13 mục" thành 14 có chủ đích, vì Founder phải tự kết nối được từ Smart Mode). Card kết nối dọn khỏi `admin/ai/index.html` sang trang riêng `admin/facebook-settings.html`.
+
 ## Image AI (Sprint 12, Requirement #11) — sinh ảnh thật, Plugin thứ 9 trong Framework
 
 Founder muốn sinh ẢNH THẬT (khác `image-prompt-generator`, Sprint 6 Requirement #4, chỉ sinh văn bản prompt) cho 7 loại ảnh marketing, luôn dừng ở Draft, Founder tự chọn nơi dùng — không có đích Publish cố định như các Plugin văn bản.
@@ -745,6 +802,8 @@ mapToDraftContent() tự lắp:
 - **Kiểm thử**: Node `vm` load mã nguồn thật — lắp media đúng thứ tự khi đủ dữ liệu; bỏ qua đúng từng phần khi thiếu ảnh/video/features (fallback specs, rồi rỗng); JSON hỏng có fallback an toàn; `draftBodyHtml()` hiển thị đẹp cho Facebook, giữ nguyên JSON thô cho Plugin khác. **Chưa kiểm thử qua UI thật có đăng nhập** (cần tài khoản Founder thật) — đã thử qua Preview nhưng bị chặn ở màn đăng nhập, như mọi lần trước trong Sprint này.
 
 ## Facebook Page Integration — CHỈ khung UI an toàn (Sprint 12, Requirement #9)
+
+**[ĐÃ NÂNG CẤP LÊN CODE THẬT]** — xem mục "Facebook AI V5 — Facebook Configuration & Auto Publish" ở trên. Mục này giữ nguyên làm lịch sử kiến trúc (giải thích lý do/phạm vi ban đầu chỉ xây khung UI) — `js/admin-facebook-connect.js`/`admin/ai/index.html` mô tả bên dưới đã thay đổi (card dọn sang `admin/facebook-settings.html`, OAuth đã thật) kể từ Facebook AI V5.
 
 Founder muốn Facebook AI đăng bài trực tiếp lên Fanpage thật từ CMS. Đây là Requirement ĐẦU TIÊN trong Sprint 12 cần hạ tầng bên ngoài thật (Facebook App + App Review từ Meta) — không thể triển khai đầy đủ chỉ bằng code, giống hệt bài học Sprint 11 Requirement #3 (AI Provider Runtime Activation). Đã hỏi rõ Chief Architect trước khi viết code (AskUserQuestion) — được xác nhận: chỉ xây phần UI/khung an toàn hoạt động thật hôm nay + 1 runbook đầy đủ, KHÔNG giả vờ có OAuth/Publish thật.
 

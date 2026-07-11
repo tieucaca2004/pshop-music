@@ -65,6 +65,28 @@
       ".write": "auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin'"
     },
 
+    "facebookOAuthState": {
+      "$state": {
+        ".read": false,
+        ".write": "auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin' && newData.child('uid').val() === auth.uid",
+        ".validate": "newData.hasChildren(['uid', 'createdAt'])"
+      }
+    },
+    "facebookPendingPages": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": false
+      }
+    },
+    "facebookPageTokens": {
+      ".read": false,
+      ".write": false
+    },
+    "facebookActiveToken": {
+      ".read": false,
+      ".write": false
+    },
+
     "$other": {
       ".read": false,
       ".write": false
