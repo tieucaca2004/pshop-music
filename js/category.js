@@ -378,7 +378,12 @@
   updateCategoryHeader(initialCat);
 
   withTimeout(DB.getAll(), 10000).then(products => {
-    allProducts = products;
+    // pubStatus (Sprint 12 Requirement #10, Product Management) - CHỈ ẩn sản
+    // phẩm có pubStatus rõ ràng là 'draft'/'hidden'. 42 sản phẩm thật hiện
+    // có đều CHƯA có field này (undefined) - PHẢI coi là "đã xuất bản"/hiển
+    // thị, tuyệt đối không được yêu cầu === 'published' (sẽ làm biến mất
+    // toàn bộ sản phẩm thật đang có trên web).
+    allProducts = products.filter(p => p.pubStatus !== 'draft' && p.pubStatus !== 'hidden');
     render();
     // Sprint 12 Requirement #5 (Media AI — Product & Blog Media) — "Sản phẩm
     // liên quan" cuối bài Blog cần 1 link thật mở đúng sản phẩm, không chỉ

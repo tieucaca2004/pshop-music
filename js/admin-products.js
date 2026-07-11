@@ -24,6 +24,30 @@ const AdminApp = (function () {
     }[c]));
   }
 
+  // getYoutubeEmbedUrl - cung logic da dung o js/category.js/blog-writer.js/
+  // facebook-post-generator.js (xem PROJECT_ARCHITECTURE.md) - lap lai o day
+  // vi day la Experience Layer rieng cua trang Product, khong phai AI module.
+  function getYoutubeEmbedUrl(url) {
+    const str = String(url || '').trim();
+    if (!str) return '';
+    let id = '';
+    let m = str.match(/[?&]v=([a-zA-Z0-9_-]{11})/);
+    if (m) id = m[1];
+    if (!id) { m = str.match(/youtu\.be\/([a-zA-Z0-9_-]{11})/); if (m) id = m[1]; }
+    if (!id) { m = str.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/); if (m) id = m[1]; }
+    if (!id) { m = str.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/); if (m) id = m[1]; }
+    return id ? `https://www.youtube.com/embed/${id}` : '';
+  }
+
+  function renderYoutubePreview() {
+    const box = document.getElementById('pYoutubePreview');
+    if (!box) return;
+    const embedUrl = getYoutubeEmbedUrl(document.getElementById('pYoutubeUrl').value);
+    if (!embedUrl) { box.style.display = 'none'; box.innerHTML = ''; return; }
+    box.style.display = 'block';
+    box.innerHTML = `<div style="position:relative;padding-top:56.25%;height:0;max-width:360px;border-radius:8px;overflow:hidden"><iframe src="${escapeHtml(embedUrl)}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0" allowfullscreen loading="lazy"></iframe></div>`;
+  }
+
   function withTimeout(promise, ms) {
     return Promise.race([
       promise,
@@ -46,7 +70,7 @@ const AdminApp = (function () {
     }).catch(err => {
       console.error('Không tải được dữ liệu sản phẩm:', err);
       document.getElementById('productTableBody').innerHTML =
-        '<tr><td colspan="7" style="color:#c0392b;text-align:center;padding:2rem">Không kết nối được database.</td></tr>';
+        '<tr><td colspan="8" style="color:#c0392b;text-align:center;padding:2rem">Không kết nối được database.</td></tr>';
     });
   }
 
@@ -57,7 +81,7 @@ const AdminApp = (function () {
 
     const body = document.getElementById('productTableBody');
     if (filtered.length === 0) {
-      body.innerHTML = '<tr><td colspan="7" style="color:var(--muted2);text-align:center;padding:2rem">Không có sản phẩm.</td></tr>';
+      body.innerHTML = '<tr><td colspan="8" style="color:var(--muted2);text-align:center;padding:2rem">Không có sản phẩm.</td></tr>';
       return;
     }
 
@@ -69,6 +93,7 @@ const AdminApp = (function () {
         <td>${p.price ? escapeHtml(p.price) : '<span style="color:var(--muted2)">Liên hệ</span>'}</td>
         <td>${p.status === 'Used' ? 'Qua sử dụng' : 'Mới'}</td>
         <td>${p.stockStatus === 'outofstock' ? '<span style="color:#c0392b;font-weight:600">Hết hàng</span>' : 'Còn hàng'}</td>
+        <td>${pubStatusLabel(p.pubStatus)}</td>
         <td>
           <div class="row-actions">
             <button class="link-btn" onclick="AdminApp.editProduct('${p.id}')">Sửa</button>
@@ -76,6 +101,16 @@ const AdminApp = (function () {
           </div>
         </td>
       </tr>`).join('');
+  }
+
+  // pubStatus mới thêm (Sprint 12 Requirement #10) — 42 sản phẩm thật hiện có
+  // đều CHƯA có field này (undefined), phải hiển thị/coi như "Đã xuất bản"
+  // (visible công khai) để không gây hiểu lầm là chưa xuất bản — đồng bộ
+  // đúng quy tắc backward-compatible ở js/category.js.
+  function pubStatusLabel(pubStatus) {
+    if (pubStatus === 'draft') return '<span style="color:var(--muted2)">Nháp</span>';
+    if (pubStatus === 'hidden') return '<span style="color:#c0392b;font-weight:600">Ẩn</span>';
+    return 'Đã xuất bản';
   }
 
   function setBrandValue(brand) {
@@ -111,15 +146,25 @@ const AdminApp = (function () {
     editingId = id;
     document.getElementById('pId').value = p.id;
     document.getElementById('pName').value = p.name || '';
+    document.getElementById('pSku').value = p.sku || '';
+    // pubStatus (Sprint 12 Requirement #10) - san pham that hien co chua co
+    // field nay (undefined) - mac dinh hien "published" khi Sua de dung voi
+    // trang thai hien tai tren web cong khai (xem js/category.js filter).
+    document.getElementById('pPubStatus').value = p.pubStatus || 'published';
     document.getElementById('pCategory').value = p.category || (categories[0] && categories[0].code) || '';
     document.getElementById('pStatus').value = p.status || 'New';
     document.getElementById('pStockStatus').value = p.stockStatus || 'instock';
+    document.getElementById('pWarranty').value = p.warranty || '';
     setBrandValue(p.brand || '');
     document.getElementById('pPrice').value = p.price || '';
     document.getElementById('pOldPrice').value = p.oldPrice || '';
     document.getElementById('pSpecs').value = p.specs || '';
     document.getElementById('pBadgeText').value = p.badgeText || '';
+    document.getElementById('pSpecifications').value = p.specifications || '';
+    document.getElementById('pFeatures').value = Array.isArray(p.features) ? p.features.join('\n') : '';
+    document.getElementById('pTags').value = Array.isArray(p.tags) ? p.tags.join(', ') : '';
     document.getElementById('pYoutubeUrl').value = p.youtubeUrl || '';
+    renderYoutubePreview();
     if (quill) quill.root.innerHTML = p.description || '';
     const images = Array.isArray(p.images) && p.images.length ? p.images : (p.image ? [p.image] : []);
     document.getElementById('pImages').value = images.join('\n');
@@ -142,14 +187,19 @@ const AdminApp = (function () {
   function resetForm() {
     editingId = null;
     document.getElementById('pId').value = '';
-    ['pName', 'pPrice', 'pOldPrice', 'pSpecs', 'pBadgeText', 'pImages', 'pYoutubeUrl'].forEach(id => {
+    ['pName', 'pSku', 'pWarranty', 'pPrice', 'pOldPrice', 'pSpecs', 'pBadgeText', 'pSpecifications', 'pFeatures', 'pTags', 'pImages', 'pYoutubeUrl'].forEach(id => {
       document.getElementById(id).value = '';
     });
+    renderYoutubePreview();
     pImagesPicker.refresh();
     if (quill) quill.setText('');
     if (categories[0]) document.getElementById('pCategory').value = categories[0].code;
     document.getElementById('pStatus').value = 'New';
     document.getElementById('pStockStatus').value = 'instock';
+    // San pham MOI mac dinh la Nhap (chua hien tren web cong khai) - Founder
+    // tu chuyen sang "Da xuat ban" khi san sang (dung "Founder Acceptance
+    // Test": Saves Draft -> Publishes -> Product appears on website).
+    document.getElementById('pPubStatus').value = 'draft';
     setBrandValue('');
     document.getElementById('formTitle').textContent = 'THÊM SẢN PHẨM MỚI';
     document.getElementById('saveBtn').textContent = 'LƯU SẢN PHẨM';
@@ -163,15 +213,21 @@ const AdminApp = (function () {
     const images = document.getElementById('pImages').value.split(/[\n,;]/).map(url => url.trim()).filter(Boolean);
     const data = {
       name,
+      sku: document.getElementById('pSku').value.trim(),
+      pubStatus: document.getElementById('pPubStatus').value,
       category,
       categoryLabel: catLabel(category),
       status: document.getElementById('pStatus').value,
       stockStatus: document.getElementById('pStockStatus').value,
+      warranty: document.getElementById('pWarranty').value.trim(),
       brand: getBrandValue(),
       price: document.getElementById('pPrice').value.trim(),
       oldPrice: document.getElementById('pOldPrice').value.trim(),
       specs: document.getElementById('pSpecs').value.trim(),
       badgeText: document.getElementById('pBadgeText').value.trim(),
+      specifications: document.getElementById('pSpecifications').value.trim(),
+      features: document.getElementById('pFeatures').value.split('\n').map(s => s.trim()).filter(Boolean),
+      tags: document.getElementById('pTags').value.split(',').map(s => s.trim()).filter(Boolean),
       youtubeUrl: document.getElementById('pYoutubeUrl').value.trim(),
       description: quill && quill.getText().trim() ? quill.root.innerHTML : '',
       images: images,
@@ -266,6 +322,8 @@ const AdminApp = (function () {
       if (e.target.files[0]) importJson(e.target.files[0]);
       e.target.value = '';
     });
+
+    document.getElementById('pYoutubeUrl').addEventListener('input', renderYoutubePreview);
   });
 
   return { editProduct, deleteProduct, saveProduct, resetForm, exportJson, resetToSeed, toggleCustomBrand };

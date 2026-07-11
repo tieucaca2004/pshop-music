@@ -44,6 +44,15 @@ const MediaLibraryPicker = (function () {
   function slotHtml(slotId, url, opts) {
     const chooseLabel = (opts && opts.chooseLabel) || 'Chọn ảnh';
     const hasRemoveSlot = !!(opts && opts.onRemoveSlot);
+    // onMoveUp/onMoveDown/onSetFeatured/isFeatured (Sprint 12 Requirement #10,
+    // Product Management) - CHỈ mountMulti() truyền các key này (sắp xếp lại
+    // ảnh cần biết vị trí trong mảng) - mount()/renderSlot() (Blog/Banner/
+    // Slider/Category) không truyền nên các nút này không xuất hiện, 0 thay
+    // đổi hành vi cũ.
+    const moveUpBtn = (opts && opts.onMoveUp) ? `<button type="button" class="link-btn" onclick="MediaLibraryPicker.moveUpFor('${slotId}')">↑</button>` : '';
+    const moveDownBtn = (opts && opts.onMoveDown) ? `<button type="button" class="link-btn" onclick="MediaLibraryPicker.moveDownFor('${slotId}')">↓</button>` : '';
+    const setFeaturedBtn = (opts && opts.onSetFeatured) ? `<button type="button" class="link-btn" onclick="MediaLibraryPicker.setFeaturedFor('${slotId}')">★ Đặt làm ảnh đại diện</button>` : '';
+    const featuredBadge = (opts && opts.isFeatured) ? `<span class="small-muted" style="margin-left:0.3rem">★ Ảnh đại diện</span>` : '';
     return `
       <div class="medialib-slot" id="${slotId}">
         <div class="medialib-slot-thumb">
@@ -54,6 +63,7 @@ const MediaLibraryPicker = (function () {
           <button type="button" class="link-btn" onclick="MediaLibraryPicker.chooseFor('${slotId}')">${escapeHtml(chooseLabel)}</button>
           ${(url && !hasRemoveSlot) ? `<button type="button" class="link-btn" onclick="MediaLibraryPicker.clearFor('${slotId}')">Xóa</button>` : ''}
           ${hasRemoveSlot ? `<button type="button" class="link-btn" onclick="MediaLibraryPicker.removeSlotFor('${slotId}')">Bỏ ảnh này</button>` : ''}
+          ${moveUpBtn}${moveDownBtn}${setFeaturedBtn}${featuredBadge}
         </div>
         ${url ? `<details class="medialib-advanced"><summary>Advanced</summary><code>${escapeHtml(url)}</code></details>` : ''}
       </div>`;
@@ -104,6 +114,27 @@ const MediaLibraryPicker = (function () {
     slot.opts.onRemoveSlot();
   }
 
+  // moveUpFor/moveDownFor/setFeaturedFor (Sprint 12 Requirement #10) - cùng
+  // pattern với removeSlotFor(): slotHtml() chỉ gọi lại đúng callback đã đăng
+  // ký trong opts, không tự biết vị trí trong mảng ảnh (mountMulti() mới biết).
+  function moveUpFor(slotId) {
+    const slot = slotRegistry[slotId];
+    if (!slot || !slot.opts || !slot.opts.onMoveUp) return;
+    slot.opts.onMoveUp();
+  }
+
+  function moveDownFor(slotId) {
+    const slot = slotRegistry[slotId];
+    if (!slot || !slot.opts || !slot.opts.onMoveDown) return;
+    slot.opts.onMoveDown();
+  }
+
+  function setFeaturedFor(slotId) {
+    const slot = slotRegistry[slotId];
+    if (!slot || !slot.opts || !slot.opts.onSetFeatured) return;
+    slot.opts.onSetFeatured();
+  }
+
   /* ================= mount() — field tĩnh, 1 ảnh (Banner/Blog) ================= */
 
   function mount(inputId, previewContainerId, opts) {
@@ -140,16 +171,47 @@ const MediaLibraryPicker = (function () {
     }
     function renderInto() {
       const urls = currentUrls();
+      // Reorder/Set Featured (Sprint 12 Requirement #10, Product Management) -
+      // ảnh đầu tiên trong mảng LUÔN là ảnh đại diện (đúng quy ước sẵn có,
+      // xem js/admin-products.js saveProduct() data.image = images[0]) - "Đặt
+      // làm ảnh đại diện" = đưa ảnh đó lên đầu mảng.
       const slotsHtml = urls.map((url, i) => renderSlot(url, newUrl => {
         const list = currentUrls();
         list[i] = newUrl;
         setUrls(list);
-      }, Object.assign({ chooseLabel: 'Đổi ảnh', onRemoveSlot: () => {
-        const list = currentUrls();
-        list.splice(i, 1);
-        setUrls(list);
-        renderInto();
-      } }, opts))).join('');
+      }, Object.assign({
+        chooseLabel: 'Đổi ảnh',
+        isFeatured: i === 0,
+        onRemoveSlot: () => {
+          const list = currentUrls();
+          list.splice(i, 1);
+          setUrls(list);
+          renderInto();
+        },
+        onMoveUp: i > 0 ? () => {
+          const list = currentUrls();
+          const tmp = list[i - 1];
+          list[i - 1] = list[i];
+          list[i] = tmp;
+          setUrls(list);
+          renderInto();
+        } : null,
+        onMoveDown: i < urls.length - 1 ? () => {
+          const list = currentUrls();
+          const tmp = list[i + 1];
+          list[i + 1] = list[i];
+          list[i] = tmp;
+          setUrls(list);
+          renderInto();
+        } : null,
+        onSetFeatured: i > 0 ? () => {
+          const list = currentUrls();
+          const [item] = list.splice(i, 1);
+          list.unshift(item);
+          setUrls(list);
+          renderInto();
+        } : null
+      }, opts))).join('');
       const addSlotId = 'medialib-add-' + (++slotCounter);
       container.innerHTML = `<div class="medialib-grid">${slotsHtml}
         <div class="medialib-slot medialib-slot-add" id="${addSlotId}">
@@ -314,6 +376,7 @@ const MediaLibraryPicker = (function () {
   return {
     mount, mountMulti, renderSlot,
     chooseFor, clearFor, removeSlotFor, addTo,
+    moveUpFor, moveDownFor, setFeaturedFor,
     openModal, closeModal, pickIndex, confirmDeleteIndex
   };
 })();

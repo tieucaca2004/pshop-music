@@ -631,6 +631,36 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Product Management (Sprint 12, Requirement #10) — tổng quát hóa AI Assist Inline CMS Forms thành 5 nút
+
+Founder First Roadmap (`ROADMAP.md`) xếp "Complete Product Management" ưu tiên #1. Requirement này (1) bổ sung field còn thiếu cho Product, (2) thêm khái niệm hiển thị/ẩn (`pubStatus`) riêng biệt khỏi `status` (tình trạng Mới/Qua sử dụng), (3) nâng cấp Editor, và (4) tổng quát hóa `ProductAIAssist` (Sprint 11 Requirement #2, xem mục bên dưới) từ 1 nút (chỉ Mô tả) thành 5 nút — tái sử dụng đúng 4 Plugin đã production-ready (Product AI V2/Facebook AI V3/Blog AI V2/Banner AI V2), không tạo Plugin/Provider/Queue/Workflow mới.
+
+```
+Founder → admin/products.html → lưu 1 sản phẩm (có #pId)
+       → bấm 1 trong 5 nút [data-ai-btn]: description/seo/facebook/blog/banner
+       → js/admin-products-ai-assist.js: BUTTONS[id].buildParams(product) → inputParams
+            - description/seo  → { productId, tone } → Plugin 'product-description-writer'
+            - facebook         → { productId, topic:'', promotion:'' } → Plugin 'facebook-post-generator'
+            - blog             → { productId, topic:'Giới thiệu '+tên sp, tone, keywords:'' } → Plugin 'blog-writer'
+            - banner           → { productId, promotion:'', event:'', link:'' } → Plugin 'banner-generator'
+       → PermissionService.checkPluginExecution → PluginManager.loadPlugin(moduleId).execute() → AIJobQueue
+       → Hoàn tất → BUTTONS[id].renderPreview(draft.content) hiển thị NGAY TRONG form
+            → applyMode 'product' (description/seo) → "ÁP DỤNG VÀO SẢN PHẨM"
+                 → AdminAI.publishDraftById(draftId) (ghi vào ĐÚNG sản phẩm đang sửa, targetId có sẵn)
+                 → syncProductForm() đồng bộ lại hiển thị: tên/mô tả/thông số/tính năng/tags
+            → applyMode 'publish' (facebook/blog/banner) → "DUYỆT & PUBLISH"
+                 → AdminAI.publishDraftById(draftId) (tạo bản ghi MỚI: blogPosts/banners, hoặc chỉ đánh dấu đã duyệt cho Facebook — không target)
+       → "TỪ CHỐI" → AdminAI.rejectDraftById(draftId) ở bất kỳ nút nào
+```
+
+- **"Generate Description" và "Generate SEO" gọi CÙNG 1 Plugin** (`product-description-writer` — đã sinh đủ 13 trường kể cả SEO trong 1 lần gọi, xem Sprint 12 Requirement #4) — chỉ khác `renderPreview` nhấn mạnh trường nào (Mô tả/Thông số/Tính năng/FAQ so với SEO Title/Meta Description/Keywords/Slug/ALT Text) — tránh gọi AI 2 lần cho cùng nội dung, và tránh dùng `seo-generator` (Sprint 3) vì Plugin đó CHỈ hỗ trợ `targetType: 'blogPost'`, không hỗ trợ Product.
+- **`buildParams` tự động điền field bắt buộc** mà form 5-nút không hỏi lại Founder: Blog AI yêu cầu `topic` bắt buộc — tự điền "Giới thiệu {tên sản phẩm}" đọc từ `#pName` hiện tại; Facebook/Banner có `productId` optional (1-trong-3 nguồn) — tự điền `productId`, để `topic`/`promotion`/`event` rỗng (đúng "chọn Sản phẩm" trong 3 lựa chọn).
+- **`pubStatus` (Draft/Published/Hidden)** — field MỚI, **không phải** field `status` cũ (Mới/Qua sử dụng — tình trạng sản phẩm). Sản phẩm mới mặc định `pubStatus: 'draft'`; sản phẩm cũ không có field (`undefined`) khi Sửa hiển thị mặc định "Đã xuất bản" (không đổi trạng thái hiển thị công khai cho tới khi Founder chủ động Lưu lại). `js/category.js` lọc **CHỈ ẩn** `pubStatus === 'draft'`/`'hidden'` — KHÔNG BAO GIỜ yêu cầu `=== 'published'` (sẽ làm biến mất toàn bộ 42 sản phẩm thật hiện có, vốn chưa có field này).
+- **`MediaLibraryPicker.mountMulti()` mở rộng reorder/set-featured** — `slotHtml()` nhận thêm `opts.onMoveUp`/`onMoveDown`/`onSetFeatured`/`isFeatured` (CHỈ `mountMulti()` truyền — cần biết vị trí trong mảng ảnh); "Đặt làm ảnh đại diện" = đưa ảnh về đầu mảng (đúng quy ước có sẵn `data.image = images[0]`, xem `js/admin-products.js saveProduct()`). `mount()`/`renderSlot()` (Blog/Banner/Slider/Category) không truyền các `opts` này nên không hiển thị nút mới — xác nhận 0 regression qua test trực tiếp (so sánh HTML output trước/sau).
+- **`syncProductForm()` chỉ đồng bộ field CÓ giá trị** trong `draft.content`, không ghi đè bằng rỗng — publishDraftById() đã ghi thật vào Firebase; đây chỉ là đồng bộ hiển thị Form, không phải ghi dữ liệu (field nào Draft không trả về vẫn giữ nguyên giá trị Founder đang gõ dở trên form).
+- **0 sửa đổi**: 4 Plugin AI Modules (`product-description-writer`/`facebook-post-generator`/`blog-writer`/`banner-generator`), `js/admin-ai.js` (Publish pipeline tái sử dụng nguyên vẹn), Queue/Provider/Workflow/Plugin Framework.
+- **Kiểm thử**: Node `vm` load mã nguồn thật (mock PermissionService/PluginManager/AIJobQueue/JobDB/DraftDB/AdminAI/AdminAuth) — cả 5 nút gọi đúng `moduleId` + `inputParams` (kể cả topic tự động cho Blog); Preview hiển thị đúng nội dung theo Plugin; Apply đồng bộ đúng field vào form (chỉ field có giá trị); Publish gọi đúng `publishDraftById` với đúng `draftId`; guard "cần lưu sản phẩm trước" hoạt động đúng. `MediaLibraryPicker` reorder/set-featured test trực tiếp trên hàm thật (không mock DOM giả lập hành vi). Preview thật (dev server local + Firebase thật): `category.html` vẫn hiển thị đủ "42 sản phẩm" sau khi thêm filter `pubStatus`, 0 lỗi console. **Chưa kiểm thử form Sản phẩm qua UI thật có đăng nhập** (cần tài khoản Founder thật).
+
 ## Facebook AI V3 (Sprint 12, Requirement #7)
 
 Nâng Facebook AI V2 (Requirement #6) lên mức dùng được cho marketing thật: 3 nguồn input thay vì chỉ Sản phẩm, và 3 phiên bản để so sánh thay vì 1 bản duy nhất.

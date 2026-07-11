@@ -28,6 +28,18 @@
             <input type="text" id="pName" placeholder="VD: Pioneer XDJ-RX3 All-in-One DJ System">
           </div>
           <div class="form-group">
+            <label>SKU / MÃ SẢN PHẨM</label>
+            <input type="text" id="pSku" placeholder="VD: PXDJ-RX3-001">
+          </div>
+          <div class="form-group">
+            <label>TRẠNG THÁI XUẤT BẢN</label>
+            <select id="pPubStatus">
+              <option value="draft">Nháp (chưa hiển thị trên web)</option>
+              <option value="published">Đã xuất bản (hiển thị trên web)</option>
+              <option value="hidden">Ẩn (tạm ẩn khỏi web)</option>
+            </select>
+          </div>
+          <div class="form-group">
             <label>DANH MỤC</label>
             <select id="pCategory"></select>
           </div>
@@ -44,6 +56,10 @@
               <option value="instock">Còn hàng</option>
               <option value="outofstock">Hết hàng</option>
             </select>
+          </div>
+          <div class="form-group">
+            <label>BẢO HÀNH</label>
+            <input type="text" id="pWarranty" placeholder="VD: 12 tháng chính hãng">
           </div>
           <div class="form-group">
             <label>THƯƠNG HIỆU</label>
@@ -89,10 +105,32 @@
           <div class="form-group full">
             <label>MÔ TẢ CHI TIẾT — hiển thị trong popup chi tiết sản phẩm</label>
             <div id="pDescriptionEditor" style="background:var(--bg-alt);color:var(--ink)"></div>
-            <!-- Sprint 11 Requirement #2: AI Assist ngay trong form, không
-                 rời trang, không mở AI Center — xem js/admin-products-ai-assist.js -->
-            <div class="admin-actions" style="margin-top:0.6rem">
-              <button type="button" class="btn-secondary" id="pAiAssistBtn">✨ VIẾT MÔ TẢ BẰNG AI</button>
+          </div>
+          <div class="form-group full">
+            <label>THÔNG SỐ KỸ THUẬT CHI TIẾT (có thể dán HTML từ AI, hoặc gõ văn bản thường)</label>
+            <textarea id="pSpecifications" rows="4" placeholder="VD: <ul><li>Màn hình cảm ứng 10.1 inch</li>...</ul>"></textarea>
+          </div>
+          <div class="form-group full">
+            <label>TÍNH NĂNG NỔI BẬT (mỗi dòng 1 tính năng)</label>
+            <textarea id="pFeatures" rows="4" placeholder="VD:&#10;Màn hình cảm ứng 10.1 inch&#10;Hỗ trợ Rekordbox &amp; Serato"></textarea>
+          </div>
+          <div class="form-group full">
+            <label>TAGS (phân tách bằng dấu phẩy)</label>
+            <input type="text" id="pTags" placeholder="VD: dj controller, all-in-one, pioneer">
+          </div>
+          <!-- Sprint 12 Requirement #10 (Product Management): 5 nút AI ngay
+               trong form, không rời trang Product — xem
+               js/admin-products-ai-assist.js. Tái sử dụng NGUYÊN VẸN
+               product-description-writer/facebook-post-generator/blog-writer/
+               banner-generator đã có, không tạo Plugin mới. -->
+          <div class="form-group full">
+            <label>AI HỖ TRỢ — SINH NỘI DUNG TỪ SẢN PHẨM NÀY (cần lưu sản phẩm trước)</label>
+            <div class="admin-actions" style="margin-top:0.4rem;flex-wrap:wrap">
+              <button type="button" class="btn-secondary" data-ai-btn="description">✨ Generate Description</button>
+              <button type="button" class="btn-secondary" data-ai-btn="seo">🔍 Generate SEO</button>
+              <button type="button" class="btn-secondary" data-ai-btn="facebook">📘 Generate Facebook</button>
+              <button type="button" class="btn-secondary" data-ai-btn="blog">📝 Generate Blog</button>
+              <button type="button" class="btn-secondary" data-ai-btn="banner">🖼 Generate Banner</button>
             </div>
             <div id="pAiAssistBox" style="display:none;margin-top:0.6rem"></div>
           </div>
@@ -104,6 +142,7 @@
           <div class="form-group full">
             <label>LINK YOUTUBE (không bắt buộc — hiển thị video bên dưới ảnh sản phẩm)</label>
             <input type="text" id="pYoutubeUrl" placeholder="VD: https://www.youtube.com/watch?v=xxxxxxxxxxx">
+            <div id="pYoutubePreview" style="display:none;margin-top:0.6rem"></div>
           </div>
         </div>
         <div class="admin-actions">
@@ -127,7 +166,7 @@
         <div class="admin-table-wrap">
           <table class="admin-table">
             <thead>
-              <tr><th>Ảnh</th><th>Tên sản phẩm</th><th>Danh mục</th><th>Giá</th><th>Tình trạng</th><th>Kho hàng</th><th></th></tr>
+              <tr><th>Ảnh</th><th>Tên sản phẩm</th><th>Danh mục</th><th>Giá</th><th>Tình trạng</th><th>Kho hàng</th><th>Xuất bản</th><th></th></tr>
             </thead>
             <tbody id="productTableBody"></tbody>
           </table>
