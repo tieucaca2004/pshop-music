@@ -18,7 +18,46 @@
     <div class="admin-topbar" id="adminTopbar"></div>
     <div class="admin-wrap">
       <p class="small-muted" style="margin-bottom:1.5rem">Mỗi module đọc dữ liệu thật từ CMS (không tự bịa), kết quả luôn lưu ở dạng Nháp — vào mục <a href="drafts.html" style="color:var(--gold-ink)">Duyệt nội dung</a> để xem trước và Publish, <a href="jobs.html" style="color:var(--gold-ink)">Job Queue</a> để theo dõi/thử lại, <a href="plugins.html" style="color:var(--gold-ink)">Plugin Manager</a> để bật/tắt plugin. Cần cấu hình + gán đúng nhà cung cấp AI cho plugin ở <a href="providers.html" style="color:var(--gold-ink)">Nhà cung cấp AI</a>/<a href="plugins.html" style="color:var(--gold-ink)">Plugin Manager</a> trước khi chạy — nếu chưa cấu hình hoặc provider gặp lỗi, job sẽ báo lỗi rõ ràng trong "Nhật ký" thay vì tạo nội dung. Xem toàn bộ trạng thái hệ thống trong 1 màn hình tại <a href="observability.html" style="color:var(--gold-ink)">AI Observability Dashboard</a>. Đăng sản phẩm mới kèm Website/Facebook/SEO/Banner chỉ với 1 lần nhập dữ liệu tại <a href="one-click-marketing.html" style="color:var(--gold-ink)">One Click Marketing</a>.</p>
+
+      <!-- Sprint 12 Requirement #9 (Facebook AI V4) — card kết nối Facebook.
+           CHỈ khung UI an toàn, CHƯA có OAuth/Publish thật — xem
+           js/admin-facebook-connect.js và docs/FACEBOOK_INTEGRATION_SETUP.md. -->
+      <div class="panel" id="fbConnectCard" style="margin-bottom:1.5rem">
+        <h3>📘 Đăng tự động lên Facebook</h3>
+        <p id="fbConnectStatus">⚪ Chưa kết nối</p>
+        <div class="admin-actions">
+          <button type="button" class="submit-btn" id="fbConnectBtn">Kết nối Facebook</button>
+          <button type="button" class="btn-secondary" id="fbChangePageBtn" style="display:none">Đổi Fanpage</button>
+          <button type="button" class="btn-secondary" id="fbReconnectBtn" style="display:none">Kết nối lại</button>
+          <button type="button" class="btn-danger" id="fbDisconnectBtn" style="display:none">Ngắt kết nối</button>
+        </div>
+      </div>
+
       <div id="moduleCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:1.5rem"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Dialog xin phép trước khi đăng nhập Facebook — nội dung đúng theo yêu
+     cầu Sprint 12 Requirement #9, chỉ hiện khi bấm "Kết nối Facebook". -->
+<div class="modal-overlay medialib-modal-overlay" id="fbConsentModal">
+  <div class="medialib-modal-box" style="max-width:480px">
+    <button type="button" class="medialib-modal-close" id="fbConsentCancelX">&times;</button>
+    <h3>Kết nối Facebook</h3>
+    <p>Để hệ thống có thể đăng bài tự động lên Fanpage của bạn, bạn cần đăng nhập Facebook và cấp quyền cho ứng dụng.</p>
+    <p>Việc đăng nhập nhằm:</p>
+    <ul style="margin:0.5rem 0 1rem 1.2rem">
+      <li>Xác thực tài khoản Facebook.</li>
+      <li>Lấy Facebook API Access Token.</li>
+      <li>Hiển thị danh sách Fanpage bạn đang quản lý.</li>
+      <li>Cho phép AI đăng bài tự động lên Fanpage bạn chọn.</li>
+    </ul>
+    <p>Hệ thống <strong>KHÔNG</strong> đọc tin nhắn riêng tư.</p>
+    <p>Hệ thống <strong>KHÔNG</strong> truy cập thông tin cá nhân ngoài các quyền được Facebook cấp.</p>
+    <p>Bạn có thể ngắt kết nối bất kỳ lúc nào.</p>
+    <div class="admin-actions">
+      <button type="button" class="btn-secondary" id="fbConsentCancel">Hủy</button>
+      <button type="button" class="submit-btn" id="fbConsentProceed">Đồng ý và đăng nhập Facebook</button>
     </div>
   </div>
 </div>
@@ -55,6 +94,7 @@
 <script src="../../js/ai/plugin-manager.js"></script>
 <script src="../../js/ai/permission-service.js"></script>
 <script src="../../js/admin-ai.js"></script>
-<script>AdminAI.initDashboard();</script>
+<script src="../../js/admin-facebook-connect.js"></script>
+<script>AdminAI.initDashboard(); AdminFacebookConnect.init();</script>
 </body>
 </html>

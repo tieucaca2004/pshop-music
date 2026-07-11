@@ -682,6 +682,62 @@ mapToDraftContent() tự lắp:
 - **0 sửa đổi**: Product AI/Blog AI/Queue/Provider/Workflow/Plugin Framework/tích hợp Facebook API (chưa từng tồn tại, không thêm mới — "Do NOT auto-post to Facebook" giữ nguyên đúng bằng cách không đổi gì ở `targetCollection: null`).
 - **Kiểm thử**: Node `vm` load mã nguồn thật — lắp media đúng thứ tự khi đủ dữ liệu; bỏ qua đúng từng phần khi thiếu ảnh/video/features (fallback specs, rồi rỗng); JSON hỏng có fallback an toàn; `draftBodyHtml()` hiển thị đẹp cho Facebook, giữ nguyên JSON thô cho Plugin khác. **Chưa kiểm thử qua UI thật có đăng nhập** (cần tài khoản Founder thật) — đã thử qua Preview nhưng bị chặn ở màn đăng nhập, như mọi lần trước trong Sprint này.
 
+## Facebook Page Integration — CHỈ khung UI an toàn (Sprint 12, Requirement #9)
+
+Founder muốn Facebook AI đăng bài trực tiếp lên Fanpage thật từ CMS. Đây là Requirement ĐẦU TIÊN trong Sprint 12 cần hạ tầng bên ngoài thật (Facebook App + App Review từ Meta) — không thể triển khai đầy đủ chỉ bằng code, giống hệt bài học Sprint 11 Requirement #3 (AI Provider Runtime Activation). Đã hỏi rõ Chief Architect trước khi viết code (AskUserQuestion) — được xác nhận: chỉ xây phần UI/khung an toàn hoạt động thật hôm nay + 1 runbook đầy đủ, KHÔNG giả vờ có OAuth/Publish thật.
+
+```
+js/admin-facebook-connect.js — card "📘 Đăng tự động lên Facebook"
+(admin/ai/index.html) đọc node Firebase facebookConnection (MỚI, chỉ lưu
+metadata — status/pageId/pageName/connectedAt/tokenExpiresAt/connectedBy,
+KHÔNG BAO GIỜ lưu Access Token thật, đúng "Never expose tokens in the UI").
+Đọc lỗi/chưa có dữ liệu → mặc định an toàn 'not_connected', không vỡ UI.
+
+4 trạng thái đúng yêu cầu: 🟢 Connected / ⚪ Not Connected /
+🟠 Token Expiring Soon / 🔴 Token Expired — mỗi trạng thái hiện đúng bộ nút
+(Connect/Change Page/Disconnect/Reconnect).
+
+Dialog xin phép — hiện khi bấm "Kết nối Facebook", NGUYÊN VĂN nội dung đã
+yêu cầu — chỉ khi bấm "Đồng ý và đăng nhập Facebook" mới thử tiến hành
+(hiện tại: hiển thị rõ Facebook App chưa cấu hình + trỏ runbook, KHÔNG giả
+vờ đăng nhập thành công).
+
+"Ngắt kết nối" — hành động DUY NHẤT thật sự ghi Firebase (set
+status:'not_connected') — an toàn để triển khai ngay vì không phụ thuộc
+OAuth thật.
+```
+
+- **Nút "📤 Đăng lên Facebook"** trên mỗi phiên bản Draft Facebook AI V3 (`js/admin-ai.js`, `admin/ai/drafts.html`) — kiểm tra `facebookConnection` thật trước khi phản hồi, luôn báo đúng trạng thái thật (chưa kết nối / đã kết nối nhưng publish thật chưa triển khai) — không bao giờ giả vờ đăng thành công.
+- **`database.rules.json`**: rule cho `facebookConnection` đã có trong code — **CHƯA deploy** (thao tác vận hành, Assistant không tự deploy Database Rules — cùng nguyên tắc xuyên suốt dự án từ Sprint 8).
+- **`docs/FACEBOOK_INTEGRATION_SETUP.md`** (mới) — runbook đầy đủ: tạo Facebook App/Meta for Developers, xin quyền, App Review, OAuth Redirect URI, App Secret → Secret Manager (không bao giờ client-side), Cloud Function `facebookOAuthCallback`/`facebookPublish` (chưa viết — cần Requirement riêng SAU KHI có App ID/Secret thật để viết và test được), deploy Database Rules, checklist xác minh trước khi PASS thật.
+- **Kiến trúc sẵn sàng mở rộng** ("Future-ready architecture" theo yêu cầu): `docs/FACEBOOK_INTEGRATION_SETUP.md` ghi rõ hướng thiết kế cho Cloud Function tương lai — node kết nối nên dùng field `destinationType` chung chung (vd `'facebook_page'`) thay vì hardcode riêng cho Facebook, để sau này thêm Instagram Business/Facebook Groups/Threads không cần đổi lại luồng UI hiện có. Đây là ĐỊNH HƯỚNG cho phần viết sau (Cloud Function OAuth/Publish), CHƯA phải code đã triển khai — phần UI hôm nay chỉ có 1 loại kết nối (Facebook Page).
+- **0 sửa đổi**: Product AI/Blog AI/Banner AI/Queue/Provider/Workflow/Plugin Framework. Không thêm Cloud Function/OAuth/Graph API thật nào.
+- **Kiểm thử**: Node `vm` load mã nguồn thật — cả 4 trạng thái kết nối hiển thị đúng nút/label; đọc lỗi (rules chưa deploy) tự fallback an toàn; nút "Đăng lên Facebook" hiển thị đúng thông báo trung thực. **Chưa kiểm thử qua UI thật có đăng nhập.**
+
+## Banner AI V2 (Sprint 12, Requirement #8)
+
+Nâng Banner Generator (sinh 1 dòng tiêu đề nội bộ, ảnh luôn để trống) lên sinh banner publish-ready: Title/Subtitle/CTA do AI viết, Featured Product Image tự động gắn nếu Founder chọn Sản phẩm — cùng kiến trúc "AI chỉ viết văn bản, code tự chèn media thật" đã dùng xuyên suốt Media AI V2 (Requirement #4-#7).
+
+```
+inputFields: productId/promotion/event — CẢ 3 optional, Founder chọn đúng
+1 (cùng pattern Facebook AI V3). buildPrompt() ground theo thứ tự: có Sản
+phẩm > có Khuyến mãi > có Sự kiện > fallback chung nếu không điền gì.
+
+Yêu cầu AI trả {"title","subtitle","cta"} — CHỈ văn bản, cấm tự bịa ảnh.
+
+mapToDraftContent(): có productId → image = ảnh đầu Product thật,
+galleryImages = ảnh còn lại (DataProvider.getProduct(), không tự bịa URL);
+KHÔNG có productId → cả 2 rỗng, đúng "If no Product is selected, generate
+text only." link/zone/order/active giữ nguyên hành vi cũ (link vẫn do
+Founder tự nhập — Requirement này không yêu cầu Product Link cho Banner,
+khác Facebook AI V3).
+```
+
+- **"Banner Draft Preview should display: Banner Image, Banner Title, Subtitle, CTA"**: `js/admin-ai.js`'s `draftBodyHtml()` thêm `bannerDraftHtml()` — hiển thị trực quan riêng cho `moduleId === 'banner-generator'`, mọi Plugin khác (Facebook AI V3, Product AI V2...) không đổi.
+- **Không sửa `js/home.js`/`BannerDB`**: trang chủ thật vẫn đọc đúng `image`/`title`/`link`/`zone`/`active` như từ đầu — `subtitle`/`cta`/`galleryImages` là field MỚI, cộng thêm, chưa được trang chủ tiêu thụ (tương tự SEO Title/Meta Description ở Product AI V2 — lưu sẵn cho khi cần, không tự ý mở rộng giao diện trang chủ ngoài phạm vi Requirement).
+- **0 sửa đổi**: Product AI/Blog AI/Facebook AI/Queue/Provider/Workflow/Plugin Framework.
+- **Kiểm thử**: Node `vm` load mã nguồn thật — cả 3 nguồn input đều ground đúng (kể cả không điền gì); có Sản phẩm → `image`/`galleryImages` đúng; không có → cả 2 rỗng; fallback an toàn khi JSON hỏng (tới tận trường hợp hoàn toàn không có gì); `bannerDraftHtml()` hiển thị đúng, xác nhận không ảnh hưởng Facebook AI V3/Plugin khác qua test trực tiếp trên hàm thật.
+
 ## Media AI V2 — Requirement 2: Product & Blog Media (Sprint 12, Requirement #5)
 
 Founder muốn Product/Blog do AI sinh ra trông giống 1 website công nghệ bình thường — có ảnh, có video, có link liên kết — nhưng KHÔNG sinh ảnh/video bằng AI (chưa tới giai đoạn Image AI/Video AI), chỉ tự động dùng đúng media THẬT đã có sẵn trong Firebase.

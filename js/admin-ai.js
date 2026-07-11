@@ -281,8 +281,27 @@ const AdminAI = (function () {
         <div class="admin-actions" style="margin-top:0.6rem">
           <button type="button" class="btn-secondary" data-copy-text="${escapeHtml(v.postText)}" onclick="AdminAI.copyDraftText(this)">📋 Copy Caption</button>
           ${hashtagsText ? `<button type="button" class="btn-secondary" data-copy-text="${escapeHtml(hashtagsText)}" onclick="AdminAI.copyDraftText(this)">#️⃣ Copy Hashtags</button>` : ''}
+          <button type="button" class="submit-btn" onclick="AdminAI.publishVersionToFacebook()">📤 Đăng lên Facebook</button>
         </div>
       </div>`;
+  }
+
+  // publishVersionToFacebook() — Sprint 12 Requirement #9 (Facebook AI V4).
+  // CHƯA có OAuth/Graph API thật (xem js/admin-facebook-connect.js) — luôn
+  // báo rõ trạng thái thật (chưa kết nối / đã kết nối nhưng publish thật
+  // chưa triển khai) thay vì giả vờ đăng bài thành công. Đọc thẳng node
+  // Firebase (không phụ thuộc AdminFacebookConnect đã init hay chưa, để
+  // hoạt động đúng trên mọi trang có Facebook draft, kể cả drafts.html).
+  function publishVersionToFacebook() {
+    const notConnectedMsg = 'Chưa kết nối Facebook. Vào "Plugin AI (Thủ công)" → mục "Đăng tự động lên Facebook" để kết nối trước khi đăng bài thật.';
+    firebase.database().ref('facebookConnection').once('value').then(snap => {
+      const data = snap.val() || { status: 'not_connected' };
+      if (data.status === 'connected' || data.status === 'token_expiring') {
+        alert('Đăng bài thật lên Facebook chưa được triển khai trong bản này — mới có khung kết nối (xem docs/FACEBOOK_INTEGRATION_SETUP.md). Dùng "Copy Caption"/"Copy Hashtags" để đăng thủ công.');
+      } else {
+        alert(notConnectedMsg);
+      }
+    }).catch(() => alert(notConnectedMsg));
   }
 
   // copyDraftText() — Clipboard API (yêu cầu HTTPS, pshopmusic.com đã có) +
@@ -314,7 +333,31 @@ const AdminAI = (function () {
     }
   }
 
+  // Sprint 12 Requirement #8 (Banner AI V2) — "Banner Draft Preview should
+  // display: Banner Image, Banner Title, Subtitle, CTA" — CHỈ đổi cách hiển
+  // thị cho moduleId này, mọi Plugin khác không bị ảnh hưởng.
+  function bannerDraftHtml(c) {
+    const imgHtml = c.image
+      ? `<img src="${escapeHtml(c.image)}" style="max-width:320px;width:100%;border-radius:8px;margin-bottom:0.8rem;display:block" alt="">`
+      : '';
+    const galleryHtml = Array.isArray(c.galleryImages) && c.galleryImages.length
+      ? `<div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.8rem">${c.galleryImages.map(g => `<img src="${escapeHtml(g)}" style="width:72px;height:72px;object-fit:cover;border-radius:6px">`).join('')}</div>`
+      : '';
+    return `
+      <div style="background:var(--bg-alt);padding:1rem;border-radius:8px">
+        ${imgHtml}
+        ${galleryHtml}
+        ${c.title ? `<p style="font-weight:700;font-size:1.1rem">${escapeHtml(c.title)}</p>` : ''}
+        ${c.subtitle ? `<p>${escapeHtml(c.subtitle)}</p>` : ''}
+        ${c.cta ? `<p style="font-weight:600;color:var(--gold-ink)">${escapeHtml(c.cta)}</p>` : ''}
+        ${c.link ? `<p class="small-muted">Link: ${escapeHtml(c.link)}</p>` : ''}
+      </div>`;
+  }
+
   function draftBodyHtml(d) {
+    if (d.moduleId === 'banner-generator') {
+      return bannerDraftHtml(d.content || {});
+    }
     if (d.moduleId === 'facebook-post-generator') {
       const c = d.content || {};
       // Facebook AI V3 (Requirement #7) — nhiều phiên bản (content.versions).
@@ -569,5 +612,5 @@ const AdminAI = (function () {
     }).join('');
   }
 
-  return { initDashboard, runModule, initDrafts, publishDraft, rejectDraft, publishDraftById, rejectDraftById, initJobs, cancelJob, retryJob, initLogs, copyDraftText };
+  return { initDashboard, runModule, initDrafts, publishDraft, rejectDraft, publishDraftById, rejectDraftById, initJobs, cancelJob, retryJob, initLogs, copyDraftText, publishVersionToFacebook };
 })();
