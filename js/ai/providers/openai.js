@@ -51,6 +51,20 @@ AIProviderRegistry.register({
 
   generate({ moduleId, prompt, params, config }) {
     if (!config || !config.enabled) return Promise.reject(createProviderNotConfiguredError('OpenAI'));
+    // image-generator (Sprint 12 Requirement #11 — Image AI) — nhánh RIÊNG
+    // gọi Cloud Function Proxy với action:'generate_image' (Images API) thay
+    // vì action:'generate' (Chat Completions). Nhận diện bằng moduleId (tín
+    // hiệu ổn định, không suy đoán qua hình dạng params) — mọi Plugin văn bản
+    // khác đi đúng nhánh cũ bên dưới, KHÔNG đổi hành vi (0 regression, xem
+    // js/ai/job-queue.js — Queue coi provider.generate() là hộp đen, không
+    // cần sửa Queue để thêm nhánh này).
+    if (moduleId === 'image-generator') {
+      return callOpenAiProxy({ action: 'generate_image', prompt, size: params && params.size }).then(({ ok, data }) => {
+        if (!ok) throw new Error(data.error || 'Cloud Function Proxy báo lỗi.');
+        if (!data.imageUrl) throw new Error('OpenAI trả về ảnh rỗng.');
+        return { text: '', raw: data.raw, imageUrl: data.imageUrl };
+      });
+    }
     return callOpenAiProxy({ action: 'generate', model: config.model || 'gpt-4o-mini', prompt }).then(({ ok, data }) => {
       if (!ok) throw new Error(data.error || 'Cloud Function Proxy báo lỗi.');
       if (!data.text) throw new Error('OpenAI trả về kết quả rỗng.');

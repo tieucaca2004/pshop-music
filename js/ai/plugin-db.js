@@ -16,7 +16,11 @@
  * admin/ai/plugins.html — đổi hằng số này không tự động bật lại cho môi
  * trường đã tồn tại dữ liệu.
  */
-const SPRINT2_ENABLED_MODULES = ['product-description-writer', 'slider-generator', 'seo-generator', 'faq-generator', 'blog-writer', 'facebook-post-generator', 'banner-generator', 'image-prompt-generator'];
+// Sprint 12 Requirement #11: thêm 'image-generator' (Image AI — sinh ảnh
+// thật, khác hẳn 'image-prompt-generator' chỉ sinh văn bản prompt). Cùng lưu
+// ý seed như trên: Production đã tồn tại dữ liệu vẫn cần Admin tự bật
+// "Enable" trong admin/ai/plugins.html, đổi hằng số này không tự bật lại.
+const SPRINT2_ENABLED_MODULES = ['product-description-writer', 'slider-generator', 'seo-generator', 'faq-generator', 'blog-writer', 'facebook-post-generator', 'banner-generator', 'image-prompt-generator', 'image-generator'];
 
 const PluginDB = (function () {
   function ref(id) {

@@ -631,6 +631,38 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Image AI (Sprint 12, Requirement #11) — sinh ảnh thật, Plugin thứ 9 trong Framework
+
+Founder muốn sinh ẢNH THẬT (khác `image-prompt-generator`, Sprint 6 Requirement #4, chỉ sinh văn bản prompt) cho 7 loại ảnh marketing, luôn dừng ở Draft, Founder tự chọn nơi dùng — không có đích Publish cố định như các Plugin văn bản.
+
+```
+Founder → admin/ai/images.html → chọn 1-trong-4 nguồn (Product/Promotion/Blog/Custom Prompt)
+       → chọn Loại ảnh + Kích thước → "TẠO ẢNH"
+       → js/admin-image-ai.js: PermissionService.checkPluginExecution('image-generator')
+       → PluginManager.loadPlugin('image-generator').execute() → AIJobQueue (KHÔNG đổi Queue)
+       → js/ai/job-queue.js: processItem() → AIProviderRegistry.resolveForPlugin() → provider.generate()
+       → js/ai/providers/openai.js generate({moduleId,...}):
+            moduleId === 'image-generator' ?
+              → callOpenAiProxy({action:'generate_image', prompt, size})
+              → functions/index.js: gọi OpenAI Images API (dall-e-3)
+                 → tải ảnh về, lưu VĨNH VIỄN vào Firebase Storage (Admin SDK)
+                 → trả {imageUrl: <URL Storage thật, không hết hạn>}
+              : callOpenAiProxy({action:'generate', model, prompt})  (mọi Plugin văn bản khác, KHÔNG đổi)
+       → module.mapToDraftContent() → DraftDB.add() (aiDrafts, targetCollection:null)
+       → Lưới "ẢNH ĐÃ TẠO" hiển thị Draft mới → Founder Actions (Regenerate/Download/
+         Save to Product Gallery/Save as Featured/Save to Blog Cover/Insert into Blog/
+         Save as Banner/Delete) → gọi THẲNG DB/BlogDB/BannerDB đã có, LUÔN CỘNG THÊM
+```
+
+- **Provider branch theo `moduleId`, không theo hình dạng `params`** — `js/ai/providers/openai.js generate()` kiểm tra `moduleId === 'image-generator'` (tín hiệu ổn định, Queue luôn truyền đúng `moduleId` của Plugin đang chạy) thay vì suy đoán qua sự có mặt của field `size` — tránh nhầm lẫn nếu 1 Plugin văn bản tương lai tình cờ cũng có field tên `size`.
+- **0 sửa đổi `js/ai/job-queue.js`** — Queue coi `provider.generate()` là hộp đen, nhận `output` rồi truyền thẳng cho `module.mapToDraftContent(output, ...)`; thêm 1 loại output mới (`imageUrl` thay vì `text`) không đòi hỏi Queue biết/xử lý khác đi.
+- **Ảnh OpenAI trả về là TẠM THỜI (hết hạn sau vài giờ)** — `functions/index.js` bắt buộc phải tự tải về + lưu vào Firebase Storage NGAY trong Cloud Function (Admin SDK, bỏ qua Storage Rules vì chạy phía server) trước khi trả kết quả cho client, dùng đúng định dạng Download URL mà Firebase Client SDK tự sinh (`firebaseStorageDownloadTokens` metadata) để hoạt động y hệt ảnh upload thủ công ở mọi nơi khác trong CMS — **0 sửa `storage.rules`** (rule `allow get: if true` đã có sẵn áp dụng cho mọi path).
+- **`targetCollection: null` — không có 1 đích Publish cố định**, khác mọi Plugin trước đó (Blog/Product/Banner đều biết trước ghi vào đâu). Founder Actions trong `js/admin-image-ai.js` KHÔNG dùng `AdminAI.publishDraftById()` (chỉ hiểu 1 target cố định) — mỗi hành động ("Save to...") tự gọi thẳng `DB.update()`/`BlogDB.update()`/`BannerDB.add()` đã có, và Draft KHÔNG bị xóa/đánh dấu published sau khi dùng (chỉ ghi thêm vào mảng `content.usedIn` để Founder biết đã dùng ở đâu) — cho phép dùng lại 1 ảnh cho nhiều mục đích khác nhau.
+- **Luôn CỘNG THÊM, không ghi đè** (đúng RULES "Do NOT overwrite existing images automatically"): "Vào Gallery Sản phẩm" nối thêm vào mảng `images` hiện có; "Đặt làm Ảnh đại diện" đưa ảnh mới lên đầu mảng (giữ nguyên các ảnh cũ, chỉ đổi `image`/thứ tự); "Chèn vào bài Blog" nối thêm `<img>` vào cuối `contentHtml` hiện có; "Dùng làm Banner" luôn tạo 1 Banner MỚI (không có Banner nào sẵn để ghi đè).
+- **Ảnh chưa có nguồn Sản phẩm/Blog rõ ràng** (sinh từ Khuyến mãi/Prompt tự do) hiện thêm 1 `<select>` inline trong card để Founder tự chọn đích trước khi lưu — không tự đoán/tự chọn thay.
+- **Kích thước "4:5" là xấp xỉ, không phải tỉ lệ thật** — `dall-e-3` chỉ hỗ trợ đúng 3 kích thước cố định (`1024x1024`/`1024x1792`/`1792x1024`), không có tỉ lệ 4:5 thật — UI ghi rõ đây là kích thước dọc gần nhất, không giả vờ là crop chính xác.
+- **Sidebar "AI Image" đã có trang riêng thật** — trước đây (Sprint 10 Requirement #5) cả "AI Content" và "AI Image" đều trỏ chung `admin/ai/index.html` (Plugin Dashboard kỹ thuật); nay "AI Image" trỏ đúng `admin/ai/images.html` ở cả `ADMIN_NAV` (Advanced Mode, mục mới thêm) và `FOUNDER_SMART_NAV` (Smart Mode, sửa href) — "AI Content" (văn bản) vẫn chưa có trang riêng, giữ nguyên giới hạn cũ.
+
 ## Product Management (Sprint 12, Requirement #10) — tổng quát hóa AI Assist Inline CMS Forms thành 5 nút
 
 Founder First Roadmap (`ROADMAP.md`) xếp "Complete Product Management" ưu tiên #1. Requirement này (1) bổ sung field còn thiếu cho Product, (2) thêm khái niệm hiển thị/ẩn (`pubStatus`) riêng biệt khỏi `status` (tình trạng Mới/Qua sử dụng), (3) nâng cấp Editor, và (4) tổng quát hóa `ProductAIAssist` (Sprint 11 Requirement #2, xem mục bên dưới) từ 1 nút (chỉ Mô tả) thành 5 nút — tái sử dụng đúng 4 Plugin đã production-ready (Product AI V2/Facebook AI V3/Blog AI V2/Banner AI V2), không tạo Plugin/Provider/Queue/Workflow mới.

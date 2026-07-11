@@ -31,6 +31,7 @@ const ADMIN_NAV = [
   { key: 'media-library', label: 'Thư viện ảnh', href: '/admin/media-library.html', icon: '&#128444;' },
   { key: 'ai-assistant', label: 'Trợ lý AI', href: '/admin/ai/assistant.html', icon: '&#129302;' },
   { key: 'ai', label: 'Plugin AI (Thủ công)', href: '/admin/ai/index.html', icon: '&#129302;' },
+  { key: 'ai-images', label: 'Image AI', href: '/admin/ai/images.html', icon: '&#128444;' },
   { key: 'menu', label: 'Menu', href: '/admin/menu.html', icon: '&#9776;', role: 'admin' },
   { key: 'footer', label: 'Footer', href: '/admin/footer.html', icon: '&#11015;', role: 'admin' },
   { key: 'seo', label: 'SEO', href: '/admin/seo.html', icon: '&#128269;', role: 'admin' },
@@ -43,9 +44,11 @@ const ADMIN_NAV = [
 // mọi trang Engineer-only (Queue/Workflow/Plugin Manager/Provider Manager/
 // Cost/Observability/Context Builder — vốn dĩ chưa từng có trong sidebar,
 // chỉ liên kết chéo nội bộ, nên "ẩn" ở đây nghĩa là KHÔNG thêm chúng vào
-// danh sách này). "AI Content"/"AI Image" cùng trỏ `admin/ai/index.html`
-// (Plugin Dashboard) — cùng giới hạn đã ghi nhận ở Sprint 10 Requirement #5
-// (Founder Home Quick Actions), chưa có 2 trang Founder-friendly riêng biệt.
+// danh sách này). "AI Content" vẫn trỏ `admin/ai/index.html` (Plugin
+// Dashboard) — giới hạn đã ghi nhận ở Sprint 10 Requirement #5 (Founder Home
+// Quick Actions), chưa có trang Founder-friendly riêng cho nội dung văn bản.
+// "AI Image" (Sprint 12 Requirement #11) ĐÃ có trang riêng thật
+// (`admin/ai/images.html`) — không còn dùng chung Plugin Dashboard nữa.
 // "AI Video" chưa có `href` (chưa có năng lực AI Video nào) — hiển thị dạng
 // vô hiệu hoá, không phải liên kết giả.
 const FOUNDER_SMART_NAV = [
@@ -58,7 +61,7 @@ const FOUNDER_SMART_NAV = [
   { key: 'media-library', label: 'Thư viện ảnh', href: '/admin/media-library.html', icon: '&#128444;' },
   { key: 'ai-one-click-marketing', label: 'One Click Marketing', href: '/admin/ai/one-click-marketing.html', icon: '&#128640;' },
   { key: 'ai-content', label: 'AI Content', href: '/admin/ai/index.html', icon: '&#129302;' },
-  { key: 'ai-image', label: 'AI Image', href: '/admin/ai/index.html', icon: '&#128444;' },
+  { key: 'ai-image', label: 'AI Image', href: '/admin/ai/images.html', icon: '&#128444;' },
   { key: 'ai-video', label: 'AI Video (Sắp có)', href: null, icon: '&#127916;' },
   { key: 'marketing-drafts', label: 'Marketing Drafts', href: '/admin/ai/drafts.html', icon: '&#128203;' },
   { key: 'settings', label: 'Cài đặt', href: '/admin/settings.html', icon: '&#9881;', role: 'admin' }

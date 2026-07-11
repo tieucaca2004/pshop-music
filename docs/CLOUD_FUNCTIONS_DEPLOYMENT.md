@@ -1,5 +1,7 @@
 # Cloud Function `openaiProxy` — AI Provider Runtime Activation Guide
 
+**Cập nhật (Sprint 12 Requirement #11 — Image AI):** `functions/index.js` vừa thêm action **`generate_image`** (gọi OpenAI Images API `dall-e-3` bằng ĐÚNG `OPENAI_API_KEY` đã có — không cần Secret/API Key mới, không cần bật thêm API nào ngoài những gì mục 0 bên dưới đã liệt kê) để phục vụ Plugin `image-generator` mới (`admin/ai/images.html`). **Nếu Cloud Function `openaiProxy` đã từng deploy trước đó, PHẢI chạy lại `firebase deploy --only functions` để bản deploy có action mới này — code cũ trên Production sẽ báo lỗi 400 "action không hợp lệ" cho tới khi redeploy.** Có phát sinh CHI PHÍ THẬT mới (DALL-E 3 tính phí theo mỗi lần gọi, khác cơ chế Chat Completions đã dùng cho các Plugin văn bản — Chief Architect nên biết trước khi cho phép Founder dùng rộng rãi). Xem checklist bổ sung ở mục 4.
+
 Sprint 11 Requirement #3 (AI Provider Runtime Activation). Tài liệu này chuẩn bị đầy đủ để người vận hành (người có quyền truy cập Firebase Console/CLI thật + 1 API Key OpenAI thật) kích hoạt AI Runtime thật lần đầu tiên — bước deploy/kích hoạt thật sự **chưa được thực hiện và không được giả lập là đã thực hiện**.
 
 Đây là khoảng hở đã biết, xuyên suốt từ Sprint 3 (`ARCHITECTURE_REVIEW_SPRINT3.md`, `functions/index.js` tạo lần đầu) — mọi Sprint từ đó tới nay đều ghi nhận lại đúng tình trạng này.
@@ -96,6 +98,13 @@ Không cần sửa code gì thêm — chỉ cấu hình qua UI đã có:
 - [ ] Xác nhận API Key KHÔNG xuất hiện ở bất kỳ đâu phía client (View Source/Network tab của trình duyệt, Firebase Realtime Database) — chỉ tồn tại trong Secret Manager + bộ nhớ runtime của Cloud Function.
 
 Nếu bất kỳ mục nào THẤT BẠI — ghi rõ lỗi thật (không suy đoán nguyên nhân) vào `ROADMAP.md`, cân nhắc rollback (mục 5).
+
+**Bổ sung cho Image AI (Sprint 12 Requirement #11) — chỉ áp dụng sau khi đã redeploy `openaiProxy` với action `generate_image`:**
+
+- [ ] Vào `admin/ai/plugins.html`, xác nhận Plugin "Image AI" (`image-generator`) đã "Enable" (seed mặc định KHÔNG tự bật lại cho Production đã tồn tại dữ liệu — xem `js/ai/plugin-db.js`).
+- [ ] Vào `admin/ai/images.html`, chọn 1 Sản phẩm có sẵn, Loại ảnh "Product Hero Image", kích thước 1:1, bấm "TẠO ẢNH" → xác nhận ảnh THẬT xuất hiện trong lưới bên dưới (không phải lỗi "OpenAI trả về ảnh rỗng"/"Cloud Function Proxy báo lỗi").
+- [ ] Xác nhận ảnh vẫn hiển thị đúng sau khi tải lại trang (ảnh đã được lưu vĩnh viễn vào Firebase Storage server-side, không phải URL tạm thời của OpenAI — nếu vỡ ảnh sau khi tải lại, kiểm tra quyền `admin.storage()` của Cloud Function).
+- [ ] Bấm "Đặt làm Ảnh đại diện" cho ảnh vừa tạo → xác nhận sản phẩm được chọn cập nhật đúng Featured Image trong `admin/products.html`, ảnh cũ trong Gallery không bị mất.
 
 ---
 

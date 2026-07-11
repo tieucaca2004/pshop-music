@@ -24,6 +24,7 @@ const AI_PERMISSIONS = {
   GENERATE_FACEBOOK: 'ai.generate.facebook', // Sprint 6, Requirement #2 — kích hoạt Facebook Post Generator (Functional Requirement "thêm Permission nếu cần")
   GENERATE_BANNER: 'ai.generate.banner', // Sprint 6, Requirement #3 — kích hoạt Banner Generator (Functional Requirement #3, "thêm Permission nếu cần")
   GENERATE_IMAGE_PROMPT: 'ai.generate.imagePrompt', // Sprint 6, Requirement #4 — kích hoạt Image Prompt Generator (Functional Requirement #3, "thêm Permission nếu cần")
+  GENERATE_IMAGE: 'ai.generate.image', // Sprint 12, Requirement #11 — Image AI (sinh ảnh thật, khác image-prompt-generator chỉ sinh văn bản prompt)
   MANAGE_PROVIDERS: 'ai.manage.providers',
   MANAGE_PLUGINS: 'ai.manage.plugins'
 };
@@ -39,7 +40,8 @@ const PLUGIN_PERMISSIONS = {
   'blog-writer': AI_PERMISSIONS.GENERATE_BLOG,
   'facebook-post-generator': AI_PERMISSIONS.GENERATE_FACEBOOK,
   'banner-generator': AI_PERMISSIONS.GENERATE_BANNER,
-  'image-prompt-generator': AI_PERMISSIONS.GENERATE_IMAGE_PROMPT
+  'image-prompt-generator': AI_PERMISSIONS.GENERATE_IMAGE_PROMPT,
+  'image-generator': AI_PERMISSIONS.GENERATE_IMAGE
 };
 
 // Chỉ Admin mới có ai.manage.providers/ai.manage.plugins (đúng yêu cầu #7:
@@ -47,7 +49,7 @@ const PLUGIN_PERMISSIONS = {
 // generate — đúng với khả năng Editor đã có trên Dashboard từ trước.
 const ROLE_PERMISSIONS = {
   admin: Object.values(AI_PERMISSIONS),
-  editor: [AI_PERMISSIONS.GENERATE_PRODUCT, AI_PERMISSIONS.GENERATE_SLIDER, AI_PERMISSIONS.GENERATE_SEO, AI_PERMISSIONS.GENERATE_FAQ, AI_PERMISSIONS.GENERATE_BLOG, AI_PERMISSIONS.GENERATE_FACEBOOK, AI_PERMISSIONS.GENERATE_BANNER, AI_PERMISSIONS.GENERATE_IMAGE_PROMPT]
+  editor: [AI_PERMISSIONS.GENERATE_PRODUCT, AI_PERMISSIONS.GENERATE_SLIDER, AI_PERMISSIONS.GENERATE_SEO, AI_PERMISSIONS.GENERATE_FAQ, AI_PERMISSIONS.GENERATE_BLOG, AI_PERMISSIONS.GENERATE_FACEBOOK, AI_PERMISSIONS.GENERATE_BANNER, AI_PERMISSIONS.GENERATE_IMAGE_PROMPT, AI_PERMISSIONS.GENERATE_IMAGE]
 };
 
 const PermissionService = (function () {
