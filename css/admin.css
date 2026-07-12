@@ -133,7 +133,13 @@ body{min-height:100vh;background:var(--bg-alt)}
 
 /* Mini hero preview — tỉ lệ 16:9, nền ảnh slide */
 .hero-mini-preview{position:relative;width:100%;aspect-ratio:16/9;border:1px solid var(--line2);overflow:hidden;background:#111}
-.hero-mini-label{position:absolute;bottom:6px;left:8px;right:8px;font-size:0.65rem;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.8);pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Nhãn tiêu đề kéo thả được — vị trí đặt theo POS_STYLE (js/admin-sliders.js),
+   khớp đúng 9 điểm .hero[data-text-pos] trên trang thật. */
+.hero-mini-label{position:absolute;max-width:72%;font-size:0.62rem;line-height:1.35;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.85);padding:3px 18px 3px 5px;border-radius:3px;background:rgba(0,0,0,0.25);cursor:grab;user-select:none;touch-action:none;transition:background 0.1s}
+.hero-mini-label:hover{background:rgba(0,0,0,0.45)}
+.hero-mini-label.dragging{cursor:grabbing;background:rgba(0,0,0,0.55)}
+.hero-mini-label-del{position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:rgba(0,0,0,0.6);color:#fff;border:none;font-size:0.5rem;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center}
+.hero-mini-label-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:rgba(255,255,255,0.55);text-align:center;padding:0 1rem;pointer-events:none}
 
 /* Lưới 9 nút vị trí phủ toàn bộ preview */
 .pos-grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:3px;padding:3px}

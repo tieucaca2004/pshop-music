@@ -53,7 +53,14 @@
     const subEl = document.getElementById('heroSubtitle');
     const ctaBtn = document.getElementById('heroCta');
     const heroSection = document.getElementById('heroSection');
-    if (titleEl && slide.title) titleEl.textContent = slide.title;
+    // Xóa tiêu đề (Sprint 13, admin/sliders.html) — trước đây "if (slide.title)"
+    // chỉ BỎ QUA khi rỗng, để lại chữ CŨ của Slide trước đó còn hiện trên màn
+    // hình (sai). Giờ luôn đồng bộ display theo đúng trạng thái Slide hiện tại.
+    if (titleEl) {
+      const hasTitle = !!(slide.title && slide.title.trim());
+      titleEl.style.display = hasTitle ? '' : 'none';
+      if (hasTitle) titleEl.textContent = slide.title;
+    }
     if (subEl && slide.subtitle) subEl.textContent = slide.subtitle;
     if (ctaBtn) ctaBtn.dataset.link = slide.link || '';
     // Vị trí chữ tiêu đề (Sprint 13) — Slide chưa có field "position" (undefined,

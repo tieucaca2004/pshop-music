@@ -631,6 +631,24 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Hero Slideshow — Kéo thả di chuyển/xóa tiêu đề (Sprint 13, follow-up)
+
+Nâng cấp trực tiếp mục "Hero Slideshow — Khung ảnh ngang + Vị trí chữ tiêu đề" bên dưới — Founder yêu cầu tương tác THẬT là kéo thả (không chỉ bấm chọn 1 trong 9 nút), và thêm khả năng xóa hẳn tiêu đề khỏi 1 Slide.
+
+### Kéo thả — Pointer Events, snap vào lưới 9 điểm đã có
+
+`js/admin-sliders.js` `startTitleDrag(e, i)` gắn vào `onpointerdown` của `.hero-mini-label` — dùng Pointer Events API (hợp nhất chuột/cảm ứng/bút, không cần thư viện ngoài). Trong lúc kéo (`pointermove`), tính toán ô gần nhất trong lưới 3×3 dựa trên `getBoundingClientRect()` của `.hero-mini-preview`, CHỈ cập nhật `style`/`class` TẠI CHỖ lên chính element đang kéo (`labelEl.setAttribute('style', POS_STYLE[code])` + toggle `.pos-dot-active`) — **không được gọi `setPos()`/`refreshPreview()` giữa chừng**, vì `refreshPreview()` rebuild toàn bộ `innerHTML` của `#preview-{i}`, phá hủy chính element đang được kéo (tham chiếu DOM cũ trở thành node đã tách rời, `getBoundingClientRect()` trả về rect rỗng, kéo tiếp sẽ sai hoàn toàn). Chỉ khi thả chuột (`pointerup`) mới gọi `setPos(i, lastCode)` — ĐÚNG 1 LẦN — để ghi thật vào `slides[]` và rebuild preview.
+
+`POS_STYLE` (constant mới) map mỗi trong 9 mã vị trí sang `top/left/right/bottom` + `transform` tuyệt đối để đặt CHÍNH nhãn tiêu đề trong khung xem trước — khớp trực quan với cách `css/style.css` `.hero[data-text-pos]` định vị trên trang thật (không phải cùng 1 bộ rule CSS, nhưng cùng ý nghĩa hình học 9 điểm).
+
+Lưới 9 nút bấm (`.pos-dot`) VẪN GIỮ NGUYÊN làm lối tắt — kéo thả và bấm dùng chung `setPos()`, không có 2 đường ghi dữ liệu khác nhau.
+
+### Xóa tiêu đề — nút ✕ + sửa lỗi hiển thị trang công khai
+
+Nút ✕ (`.hero-mini-label-del`) trên chính nhãn kéo thả gọi `deleteTitle(i)` — set `slides[i].title = ''`, xóa luôn ô nhập tiêu đề tương ứng (`#slideTitleInput-{i}`). Khung xem trước tự chuyển sang hiện gợi ý trống (`.hero-mini-label-empty`, không kéo được — không có gì để kéo) thay vì nhãn kéo được.
+
+**Sửa lỗi thật phát hiện khi làm tính năng này**: `js/home.js` `updateHeroText()` trước đây `if (titleEl && slide.title) titleEl.textContent = slide.title;` — khi `slide.title` rỗng, dòng này chỉ BỎ QUA (không update), để lại `textContent` của Slide TRƯỚC ĐÓ còn hiển thị trên màn hình dù đã chuyển sang Slide có tiêu đề trống. Sửa thành luôn đồng bộ `titleEl.style.display` theo đúng trạng thái Slide hiện tại (`hasTitle ? '' : 'none'`) — "xóa tiêu đề" giờ thật sự ẩn khỏi trang công khai, không chỉ ẩn khỏi Admin. 0 regression cho mọi Slide có tiêu đề (hành vi giống hệt trước).
+
 ## Hero Slideshow — Khung ảnh ngang + Vị trí chữ tiêu đề (Sprint 13)
 
 Trang Quản lý Slider (`admin/sliders.html` + `js/admin-sliders.js`) quản lý node `siteContent.heroSlides` — cùng dữ liệu trang chủ (`index.html`/`js/home.js`) đọc để render Hero Slideshow. Founder báo 2 vấn đề thật: ô chọn ảnh dùng chung khung vuông nhỏ với mọi nơi khác trong CMS (không đúng tỉ lệ banner ngang thật), và không có cách nào di chuyển vị trí chữ tiêu đề.

@@ -2,6 +2,17 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 13 — Requirement: Hero Slideshow — Kéo thả di chuyển/xóa tiêu đề + xác nhận Background/Xóa phông
+
+Founder yêu cầu: (1) tiêu đề Hero Slideshow di chuyển ĐƯỢC bằng kéo thả (không chỉ bấm chọn) và xóa được; (2) xác nhận chọn nền + xóa phông cho từng Sản phẩm, upload ảnh nền cho Danh mục + Sản phẩm, tất cả có ô xem thử tự co vừa khung.
+
+- **Kéo thả di chuyển tiêu đề (Hero Slideshow)**: nhãn tiêu đề trong khung xem trước mini (`.hero-mini-label`) giờ kéo thả được thật sự bằng Pointer Events (chuột/cảm ứng/bút) — bấm giữ và kéo tới vị trí muốn, tự "snap" vào 1 trong 9 điểm khi thả chuột (dùng lại đúng dữ liệu/CSS `position`/`data-text-pos` đã kiểm thử và triển khai ở Requirement trước, không đổi kiến trúc lưu trữ). Lưới 9 nút vẫn giữ làm lối tắt bấm nhanh — dùng chung `setPos()`. Trong lúc kéo CHỈ cập nhật style/class tại chỗ (không gọi `refreshPreview()` giữa chừng — sẽ rebuild DOM, làm mất phần tử đang kéo); chỉ commit thật (ghi vào `slides[]`) đúng 1 lần khi thả chuột.
+- **Xóa tiêu đề**: nút ✕ trên nhãn kéo thả (và khi tiêu đề trống, khung xem trước hiện gợi ý "Chưa có tiêu đề — gõ ở ô bên trái" thay vì nhãn kéo được). `js/home.js` `updateHeroText()` sửa lỗi thật: trước đây tiêu đề rỗng chỉ bị BỎ QUA khi cập nhật (`if (slide.title)`), để lại chữ CŨ của Slide trước đó còn hiện — giờ luôn đồng bộ `display:none`/hiện đúng theo tiêu đề Slide hiện tại, "xóa" thật sự ẩn khỏi trang công khai.
+- **Xác nhận đã có sẵn (Requirement trước, kiểm tra lại theo yêu cầu)**: chọn nền + Xóa phông tích hợp cho từng Sản phẩm (`admin/products.html` — `pBgImageSlot` + panel `AdminBgRemover` ngay bên dưới), upload ảnh nền cho Danh mục (`admin/categories.html` — mỗi dòng Danh mục có `ẢNH NỀN HEADER TRANG DANH MỤC`) VÀ Sản phẩm — tất cả đều dùng `MediaLibraryPicker` khung ngang (`opts.wide`) hoặc `AdminBgRemover`'s `.bg-remover-img-fit` (`object-fit:contain`), cả 2 đều tự co vừa khung, không méo/tràn ảnh. Không cần sửa gì thêm — đã đúng yêu cầu.
+- **0 sửa đổi**: dữ liệu Category/Product background, Cloud Function `remove_background`, Draft System/Publish Pipeline.
+- **Kiểm thử**: Node `vm` mã nguồn thật, 15 assertions mới (mô phỏng đầy đủ vòng đời kéo thả: pointerdown → pointermove snap vào từng ô trong lưới 3×3 → pointerup commit → Lưu; xóa tiêu đề xóa đúng input + đổi khung xem trước; Slide khác/dữ liệu khác không bị ảnh hưởng) + 13 assertions cũ (Requirement trước) chạy lại xác nhận 0 regression. Preview thật xác nhận `admin/sliders.html`/`admin/products.html` tải đúng, không lỗi JS mới.
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+
 ## Sprint 13 — Requirement: Hero Slideshow — Khung ảnh ngang + Vị trí chữ tiêu đề
 
 Founder báo lỗi thật: trang Quản lý Slider (admin/sliders.html) không có ô hình nằm ngang cho ảnh Slide Trang chủ (Hero Slideshow), và không có cách nào di chuyển vị trí chữ tiêu đề trên banner — cả khi tạo Slide mới lẫn khi sửa Slide có sẵn.

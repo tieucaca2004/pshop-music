@@ -25,22 +25,97 @@ document.addEventListener('DOMContentLoaded', () => {
     ['bottom-left',  'Dưới Trái'],   ['bottom-center', 'Dưới Giữa'],   ['bottom-right', 'Dưới Phải'],
   ];
 
-  // Mini hero preview — lưới 3×3 nút để Founder click chọn vị trí text.
-  // Hiển thị ảnh slide làm nền, 9 nút vị trí, nút active được highlight.
+  // Style tuyệt đối cho từng vị trí trong 9 điểm — dùng để đặt CHÍNH nhãn
+  // tiêu đề (.hero-mini-label) trong khung xem trước, khớp đúng cách
+  // css/style.css .hero[data-text-pos] định vị trên trang thật.
+  const POS_STYLE = {
+    'top-left':      'top:8px;left:8px;',
+    'top-center':    'top:8px;left:50%;transform:translateX(-50%);',
+    'top-right':     'top:8px;right:8px;',
+    'middle-left':   'top:50%;left:8px;transform:translateY(-50%);',
+    'middle-center': 'top:50%;left:50%;transform:translate(-50%,-50%);',
+    'middle-right':  'top:50%;right:8px;transform:translateY(-50%);',
+    'bottom-left':   'bottom:8px;left:8px;',
+    'bottom-center': 'bottom:8px;left:50%;transform:translateX(-50%);',
+    'bottom-right':  'bottom:8px;right:8px;'
+  };
+
+  // Mini hero preview — kéo thả TRỰC TIẾP nhãn tiêu đề trên ảnh xem trước để
+  // di chuyển (snap vào 1 trong 9 điểm khi thả chuột — cùng dữ liệu/CSS đã
+  // kiểm thử và triển khai trên trang thật, không đổi kiến trúc lưu trữ),
+  // bấm nút ✕ để xóa tiêu đề khỏi Slide này. 9 nút vị trí vẫn giữ làm lối
+  // tắt bấm nhanh, dùng chung logic setPos() với thao tác kéo thả.
   function miniPreview(i, s) {
     const pos = s.position || 'bottom-left';
     const bg = s.image ? `background-image:url('${escapeHtml(s.image)}');background-size:cover;background-position:center;` : 'background:#222;';
     const dots = POSITIONS.map(([code, label]) => `
       <button type="button"
         class="pos-dot${code === pos ? ' pos-dot-active' : ''}"
+        data-code="${code}"
         title="${escapeHtml(label)}"
         onclick="AdminSliders.setPos(${i},'${code}')">
       </button>`).join('');
+    const hasTitle = !!(s.title && s.title.trim());
+    const label = hasTitle ? `
+      <div class="hero-mini-label" style="${POS_STYLE[pos] || POS_STYLE['bottom-left']}" onpointerdown="AdminSliders.startTitleDrag(event,${i})" title="Kéo để di chuyển tiêu đề">
+        ${escapeHtml(s.title)}
+        <button type="button" class="hero-mini-label-del" onclick="event.stopPropagation();AdminSliders.deleteTitle(${i})" title="Xóa tiêu đề">✕</button>
+      </div>` : `<div class="hero-mini-label-empty">Chưa có tiêu đề — gõ ở ô bên trái</div>`;
     return `
       <div class="hero-mini-preview" style="${bg}">
         <div class="pos-grid">${dots}</div>
-        <div class="hero-mini-label">${escapeHtml(s.title || 'Tiêu đề slide')}</div>
+        ${label}
       </div>`;
+  }
+
+  // startTitleDrag — kéo nhãn tiêu đề trong khung xem trước bằng Pointer
+  // Events (hợp nhất chuột/cảm ứng/bút). CHỈ cập nhật style/class tại chỗ
+  // trong lúc kéo (không gọi setPos()/refreshPreview() — sẽ REBUILD toàn bộ
+  // innerHTML, làm mất tham chiếu DOM đang kéo giữa chừng) — chỉ commit thật
+  // sự (setPos, ghi vào `slides`) đúng 1 lần khi thả chuột (pointerup).
+  function startTitleDrag(e, i) {
+    e.preventDefault();
+    const labelEl = e.currentTarget;
+    const box = labelEl.closest('.hero-mini-preview');
+    if (!box) return;
+    labelEl.classList.add('dragging');
+    let lastCode = slides[i].position || 'bottom-left';
+
+    function nearestCode(clientX, clientY) {
+      const rect = box.getBoundingClientRect();
+      const x = Math.min(Math.max(clientX - rect.left, 0), rect.width);
+      const y = Math.min(Math.max(clientY - rect.top, 0), rect.height);
+      const col = Math.min(2, Math.floor((x / rect.width) * 3));
+      const row = Math.min(2, Math.floor((y / rect.height) * 3));
+      return POSITIONS[row * 3 + col][0];
+    }
+
+    function applyLive(code) {
+      labelEl.setAttribute('style', POS_STYLE[code] || POS_STYLE['bottom-left']);
+      box.querySelectorAll('.pos-dot').forEach(d => d.classList.remove('pos-dot-active'));
+      const dot = box.querySelector(`.pos-dot[data-code="${code}"]`);
+      if (dot) dot.classList.add('pos-dot-active');
+    }
+
+    function move(ev) {
+      const code = nearestCode(ev.clientX, ev.clientY);
+      if (code !== lastCode) { lastCode = code; applyLive(code); }
+    }
+    function up() {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      labelEl.classList.remove('dragging');
+      setPos(i, lastCode);
+    }
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+  }
+
+  function deleteTitle(i) {
+    slides[i].title = '';
+    refreshPreview(i);
+    const input = document.getElementById('slideTitleInput-' + i);
+    if (input) input.value = '';
   }
 
   function load() {
@@ -66,8 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     ${MediaLibraryPicker.renderSlot(s.image, url => { setField(i, 'image', url); refreshPreview(i); }, { wide: true })}
                   </div>
                   <div class="form-group">
-                    <label>TIÊU ĐỀ LỚN</label>
-                    <input type="text" value="${escapeHtml(s.title)}" oninput="AdminSliders.setField(${i},'title',this.value);AdminSliders.refreshPreview(${i})">
+                    <label>TIÊU ĐỀ LỚN <span class="small-muted">(kéo trong khung bên phải để di chuyển, bấm ✕ để xóa)</span></label>
+                    <input type="text" id="slideTitleInput-${i}" value="${escapeHtml(s.title)}" oninput="AdminSliders.setField(${i},'title',this.value);AdminSliders.refreshPreview(${i})">
                   </div>
                   <div class="form-group">
                     <label>LINK KHI BẤM (để trống = cuộn xuống danh mục)</label>
@@ -157,7 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('addSlideBtn').addEventListener('click', addSlide);
   document.getElementById('saveSlidesBtn').addEventListener('click', saveAll);
 
-  window.AdminSliders = { setField, setPos, move: (i, dir) => {
+  window.AdminSliders = { setField, setPos, startTitleDrag, deleteTitle, move: (i, dir) => {
     const j = i + dir;
     if (j < 0 || j >= slides.length) return;
     [slides[i], slides[j]] = [slides[j], slides[i]];
