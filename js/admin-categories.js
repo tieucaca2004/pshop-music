@@ -3,6 +3,7 @@
  * (js/cms-db.js CategoryDB). This is the single source of truth consumed by
  * the product category dropdown (admin/products.html) and the category
  * filter tabs on category.html (js/category.js).
+ * Sprint 13: + backgroundImage field per category (header trang danh mục).
  */
 document.addEventListener('DOMContentLoaded', () => {
   AdminAuth.init({ page: 'categories', title: 'QUẢN LÝ DANH MỤC' }).then(() => {
@@ -10,6 +11,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   let categories = [];
+  // bgSlots[id] = URL ảnh nền hiện tại — cập nhật realtime khi Founder
+  // chọn/xóa ảnh, để save() ghi đúng giá trị mới nhất dù picker dùng closure.
+  const bgSlots = {};
 
   function escapeHtml(str) {
     return String(str || '').replace(/[&<>"']/g, c => ({
@@ -20,6 +24,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function load() {
     return CategoryDB.getAll().then(list => {
       categories = list;
+      // Sync bgSlots với dữ liệu mới nhất từ DB
+      categories.forEach(c => { bgSlots[c.id] = c.backgroundImage || ''; });
       render();
     });
   }
@@ -27,11 +33,15 @@ document.addEventListener('DOMContentLoaded', () => {
   function render() {
     const wrap = document.getElementById('categoryList');
     wrap.innerHTML = categories.map((c, i) => `
-      <div class="cms-row" data-id="${c.id}">
+      <div class="cms-row cat-row-expand" data-id="${c.id}">
         <div class="cms-row-fields">
           <input type="text" value="${escapeHtml(c.code)}" placeholder="Mã (vd: dj)" data-field="code">
           <input type="text" value="${escapeHtml(c.label)}" placeholder="Tên hiển thị" data-field="label">
           <label class="cms-toggle"><input type="checkbox" data-field="active" ${c.active !== false ? 'checked' : ''}> Hoạt động</label>
+        </div>
+        <div class="cat-bg-section">
+          <label class="cat-bg-label">ẢNH NỀN HEADER TRANG DANH MỤC <span class="small-muted">(tự co vừa khung — để trống = nền mặc định)</span></label>
+          ${MediaLibraryPicker.renderSlot(bgSlots[c.id], url => { bgSlots[c.id] = url; }, { wide: true })}
         </div>
         <div class="cms-row-actions">
           <button class="btn-secondary" title="Lên" ${i === 0 ? 'disabled' : ''} onclick="AdminCategories.move('${c.id}',-1)">&#8593;</button>
@@ -47,7 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
     return {
       code: row.querySelector('[data-field="code"]').value.trim(),
       label: row.querySelector('[data-field="label"]').value.trim(),
-      active: row.querySelector('[data-field="active"]').checked
+      active: row.querySelector('[data-field="active"]').checked,
+      backgroundImage: bgSlots[id] || ''
     };
   }
 

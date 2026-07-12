@@ -144,3 +144,7 @@ body{min-height:100vh;background:var(--bg-alt)}
 .slide-drag-ghost{opacity:0.4;background:var(--gold-soft) !important}
 
 @media(max-width:900px){.slide-panel-top{grid-template-columns:1fr}.slide-preview-col{max-width:100%}}
+
+/* ---- Category background image section (Sprint 13) ---- */
+.cat-bg-section{margin:0.6rem 0 0.4rem;padding:0.75rem 0 0.5rem;border-top:1px solid var(--line2)}
+.cat-bg-label{display:block;font-size:0.72rem;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:0.5rem}

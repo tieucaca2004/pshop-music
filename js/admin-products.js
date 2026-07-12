@@ -12,6 +12,7 @@ const AdminApp = (function () {
   let editingId = null;
   let quill = null;
   let pImagesPicker = null;
+  let pBgImagePicker = null; // Sprint 13: ảnh nền sản phẩm
 
   function catLabel(code) {
     const c = categories.find(x => x.code === code);
@@ -210,6 +211,8 @@ const AdminApp = (function () {
     const images = Array.isArray(p.images) && p.images.length ? p.images : (p.image ? [p.image] : []);
     document.getElementById('pImages').value = images.join('\n');
     pImagesPicker.refresh();
+    document.getElementById('pBgImage').value = p.backgroundImage || '';
+    if (pBgImagePicker) pBgImagePicker.refresh();
     document.getElementById('formTitle').textContent = 'SỬA SẢN PHẨM';
     document.getElementById('saveBtn').textContent = 'CẬP NHẬT SẢN PHẨM';
     document.getElementById('formPanel').scrollIntoView({ behavior: 'smooth' });
@@ -228,11 +231,12 @@ const AdminApp = (function () {
   function resetForm() {
     editingId = null;
     document.getElementById('pId').value = '';
-    ['pName', 'pSku', 'pWarranty', 'pPrice', 'pOldPrice', 'pSpecs', 'pBadgeText', 'pSpecifications', 'pFeatures', 'pTags', 'pImages', 'pYoutubeUrl'].forEach(id => {
+    ['pName', 'pSku', 'pWarranty', 'pPrice', 'pOldPrice', 'pSpecs', 'pBadgeText', 'pSpecifications', 'pFeatures', 'pTags', 'pImages', 'pYoutubeUrl', 'pBgImage'].forEach(id => {
       document.getElementById(id).value = '';
     });
     renderYoutubePreview();
     pImagesPicker.refresh();
+    if (pBgImagePicker) pBgImagePicker.refresh();
     if (quill) quill.setText('');
     renderCategoryCheckboxes([]);
     document.getElementById('pCategoriesError').style.display = 'none';
@@ -285,6 +289,7 @@ const AdminApp = (function () {
       features: document.getElementById('pFeatures').value.split('\n').map(s => s.trim()).filter(Boolean),
       tags: document.getElementById('pTags').value.split(',').map(s => s.trim()).filter(Boolean),
       youtubeUrl: document.getElementById('pYoutubeUrl').value.trim(),
+      backgroundImage: document.getElementById('pBgImage').value.trim(),
       description: quill && quill.getText().trim() ? quill.root.innerHTML : '',
       images: images,
       image: images[0] || ''
@@ -349,6 +354,7 @@ const AdminApp = (function () {
     });
 
     pImagesPicker = MediaLibraryPicker.mountMulti('pImages', 'pImagesGrid');
+    pBgImagePicker = MediaLibraryPicker.mount('pBgImage', 'pBgImageSlot');
 
     if (typeof Quill !== 'undefined') {
       quill = new Quill('#pDescriptionEditor', {

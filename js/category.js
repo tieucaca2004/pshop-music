@@ -14,6 +14,7 @@
 
   let allProducts = [];
   let categoryTiles = [];
+  let categoryData = []; // Sprint 13: lưu list category thật để đọc backgroundImage
   let state = { category: 'all', query: '', visibleCount: PAGE_SIZE };
 
   const grid = document.getElementById('productGrid');
@@ -195,6 +196,7 @@
     withTimeout(CategoryDB.getAll(), 10000).then(list => {
       const active = list.filter(c => c.active !== false);
       if (!active.length) return;
+      categoryData = active; // Sprint 13: lưu để updateCategoryHeader đọc backgroundImage
       CAT_LABELS = { all: 'Tất cả sản phẩm' };
       active.forEach(c => { CAT_LABELS[c.code] = c.label; });
       VALID_CATEGORIES = active.map(c => c.code);
@@ -221,8 +223,13 @@
     if (crumbEl) crumbEl.textContent = label;
     document.getElementById('pageTitle').textContent = label + ' - Pshop Music';
 
-    const tile = categoryTiles.find(t => t.category === cat && t.image);
-    if (header) header.style.backgroundImage = tile ? `url('${tile.image}')` : 'none';
+    // Sprint 13: ưu tiên backgroundImage từ category thật (field mới),
+    // fallback về categoryTiles.image (cũ) để backward compatible.
+    const catObj = categoryData.find(c => c.code === cat);
+    const bgFromCat = catObj && catObj.backgroundImage;
+    const tile = !bgFromCat && categoryTiles.find(t => t.category === cat && t.image);
+    const bg = bgFromCat || (tile && tile.image) || '';
+    if (header) header.style.backgroundImage = bg ? `url('${bg}')` : 'none';
   }
 
   window.filterP = function (cat, btn, opts) {
