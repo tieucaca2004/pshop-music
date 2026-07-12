@@ -31,13 +31,28 @@ AIModuleRegistry.register({
 
   loadContext(inputParams) {
     if (!inputParams.productId) return Promise.resolve({});
-    return DataProvider.getProduct(inputParams.productId).then(product => ({ product }));
+    return Promise.all([
+      DataProvider.getProduct(inputParams.productId),
+      DataProvider.getCategories()
+    ]).then(([product, categories]) => ({ product, categories: categories || [] }));
+  },
+
+  // productCategoryLabels — Sprint 13 (Product Management V2: Category
+  // Assignment). "Reuse the selected Categories" — cùng logic đã dùng ở
+  // Product AI V2/Facebook AI V3/Banner AI V2, lặp lại vì Blog AI là
+  // Experience Layer riêng.
+  productCategoryLabels(p, categories) {
+    const ids = Array.isArray(p.categoryIds) && p.categoryIds.length ? p.categoryIds : (p.category ? [p.category] : []);
+    const byCode = {};
+    (categories || []).forEach(c => { byCode[c.code] = c; });
+    return ids.map(id => byCode[id]).filter(Boolean).map(c => c.label);
   },
 
   buildPrompt(inputParams, context) {
     const p = context.product || {};
+    const categoryLabels = this.productCategoryLabels(p, context.categories);
     const grounding = p.name
-      ? `\n\nBài viết này xoay quanh sản phẩm thật sau — chỉ dùng đúng thông tin đã cho, không bịa thêm thông số: Tên: ${p.name}. Thương hiệu: ${p.brand || ''}. Thông số: ${p.specs || ''}.`
+      ? `\n\nBài viết này xoay quanh sản phẩm thật sau — chỉ dùng đúng thông tin đã cho, không bịa thêm thông số: Tên: ${p.name}. Thương hiệu: ${p.brand || ''}. Thông số: ${p.specs || ''}.${categoryLabels.length ? ` Thuộc danh mục: ${categoryLabels.join(', ')}.` : ''}`
       : '';
     return `Viết 1 bài blog bằng tiếng Việt, văn phong ${inputParams.tone || 'Chuyên nghiệp'}, chủ đề: "${inputParams.topic}". Từ khóa SEO cần lồng ghép: ${inputParams.keywords || '(không có)'}.${grounding}
 

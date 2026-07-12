@@ -631,6 +631,49 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Product Management V2 — Category Assignment (Sprint 13)
+
+Mỗi Sản phẩm cần thuộc được NHIỀU Danh mục (yêu cầu "Every Product must belong to one or more Categories"), thay vì chỉ 1 Danh mục như trước — thay đổi cả 3 tầng: form Admin, dữ liệu Firebase, và trang công khai, cộng thêm điểm chạm AI Reuse ở 5 Plugin.
+
+### Database — `categoryIds` mới, `category` cũ vẫn giữ
+
+Product thêm field `categoryIds` (mảng mã Danh mục). Field `category`/`categoryLabel` CŨ (1 mã) **không bị xóa** — mỗi lần Lưu, hệ thống tự ghi lại `category`/`categoryLabel` = Danh mục ĐẦU TIÊN trong `categoryIds` vừa chọn, để bất kỳ chỗ nào khác (ngoài phạm vi Requirement này) còn đọc field cũ vẫn nhận giá trị hợp lệ, không vỡ.
+
+### Migration — derive-at-read, không ghi hàng loạt
+
+Sản phẩm cũ (40+ sản phẩm thật) chỉ có `category`, không có `categoryIds`. Thay vì chạy 1 script ghi lại toàn bộ Firebase (rủi ro cao, không cần thiết), mọi nơi ĐỌC categoryIds đều qua cùng 1 hàm nhỏ (lặp lại ở `js/admin-products.js`/`js/category.js`/mỗi AI Plugin — cùng nguyên tắc "Experience Layer riêng, hàm nhỏ được phép lặp" đã áp dụng cho `getYoutubeEmbedUrl()`):
+
+```js
+function productCategoryIds(p) {
+  if (Array.isArray(p.categoryIds) && p.categoryIds.length) return p.categoryIds;
+  return p.category ? [p.category] : [];
+}
+```
+
+Sản phẩm cũ tự động được coi như `categoryIds = [category]` ngay khi đọc — Firebase chỉ thật sự ghi field `categoryIds` khi Founder mở Sửa + Lưu lại sản phẩm đó (tiến hoá dần dần, cùng cách `pubStatus` đã rollout ở Sprint 12 Requirement #10).
+
+### Product Form — checklist thay cho select 1-lựa-chọn
+
+`admin/products.html`: `#pCategoriesList` render checkbox cho mọi Category `active !== false`, sắp theo field `order` có sẵn (Requirement gọi là "displayOrder" — ánh xạ vào field đã tồn tại, không tạo field trùng lặp), hiện icon Category nếu có field `icon` (chưa có UI ghi field này ở Category Manager — chỉ hiển thị phòng khi tự thêm thẳng trong Firebase, đúng "if available"). Reset Form (sản phẩm MỚI) mặc định KHÔNG check gì — buộc Founder chọn có chủ đích, khớp đúng validate bên dưới.
+
+**Validation**: `saveProduct()` đọc checkbox đã check qua `document.querySelectorAll('#pCategoriesList input[type="checkbox"]:checked')`; 0 lựa chọn → chặn Lưu, hiện nguyên văn `Please select at least one Category.` (giữ tiếng Anh đúng yêu cầu).
+
+### Public site — sản phẩm hiện trong MỌI Danh mục đã gán
+
+`js/category.js` `getFiltered()`: `productCategoryIds(p).includes(state.category)` thay vì so khớp 1-1 — 1 sản phẩm gán 2 Danh mục sẽ hiện đúng ở CẢ 2 tab lọc. Nút "Xem trên Shopee" (gắn với Danh mục `phukien`) cũng đổi sang kiểm tra qua mảng, không còn giả định `phukien` là Danh mục duy nhất.
+
+### Category Management — xóa 1 Danh mục không làm vỡ Sản phẩm
+
+Mọi nơi map `categoryIds` → nhãn hiển thị (bảng Sản phẩm `catLabelsJoined()`, ngữ cảnh AI `productCategoryLabels()`) đều `.filter(Boolean)` bỏ qua mã không còn tồn tại trong `CategoryDB` — Sản phẩm vẫn hợp lệ, vẫn hiển thị đúng dưới "Tất cả" và mọi Danh mục hợp lệ còn lại. Tab lọc công khai (`VALID_CATEGORIES`) chỉ dựng từ Category đang Hoạt động nên 1 mã đã xóa không bao giờ xuất hiện thành tab để bấm vào — không cần xử lý gì thêm ở tầng UI công khai.
+
+### AI Reuse — "must use categoryIds automatically"
+
+Product AI (`product-description-writer.js`)/Facebook AI (`facebook-post-generator.js`)/Banner AI (`banner-generator.js`)/Blog AI (`blog-writer.js`): mỗi Plugin thêm 1 hàm `productCategoryLabels(p, categories)` nhỏ (cùng lặp lại có chủ đích như trên) và ghép câu ngữ cảnh "Thuộc danh mục: X, Y" vào Prompt khi có chọn Sản phẩm — AI dùng làm CĂN CỨ, các Plugin dùng `productId` đều đã sửa `loadContext()` để tải thêm `DataProvider.getCategories()` (Product AI đã tải sẵn từ trước, không cần sửa `loadContext()`, chỉ sửa `buildPrompt()`).
+
+SEO AI (`seo-generator.js`) là ngoại lệ kiến trúc: nhắm Blog Post, không nhắm Product trực tiếp (giới hạn đã ghi nhận từ trước, không đổi ở đây). Reuse categoryIds GIÁN TIẾP: nếu Blog Post có `relatedProductId` (Blog AI tự gán field này khi sinh bài từ 1 Sản phẩm), SEO AI tải thêm Sản phẩm đó + Danh mục để ghép câu "Sản phẩm liên quan thuộc danh mục: ..." vào Prompt. Không có `relatedProductId` (đa số bài cũ/viết tay) → bỏ qua hoàn toàn, 0 regression.
+
+**Không đổi**: Draft System/Publish Pipeline/Queue/Provider của bất kỳ Plugin nào — categoryIds chỉ là 1 dòng ngữ cảnh THÊM VÀO Prompt, không có Plugin nào tự ý ghi `categoryIds` ngược lại Product khi Publish (khác với `category` — Product AI vẫn giữ nguyên cơ chế cũ tự đề xuất 1 mã `category`, đã validate ở `publishToTarget()` từ trước, không đổi).
+
 ## Social Media Publishing Center (Sprint 12) — 1 nơi duy nhất quản lý nội dung AI mạng xã hội
 
 Founder cần 1 nơi DUY NHẤT quản lý toàn bộ nội dung AI (Facebook/Banner/Blog/Product) — xem trước, sửa, Publish/Lên lịch, tra cứu Lịch sử — thay vì rải rác ở `admin/ai/drafts.html` + từng trang riêng. Yêu cầu rõ "Reuse everything already built. Do NOT redesign", nên đây là 1 lớp Trải nghiệm (Experience Layer) THUẦN TUÝ phía trên `DraftDB`/`AdminAI` đã có — **không thêm bảng/collection Firebase mới, không viết lại logic Draft hay Publish Pipeline nào**.

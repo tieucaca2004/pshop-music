@@ -31,6 +31,9 @@ body{min-height:100vh;background:var(--bg-alt)}
 .toolbar-row{display:flex;gap:1rem;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:1rem}
 .status-msg{font-size:0.82rem;color:var(--gold-ink);margin-top:0.5rem;display:none}
 .small-muted{font-size:0.78rem;color:var(--ink-mute);margin-top:0.5rem;line-height:1.6}
+.field-error{color:#c0392b;font-size:0.82rem;margin-top:0.6rem;display:none;font-weight:600}
+.checkbox-grid{display:flex;flex-wrap:wrap;gap:0.6rem 1.5rem}
+.checkbox-grid label{display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;color:var(--ink);white-space:nowrap}
 
 @media(max-width:700px){.field-grid{grid-template-columns:1fr}.admin-topbar{padding:1rem}.admin-wrap{padding:1.25rem}}
 

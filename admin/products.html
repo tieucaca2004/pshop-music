@@ -39,9 +39,14 @@
               <option value="hidden">Ẩn (tạm ẩn khỏi web)</option>
             </select>
           </div>
-          <div class="form-group">
-            <label>DANH MỤC</label>
-            <select id="pCategory"></select>
+          <!-- Sprint 13 (Product Management V2 — Category Assignment): 1 sản
+               phẩm thuộc được NHIỀU danh mục (categoryIds), thay cho select
+               1-lựa-chọn cũ (category, vẫn giữ lại ở tầng dữ liệu để tương
+               thích ngược — xem js/admin-products.js). -->
+          <div class="form-group full">
+            <label>DANH MỤC (chọn ít nhất 1)</label>
+            <div id="pCategoriesList" class="checkbox-grid"></div>
+            <p id="pCategoriesError" class="field-error">Please select at least one Category.</p>
           </div>
           <div class="form-group">
             <label>TÌNH TRẠNG</label>

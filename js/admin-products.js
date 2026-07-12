@@ -18,6 +18,29 @@ const AdminApp = (function () {
     return c ? c.label : code;
   }
 
+  // productCategoryIds — Sprint 13 (Product Management V2: Category
+  // Assignment). Đọc categoryIds (mới, nhiều danh mục) nếu có; sản phẩm CŨ
+  // chỉ có "category" (1 mã, field cũ VẪN GIỮ NGUYÊN không xóa) thì tự coi
+  // như đã "migrate" thành mảng 1 phần tử ngay tại thời điểm đọc — không cần
+  // chạy migration ghi hàng loạt vào Firebase, cùng cách pubStatus đã làm ở
+  // Sprint 12 Requirement #10 (derive-at-read, backfill dần khi Founder Sửa
+  // và Lưu lại sản phẩm đó).
+  function productCategoryIds(p) {
+    if (Array.isArray(p.categoryIds) && p.categoryIds.length) return p.categoryIds;
+    return p.category ? [p.category] : [];
+  }
+
+  // catLabelsJoined — hiển thị TẤT CẢ danh mục đã gán (không chỉ 1) ở bảng
+  // danh sách sản phẩm. Danh mục đã bị xóa khỏi CategoryDB tự động bỏ qua
+  // (catLabel() đã fallback về code nếu không tìm thấy — ở đây lọc hẳn ra
+  // khỏi hiển thị để không gây hiểu lầm, đúng "Ignore missing Categories
+  // gracefully").
+  function catLabelsJoined(p) {
+    const ids = productCategoryIds(p);
+    const labels = ids.map(id => categories.find(x => x.code === id)).filter(Boolean).map(c => c.label);
+    return labels.length ? labels.join(', ') : '—';
+  }
+
   function escapeHtml(str) {
     return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -55,11 +78,28 @@ const AdminApp = (function () {
     ]);
   }
 
+  // renderCategoryCheckboxes — RULES Sprint 13: chỉ danh mục đang Hoạt động
+  // (active !== false, đã lọc ở loadCategories), sắp theo displayOrder (field
+  // "order" có sẵn trong CategoryDB — không tạo field trùng lặp mới), hiển
+  // thị icon nếu Category có field "icon" (chưa có UI nào ghi field này, chỉ
+  // hiển thị NẾU tự có sẵn trong dữ liệu — "if available").
+  function renderCategoryCheckboxes(selectedIds) {
+    const wrap = document.getElementById('pCategoriesList');
+    wrap.innerHTML = categories.map(c => `
+      <label>
+        <input type="checkbox" value="${escapeHtml(c.code)}" ${selectedIds.includes(c.code) ? 'checked' : ''}>
+        ${c.icon ? escapeHtml(c.icon) + ' ' : ''}${escapeHtml(c.label)}
+      </label>`).join('') || '<p class="small-muted">Chưa có danh mục nào đang hoạt động.</p>';
+  }
+
+  function getCheckedCategoryIds() {
+    return Array.from(document.querySelectorAll('#pCategoriesList input[type="checkbox"]:checked')).map(cb => cb.value);
+  }
+
   function loadCategories() {
     return withTimeout(CategoryDB.getAll(), 10000).then(list => {
-      categories = list.filter(c => c.active !== false);
-      const select = document.getElementById('pCategory');
-      select.innerHTML = categories.map(c => `<option value="${escapeHtml(c.code)}">${escapeHtml(c.label)}</option>`).join('');
+      categories = list.filter(c => c.active !== false).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
+      renderCategoryCheckboxes([]);
     });
   }
 
@@ -89,7 +129,7 @@ const AdminApp = (function () {
       <tr>
         <td>${p.image ? `<img src="${escapeHtml(p.image)}" onerror="this.style.display='none'">` : '—'}</td>
         <td>${escapeHtml(p.name)}</td>
-        <td>${escapeHtml(catLabel(p.category))}</td>
+        <td>${escapeHtml(catLabelsJoined(p))}</td>
         <td>${p.price ? escapeHtml(p.price) : '<span style="color:var(--muted2)">Liên hệ</span>'}</td>
         <td>${p.status === 'Used' ? 'Qua sử dụng' : 'Mới'}</td>
         <td>${p.stockStatus === 'outofstock' ? '<span style="color:#c0392b;font-weight:600">Hết hàng</span>' : 'Còn hàng'}</td>
@@ -151,7 +191,8 @@ const AdminApp = (function () {
     // field nay (undefined) - mac dinh hien "published" khi Sua de dung voi
     // trang thai hien tai tren web cong khai (xem js/category.js filter).
     document.getElementById('pPubStatus').value = p.pubStatus || 'published';
-    document.getElementById('pCategory').value = p.category || (categories[0] && categories[0].code) || '';
+    renderCategoryCheckboxes(productCategoryIds(p));
+    document.getElementById('pCategoriesError').style.display = 'none';
     document.getElementById('pStatus').value = p.status || 'New';
     document.getElementById('pStockStatus').value = p.stockStatus || 'instock';
     document.getElementById('pWarranty').value = p.warranty || '';
@@ -193,7 +234,8 @@ const AdminApp = (function () {
     renderYoutubePreview();
     pImagesPicker.refresh();
     if (quill) quill.setText('');
-    if (categories[0]) document.getElementById('pCategory').value = categories[0].code;
+    renderCategoryCheckboxes([]);
+    document.getElementById('pCategoriesError').style.display = 'none';
     document.getElementById('pStatus').value = 'New';
     document.getElementById('pStockStatus').value = 'instock';
     // San pham MOI mac dinh la Nhap (chua hien tren web cong khai) - Founder
@@ -209,7 +251,20 @@ const AdminApp = (function () {
     const name = document.getElementById('pName').value.trim();
     if (!name) { alert('Vui lòng nhập tên sản phẩm.'); return; }
 
-    const category = document.getElementById('pCategory').value;
+    // VALIDATION Sprint 13 (Category Assignment): "At least ONE Category
+    // must be selected. Do not allow saving without a Category." — chặn
+    // Lưu, hiện đúng thông báo yêu cầu, KHÔNG cho phép Lưu sản phẩm không có
+    // danh mục nào (khác các field tuỳ chọn khác trong form này).
+    const categoryIds = getCheckedCategoryIds();
+    const categoriesError = document.getElementById('pCategoriesError');
+    if (!categoryIds.length) { categoriesError.style.display = 'block'; document.getElementById('pCategoriesList').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+    categoriesError.style.display = 'none';
+
+    // category/categoryLabel (field CŨ) VẪN được ghi — "Do NOT remove
+    // existing category field. Remain backward compatible" — lấy danh mục
+    // ĐẦU TIÊN trong số đã chọn, để mọi nơi còn đọc field cũ (vd cột "Danh
+    // mục" ở nơi khác, dữ liệu export JSON) vẫn có 1 giá trị hợp lệ.
+    const category = categoryIds[0];
     const images = document.getElementById('pImages').value.split(/[\n,;]/).map(url => url.trim()).filter(Boolean);
     const data = {
       name,
@@ -217,6 +272,7 @@ const AdminApp = (function () {
       pubStatus: document.getElementById('pPubStatus').value,
       category,
       categoryLabel: catLabel(category),
+      categoryIds,
       status: document.getElementById('pStatus').value,
       stockStatus: document.getElementById('pStockStatus').value,
       warranty: document.getElementById('pWarranty').value.trim(),

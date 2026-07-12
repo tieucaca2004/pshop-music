@@ -21,13 +21,36 @@ AIModuleRegistry.register({
     { key: 'postId', label: 'Chọn bài viết', type: 'blogSelect' }
   ],
 
+  // loadContext — Sprint 13 (Product Management V2: Category Assignment):
+  // "Reuse the selected Categories" cho SEO AI. SEO Generator chỉ nhắm Blog
+  // Post (không nhắm Product trực tiếp — xem ghi chú đầu file), nên chỉ có
+  // thể "reuse" categoryIds NẾU bài viết có sẵn relatedProductId (do Blog AI
+  // gán khi Founder chọn Sản phẩm lúc sinh bài, xem blog-writer.js). Không có
+  // relatedProductId (đa số bài viết cũ/viết tay) → bỏ qua hoàn toàn, đúng
+  // hành vi hiện tại, không phá gì.
   loadContext(inputParams) {
     if (!inputParams.postId) return Promise.resolve({});
-    return DataProvider.getBlogPost(inputParams.postId).then(post => ({ post }));
+    return DataProvider.getBlogPost(inputParams.postId).then(post => {
+      if (!post || !post.relatedProductId) return { post };
+      return Promise.all([
+        DataProvider.getProduct(post.relatedProductId),
+        DataProvider.getCategories()
+      ]).then(([product, categories]) => ({ post, product, categories: categories || [] }));
+    });
+  },
+
+  productCategoryLabels(p, categories) {
+    if (!p) return [];
+    const ids = Array.isArray(p.categoryIds) && p.categoryIds.length ? p.categoryIds : (p.category ? [p.category] : []);
+    const byCode = {};
+    (categories || []).forEach(c => { byCode[c.code] = c; });
+    return ids.map(id => byCode[id]).filter(Boolean).map(c => c.label);
   },
 
   buildPrompt(inputParams, context) {
     const post = context.post || {};
+    const categoryLabels = this.productCategoryLabels(context.product, context.categories);
+    const categoryLine = categoryLabels.length ? ` Sản phẩm liên quan thuộc danh mục: ${categoryLabels.join(', ')}.` : '';
     return [
       `Dựa trên bài viết sau, tạo gói SEO gồm đúng 6 dòng:`,
       `dòng 1 = Meta Title (dưới 60 ký tự),`,
@@ -36,7 +59,7 @@ AIModuleRegistry.register({
       `dòng 4 = Open Graph Title,`,
       `dòng 5 = Open Graph Description,`,
       `dòng 6 = gợi ý loại Schema.org phù hợp (vd: Article, Product, FAQPage) kèm lý do ngắn gọn.`,
-      `Tiêu đề gốc: "${post.title || ''}". Mô tả ngắn: "${post.excerpt || ''}".`
+      `Tiêu đề gốc: "${post.title || ''}". Mô tả ngắn: "${post.excerpt || ''}".${categoryLine}`
     ].join(' ');
   },
 

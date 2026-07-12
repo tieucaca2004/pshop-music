@@ -35,17 +35,31 @@ AIModuleRegistry.register({
     ]).then(([product, categories]) => ({ product, categories: categories || [] }));
   },
 
+  // productCategoryLabels — Sprint 13 (Product Management V2: Category
+  // Assignment). "Reuse the selected Categories" — đọc categoryIds Founder
+  // ĐÃ chọn thật (nhiều danh mục), tương thích ngược với sản phẩm cũ chỉ có
+  // "category" (1 mã). Danh mục đã bị xóa khỏi CategoryDB tự động lọc bỏ
+  // (Ignore missing Categories gracefully), không lỗi.
+  productCategoryLabels(p, categories) {
+    const ids = Array.isArray(p.categoryIds) && p.categoryIds.length ? p.categoryIds : (p.category ? [p.category] : []);
+    const byCode = {};
+    (categories || []).forEach(c => { byCode[c.code] = c; });
+    return ids.map(id => byCode[id]).filter(Boolean).map(c => c.label);
+  },
+
   buildPrompt(inputParams, context) {
     const p = context.product || {};
     const categories = context.categories || [];
     const categoryList = categories.map(c => `${c.code} (${c.label})`).join(', ') || '(chưa có danh mục nào)';
+    const assignedLabels = this.productCategoryLabels(p, categories);
+    const assignedText = assignedLabels.length ? assignedLabels.join(', ') : (p.categoryLabel || p.category || '');
     return `Bạn là chuyên gia content SEO cho cửa hàng thiết bị DJ/âm thanh chuyên nghiệp tại Việt Nam. Dựa ĐÚNG vào thông tin sản phẩm thật dưới đây — KHÔNG bịa thêm thông số/tính năng không có căn cứ — viết đầy đủ nội dung publish-ready, văn phong ${inputParams.tone || 'Chuyên nghiệp'}.
 
 Thông tin sản phẩm thật:
 - Tên hiện tại: ${p.name || ''}
 - Thương hiệu: ${p.brand || ''}
 - Thông số ngắn hiện có: ${p.specs || ''}
-- Danh mục hiện tại: ${p.categoryLabel || p.category || ''}
+- Danh mục đã gán (Founder đã chọn — dùng làm căn cứ ngữ cảnh, không tự đổi): ${assignedText || '(chưa gán danh mục nào)'}
 - Danh sách mã danh mục HỢP LỆ (chỉ được chọn đúng 1 mã "code" trong danh sách này, giữ nguyên, không dịch, không bịa mã mới): ${categoryList}
 
 Trả về DUY NHẤT 1 đối tượng JSON hợp lệ — không kèm câu giải thích nào trước/sau, không bọc trong khối markdown \`\`\`, đúng các khóa sau:

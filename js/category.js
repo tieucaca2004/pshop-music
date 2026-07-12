@@ -118,9 +118,18 @@
     return hay.includes(q.toLowerCase());
   }
 
+  // productCategoryIds — Sprint 13 (Product Management V2: Category
+  // Assignment). 1 sản phẩm có thể thuộc NHIỀU danh mục (categoryIds) —
+  // sản phẩm CŨ chỉ có "category" (field cũ, vẫn giữ nguyên) tự coi như
+  // categoryIds 1 phần tử ngay khi đọc, không cần sửa dữ liệu Firebase.
+  function productCategoryIds(p) {
+    if (Array.isArray(p.categoryIds) && p.categoryIds.length) return p.categoryIds;
+    return p.category ? [p.category] : [];
+  }
+
   function getFiltered() {
     return allProducts.filter(p =>
-      (state.category === 'all' || p.category === state.category) &&
+      (state.category === 'all' || productCategoryIds(p).includes(state.category)) &&
       matchesQuery(p, state.query)
     );
   }
@@ -311,7 +320,7 @@
     if (oosEl) oosEl.style.display = p.stockStatus === 'outofstock' ? 'inline-block' : 'none';
 
     const btn2 = document.getElementById('modalSecondBtn');
-    if (p.category === 'phukien') {
+    if (productCategoryIds(p).includes('phukien')) {
       btn2.href = CONTACT.shopee;
       btn2.textContent = 'XEM TRÊN SHOPEE →';
     } else {
