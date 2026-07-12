@@ -1,36 +1,40 @@
 /*
  * Facebook Configuration — Sprint 12 Requirement #9 (Facebook AI V4, khung UI
- * an toàn) → nâng cấp thật ở Facebook AI V5 (Sprint 12 Requirement kế tiếp).
+ * an toàn) → OAuth thật ở Facebook AI V5 → kiến trúc production hoàn chỉnh +
+ * Mock Mode ở Facebook Integration V1 (Requirement hiện tại).
  *
- * V4 CHỈ có khung UI (card kết nối, dialog xin phép, Ngắt kết nối ghi Firebase
- * thật) — KHÔNG có OAuth thật. V5 nối OAuth THẬT: redirect sang Facebook Login
- * Dialog → Cloud Function `facebookOAuthCallback` (functions/index.js) xử lý
- * đổi code lấy token + lấy danh sách Fanpage → trang này hiển thị danh sách
- * để Founder chọn Default Page → Cloud Function `facebookSelectPage` lưu lựa
- * chọn thật.
+ * App ID KHÔNG hardcode ở đây (khác quyết định tạm thời ở V5) — đọc từ node
+ * Firebase `facebookAppConfig/appId`, Founder tự "Enter App ID" qua ô nhập
+ * trên chính trang này (`#fbAppIdInput`/`#fbAppIdSaveBtn`), KHÔNG cần sửa
+ * code/redeploy. App Secret vẫn KHÔNG BAO GIỜ xuất hiện ở client — chỉ sống
+ * trong Secret Manager phía Cloud Function.
  *
- * `FACEBOOK_APP_ID` dưới đây CHƯA có giá trị thật — Facebook App chỉ Chief
- * Architect tự tạo được (developers.facebook.com), xem
- * docs/FACEBOOK_INTEGRATION_SETUP.md. App ID KHÔNG nhạy cảm (an toàn ở phía
- * client, giống mọi trang OAuth khác) — App Secret KHÔNG BAO GIỜ xuất hiện ở
- * đây, chỉ sống trong Secret Manager phía Cloud Function.
+ * Mock Mode: App ID rỗng (trạng thái HIỆN TẠI, chưa có Facebook App thật) tự
+ * động bật Mock Mode cho toàn bộ luồng — không có công tắc riêng nào khác.
+ * `proceedOAuth()` khi đó KHÔNG redirect sang Facebook thật (không có gì để
+ * redirect tới) mà đi thẳng tới CHÍNH Cloud Function `facebookOAuthCallback`
+ * của mình với 1 code giả — Cloud Function tự nhận biết Mock Mode (App ID
+ * rỗng) và trả dữ liệu giả lập đúng shape Graph API thật qua
+ * functions/facebook-graph-api.js, để toàn bộ phần còn lại của luồng (state
+ * nonce → callback → Page Selection → Publish) chạy Y HỆT luồng thật, chỉ
+ * khác không có Facebook thật đứng giữa. Loại bỏ Mock Mode sau này = điền
+ * App ID thật — không cần sửa file này hay bất kỳ nơi nào khác.
  *
  * Token thật (User Access Token/Page Access Token) KHÔNG BAO GIỜ đi qua file
  * này hay bất kỳ đâu phía client — toàn bộ nằm trong node server-only
- * `facebookPageTokens`/`facebookActiveToken` (Database Rules .read:false/
- * .write:false tuyệt đối, chỉ Cloud Function Admin SDK đọc/ghi được). Trang
- * này chỉ đọc `facebookConnection` (metadata) và `facebookPendingPages/{uid}`
- * (danh sách Page để hiển thị chọn, cũng không có token).
+ * `facebookPageTokens`/`facebookActiveToken`/`facebookUserToken` (Database
+ * Rules .read:false/.write:false tuyệt đối, chỉ Cloud Function Admin SDK đọc/
+ * ghi được). Trang này chỉ đọc `facebookConnection` (metadata) và
+ * `facebookPendingPages/{uid}` (danh sách Page để hiển thị chọn).
  */
 const AdminFacebookConnect = (function () {
-  // TODO: Chief Architect điền App ID thật sau khi tạo Facebook App.
-  const FACEBOOK_APP_ID = '';
   const FACEBOOK_OAUTH_DIALOG_URL = 'https://www.facebook.com/v19.0/dialog/oauth';
   const FACEBOOK_OAUTH_CALLBACK_URL = 'https://us-central1-pshop-music.cloudfunctions.net/facebookOAuthCallback';
   const FACEBOOK_SELECT_PAGE_URL = 'https://us-central1-pshop-music.cloudfunctions.net/facebookSelectPage';
+  const FACEBOOK_REFRESH_TOKEN_URL = 'https://us-central1-pshop-music.cloudfunctions.net/facebookRefreshToken';
   const FACEBOOK_SCOPES = 'pages_show_list,pages_manage_posts,pages_read_engagement';
   // Facebook Long-Lived User Token thường sống ~60 ngày — cảnh báo "sắp hết
-  // hạn" khi còn dưới 7 ngày, để Founder có thời gian tự kết nối lại.
+  // hạn" khi còn dưới 7 ngày, để Founder có thời gian tự làm mới/kết nối lại.
   const TOKEN_EXPIRING_SOON_MS = 7 * 24 * 60 * 60 * 1000;
 
   function ref() {
@@ -45,6 +49,12 @@ const AdminFacebookConnect = (function () {
 
   function generateStateNonce() {
     return 'st-' + Math.random().toString(36).slice(2) + '-' + Date.now();
+  }
+
+  function getAppId() {
+    return firebase.database().ref('facebookAppConfig/appId').once('value')
+      .then(snap => snap.val() || '')
+      .catch(() => '');
   }
 
   // getStatus() — mặc định an toàn 'not_connected' nếu chưa có dữ liệu HOẶC
@@ -76,12 +86,21 @@ const AdminFacebookConnect = (function () {
     token_expired: { icon: '🔴', label: 'Token đã hết hạn' }
   };
 
-  function renderCard(data) {
+  function renderMockBadge(isMockActive) {
+    const badge = document.getElementById('fbMockModeBadge');
+    if (!badge) return;
+    if (!isMockActive) { badge.style.display = 'none'; badge.innerHTML = ''; return; }
+    badge.style.display = 'block';
+    badge.innerHTML = '<p class="small-muted" style="color:#b36b00">🧪 Mock Mode — chưa có App ID thật, mọi kết nối/đăng bài hiện chỉ là dữ liệu giả lập để tự kiểm thử luồng.</p>';
+  }
+
+  function renderCard(data, appId) {
     const statusEl = document.getElementById('fbConnectStatus');
     const connectBtn = document.getElementById('fbConnectBtn');
     const changePageBtn = document.getElementById('fbChangePageBtn');
     const disconnectBtn = document.getElementById('fbDisconnectBtn');
     const reconnectBtn = document.getElementById('fbReconnectBtn');
+    const refreshTokenBtn = document.getElementById('fbRefreshTokenBtn');
     if (!statusEl) return;
 
     const effectiveStatus = computeEffectiveStatus(data);
@@ -94,12 +113,20 @@ const AdminFacebookConnect = (function () {
 
     if (connectBtn) connectBtn.style.display = (!connected && !expired) ? 'inline-block' : 'none';
     if (changePageBtn) changePageBtn.style.display = connected ? 'inline-block' : 'none';
+    if (refreshTokenBtn) refreshTokenBtn.style.display = (connected || expired) ? 'inline-block' : 'none';
     if (disconnectBtn) disconnectBtn.style.display = (connected || expired) ? 'inline-block' : 'none';
     if (reconnectBtn) reconnectBtn.style.display = expired ? 'inline-block' : 'none';
+
+    // Mock Mode đang thật sự áp dụng nếu CHƯA điền App ID (mọi kết nối MỚI sẽ
+    // là giả) HOẶC kết nối HIỆN TẠI đã được thiết lập lúc còn Mock Mode
+    // (`facebookConnection.isMock`) — giữ đúng cho tới khi Founder "Kết nối
+    // lại" thật, tránh hiển thị nhầm 🟢 "đã kết nối thật" trong khi vẫn đang
+    // dùng dữ liệu giả.
+    renderMockBadge(!appId || !!data.isMock);
   }
 
   function refresh() {
-    return getStatus().then(renderCard);
+    return Promise.all([getStatus(), getAppId()]).then(([data, appId]) => renderCard(data, appId));
   }
 
   function openConsentDialog() {
@@ -112,23 +139,30 @@ const AdminFacebookConnect = (function () {
     if (modal) modal.classList.remove('open');
   }
 
-  // proceedOAuth() — bắt đầu OAuth THẬT (Sprint 12, Facebook AI V5). Ghi 1
-  // nonce dùng 1 lần vào `facebookOAuthState/{state}` TRƯỚC khi rời trang —
-  // đây là cách DUY NHẤT Cloud Function `facebookOAuthCallback` (nhận redirect
-  // từ Facebook, không có Firebase Auth header vì là navigation trình duyệt
-  // thật, không phải fetch()) biết được "yêu cầu OAuth này của Founder nào".
-  // Nếu App ID chưa được cấu hình (Facebook App chưa tồn tại), báo rõ ràng —
-  // không redirect tới 1 URL chắc chắn lỗi.
+  // proceedOAuth() — Facebook Integration V1: KHÔNG còn báo "chưa cấu hình"
+  // khi thiếu App ID — thay vào đó tự động chạy Mock Mode (xem comment đầu
+  // file). Ghi 1 nonce dùng 1 lần vào `facebookOAuthState/{state}` TRƯỚC khi
+  // rời trang trong CẢ 2 trường hợp (thật/mock) — đây là cách DUY NHẤT Cloud
+  // Function `facebookOAuthCallback` (nhận redirect, không có Firebase Auth
+  // header vì là navigation trình duyệt thật, không phải fetch()) biết được
+  // "yêu cầu OAuth này của Founder nào".
   function proceedOAuth() {
     closeConsentDialog();
-    if (!FACEBOOK_APP_ID) {
-      alert('Facebook App chưa được cấu hình (thiếu App ID thật).\n\nCần Chief Architect tạo Facebook App tại developers.facebook.com rồi điền App ID vào js/admin-facebook-connect.js + functions/index.js trước khi tính năng này hoạt động được.\n\nXem hướng dẫn đầy đủ: docs/FACEBOOK_INTEGRATION_SETUP.md');
-      return;
-    }
     const user = AdminAuth.getUser();
     const state = generateStateNonce();
-    firebase.database().ref('facebookOAuthState/' + state).set({ uid: user.uid, createdAt: Date.now() }).then(() => {
-      const authUrl = `${FACEBOOK_OAUTH_DIALOG_URL}?client_id=${encodeURIComponent(FACEBOOK_APP_ID)}` +
+    Promise.all([
+      getAppId(),
+      firebase.database().ref('facebookOAuthState/' + state).set({ uid: user.uid, createdAt: Date.now() })
+    ]).then(([appId]) => {
+      if (!appId) {
+        // Mock Mode — không có gì để redirect sang Facebook thật, đi thẳng
+        // tới CHÍNH Cloud Function callback của mình với code giả để kiểm
+        // thử toàn bộ luồng còn lại (state → exchange giả lập → pages giả →
+        // page selection → publish) y hệt luồng thật.
+        window.location.href = `${FACEBOOK_OAUTH_CALLBACK_URL}?code=mock-code&state=${encodeURIComponent(state)}`;
+        return;
+      }
+      const authUrl = `${FACEBOOK_OAUTH_DIALOG_URL}?client_id=${encodeURIComponent(appId)}` +
         `&redirect_uri=${encodeURIComponent(FACEBOOK_OAUTH_CALLBACK_URL)}` +
         `&scope=${encodeURIComponent(FACEBOOK_SCOPES)}&response_type=code&state=${encodeURIComponent(state)}`;
       window.location.href = authUrl;
@@ -142,7 +176,44 @@ const AdminFacebookConnect = (function () {
     });
   }
 
-  /* ================= Page Selection (sau khi OAuth thật hoàn tất) ================= */
+  // refreshToken() — Token Refresh (Facebook Integration V1). Gọi Cloud
+  // Function facebookRefreshToken (đổi Long-Lived User Token còn hạn lấy 1
+  // token mới, gia hạn thêm ~60 ngày) — không cần Founder đăng nhập lại nếu
+  // Token vẫn còn hạn. Nếu đã hết hạn hoàn toàn, Cloud Function trả lỗi rõ
+  // ràng yêu cầu "Kết nối lại" thay vì báo chung chung.
+  function refreshToken() {
+    firebase.auth().currentUser.getIdToken().then(idToken => {
+      return fetch(FACEBOOK_REFRESH_TOKEN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
+        body: JSON.stringify({})
+      }).then(res => res.json().then(data => ({ ok: res.ok, data })));
+    }).then(({ ok, data }) => {
+      if (!ok || !data.success) { alert('Không làm mới được Token: ' + ((data && data.error) || 'Không rõ nguyên nhân.')); return; }
+      alert('Đã làm mới Token thành công.');
+      refresh();
+    }).catch(err => alert('Lỗi khi làm mới Token: ' + err.message));
+  }
+
+  /* ================= App ID (Founder tự "Enter App ID" qua UI, không sửa code) ================= */
+
+  function loadAppIdField() {
+    const input = document.getElementById('fbAppIdInput');
+    if (!input) return Promise.resolve();
+    return getAppId().then(appId => { input.value = appId; });
+  }
+
+  function saveAppId() {
+    const input = document.getElementById('fbAppIdInput');
+    if (!input) return;
+    const appId = input.value.trim();
+    firebase.database().ref('facebookAppConfig').update({ appId }).then(() => {
+      alert(appId ? 'Đã lưu App ID.' : 'Đã xoá App ID — hệ thống quay lại Mock Mode.');
+      refresh();
+    }).catch(err => alert('Lỗi khi lưu App ID: ' + err.message));
+  }
+
+  /* ================= Page Selection (sau khi OAuth hoàn tất — thật hoặc Mock Mode) ================= */
 
   function pageSelectBox() { return document.getElementById('fbPageSelectBox'); }
 
@@ -191,9 +262,10 @@ const AdminFacebookConnect = (function () {
   }
 
   // checkOAuthReturn() — sau khi Cloud Function facebookOAuthCallback redirect
-  // trình duyệt về đúng trang này (?oauth=success hoặc ?oauth=error&reason=...).
-  // Luôn dọn query string khỏi URL sau khi xử lý (history.replaceState) để
-  // tải lại trang không xử lý lại cùng 1 kết quả OAuth.
+  // trình duyệt về đúng trang này (?oauth=success hoặc ?oauth=error&reason=...),
+  // dù là kết nối thật hay Mock Mode. Luôn dọn query string khỏi URL sau khi
+  // xử lý (history.replaceState) để tải lại trang không xử lý lại cùng 1 kết
+  // quả OAuth.
   function checkOAuthReturn() {
     const params = new URLSearchParams(location.search);
     const oauth = params.get('oauth');
@@ -221,6 +293,8 @@ const AdminFacebookConnect = (function () {
     const changePageBtn = document.getElementById('fbChangePageBtn');
     const disconnectBtn = document.getElementById('fbDisconnectBtn');
     const reconnectBtn = document.getElementById('fbReconnectBtn');
+    const refreshTokenBtn = document.getElementById('fbRefreshTokenBtn');
+    const appIdSaveBtn = document.getElementById('fbAppIdSaveBtn');
     const cancelBtn = document.getElementById('fbConsentCancel');
     const cancelXBtn = document.getElementById('fbConsentCancelX');
     const proceedBtn = document.getElementById('fbConsentProceed');
@@ -228,11 +302,14 @@ const AdminFacebookConnect = (function () {
     if (connectBtn) connectBtn.addEventListener('click', openConsentDialog);
     if (changePageBtn) changePageBtn.addEventListener('click', openConsentDialog);
     if (reconnectBtn) reconnectBtn.addEventListener('click', openConsentDialog);
+    if (refreshTokenBtn) refreshTokenBtn.addEventListener('click', refreshToken);
     if (disconnectBtn) disconnectBtn.addEventListener('click', disconnect);
+    if (appIdSaveBtn) appIdSaveBtn.addEventListener('click', saveAppId);
     if (cancelBtn) cancelBtn.addEventListener('click', closeConsentDialog);
     if (cancelXBtn) cancelXBtn.addEventListener('click', closeConsentDialog);
     if (proceedBtn) proceedBtn.addEventListener('click', proceedOAuth);
 
+    loadAppIdField();
     refresh();
     checkOAuthReturn();
   }

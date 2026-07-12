@@ -344,7 +344,24 @@ const AdminAI = (function () {
   // A/B/C còn lại, cho phép đăng nhiều phiên bản độc lập nếu Founder muốn.
   function publishVersionToFacebook(draftId, versionLabel) {
     const notConnectedMsg = 'Chưa kết nối Facebook. Vào "Cài đặt" → "Facebook Configuration" để kết nối trước khi đăng bài thật.';
-    firebase.database().ref('facebookConnection').once('value').then(snap => {
+    // Permission Checking (Facebook Integration V1) — Đăng lên Facebook
+    // không đi qua PluginManager/Queue nên không dùng
+    // PermissionService.checkPluginExecution() (gắn với 1 Plugin cụ thể) —
+    // dùng checkFacebookPublish() riêng, cùng nguyên tắc "kiểm tra quyền
+    // TRƯỚC khi làm bất kỳ việc gì" đã áp dụng cho mọi Plugin AI khác.
+    const user = AdminAuth.getUser();
+    PermissionService.checkFacebookPublish(user.uid, user.email).then(check => {
+      if (!check.granted) {
+        alert(`Không có quyền đăng bài lên Facebook (thiếu "${check.permission || 'quyền chưa được gán'}").`);
+        return;
+      }
+      return publishVersionToFacebookAfterPermission(draftId, versionLabel);
+    }).catch(err => alert('Lỗi khi đăng bài: ' + err.message));
+  }
+
+  function publishVersionToFacebookAfterPermission(draftId, versionLabel) {
+    const notConnectedMsg = 'Chưa kết nối Facebook. Vào "Cài đặt" → "Facebook Configuration" để kết nối trước khi đăng bài thật.';
+    return firebase.database().ref('facebookConnection').once('value').then(snap => {
       const conn = snap.val() || { status: 'not_connected' };
       if (conn.status !== 'connected' && conn.status !== 'token_expiring') {
         alert(notConnectedMsg);

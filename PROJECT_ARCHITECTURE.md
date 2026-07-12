@@ -631,7 +631,75 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Facebook Integration V1 (Sprint 12) — App ID động + Mock Mode + Token Refresh + Permission Checking
+
+Hoàn thiện kiến trúc production của "Facebook AI V5" (mục bên dưới) theo đúng yêu cầu "Build the REAL production implementation first... Do NOT wait for App ID" — không hardcode App ID (khác quyết định tạm thời ở V5), thêm Mock Mode để tự kiểm thử toàn bộ luồng ngay cả khi Meta App chưa tồn tại, và hoàn thiện 3 hạng mục còn thiếu ở V5: Token Refresh/Permission Checking/Facebook Graph API Wrapper.
+
+### App ID — cấu hình động, không hardcode
+
+```
+App ID: Firebase RTDB facebookAppConfig/appId (KHÔNG phải hằng số JS)
+  - Client (js/admin-facebook-connect.js) đọc qua getAppId() mỗi khi cần
+  - Server (functions/index.js) đọc qua getFacebookAppId() (Admin SDK) mỗi request
+  - Founder tự "Enter App ID" tại admin/facebook-settings.html (ô nhập +
+    nút LƯU, ghi thẳng facebookAppConfig — KHÔNG cần sửa code/redeploy)
+  - App Secret vẫn BẮT BUỘC qua Secret Manager (defineSecret) — không đổi
+```
+
+### Mock Mode — tự động, không có công tắc riêng
+
+```
+mockMode = !appId  (tính DUY NHẤT 1 lần, tại facebookOAuthCallback)
+  → LƯU LẠI thành `isMock` trên MỌI bản ghi phái sinh từ lần OAuth đó:
+    facebookPendingPages/{uid}.isMock, facebookPageTokens/{uid}/{pageId}.isMock,
+    facebookUserToken.isMock, facebookActiveToken.isMock, facebookConnection.isMock
+  → facebookPublish/facebookRefreshToken ĐỌC LẠI `isMock` đã lưu — KHÔNG
+    tính lại theo App ID hiện tại. Lý do: nếu Founder điền App ID SAU KHI
+    đã kết nối ở Mock Mode, kết nối đó vẫn phải tiếp tục dùng Graph API giả
+    lập cho tới khi "Kết nối lại" thật — nếu không sẽ vô tình gọi Facebook
+    thật bằng token giả (`mock_page_token_1`) và lỗi khó hiểu. Đã kiểm thử
+    riêng đúng kịch bản này (Scenario C trong bộ test Cloud Functions).
+```
+
+`proceedOAuth()` ở Mock Mode KHÔNG redirect sang facebook.com (không có App ID để redirect tới) — redirect thẳng tới CHÍNH Cloud Function `facebookOAuthCallback` của mình với `code=mock-code`, cùng `state` nonce ghi trước như luồng thật. `facebookOAuthCallback` tự nhận biết Mock Mode và gọi `functions/facebook-graph-api.js` (wrapper) ở chế độ giả lập — toàn bộ phần còn lại của luồng (đọc/xoá state, ghi `facebookPendingPages`/`facebookPageTokens`, redirect về `?oauth=success`) chạy Y HỆT luồng thật. Founder có thể tự click qua toàn bộ vòng đời (Connect → chọn 1 trong 2 Fanpage giả → Generate Facebook AI → Đăng lên Facebook giả, nhận `facebookPostId` dạng `{pageId}_mockpost_{timestamp}`) để xác nhận kiến trúc đúng, ngay cả khi Meta App chưa tồn tại.
+
+### Facebook Graph API Wrapper (`functions/facebook-graph-api.js`, file mới)
+
+Điểm gọi Graph API DUY NHẤT (`exchangeCodeForToken`/`exchangeForLongLivedToken`/`getManagedPages`/`uploadPhoto`/`publishToFeed`) — không phụ thuộc `firebase-admin`/`firebase-functions`, chỉ nhận tham số qua object argument, nên test được bằng Node thuần không cần giả lập cả Cloud Functions runtime. Mỗi hàm nhận `mockMode`; nếu `true`, trả dữ liệu giả ĐÚNG SHAPE Graph API thật (vd `getManagedPages` mock trả về đúng 2 Page giả có `id`/`name`/`access_token`/`picture.data.url`) mà không gọi mạng. **Xoá Mock Mode sau này chỉ cần xoá đúng 5 nhánh `if (mockMode)` trong file NÀY — `facebookOAuthCallback`/`facebookSelectPage`/`facebookPublish`/`facebookRefreshToken` KHÔNG cần sửa gì**, vì chúng luôn gọi wrapper giống hệt nhau bất kể mock hay thật.
+
+### Token Refresh (`facebookRefreshToken`, Cloud Function mới)
+
+```
+Node facebookUserToken (server-only, TOÀN CỤC — không theo uid, chỉ 1 kết
+nối Facebook cho toàn platform) — LƯU LẠI (KHÔNG xoá ở facebookSelectPage
+như facebookPendingPages/facebookPageTokens) để dùng cho Refresh sau này.
+
+facebookRefreshToken:
+  1. Đọc facebookUserToken — nếu ĐÃ hết hạn hoàn toàn → lỗi rõ ràng
+     "không thể tự làm mới, cần Kết nối lại" (giới hạn thật của Facebook —
+     Long-Lived Token hết hạn hẳn thì không có cách "refresh token" nào
+     khác ngoài đăng nhập lại, không phải thiếu sót code).
+  2. Còn hạn → exchangeForLongLivedToken() lại CHÍNH token đó (Meta cho
+     phép "gia hạn" 1 Long-Lived Token còn hạn thành 1 token mới ~60 ngày,
+     không cần Founder đăng nhập lại — đây là cơ chế Refresh DUY NHẤT
+     Facebook hỗ trợ cho loại token này).
+  3. getManagedPages() lại với token mới → tìm đúng Page đang active →
+     lấy Page Access Token mới.
+  4. Cập nhật facebookUserToken/facebookActiveToken/facebookConnection.tokenExpiresAt.
+```
+
+Nút "🔄 Làm mới Token" hiển thị khi đang Connected/Token Expiring (`js/admin-facebook-connect.js`).
+
+### Permission Checking (`js/ai/permission-service.js`)
+
+Lỗ hổng RBAC đã sửa: nút "Đăng lên Facebook" (`admin/ai/drafts.html`) trước đây (Facebook AI V5) CHỈ kiểm tra `facebookConnection.status` — KHÔNG kiểm tra quyền gì, nghĩa là bất kỳ Editor nào xem được Draft Facebook đều bấm Publish được ngay. Thêm `AI_PERMISSIONS.PUBLISH_FACEBOOK` + `PermissionService.checkFacebookPublish(userId, userEmail)` (cùng pattern `checkPluginExecution()` — kiểm tra role, ghi Log khi từ chối — nhưng KHÔNG gắn với 1 Plugin/moduleId thật vì Publish không đi qua PluginManager/Queue; dùng chuỗi cố định `'facebook-publish'` khi ghi Log để phân biệt với Plugin `facebook-post-generator` thật). Editor được cấp quyền này — ngang mức Editor đã có với mọi hành động Publish khác (Blog/Product/Banner qua `publishDraftById()` không có rào riêng nào khắt khe hơn), không tự đặt ra hạn chế mới không được yêu cầu.
+
+- **0 sửa đổi**: Product AI/Blog AI/Banner AI/Image AI/Workflow/Plugin Framework/Queue/Draft System/`js/ai/modules/facebook-post-generator.js`.
+- **Kiểm thử**: Node `vm`/Node thuần cho cả 4 lớp (wrapper độc lập, Cloud Functions rewrite gồm cả kịch bản "guard" mock-không-tự-chuyển-thật, client OAuth/App ID field/Mock badge/Refresh, Permission Checking + regression toàn bộ luồng Publish V5) — tổng ~90 assertion, xem `CHANGELOG.md` để biết số lượng chi tiết từng bộ. Preview thật xác nhận trang tải đúng, không lỗi JS mới. **Mock Mode CÓ THỂ kiểm thử toàn bộ luồng ngay hôm nay trên Production thật** — đây là khác biệt cốt lõi so với Facebook AI V5 (chỉ kiểm thử được bằng Node `vm`, không click qua UI thật được vì chưa có gì để OAuth redirect tới).
+
 ## Facebook AI V5 — Facebook Configuration & Auto Publish (Sprint 12) — OAuth thật + Publish thật
+
+**[ĐÃ NÂNG CẤP THÊM]** — xem mục "Facebook Integration V1" ở trên (App ID không còn hardcode, có Mock Mode, Token Refresh, Permission Checking). Mục dưới đây giữ nguyên làm lịch sử kiến trúc gốc.
 
 Nâng cấp "Facebook Page Integration — CHỈ khung UI an toàn" (mục bên dưới, Sprint 12 Requirement #9) lên code THẬT — vẫn chưa chạy thử được thật vì chưa có Meta App (Chief Architect xác nhận trước khi code: viết toàn bộ code thật, chờ App ID/Secret sau — không lặp lại lựa chọn "chỉ khung an toàn" của Requirement #9 nữa).
 

@@ -86,6 +86,14 @@
       ".read": false,
       ".write": false
     },
+    "facebookUserToken": {
+      ".read": false,
+      ".write": false
+    },
+    "facebookAppConfig": {
+      ".read": "auth != null && root.child('roles').child(auth.uid).exists()",
+      ".write": "auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin'"
+    },
 
     "$other": {
       ".read": false,

@@ -25,6 +25,7 @@ const AI_PERMISSIONS = {
   GENERATE_BANNER: 'ai.generate.banner', // Sprint 6, Requirement #3 — kích hoạt Banner Generator (Functional Requirement #3, "thêm Permission nếu cần")
   GENERATE_IMAGE_PROMPT: 'ai.generate.imagePrompt', // Sprint 6, Requirement #4 — kích hoạt Image Prompt Generator (Functional Requirement #3, "thêm Permission nếu cần")
   GENERATE_IMAGE: 'ai.generate.image', // Sprint 12, Requirement #11 — Image AI (sinh ảnh thật, khác image-prompt-generator chỉ sinh văn bản prompt)
+  PUBLISH_FACEBOOK: 'ai.publish.facebook', // Sprint 12, Facebook Integration V1 — đăng THẬT lên Facebook (khác GENERATE_FACEBOOK chỉ sinh Draft văn bản) — admin/ai/drafts.html cho phép cả Editor xem Draft Facebook, cần kiểm tra riêng trước khi cho phép bấm "Đăng lên Facebook" thật
   MANAGE_PROVIDERS: 'ai.manage.providers',
   MANAGE_PLUGINS: 'ai.manage.plugins'
 };
@@ -47,9 +48,13 @@ const PLUGIN_PERMISSIONS = {
 // Chỉ Admin mới có ai.manage.providers/ai.manage.plugins (đúng yêu cầu #7:
 // chỉ Admin được đổi AI Provider và Plugin Settings). Editor có đủ quyền
 // generate — đúng với khả năng Editor đã có trên Dashboard từ trước.
+// PUBLISH_FACEBOOK cho cả admin lẫn editor — cùng mức Editor đã có sẵn với
+// mọi hành động Publish khác (Blog/Product/Banner qua publishDraftById()
+// không có kiểm tra RBAC riêng nào khắt khe hơn) — không tự đặt ra hạn chế
+// MỚI cho riêng Facebook khi không được yêu cầu.
 const ROLE_PERMISSIONS = {
   admin: Object.values(AI_PERMISSIONS),
-  editor: [AI_PERMISSIONS.GENERATE_PRODUCT, AI_PERMISSIONS.GENERATE_SLIDER, AI_PERMISSIONS.GENERATE_SEO, AI_PERMISSIONS.GENERATE_FAQ, AI_PERMISSIONS.GENERATE_BLOG, AI_PERMISSIONS.GENERATE_FACEBOOK, AI_PERMISSIONS.GENERATE_BANNER, AI_PERMISSIONS.GENERATE_IMAGE_PROMPT, AI_PERMISSIONS.GENERATE_IMAGE]
+  editor: [AI_PERMISSIONS.GENERATE_PRODUCT, AI_PERMISSIONS.GENERATE_SLIDER, AI_PERMISSIONS.GENERATE_SEO, AI_PERMISSIONS.GENERATE_FAQ, AI_PERMISSIONS.GENERATE_BLOG, AI_PERMISSIONS.GENERATE_FACEBOOK, AI_PERMISSIONS.GENERATE_BANNER, AI_PERMISSIONS.GENERATE_IMAGE_PROMPT, AI_PERMISSIONS.GENERATE_IMAGE, AI_PERMISSIONS.PUBLISH_FACEBOOK]
 };
 
 const PermissionService = (function () {
@@ -102,5 +107,24 @@ const PermissionService = (function () {
     });
   }
 
-  return { AI_PERMISSIONS, PLUGIN_PERMISSIONS, ROLE_PERMISSIONS, getRole, hasPermission, permissionForPlugin, checkPluginExecution };
+  // checkFacebookPublish() — Sprint 12, Facebook Integration V1. Cùng pattern
+  // checkPluginExecution() (kiểm tra role → hasPermission(), ghi Log khi từ
+  // chối) nhưng KHÔNG gắn với 1 Plugin cụ thể — Đăng lên Facebook không đi
+  // qua PluginManager/Queue (không "generate" gì mới, chỉ publish nội dung
+  // Draft đã có sẵn), nên không dùng permissionForPlugin()/moduleId thật.
+  // Dùng chuỗi 'facebook-publish' cố định khi ghi Log để phân biệt rõ với
+  // Plugin 'facebook-post-generator' thật (generate Draft).
+  function checkFacebookPublish(userId, userEmail) {
+    const permission = AI_PERMISSIONS.PUBLISH_FACEBOOK;
+    return getRole(userId).then(role => {
+      if (hasPermission(role, permission)) {
+        return { granted: true, permission, role, reason: '' };
+      }
+      const reason = `Thiếu quyền "${permission}" (vai trò hiện tại: ${role || 'không xác định'}).`;
+      return logDenied(userId, userEmail, 'facebook-publish', permission, reason)
+        .then(() => ({ granted: false, permission, role, reason }));
+    });
+  }
+
+  return { AI_PERMISSIONS, PLUGIN_PERMISSIONS, ROLE_PERMISSIONS, getRole, hasPermission, permissionForPlugin, checkPluginExecution, checkFacebookPublish };
 })();

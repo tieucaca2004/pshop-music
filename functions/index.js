@@ -24,22 +24,29 @@
 const { onRequest } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
+const facebookGraphApi = require('./facebook-graph-api');
 
 admin.initializeApp();
 
 const OPENAI_API_KEY = defineSecret('OPENAI_API_KEY');
 
-// Sprint 12 Requirement — Facebook AI V5 (Facebook Configuration & Auto
-// Publish). App ID KHÔNG nhạy cảm (an toàn để hardcode, giống cách mọi trang
-// OAuth khác hoạt động) — CHƯA có giá trị thật vì Facebook App chưa được tạo
-// (chỉ Chief Architect tự tạo được tại developers.facebook.com, xem
-// docs/FACEBOOK_INTEGRATION_SETUP.md). App Secret PHẢI qua Secret Manager,
-// không bao giờ hardcode — cùng nguyên tắc đã áp dụng cho OPENAI_API_KEY.
-const FACEBOOK_APP_ID = ''; // TODO: điền App ID thật sau khi tạo Facebook App
+// Sprint 12 — Facebook Integration V1. App ID KHÔNG hardcode (khác quyết
+// định tạm thời ở Facebook AI V5 trước đó) — đọc từ node Firebase
+// `facebookAppConfig/appId` (Founder tự "Enter App ID" qua UI thật ở
+// admin/facebook-settings.html, KHÔNG cần sửa code/redeploy). App Secret vẫn
+// PHẢI qua Secret Manager (`defineSecret`) — không bao giờ hardcode, cùng
+// nguyên tắc đã áp dụng cho OPENAI_API_KEY.
+//
+// Mock Mode: `mockMode = !appId` — bỏ trống App ID (trạng thái HIỆN TẠI,
+// chưa có Facebook App thật) tự động bật Mock Mode cho MỌI request mới,
+// không cần công tắc riêng nào khác. Xem functions/facebook-graph-api.js.
 const FACEBOOK_APP_SECRET = defineSecret('FACEBOOK_APP_SECRET');
-const FACEBOOK_GRAPH_VERSION = 'v19.0';
 const FACEBOOK_OAUTH_CALLBACK_URL = 'https://us-central1-pshop-music.cloudfunctions.net/facebookOAuthCallback';
 const FACEBOOK_RETURN_URL = 'https://pshopmusic.com/admin/facebook-settings.html';
+
+function getFacebookAppId() {
+  return admin.database().ref('facebookAppConfig/appId').once('value').then(snap => snap.val() || '');
+}
 
 async function validateRequest(req) {
   const authHeader = req.get('Authorization') || '';
@@ -196,14 +203,23 @@ exports.openaiProxy = onRequest({ secrets: [OPENAI_API_KEY], cors: true }, async
  * KHÔNG thể xác thực bằng Firebase ID token ở đây). Thay vào đó, xác định
  * "yêu cầu này của Founder nào" qua tham số `state` — 1 nonce dùng 1 lần do
  * client tự tạo + ghi vào `facebookOAuthState/{state}` TRƯỚC khi redirect
- * sang Facebook (xem js/admin-facebook-connect.js).
+ * (xem js/admin-facebook-connect.js).
  *
- * Luồng: code -> Short-Lived User Token -> Long-Lived User Token (~60 ngày)
- * -> danh sách Fanpage + Page Access Token riêng từng Page. Token THẬT chỉ
- * lưu vào node server-only `facebookPageTokens/{uid}` (Database Rules
- * .read:false/.write:false tuyệt đối, chỉ Admin SDK đọc/ghi được) — client
- * chỉ nhận metadata Page (id/name/ảnh đại diện) qua `facebookPendingPages`
- * để hiển thị danh sách chọn, KHÔNG BAO GIỜ thấy token thật.
+ * Mock Mode (Sprint 12 — Facebook Integration V1): `mockMode = !appId` được
+ * TÍNH 1 LẦN NGAY TẠI ĐÂY và LƯU LẠI (`isMock`) xuyên suốt cả token Page lẫn
+ * User Token — không tính lại mockMode ở facebookPublish/facebookRefreshToken
+ * dựa trên App ID hiện tại, để 1 kết nối mock không bị nhầm gọi Graph API
+ * thật chỉ vì Founder vừa điền App ID sau đó (phải "Kết nối lại" thật mới
+ * chuyển hẳn sang chế độ thật).
+ *
+ * Luồng: code -> Short-Lived User Token -> Long-Lived User Token (~60 ngày,
+ * LƯU LẠI vào `facebookUserToken` server-only để facebookRefreshToken dùng
+ * sau này) -> danh sách Fanpage + Page Access Token riêng từng Page. Token
+ * THẬT chỉ lưu vào node server-only `facebookPageTokens/{uid}` (Database
+ * Rules .read:false/.write:false tuyệt đối, chỉ Admin SDK đọc/ghi được) —
+ * client chỉ nhận metadata Page (id/name/ảnh đại diện) qua
+ * `facebookPendingPages` để hiển thị danh sách chọn, KHÔNG BAO GIỜ thấy
+ * token thật.
  */
 exports.facebookOAuthCallback = onRequest({ secrets: [FACEBOOK_APP_SECRET] }, async (req, res) => {
   const { code, state, error, error_description: errorDescription } = req.query || {};
@@ -227,23 +243,17 @@ exports.facebookOAuthCallback = onRequest({ secrets: [FACEBOOK_APP_SECRET] }, as
     await stateRef.remove(); // dùng 1 lần, xoá ngay sau khi xác nhận
     const uid = stateData.uid;
 
-    const tokenUrl = `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/oauth/access_token` +
-      `?client_id=${FACEBOOK_APP_ID}&redirect_uri=${encodeURIComponent(FACEBOOK_OAUTH_CALLBACK_URL)}` +
-      `&client_secret=${FACEBOOK_APP_SECRET.value()}&code=${code}`;
-    const tokenRes = await fetch(tokenUrl);
-    const tokenData = await tokenRes.json();
-    if (!tokenRes.ok || !tokenData.access_token) {
-      throw new Error((tokenData.error && tokenData.error.message) || 'Không đổi được "code" lấy Access Token.');
-    }
+    const appId = await getFacebookAppId();
+    const mockMode = !appId;
+    const appSecret = FACEBOOK_APP_SECRET.value();
 
-    const longLivedUrl = `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/oauth/access_token` +
-      `?grant_type=fb_exchange_token&client_id=${FACEBOOK_APP_ID}&client_secret=${FACEBOOK_APP_SECRET.value()}` +
-      `&fb_exchange_token=${tokenData.access_token}`;
-    const longLivedRes = await fetch(longLivedUrl);
-    const longLivedData = await longLivedRes.json();
-    if (!longLivedRes.ok || !longLivedData.access_token) {
-      throw new Error((longLivedData.error && longLivedData.error.message) || 'Không đổi được Long-Lived Access Token.');
-    }
+    const tokenData = await facebookGraphApi.exchangeCodeForToken({
+      mockMode, code, appId, appSecret, redirectUri: FACEBOOK_OAUTH_CALLBACK_URL
+    });
+
+    const longLivedData = await facebookGraphApi.exchangeForLongLivedToken({
+      mockMode, shortLivedToken: tokenData.access_token, appId, appSecret
+    });
     const userToken = longLivedData.access_token;
     // Facebook không phải lúc nào cũng trả "expires_in" cho Long-Lived Token —
     // mặc định ước tính 60 ngày (giá trị Meta công bố) nếu thiếu, để tokenExpiresAt
@@ -251,13 +261,7 @@ exports.facebookOAuthCallback = onRequest({ secrets: [FACEBOOK_APP_SECRET] }, as
     const expiresInSec = longLivedData.expires_in || 60 * 24 * 3600;
     const expiresAt = Date.now() + expiresInSec * 1000;
 
-    const accountsUrl = `https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/me/accounts` +
-      `?fields=id,name,access_token,picture&access_token=${userToken}`;
-    const accountsRes = await fetch(accountsUrl);
-    const accountsData = await accountsRes.json();
-    if (!accountsRes.ok) {
-      throw new Error((accountsData.error && accountsData.error.message) || 'Không lấy được danh sách Fanpage.');
-    }
+    const accountsData = await facebookGraphApi.getManagedPages({ mockMode, userToken });
     const pages = accountsData.data || [];
     if (!pages.length) {
       throw new Error('Tài khoản Facebook này chưa quản lý Fanpage nào.');
@@ -270,11 +274,18 @@ exports.facebookOAuthCallback = onRequest({ secrets: [FACEBOOK_APP_SECRET] }, as
     }));
     const tokenUpdates = {};
     pages.forEach(p => {
-      tokenUpdates[p.id] = { accessToken: p.access_token, name: p.name, obtainedAt: Date.now(), expiresAt };
+      tokenUpdates[p.id] = { accessToken: p.access_token, name: p.name, obtainedAt: Date.now(), expiresAt, isMock: mockMode };
     });
 
-    await admin.database().ref('facebookPendingPages/' + uid).set({ pages: pendingPages, fetchedAt: Date.now() });
+    await admin.database().ref('facebookPendingPages/' + uid).set({ pages: pendingPages, fetchedAt: Date.now(), isMock: mockMode });
     await admin.database().ref('facebookPageTokens/' + uid).set(tokenUpdates);
+    // facebookUserToken — node TOÀN CỤC (không theo uid, chỉ 1 kết nối Facebook
+    // cho toàn platform tại 1 thời điểm, giống facebookActiveToken) — giữ lại
+    // (KHÔNG xoá ở facebookSelectPage) để facebookRefreshToken dùng làm mới
+    // Page Token sau này mà không cần Founder đăng nhập lại từ đầu.
+    await admin.database().ref('facebookUserToken').set({
+      accessToken: userToken, obtainedAt: Date.now(), expiresAt, isMock: mockMode, obtainedBy: uid
+    });
 
     res.redirect(302, `${FACEBOOK_RETURN_URL}?oauth=success`);
   } catch (err) {
@@ -326,7 +337,8 @@ exports.facebookSelectPage = onRequest({ cors: true }, async (req, res) => {
       pageId,
       accessToken: tokenData.accessToken,
       obtainedAt: tokenData.obtainedAt,
-      expiresAt: tokenData.expiresAt
+      expiresAt: tokenData.expiresAt,
+      isMock: !!tokenData.isMock
     });
 
     await admin.database().ref('facebookConnection').set({
@@ -336,7 +348,8 @@ exports.facebookSelectPage = onRequest({ cors: true }, async (req, res) => {
       pageProfileImage: pageMeta.picture || '',
       connectedAt: Date.now(),
       tokenExpiresAt: tokenData.expiresAt,
-      connectedBy: userRecord.email || uid
+      connectedBy: userRecord.email || uid,
+      isMock: !!tokenData.isMock
     });
 
     // Dọn state tạm — token của các Page KHÔNG được chọn không cần giữ lại.
@@ -388,6 +401,11 @@ exports.facebookPublish = onRequest({ cors: true }, async (req, res) => {
 
     const pageId = active.pageId;
     const accessToken = active.accessToken;
+    // mockMode LẤY TỪ chính kết nối đã lưu (`active.isMock`), KHÔNG tính lại
+    // từ App ID hiện tại — 1 kết nối được thiết lập ở Mock Mode phải TIẾP TỤC
+    // gọi Graph API giả lập cho tới khi Founder "Kết nối lại" thật, tránh vô
+    // tình gọi Facebook thật bằng token giả nếu App ID được điền sau đó.
+    const mockMode = !!active.isMock;
     const images = Array.isArray(imageUrls) ? imageUrls.filter(Boolean) : [];
 
     // Nhiều ảnh trong 1 bài đăng — đúng pattern Graph API công khai: upload
@@ -395,32 +413,87 @@ exports.facebookPublish = onRequest({ cors: true }, async (req, res) => {
     // rồi lắp tất cả vào 1 bài đăng /feed duy nhất qua "attached_media".
     const attachedMedia = [];
     for (const url of images) {
-      const photoRes = await fetch(`https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/${pageId}/photos`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url, published: false, access_token: accessToken })
-      });
-      const photoData = await photoRes.json();
-      if (!photoRes.ok || !photoData.id) {
-        throw new Error((photoData.error && photoData.error.message) || 'Không tải được ảnh lên Facebook.');
-      }
+      const photoData = await facebookGraphApi.uploadPhoto({ mockMode, pageId, imageUrl: url, pageAccessToken: accessToken });
       attachedMedia.push({ media_fbid: photoData.id });
     }
 
-    const feedBody = { message, access_token: accessToken };
-    if (attachedMedia.length) feedBody.attached_media = attachedMedia;
+    const feedData = await facebookGraphApi.publishToFeed({ mockMode, pageId, message, attachedMedia, pageAccessToken: accessToken });
 
-    const feedRes = await fetch(`https://graph.facebook.com/${FACEBOOK_GRAPH_VERSION}/${pageId}/feed`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(feedBody)
-    });
-    const feedData = await feedRes.json();
-    if (!feedRes.ok || !feedData.id) {
-      throw new Error((feedData.error && feedData.error.message) || 'Facebook API từ chối đăng bài.');
+    res.json({ success: true, facebookPostId: feedData.id, mockMode });
+  } catch (err) {
+    res.status(502).json({ success: false, error: err.message });
+  }
+});
+
+/*
+ * facebookRefreshToken — Sprint 12, Facebook Integration V1 (Token Refresh).
+ * Meta cho phép đổi 1 Long-Lived User Token CÒN HẠN lấy 1 Long-Lived User
+ * Token MỚI (gia hạn thêm ~60 ngày) mà KHÔNG cần Founder đăng nhập lại —
+ * đây là cơ chế "làm mới" DUY NHẤT Facebook hỗ trợ cho loại token này (không
+ * có refresh token riêng như OAuth chuẩn). Nếu Token đã hết hạn HOÀN TOÀN,
+ * Meta sẽ từ chối đổi — lúc đó không có cách nào khác ngoài "Kết nối lại"
+ * (đăng nhập Facebook lại từ đầu), đây là giới hạn thật của Facebook, không
+ * phải thiếu sót của code.
+ */
+exports.facebookRefreshToken = onRequest({ secrets: [FACEBOOK_APP_SECRET], cors: true }, async (req, res) => {
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Chỉ hỗ trợ POST.' });
+    return;
+  }
+  const check = await validateRequest(req);
+  if (!check.ok) {
+    res.status(check.status).json({ error: check.error });
+    return;
+  }
+
+  try {
+    const userTokenSnap = await admin.database().ref('facebookUserToken').once('value');
+    const userTokenRecord = userTokenSnap.val();
+    if (!userTokenRecord || !userTokenRecord.accessToken) {
+      res.status(400).json({ success: false, error: 'Chưa từng kết nối Facebook — vào Cài đặt > Facebook Configuration để kết nối trước.' });
+      return;
+    }
+    if (userTokenRecord.expiresAt && Date.now() > userTokenRecord.expiresAt) {
+      res.status(400).json({ success: false, error: 'Token đã hết hạn hoàn toàn — không thể tự làm mới, vui lòng bấm "Kết nối lại" để đăng nhập Facebook từ đầu.' });
+      return;
     }
 
-    res.json({ success: true, facebookPostId: feedData.id });
+    const activeSnap = await admin.database().ref('facebookActiveToken').once('value');
+    const active = activeSnap.val();
+    if (!active || !active.pageId) {
+      res.status(400).json({ success: false, error: 'Chưa chọn Fanpage nào — vào Cài đặt > Facebook Configuration để kết nối trước.' });
+      return;
+    }
+
+    // Giữ NGUYÊN mockMode của kết nối gốc — cùng lý do đã áp dụng ở
+    // facebookPublish (không tính lại theo App ID hiện tại).
+    const mockMode = !!userTokenRecord.isMock;
+    const appId = await getFacebookAppId();
+    const appSecret = FACEBOOK_APP_SECRET.value();
+
+    const refreshed = await facebookGraphApi.exchangeForLongLivedToken({
+      mockMode, shortLivedToken: userTokenRecord.accessToken, appId, appSecret
+    });
+    const freshUserToken = refreshed.access_token;
+    const expiresInSec = refreshed.expires_in || 60 * 24 * 3600;
+    const expiresAt = Date.now() + expiresInSec * 1000;
+
+    const accountsData = await facebookGraphApi.getManagedPages({ mockMode, userToken: freshUserToken });
+    const pages = accountsData.data || [];
+    const matchingPage = pages.find(p => p.id === active.pageId);
+    if (!matchingPage) {
+      throw new Error('Không còn thấy Fanpage đã kết nối trong danh sách quản lý — vui lòng "Kết nối lại".');
+    }
+
+    await admin.database().ref('facebookUserToken').set({
+      accessToken: freshUserToken, obtainedAt: Date.now(), expiresAt, isMock: mockMode, obtainedBy: check.uid
+    });
+    await admin.database().ref('facebookActiveToken').update({
+      accessToken: matchingPage.access_token, obtainedAt: Date.now(), expiresAt
+    });
+    await admin.database().ref('facebookConnection').update({ tokenExpiresAt: expiresAt });
+
+    res.json({ success: true, tokenExpiresAt: expiresAt });
   } catch (err) {
     res.status(502).json({ success: false, error: err.message });
   }
