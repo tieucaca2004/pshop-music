@@ -2,6 +2,19 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 13 — Requirement: Hero Slideshow — Khung ảnh ngang + Vị trí chữ tiêu đề
+
+Founder báo lỗi thật: trang Quản lý Slider (admin/sliders.html) không có ô hình nằm ngang cho ảnh Slide Trang chủ (Hero Slideshow), và không có cách nào di chuyển vị trí chữ tiêu đề trên banner — cả khi tạo Slide mới lẫn khi sửa Slide có sẵn.
+
+- **Khung ảnh ngang (16:9)**: `js/media-library-picker.js` — `slotHtml()` thêm `opts.wide` (mặc định không bật, 0 ảnh hưởng mọi nơi gọi khác — Product/Blog/Banner/Category vẫn dùng khung vuông 96×96 như cũ), gắn class `medialib-slot-thumb-wide` (220×124px, css/admin.css). `js/admin-sliders.js` truyền `{ wide: true }` khi gọi `MediaLibraryPicker.renderSlot()` cho ảnh Slide — Founder thấy đúng ảnh sẽ crop/hiển thị thế nào trước khi Lưu, thay vì khung vuông nhỏ gây cảm giác sai tỉ lệ.
+- **Vị trí chữ tiêu đề — lưới 9 điểm bấm trực tiếp trên ảnh xem trước**: mỗi Slide thêm field mới `position` (`top-left`/`top-center`/`top-right`/`middle-left`/`middle-center`/`middle-right`/`bottom-left`/`bottom-center`/`bottom-right`; mặc định `bottom-left` — khớp ĐÚNG vị trí cố định trước đây, Slide cũ không có field này tự hiểu là `bottom-left`, không cần migration). Thay vì `<select>` chữ, `js/admin-sliders.js` render 1 khung xem trước mini (`.hero-mini-preview`, tỉ lệ 16:9, dùng chính ảnh Slide làm nền) với lưới 9 nút (`.pos-dot`) phủ lên trên — Founder bấm trực tiếp vào điểm muốn đặt chữ, thấy ngay điểm đang chọn (`.pos-dot-active`). `refreshPreview()` cập nhật khung xem trước tại chỗ (không rebuild lại toàn bộ danh sách Slide, tránh mất focus ô đang gõ) mỗi khi đổi ảnh/tiêu đề/vị trí. **Có ở CẢ tạo Slide mới (`addSlide()`, mặc định `position:'bottom-left'`) VÀ sửa Slide có sẵn** — cùng 1 component `miniPreview()` dùng chung, không có đường code riêng cho 2 trường hợp.
+- **Trang công khai (`index.html`/`js/home.js`)**: `updateHeroText()` ghi `data-text-pos` lên `#heroSection` mỗi khi chuyển Slide — `css/style.css` thêm 6 rule dùng CSS attribute selector (`.hero[data-text-pos^="top-"]`, `$="-center"`, `$="-right"`...) đổi `align-items`/`text-align`/`margin` tương ứng. Vị trí mặc định `bottom-left` KHÔNG có rule riêng — giữ NGUYÊN VẸN CSS/hành vi cũ cho mọi Slide chưa có field `position`, 0 regression cho 42+ Slide/trang hiện có.
+- **Kéo thả sắp xếp lại thứ tự Slide**: thêm SortableJS (CDN, `admin/sliders.html`) — kéo bằng tay cầm `.slide-drag-handle` (☰) thay cho 2 nút ↑LÊN/↓XUỐNG cũ. `initSortable()` khởi tạo lại sau mỗi `render()` (DOM bị rebuild hoàn toàn mỗi lần render).
+- **Polish fix nhỏ đi kèm**: `.slide-panel{padding:0}` — bỏ padding 1.75rem thừa của `.panel` gốc cộng dồn với padding riêng của `.slide-panel-content`, để tay cầm kéo thả nằm sát mép đúng như 1 handle thật.
+- **0 sửa đổi**: Product/Blog/Banner/Category (mọi nơi khác dùng chung `MediaLibraryPicker`/`slotHtml()`) — chỉ Slider Trang chủ đổi hành vi.
+- **Kiểm thử**: Node `vm` mã nguồn thật, 13 assertions — `opts.wide` chỉ ảnh hưởng khi truyền tường minh (0 regression nơi khác); lưới 9 điểm render đủ cho cả Slide cũ (mặc định đúng `bottom-left`) lẫn Slide mới; ảnh nền khung xem trước đúng WYSIWYG; bấm chọn vị trí (`setPos()`) + Lưu ghi đúng vào `SiteContentDB`; Slide khác không bị ảnh hưởng khi Lưu. Preview thật xác nhận `admin/sliders.html` tải đúng, `js/admin-sliders.js` load thành công (200 OK), không lỗi JS mới. **Chưa kiểm thử kéo thả/bấm vị trí qua UI thật có đăng nhập** (cần tài khoản Founder thật).
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+
 ## Sprint 13 — Requirement: Product Management V2 — Category Assignment
 
 Mỗi Sản phẩm giờ thuộc được NHIỀU Danh mục thay vì chỉ 1 (yêu cầu "Every Product must belong to one or more Categories") — thay select 1-lựa-chọn cũ bằng checklist nhiều-lựa-chọn trong form Sản phẩm, có validate bắt buộc chọn ít nhất 1, và mọi AI Plugin liên quan tự động dùng lại đúng danh mục Founder đã chọn làm ngữ cảnh.

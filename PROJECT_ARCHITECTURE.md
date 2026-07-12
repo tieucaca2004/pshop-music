@@ -631,6 +631,39 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Hero Slideshow — Khung ảnh ngang + Vị trí chữ tiêu đề (Sprint 13)
+
+Trang Quản lý Slider (`admin/sliders.html` + `js/admin-sliders.js`) quản lý node `siteContent.heroSlides` — cùng dữ liệu trang chủ (`index.html`/`js/home.js`) đọc để render Hero Slideshow. Founder báo 2 vấn đề thật: ô chọn ảnh dùng chung khung vuông nhỏ với mọi nơi khác trong CMS (không đúng tỉ lệ banner ngang thật), và không có cách nào di chuyển vị trí chữ tiêu đề.
+
+### Khung ảnh ngang — `opts.wide`, chỉ Slider dùng
+
+`js/media-library-picker.js` `slotHtml()` thêm nhánh `opts.wide` — gắn thêm class `medialib-slot-thumb-wide` (220×124px, tỉ lệ ~16:9) lên khung xem trước ảnh, thay cho khung vuông mặc định `medialib-slot-thumb` (96×96px) dùng chung mọi nơi khác (Product/Blog/Banner/Category). **Opt-in tuyệt đối** — chỉ `js/admin-sliders.js` truyền `{ wide: true }`, mọi lời gọi `renderSlot()`/`mount()`/`mountMulti()` khác không đổi, 0 regression.
+
+### Vị trí chữ tiêu đề — lưới 9 điểm bấm trên ảnh xem trước thật
+
+Mỗi phần tử `heroSlides[]` thêm field `position` (1 trong 9 giá trị: `top-left`/`top-center`/`top-right`/`middle-left`/`middle-center`/`middle-right`/`bottom-left`/`bottom-center`/`bottom-right`; mặc định/không có field = `bottom-left`, khớp đúng vị trí cố định trước đây — Slide cũ không cần migration).
+
+Thay vì 1 `<select>` chọn vị trí bằng chữ, `admin-sliders.js` render 1 khung xem trước mini (`miniPreview()`, class `.hero-mini-preview`, tỉ lệ 16:9, nền = chính ảnh Slide) phủ lưới 9 nút `.pos-dot` — Founder bấm trực tiếp vào điểm muốn đặt chữ trên ẢNH THẬT, trực quan hơn hẳn chọn text trong dropdown. `refreshPreview(i)` patch lại đúng `#preview-{i}` tại chỗ (không rebuild toàn bộ `#slideList`) mỗi khi ảnh/tiêu đề/vị trí đổi — tránh mất focus ô đang gõ dở. Có mặt ở CẢ `addSlide()` (Slide mới, mặc định `position:'bottom-left'`) LẪN sửa Slide có sẵn — dùng chung đúng 1 hàm `miniPreview()`, không có 2 đường code riêng biệt.
+
+### Áp dụng vị trí lên trang công khai — CSS attribute selector, mặc định không có rule
+
+`js/home.js` `updateHeroText(index)` — mỗi khi chuyển Slide (kể cả Slide đầu tiên khi tải trang), ghi `document.getElementById('heroSection').dataset.textPos = slide.position || 'bottom-left'`. `css/style.css` thêm 6 rule dùng CSS attribute selector (`^=`/`$=`) áp `align-items` (dọc)/`text-align`+`margin` (ngang) tương ứng lên `.hero`/`.container`/`h1`/`.hero-sub`/`.hero-btns`:
+
+```css
+.hero[data-text-pos^="top-"]{align-items:flex-start}
+.hero[data-text-pos^="middle-"]{align-items:center}
+.hero[data-text-pos$="-center"] .container{margin-left:auto;margin-right:auto;text-align:center}
+.hero[data-text-pos$="-center"] .hero-btns{justify-content:center}
+.hero[data-text-pos$="-right"] .container{margin-left:auto;margin-right:0;text-align:right}
+.hero[data-text-pos$="-right"] .hero-btns{justify-content:flex-end}
+```
+
+`bottom-left` (mặc định) **KHÔNG có rule riêng nào** — CSS gốc của `.hero` (`align-items:flex-end`, `.container` căn trái tự nhiên) đã đúng, đảm bảo mọi Slide chưa từng chạm vào tính năng này (toàn bộ Slide thật hiện có) hiển thị giống hệt trước, 0 regression.
+
+### Kéo thả sắp xếp lại thứ tự Slide
+
+Thêm SortableJS (CDN, `admin/sliders.html`) — tay cầm `.slide-drag-handle` (☰) kéo thả đổi thứ tự, thay 2 nút ↑LÊN/↓XUỐNG cũ. `initSortable()` phải gọi lại sau MỖI `render()` vì `#slideList` bị rebuild hoàn toàn (innerHTML thay mới) mỗi lần — SortableJS instance cũ mất gắn kết với DOM cũ, cần `.destroy()` + tạo lại.
+
 ## Product Management V2 — Category Assignment (Sprint 13)
 
 Mỗi Sản phẩm cần thuộc được NHIỀU Danh mục (yêu cầu "Every Product must belong to one or more Categories"), thay vì chỉ 1 Danh mục như trước — thay đổi cả 3 tầng: form Admin, dữ liệu Firebase, và trang công khai, cộng thêm điểm chạm AI Reuse ở 5 Plugin.
