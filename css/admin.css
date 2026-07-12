@@ -182,22 +182,36 @@ body{min-height:100vh;background:var(--bg-alt)}
 .agent-msg-user .agent-msg-bubble{background:var(--gold-soft);border-color:var(--gold);color:var(--gold-ink)}
 .agent-msg-agent .agent-msg-bubble{background:var(--bg-alt);color:var(--ink)}
 .agent-msg-body{margin-top:0.35rem}
-/* Execution Timeline — 4 bước cố định (Hiểu ý định/Chọn công cụ/Đang thực
-   thi/Hoàn tất), độc lập với dòng agent-status bên dưới. */
-.agent-timeline{display:flex;flex-wrap:wrap;align-items:center;gap:0.3rem;font-size:0.68rem;margin-bottom:0.5rem;letter-spacing:0.02em}
-.agent-step{color:var(--ink-mute)}
-.agent-step-done{color:#1a7a4a;font-weight:600}
-.agent-step-active{color:var(--gold-ink);font-weight:700}
-.agent-step-error{color:#c0392b;font-weight:700}
-.agent-step-sep{color:var(--line2)}
-.agent-status{display:inline-flex;align-items:center;gap:0.3rem;font-size:0.72rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;padding:0.2rem 0.55rem;border:1px solid currentColor}
-.agent-status-thinking{color:var(--ink-mute)}
-.agent-status-selected{color:var(--gold-ink);background:var(--gold-soft)}
-.agent-status-running{color:#1a6b9a;background:#eaf4fb}
-.agent-status-done{color:#1a7a4a;background:#eafaf2}
-.agent-status-error{color:#c0392b;background:#fdf1ef}
 .agent-open-draft-btn{display:inline-block;margin-left:0.6rem;font-size:0.8rem;font-weight:700;color:var(--gold-ink);text-decoration:none;letter-spacing:0.03em}
 .agent-open-draft-btn:hover{text-decoration:underline}
+
+/* Execution Plan (Founder Agent V2) — mỗi bước 1 dòng: Tool/Target/Status/
+   Actions. Thay thế Execution Timeline 4-bước cố định của V1 (đã gộp khái
+   niệm "tiến trình" vào chính Status của từng bước Plan). */
+.agent-plan{display:flex;flex-direction:column;gap:0.5rem;margin-top:0.6rem}
+.agent-plan-row{display:grid;grid-template-columns:1.3fr 1.3fr auto auto;gap:0.5rem;align-items:center;padding:0.5rem 0.7rem;background:#fff;border:1px solid var(--line2);border-left:3px solid var(--line2);font-size:0.8rem}
+.agent-plan-row-running{border-left-color:#1a6b9a}
+.agent-plan-row-completed{border-left-color:#1a7a4a}
+.agent-plan-row-failed{border-left-color:#c0392b}
+.agent-plan-row-skipped{opacity:0.55}
+.agent-plan-tool{font-weight:700;color:var(--ink)}
+.agent-plan-target{color:var(--ink-soft);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agent-plan-status{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;padding:0.15rem 0.5rem;border:1px solid currentColor;white-space:nowrap}
+.agent-plan-status-pending{color:var(--ink-mute)}
+.agent-plan-status-running{color:#1a6b9a;background:#eaf4fb}
+.agent-plan-status-completed{color:#1a7a4a;background:#eafaf2}
+.agent-plan-status-failed{color:#c0392b;background:#fdf1ef}
+.agent-plan-status-skipped{color:var(--ink-mute);background:var(--bg-alt)}
+.agent-plan-actions{display:flex;gap:0.4rem;align-items:center;white-space:nowrap}
+.agent-plan-btn{background:none;border:1px solid var(--line2);color:var(--ink);font-size:0.7rem;padding:0.25rem 0.55rem;cursor:pointer;font-family:'Be Vietnam Pro',sans-serif}
+.agent-plan-btn:hover{border-color:var(--gold);color:var(--gold-ink)}
+.agent-plan-btn-danger{color:#c0392b;border-color:#e3b3ab}
+.agent-plan-btn-danger:hover{border-color:#c0392b;color:#c0392b}
+.agent-plan-error{grid-column:1/-1;color:#c0392b;font-size:0.74rem;margin-top:0.2rem}
+.agent-plan-runall{margin-top:0.2rem}
+.agent-plan-report{margin-top:0.6rem;padding-top:0.6rem;border-top:1px solid var(--line2);font-size:0.82rem}
+.agent-plan-report-links{margin:0.4rem 0 0;padding-left:1.1rem}
+@media(max-width:700px){.agent-plan-row{grid-template-columns:1fr}}
 .agent-suggestions{display:flex;flex-wrap:wrap;gap:0.5rem;padding:0.75rem 1.25rem;border-top:1px solid var(--line2)}
 .agent-suggestion-chip{background:var(--bg-alt);border:1px solid var(--line2);color:var(--ink);font-size:0.76rem;padding:0.35rem 0.8rem;cursor:pointer;transition:border-color 0.15s,background 0.15s;font-family:'Be Vietnam Pro',sans-serif}
 .agent-suggestion-chip:hover{border-color:var(--gold);background:var(--gold-soft);color:var(--gold-ink)}

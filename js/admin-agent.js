@@ -1,74 +1,70 @@
 /*
- * admin-agent.js — Founder Agent V1 (Sprint 13)
- * Entry Point AI DUY NHẤT cho toàn bộ PSH Platform: Founder gõ tự do bằng
- * tiếng Việt → Agent hiểu ý định → chọn đúng công cụ → thực thi → hiển thị
- * tiến trình → mở Nháp. Agent CHỈ LÀ ORCHESTRATOR — không tự sinh nội dung
- * (mọi generation thật do đúng Plugin đã có thực hiện qua Queue như bình
- * thường), không thay thế/sửa bất kỳ Plugin nào.
+ * admin-agent.js — Founder Agent V2: Task Planner (Sprint 13)
+ * Nâng cấp V1 (1 lệnh -> 1 công cụ -> 1 Draft) thành Task Planner: 1 lệnh CÓ
+ * THỂ cần NHIỀU công cụ, Agent tự XÂY DỰNG 1 Execution Plan (danh sách bước,
+ * mỗi bước là 1 công cụ + đích nhắm), Founder tự quyết định chạy bước nào,
+ * khi nào — Agent KHÔNG BAO GIỜ tự chạy khi chưa được bấm (Do NOT add
+ * Autonomous Agent). Agent vẫn CHỈ LÀ ORCHESTRATOR — không tự sinh nội
+ * dung, mọi generation thật đi qua ĐÚNG Plugin/Queue/Draft đã có, không
+ * viết lại/sửa bất kỳ Plugin nào (giữ nguyên toàn bộ nguyên tắc V1).
  *
- * Khác với "Trợ lý AI" (admin/ai/assistant.html, js/admin-ai-assistant.js) —
- * dùng AITaskRouter (Sprint 4, rule-based khớp từ khóa cố định, cố tình
- * KHÔNG gọi AI thật để phân loại ý định, đúng ràng buộc Sprint 4 lúc đó) —
- * Founder Agent dùng GPT-4o-mini QUA ĐÚNG Cloud Function openaiProxy đã có
- * (action="generate", không thêm Provider/API Key mới) làm Tool Router, để
- * hiểu được câu tự do linh hoạt hơn (vd "Tạo sản phẩm Pioneer RX3" — ý định
- * KHÁC hẳn "Viết mô tả Pioneer RX3", AITaskRouter không phân biệt được vì
- * route cố định theo từ khóa). Đây là năng lực MỚI có chủ đích của
- * Requirement này — phần THỰC THI phía sau (PermissionService ->
- * PluginManager -> AIJobQueue -> Draft) tái sử dụng NGUYÊN VẸN, giống hệt
- * AITaskRouter.dispatch() đã làm, không viết lại logic Queue/Publish Pipeline
- * ở bất kỳ đâu trong file này.
+ * KIẾN TRÚC: V2 THAY THẾ hoàn toàn luồng "1 công cụ" của V1 bằng 1 Plan có
+ * thể chỉ có ĐÚNG 1 bước (trường hợp thoái hoá — vd "Viết mô tả RX3" vẫn
+ * hoạt động y hệt V1, chỉ khác hiển thị trong khung Execution Plan 1 dòng
+ * thay vì Timeline 4 bước cũ) — không giữ 2 đường code song song cho cùng
+ * 1 file, tránh trùng lặp logic thực thi Plugin.
  *
- * "Tạo sản phẩm X" — KHÔNG có Plugin nào "tạo sản phẩm mới" (product-
- * description-writer chỉ viết mô tả cho sản phẩm ĐÃ CÓ). Đây không phải sinh
- * NỘI DUNG bằng AI (không vi phạm "Never generate content directly") — chỉ
- * tạo 1 dòng dữ liệu Sản phẩm trống (chỉ có Tên) ở trạng thái Nháp, tái sử
- * dụng ĐÚNG DB.add() js/admin-products.js đã dùng cho sản phẩm mới, rồi
- * hướng Founder qua Product Editor thật để tự điền tiếp — không qua Queue/
- * Plugin vì không có bước generate AI nào ở hành động này.
+ * Mỗi bước khi CHẠY vẫn đi ĐÚNG 5 bước cũ (Permission -> PluginManager ->
+ * Queue -> Draft), giống hệt V1/AITaskRouter.dispatch() — không đổi.
  */
 const AdminAgent = (function () {
   const PROXY_URL = 'https://us-central1-pshop-music.cloudfunctions.net/openaiProxy';
 
-  // 4 bước cố định của Execution Timeline — hiển thị tiến trình rõ ràng cho
-  // MỌI yêu cầu, không phụ thuộc công cụ nào được chọn.
-  const STEPS = ['Hiểu ý định', 'Chọn công cụ AI', 'Đang thực thi', 'Hoàn tất'];
+  // "$product" — token đại diện cho ID sản phẩm SẼ ĐƯỢC TẠO bởi bước
+  // "create-product" trong CÙNG 1 Plan (chưa tồn tại tại thời điểm lập kế
+  // hoạch — Planner không thể biết trước ID thật). resolveInputParams() thay
+  // token này bằng ID thật NGAY TRƯỚC KHI chạy 1 bước, chỉ khi bước
+  // "create-product" trong CÙNG Plan đã Completed.
+  const PRODUCT_TOKEN = '$product';
 
-  // Map moduleId (kể cả "create-product", KHÔNG phải Plugin thật) → tên
-  // thân thiện + icon hiển thị trên timeline/chip.
+  // Map tool -> tên thân thiện + icon. "create-product" và "seo" KHÔNG PHẢI
+  // Plugin thật (xem executeStep()) — "seo" là mốc hiển thị, gộp chung 1 lần
+  // generate với product-description-writer (Product AI đã sinh đủ cả nội
+  // dung LẪN field SEO trong 1 JSON — đúng nguyên tắc "tránh gọi AI 2 lần"
+  // đã áp dụng từ Sprint 12 Requirement #10, nút "Generate SEO" trên
+  // admin/products.html cũng gọi CHUNG plugin này, không phải plugin riêng).
   const TOOL_MAP = {
     'create-product':             { label: 'Tạo Sản phẩm mới', icon: '🆕' },
     'product-description-writer': { label: 'Product AI',       icon: '🎸' },
+    'seo':                        { label: 'SEO',               icon: '🔍' },
     'blog-writer':                { label: 'Blog AI',          icon: '📝' },
     'facebook-post-generator':    { label: 'Facebook AI',      icon: '📱' },
     'banner-generator':           { label: 'Banner AI',        icon: '🖼' },
     'image-generator':            { label: 'Image AI',         icon: '✨' },
     'slider-generator':           { label: 'Slider AI',        icon: '🎞' },
-    'seo-generator':              { label: 'SEO AI',           icon: '🔍' },
     'faq-generator':              { label: 'FAQ AI',           icon: '❓' }
   };
 
+  const STATUS_LABEL = { pending: 'Chờ chạy', running: 'Đang chạy', completed: 'Hoàn tất', failed: 'Thất bại', skipped: 'Đã bỏ qua' };
+
   const SUGGESTED = [
-    { label: 'Tạo sản phẩm mới',           text: 'Tạo sản phẩm Pioneer RX3' },
-    { label: 'Viết mô tả Pioneer RX3',     text: 'Viết mô tả sản phẩm Pioneer RX3' },
-    { label: 'Viết bài Facebook cho RX3',  text: 'Viết bài Facebook cho Pioneer RX3' },
-    { label: 'Viết blog Pioneer RX3',      text: 'Viết bài blog về Pioneer RX3' },
-    { label: 'Tạo banner giảm giá 20%',    text: 'Tạo banner giảm giá 20%' },
-    { label: 'Tạo ảnh marketing RX3',      text: 'Tạo ảnh marketing cho Pioneer RX3' }
+    { label: 'Tạo sản phẩm mới (full plan)', text: 'Tạo sản phẩm Pioneer RX3' },
+    { label: 'Blog + Facebook cho RX3',      text: 'Viết Blog và Facebook cho Pioneer RX3' },
+    { label: 'Banner + ảnh Facebook',        text: 'Tạo Banner và ảnh Facebook cho Pioneer RX3' },
+    { label: 'Viết mô tả Pioneer RX3',       text: 'Viết mô tả sản phẩm Pioneer RX3' }
   ];
 
-  let messages = []; // { id, role:'user'|'agent', text, toolName, toolIcon, stepIndex, stepState:'active'|'done'|'error', draftId, productId }
+  let messages = []; // { id, role:'user'|'agent', text, steps:[...] }
   let user = null;
   let products = [];
   let blogPosts = [];
-  let isRunning = false;
+  let isBusy = false; // chặn gửi lệnh mới trong khi 1 Plan đang Run All (không chặn Run Step/Skip/Retry của Plan đang hiện — chỉ chặn gửi tin nhắn MỚI)
 
   // ── INIT ────────────────────────────────────────────────────────────────────
 
   function init() {
     AdminAuth.init({ page: 'founder-agent', title: 'FOUNDER AGENT' }).then(u => {
       user = u;
-      // Load products + blog posts để router dùng khi resolve tên
       Promise.all([
         DB.getAll ? DB.getAll() : Promise.resolve([]),
         BlogDB && BlogDB.getAll ? BlogDB.getAll() : Promise.resolve([])
@@ -103,7 +99,7 @@ const AdminAgent = (function () {
   // ── SEND ─────────────────────────────────────────────────────────────────────
 
   function send() {
-    if (isRunning) return;
+    if (isBusy) return;
     const input = document.getElementById('agentInput');
     const text = input.value.trim();
     if (!text) return;
@@ -112,7 +108,7 @@ const AdminAgent = (function () {
     messages.push({ role: 'user', text });
     renderMessages();
     hideSuggested();
-    run(text);
+    planAndShow(text);
   }
 
   function hideSuggested() {
@@ -120,70 +116,94 @@ const AdminAgent = (function () {
     if (el) el.style.display = 'none';
   }
 
-  // ── AGENT LOOP ───────────────────────────────────────────────────────────────
+  // ── PLANNER — GPT-4o-mini qua ĐÚNG Cloud Function openaiProxy đã có ─────────
+  // (action="generate", không thêm Provider/API Key/Cloud Function mới — cùng
+  // cách V1 dùng cho Tool Router, chỉ khác giờ trả về MẢNG bước thay vì 1
+  // bước). Planner CHỈ xây kế hoạch — KHÔNG side-effect, không gọi Plugin nào
+  // ở đây (đúng "The Agent itself never generates content. It only builds
+  // and executes a plan" — bước "executes" nằm ở executeStep(), tách biệt).
 
-  async function run(userText) {
-    isRunning = true;
+  async function planAndShow(userText) {
+    isBusy = true;
     setInputEnabled(false);
-
-    // Bước 1: Hiểu ý định
-    const msgId = pushAgentMsg({ text: 'Đang phân tích yêu cầu...' });
+    const msgId = pushAgentMsg({ text: 'Đang lập kế hoạch...', steps: null });
     renderMessages();
 
     try {
-      // Bước 2: Tool Router — gọi GPT-4o-mini để chọn công cụ
-      const routeResult = await route(userText);
-
-      if (!routeResult.moduleId) {
-        setStep(msgId, 0, 'error', { text: routeResult.reason || 'Không tìm được công cụ phù hợp cho yêu cầu này.' });
+      const plan = await buildPlan(userText);
+      if (!plan || !Array.isArray(plan.steps) || !plan.steps.length) {
+        updateMsg(msgId, { text: (plan && plan.reason) || 'Không hiểu được yêu cầu này — hãy mô tả cụ thể hơn.', steps: [] });
         renderMessages();
         return;
       }
-
-      const tool = TOOL_MAP[routeResult.moduleId];
-      setStep(msgId, 1, 'done', {
-        text: `Đã chọn: ${tool ? tool.label : routeResult.moduleId}`,
-        toolName: tool ? tool.label : routeResult.moduleId,
-        toolIcon: tool ? tool.icon : '🔧'
+      const steps = plan.steps.map(s => normalizeStep(s));
+      updateMsg(msgId, {
+        text: steps.length > 1 ? `Đã lập Execution Plan gồm ${steps.length} bước:` : 'Đã hiểu yêu cầu:',
+        steps
       });
       renderMessages();
-
-      // Bước 3: Thực thi — "create-product" không qua Plugin (không có bước
-      // generate AI nào), mọi công cụ khác qua Plugin Framework/Queue như cũ.
-      if (routeResult.moduleId === 'create-product') {
-        await executeCreateProduct(msgId, routeResult.inputParams);
-      } else {
-        await executePlugin(msgId, routeResult.moduleId, routeResult.inputParams);
-      }
-
     } catch (err) {
-      setStep(msgId, 2, 'error', { text: 'Lỗi: ' + err.message });
+      updateMsg(msgId, { text: 'Lỗi lập kế hoạch: ' + err.message, steps: [] });
       renderMessages();
     } finally {
-      isRunning = false;
+      isBusy = false;
       setInputEnabled(true);
     }
   }
 
-  // ── TOOL ROUTER ──────────────────────────────────────────────────────────────
+  function normalizeStep(s) {
+    return {
+      tool: s.tool,
+      target: s.target || '',
+      inputParams: s.inputParams || {},
+      status: 'pending',
+      errorText: null,
+      draftId: null,
+      productId: null
+    };
+  }
 
-  async function route(userText) {
+  async function buildPlan(userText) {
     const idToken = await user.getIdToken();
     const productList = products.slice(0, 30).map(p => `- ${p.name} (id:${p.id})`).join('\n');
     const blogList = blogPosts.slice(0, 10).map(b => `- ${b.title} (id:${b.id})`).join('\n');
 
-    const systemPrompt = `Bạn là Tool Router của PSH Platform (cửa hàng âm thanh DJ). Phân tích yêu cầu của Founder và trả về JSON chọn đúng tool.
+    const systemPrompt = `Bạn là Task Planner của PSH Platform (cửa hàng âm thanh DJ). Phân tích yêu cầu của Founder — CÓ THỂ cần NHIỀU công cụ — và trả về 1 Execution Plan dạng JSON (mảng các bước, ĐÚNG THỨ TỰ nên chạy).
 
-Available tools:
-- create-product: TẠO MỚI 1 sản phẩm trống (chỉ có Tên) để Founder tự vào Sửa tiếp — dùng khi Founder nói "tạo sản phẩm X"/"thêm sản phẩm X" (KHÁC HẲN product-description-writer — tool đó CHỈ viết mô tả cho sản phẩm ĐÃ CÓ SẴN trong danh sách dưới, không tạo sản phẩm mới). inputParams: {name}
-- product-description-writer: viết/cập nhật mô tả cho 1 sản phẩm ĐÃ CÓ SẴN trong danh sách dưới. inputParams: {productId, tone}
-- blog-writer: viết bài blog. inputParams: {topic, tone, keywords, productId}
-- facebook-post-generator: viết bài đăng Facebook. inputParams: {productId?, topic?, promotion?}
-- banner-generator: tạo banner quảng cáo. inputParams: {productId?, promotion?, event?, link?}
-- image-generator: tạo ảnh marketing AI. inputParams: {productId?, promotion?, blogPostId?, customPrompt?}
-- slider-generator: tạo slide hero. inputParams: {productId, ctaStyle}
-- seo-generator: tối ưu SEO bài blog. inputParams: {postId}
-- faq-generator: tạo FAQ. inputParams: {topic, questionCount}
+Available tools (dùng ĐÚNG tên "tool" sau):
+- create-product: TẠO MỚI 1 sản phẩm trống (chỉ có Tên). Dùng khi Founder nói "tạo sản phẩm X" và X CHƯA có trong danh sách sản phẩm dưới đây. inputParams: {"name": "<tên>"}
+- product-description-writer: viết mô tả + SEO cho 1 sản phẩm (ĐÃ CÓ SẴN hoặc VỪA được tạo ở bước create-product trong CÙNG Plan này). inputParams: {"productId": "<id thật, hoặc \"$product\" nếu là sản phẩm vừa tạo ở bước create-product CÙNG Plan>", "tone": "Chuyên nghiệp"}
+- seo: mốc hiển thị "SEO đã gộp chung vào Product AI" — CHỈ thêm bước này NGAY SAU 1 bước product-description-writer trong CÙNG Plan (không dùng riêng lẻ). inputParams: {}
+- blog-writer: viết bài blog. inputParams: {"topic": "<chủ đề>", "tone": "Chuyên nghiệp", "keywords": "", "productId": "<id thật, hoặc \"$product\", hoặc bỏ trống nếu không liên quan sản phẩm nào>"}
+- facebook-post-generator: viết bài Facebook. inputParams: {"productId": "<id thật, hoặc \"$product\", hoặc bỏ trống>"}
+- banner-generator: tạo banner quảng cáo. inputParams: {"productId": "<id thật, hoặc \"$product\", hoặc bỏ trống>"}
+- image-generator: tạo ảnh marketing AI. inputParams: {"productId": "<id thật, hoặc \"$product\", hoặc bỏ trống>"}
+
+QUY TẮC ĐẶC BIỆT — "$product": nếu Plan có bước create-product, MỌI bước sau đó nhắm vào ĐÚNG sản phẩm vừa tạo phải dùng productId:"$product" (không bịa id giả) — hệ thống sẽ tự thay bằng ID thật sau khi bước create-product chạy xong.
+
+VÍ DỤ ĐÃ XÁC NHẬN ĐÚNG (few-shot, làm mẫu — không phải sản phẩm cố định):
+Founder: "Tạo sản phẩm Pioneer RX3" (RX3 CHƯA có trong danh sách) →
+{"steps":[
+  {"tool":"create-product","target":"Pioneer RX3","inputParams":{"name":"Pioneer RX3"}},
+  {"tool":"product-description-writer","target":"Pioneer RX3","inputParams":{"productId":"$product","tone":"Chuyên nghiệp"}},
+  {"tool":"seo","target":"Pioneer RX3","inputParams":{}},
+  {"tool":"blog-writer","target":"Pioneer RX3","inputParams":{"topic":"Pioneer RX3","tone":"Chuyên nghiệp","keywords":"","productId":"$product"}},
+  {"tool":"facebook-post-generator","target":"Pioneer RX3","inputParams":{"productId":"$product"}},
+  {"tool":"banner-generator","target":"Pioneer RX3","inputParams":{"productId":"$product"}},
+  {"tool":"image-generator","target":"Pioneer RX3","inputParams":{"productId":"$product"}}
+]}
+
+Founder: "Viết Blog và Facebook cho RX3" (RX3 ĐÃ có trong danh sách, id thật vd "p7") →
+{"steps":[
+  {"tool":"blog-writer","target":"Pioneer RX3","inputParams":{"topic":"Pioneer RX3","tone":"Chuyên nghiệp","keywords":"","productId":"p7"}},
+  {"tool":"facebook-post-generator","target":"Pioneer RX3","inputParams":{"productId":"p7"}}
+]}
+
+Founder: "Tạo Banner và ảnh Facebook cho RX3" (RX3 ĐÃ có, id "p7") →
+{"steps":[
+  {"tool":"image-generator","target":"Pioneer RX3","inputParams":{"productId":"p7"}},
+  {"tool":"banner-generator","target":"Pioneer RX3","inputParams":{"productId":"p7"}}
+]}
 
 Danh sách sản phẩm hiện có:
 ${productList || '(chưa có)'}
@@ -192,9 +212,9 @@ Danh sách bài blog hiện có:
 ${blogList || '(chưa có)'}
 
 Quy tắc:
-1. Nếu tìm được tool phù hợp, trả về: {"moduleId":"<id>","inputParams":{...},"confidence":"high"|"medium"}
-2. Nếu Founder đề cập tên sản phẩm ĐÃ CÓ trong danh sách trên, tìm đúng productId (khớp một phần tên là được). Nếu Founder muốn TẠO MỚI 1 sản phẩm chưa có trong danh sách, dùng create-product với tên đó.
-3. Nếu không tìm được tool phù hợp, trả về: {"moduleId":null,"reason":"<giải thích ngắn tiếng Việt>"}
+1. Nếu hiểu được yêu cầu, trả về: {"steps":[{"tool":"...","target":"...","inputParams":{...}}, ...]}
+2. Yêu cầu chỉ cần 1 công cụ → mảng "steps" có ĐÚNG 1 phần tử (vẫn hợp lệ).
+3. Nếu không hiểu được yêu cầu, trả về: {"steps":[],"reason":"<giải thích ngắn tiếng Việt>"}
 4. Trả về JSON thuần, KHÔNG có markdown fence, KHÔNG có giải thích thêm.`;
 
     const r = await fetch(PROXY_URL, {
@@ -207,79 +227,159 @@ Quy tắc:
       })
     });
     const data = await r.json();
-    if (!r.ok) throw new Error(data.error || 'Router lỗi.');
+    if (!r.ok) throw new Error(data.error || 'Planner lỗi.');
 
     const raw = (data.text || '').trim();
     try {
-      // Strip markdown fence nếu có
       const json = raw.replace(/^```[a-z]*\n?/i, '').replace(/```$/, '').trim();
       return JSON.parse(json);
     } catch (e) {
-      return { moduleId: null, reason: 'Không phân tích được yêu cầu. Hãy thử diễn đạt cụ thể hơn.' };
+      return { steps: [], reason: 'Không phân tích được kế hoạch. Hãy thử diễn đạt cụ thể hơn.' };
     }
   }
 
-  // ── EXECUTE: TẠO SẢN PHẨM MỚI (không qua Plugin/Queue) ──────────────────────
+  // ── EXECUTION — mỗi bước đi ĐÚNG Permission -> PluginManager -> Queue ->
+  // Draft (giống hệt V1), "create-product"/"seo" là 2 ngoại lệ KHÔNG PHẢI
+  // Plugin thật (xem chú thích TOOL_MAP). KHÔNG BAO GIỜ tự chạy nếu Founder
+  // chưa bấm (Run All / Run Step) — đúng "Do NOT add Autonomous Agent".
 
-  async function executeCreateProduct(msgId, inputParams) {
-    setStep(msgId, 2, 'active', { text: 'Đang tạo sản phẩm mới...' });
+  // resolveInputParams — thay token "$product" bằng ID thật của sản phẩm vừa
+  // tạo TRONG CÙNG PLAN (chỉ khi bước create-product của Plan đó đã
+  // Completed) — trả về null nếu còn token chưa resolve được (bước phụ
+  // thuộc CHƯA sẵn sàng — chặn chạy nhầm với chuỗi "$product" theo nghĩa đen).
+  function resolveInputParams(step, allSteps) {
+    const params = Object.assign({}, step.inputParams);
+    let ok = true;
+    Object.keys(params).forEach(key => {
+      if (params[key] === PRODUCT_TOKEN) {
+        const createStep = allSteps.find(s => s.tool === 'create-product');
+        if (createStep && createStep.status === 'completed' && createStep.productId) {
+          params[key] = createStep.productId;
+        } else {
+          ok = false;
+        }
+      }
+    });
+    return ok ? params : null;
+  }
+
+  async function executeStep(msgId, stepIndex) {
+    const m = findMsg(msgId);
+    if (!m) return 'failed';
+    const step = m.steps[stepIndex];
+    if (!step || step.status === 'running') return step ? step.status : 'failed';
+
+    const resolvedParams = resolveInputParams(step, m.steps);
+    if (resolvedParams === null) {
+      step.status = 'failed';
+      step.errorText = 'Cần hoàn thành bước "Tạo Sản phẩm mới" trước — bấm THỬ LẠI sau khi bước đó Hoàn tất.';
+      renderMessages();
+      return 'failed';
+    }
+
+    step.status = 'running';
+    step.errorText = null;
     renderMessages();
 
-    const name = (inputParams && String(inputParams.name || '').trim()) || 'Sản phẩm mới';
-    // Tái sử dụng ĐÚNG DB.add() (js/db.js) — CHÍNH CƠ CHẾ js/admin-products.js
-    // saveProduct() dùng khi tạo sản phẩm mới, không viết lại logic ghi dữ
-    // liệu. pubStatus:'draft' khớp ĐÚNG quy ước "sản phẩm mới mặc định Nháp"
-    // đã có từ Sprint 12 Requirement #10 (Product Management).
-    const newProduct = await DB.add({ name, pubStatus: 'draft' });
+    try {
+      if (step.tool === 'create-product') {
+        const name = (resolvedParams.name || step.target || 'Sản phẩm mới').trim();
+        // Không có Plugin nào "tạo sản phẩm mới" — không phải sinh NỘI DUNG
+        // bằng AI (0 vi phạm "Never generate content directly"). Tái sử
+        // dụng ĐÚNG DB.add() js/admin-products.js dùng cho sản phẩm mới.
+        const newProduct = await DB.add({ name, pubStatus: 'draft' });
+        step.productId = newProduct.id;
+        step.status = 'completed';
+      } else if (step.tool === 'seo') {
+        // Mốc hiển thị — KHÔNG gọi Plugin riêng (tránh gọi AI 2 lần trên
+        // cùng 1 sản phẩm — product-description-writer đã sinh đủ field SEO
+        // trong CÙNG 1 JSON, đúng nguyên tắc Sprint 12 Requirement #10).
+        // Chỉ hợp lệ khi bước Product AI TRƯỚC ĐÓ trong CÙNG Plan đã Completed.
+        const prodStep = m.steps.slice(0, stepIndex).reverse().find(s => s.tool === 'product-description-writer');
+        if (prodStep && prodStep.status === 'completed') {
+          step.draftId = prodStep.draftId;
+          step.status = 'completed';
+        } else {
+          step.status = 'failed';
+          step.errorText = 'Cần bước Product AI hoàn tất trước (SEO dùng chung 1 lần generate với Product AI, không gọi AI riêng lần 2).';
+        }
+      } else {
+        // Plugin thật — ĐÚNG 4 bước cũ (V1/AITaskRouter.dispatch()), không đổi.
+        const perm = await PermissionService.checkPluginExecution(user.uid, user.email, step.tool);
+        if (!perm.granted) throw new Error('Không có quyền chạy ' + (TOOL_MAP[step.tool] ? TOOL_MAP[step.tool].label : step.tool) + ': ' + perm.reason);
 
-    setStep(msgId, 3, 'done', {
-      text: `Đã tạo sản phẩm "${name}" (Nháp) — mở Quản lý Sản phẩm để điền đầy đủ thông tin (Danh mục, Giá, Ảnh...).`,
-      productId: newProduct.id
-    });
+        const plugin = await PluginManager.loadPlugin(step.tool);
+        if (!plugin) throw new Error('Không tìm thấy công cụ: ' + step.tool);
+
+        await plugin.execute([resolvedParams], user.uid, user.email);
+        await AIJobQueue.resume(user.uid, user.email);
+
+        const drafts = await DraftDB.getAll();
+        const sorted = drafts.filter(d => d.status === 'draft').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        step.draftId = sorted[0] ? sorted[0].id : null;
+        step.status = 'completed';
+      }
+    } catch (err) {
+      step.status = 'failed';
+      step.errorText = err.message;
+    }
+
+    renderMessages();
+    return step.status;
+  }
+
+  // runAll — chạy tuần tự từ đầu Plan, bỏ qua bước đã Completed/Skipped.
+  // DỪNG NGAY khi 1 bước Failed (Pause the plan — không chạy tiếp mù quáng),
+  // hiện lý do, chờ Founder tự Thử lại hoặc bấm CHẠY TẤT CẢ lại (idempotent —
+  // tự tiếp tục đúng từ bước còn Pending, không chạy lại bước đã xong).
+  async function runAll(msgId) {
+    if (isBusy) return;
+    isBusy = true;
+    setInputEnabled(false);
+    const m = findMsg(msgId);
+    if (m) {
+      for (let i = 0; i < m.steps.length; i++) {
+        const s = m.steps[i];
+        if (s.status === 'completed' || s.status === 'skipped') continue;
+        const result = await executeStep(msgId, i);
+        if (result === 'failed') break; // Pause the plan — FAILURE section
+      }
+    }
+    isBusy = false;
+    setInputEnabled(true);
+  }
+
+  async function runStep(msgId, stepIndex) {
+    if (isBusy) return;
+    isBusy = true;
+    setInputEnabled(false);
+    await executeStep(msgId, stepIndex);
+    isBusy = false;
+    setInputEnabled(true);
+  }
+
+  function skipStep(msgId, stepIndex) {
+    const step = findStep(msgId, stepIndex);
+    if (!step || step.status !== 'pending') return;
+    step.status = 'skipped';
     renderMessages();
   }
 
-  // ── EXECUTE: CHẠY PLUGIN QUA PLUGIN FRAMEWORK (nguyên vẹn, không đổi) ───────
+  // cancelStep — cùng hiệu ứng skipStep() cho bước CHƯA chạy (Pending). Queue
+  // hiện có KHÔNG hỗ trợ hủy 1 lệnh gọi mạng đang chạy giữa chừng, và sửa
+  // Queue để thêm cơ chế đó nằm ngoài phạm vi "Do NOT redesign... Queue" —
+  // "Hủy" ở đây nghĩa là "không để bước này chạy", đúng với 1 bước còn Pending.
+  function cancelStep(msgId, stepIndex) {
+    skipStep(msgId, stepIndex);
+  }
 
-  async function executePlugin(msgId, moduleId, inputParams) {
-    setStep(msgId, 2, 'active', { text: 'Đang chạy...' });
-    renderMessages();
-
-    // 1. Permission check
-    const perm = await PermissionService.checkPluginExecution(user.uid, user.email, moduleId);
-    if (!perm.granted) {
-      setStep(msgId, 2, 'error', { text: 'Không có quyền chạy ' + moduleId + ': ' + perm.reason });
-      renderMessages();
-      return;
-    }
-
-    // 2. Load plugin
-    const plugin = await PluginManager.loadPlugin(moduleId);
-    if (!plugin) {
-      setStep(msgId, 2, 'error', { text: 'Không tìm thấy plugin: ' + moduleId });
-      renderMessages();
-      return;
-    }
-
-    // 3. Execute (enqueues job) — ĐÚNG API công khai Plugin Framework đã có.
-    await plugin.execute([inputParams], user.uid, user.email);
-
-    // 4. Resume queue (chạy generation thật) — ĐÚNG API công khai Queue đã có.
-    setStep(msgId, 2, 'active', { text: 'AI đang tạo nội dung...' });
-    renderMessages();
-    await AIJobQueue.resume(user.uid, user.email);
-
-    // 5. Tìm draft mới nhất vừa tạo
-    const drafts = await DraftDB.getAll();
-    const sorted = drafts.filter(d => d.status === 'draft')
-      .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    const newDraft = sorted[0];
-
-    setStep(msgId, 3, 'done', {
-      text: 'Hoàn tất! Nháp đã được tạo.',
-      draftId: newDraft ? newDraft.id : null
-    });
-    renderMessages();
+  function retryStep(msgId, stepIndex) {
+    if (isBusy) return;
+    const step = findStep(msgId, stepIndex);
+    if (!step || step.status !== 'failed') return;
+    step.status = 'pending';
+    step.errorText = null;
+    runStep(msgId, stepIndex);
   }
 
   // ── MESSAGE HELPERS ──────────────────────────────────────────────────────────
@@ -287,68 +387,101 @@ Quy tắc:
   let msgCounter = 0;
   function pushAgentMsg(data) {
     const id = 'msg_' + (++msgCounter);
-    messages.push(Object.assign({ id, role: 'agent', stepIndex: 0, stepState: 'active' }, data));
+    messages.push(Object.assign({ id, role: 'agent' }, data));
     return id;
   }
-  // setStep — cập nhật đúng 1 nấc của Execution Timeline (0-3, xem STEPS) +
-  // trạng thái ('active'|'done'|'error') + dữ liệu hiển thị kèm theo. Timeline
-  // luôn hiển thị ĐỦ 4 bước, tô đậm/đánh dấu theo stepIndex/stepState hiện tại
-  // — khác hẳn cách cũ (chỉ 1 chip trạng thái bị GHI ĐÈ mỗi bước, mất dấu vết
-  // các bước trước).
-  function setStep(id, stepIndex, stepState, extra) {
+  function updateMsg(id, data) {
     const m = messages.find(x => x.id === id);
-    if (m) Object.assign(m, { stepIndex, stepState }, extra || {});
+    if (m) Object.assign(m, data);
   }
+  function findMsg(id) { return messages.find(x => x.id === id); }
+  function findStep(msgId, i) { const m = findMsg(msgId); return m && m.steps ? m.steps[i] : null; }
 
   // ── RENDER ───────────────────────────────────────────────────────────────────
 
   function renderMessages() {
     const list = document.getElementById('agentMessages');
     if (!list) return;
-
     list.innerHTML = messages.map(m => {
       if (m.role === 'user') {
         return `<div class="agent-msg agent-msg-user"><div class="agent-msg-bubble">${escHtml(m.text)}</div></div>`;
       }
       return renderAgentMsg(m);
     }).join('');
-
     list.scrollTop = list.scrollHeight;
   }
 
-  // renderTimeline — 4 bước cố định (STEPS), đánh dấu ✓ (đã xong)/●(đang
-  // chạy)/✕(lỗi tại bước này)/○ (chưa tới) — "Execution Timeline" độc lập với
-  // dòng "Running Status" (agent-msg-text) bên dưới, đúng yêu cầu UI có cả 2.
-  function renderTimeline(m) {
-    return `<div class="agent-timeline">${STEPS.map((label, i) => {
-      let cls = 'agent-step-pending', icon = '○';
-      if (m.stepState === 'error' && i === m.stepIndex) { cls = 'agent-step-error'; icon = '✕'; }
-      else if (i < m.stepIndex || (i === m.stepIndex && m.stepState === 'done')) { cls = 'agent-step-done'; icon = '✓'; }
-      else if (i === m.stepIndex && m.stepState === 'active') { cls = 'agent-step-active'; icon = '●'; }
-      return `<span class="agent-step ${cls}">${icon} ${escHtml(label)}</span>`;
-    }).join('<span class="agent-step-sep">›</span>')}</div>`;
+  function stepActions(m, step, i) {
+    if (step.status === 'pending') {
+      return `<button type="button" class="agent-plan-btn" onclick="AdminAgent.runStep('${m.id}',${i})">▶ Chạy</button>
+        <button type="button" class="agent-plan-btn" onclick="AdminAgent.skipStep('${m.id}',${i})">⏭ Bỏ qua</button>
+        <button type="button" class="agent-plan-btn agent-plan-btn-danger" onclick="AdminAgent.cancelStep('${m.id}',${i})">✕ Hủy</button>`;
+    }
+    if (step.status === 'failed') {
+      return `<button type="button" class="agent-plan-btn" onclick="AdminAgent.retryStep('${m.id}',${i})">🔁 Thử lại</button>`;
+    }
+    if (step.status === 'running') return `<span class="small-muted">Đang chạy...</span>`;
+    return ''; // completed/skipped — không còn hành động
+  }
+
+  function stepLink(step) {
+    if (step.status !== 'completed') return '';
+    if (step.draftId) return ` <a href="/admin/ai/drafts.html" class="agent-open-draft-btn">Mở Nháp →</a>`;
+    if (step.productId) return ` <a href="/admin/products.html" class="agent-open-draft-btn">Mở Sản phẩm →</a>`;
+    return '';
+  }
+
+  // renderPlan — "Execution Plan": mỗi bước hiện Tool/Target/Status + hành
+  // động Founder có thể bấm (Run/Skip/Cancel/Retry) — đúng PLAN UI + FOUNDER
+  // CONTROLS. Có "▶ CHẠY TẤT CẢ" tổng ở trên (Run All).
+  function renderPlan(m) {
+    if (!m.steps || !m.steps.length) return '';
+    const allDone = m.steps.every(s => s.status === 'completed' || s.status === 'skipped' || s.status === 'failed');
+    const hasPending = m.steps.some(s => s.status === 'pending');
+    const rows = m.steps.map((step, i) => {
+      const tool = TOOL_MAP[step.tool] || { label: step.tool, icon: '🔧' };
+      return `
+        <div class="agent-plan-row agent-plan-row-${step.status}">
+          <span class="agent-plan-tool">${escHtml(tool.icon)} ${escHtml(tool.label)}</span>
+          <span class="agent-plan-target">${escHtml(step.target || '—')}</span>
+          <span class="agent-plan-status agent-plan-status-${step.status}">${escHtml(STATUS_LABEL[step.status] || step.status)}</span>
+          <span class="agent-plan-actions">${stepActions(m, step, i)}${stepLink(step)}</span>
+          ${step.errorText ? `<div class="agent-plan-error">${escHtml(step.errorText)}</div>` : ''}
+        </div>`;
+    }).join('');
+
+    const runAllBtn = hasPending
+      ? `<button type="button" class="submit-btn agent-plan-runall" onclick="AdminAgent.runAll('${m.id}')">▶ CHẠY TẤT CẢ</button>`
+      : '';
+
+    return `<div class="agent-plan">${rows}</div>${runAllBtn}${allDone ? renderReport(m) : ''}`;
+  }
+
+  // renderReport — "After completion show: Completed / Failed / Skipped /
+  // Draft links" — tính TRỰC TIẾP từ steps[], không lưu cờ riêng.
+  function renderReport(m) {
+    const completed = m.steps.filter(s => s.status === 'completed');
+    const failed = m.steps.filter(s => s.status === 'failed');
+    const skipped = m.steps.filter(s => s.status === 'skipped');
+    const draftLinks = completed.filter(s => s.draftId || s.productId).map(s => {
+      const tool = TOOL_MAP[s.tool] || { label: s.tool };
+      const href = s.draftId ? '/admin/ai/drafts.html' : '/admin/products.html';
+      const label = s.draftId ? 'Mở Nháp' : 'Mở Sản phẩm';
+      return `<li>${escHtml(tool.label)} — <a href="${href}" class="agent-open-draft-btn">${label} →</a></li>`;
+    }).join('');
+    return `<div class="agent-plan-report">
+      <p><strong>Báo cáo:</strong> ${completed.length} Hoàn tất · ${failed.length} Thất bại · ${skipped.length} Đã bỏ qua</p>
+      ${draftLinks ? `<ul class="agent-plan-report-links">${draftLinks}</ul>` : ''}
+    </div>`;
   }
 
   function renderAgentMsg(m) {
-    let statusChip = '';
-    if (m.stepState === 'active') statusChip = `<span class="agent-status agent-status-running">⚙ Đang xử lý</span>`;
-    else if (m.stepState === 'done') statusChip = `<span class="agent-status agent-status-done">✓ Hoàn tất</span>`;
-    else if (m.stepState === 'error') statusChip = `<span class="agent-status agent-status-error">✕ Lỗi</span>`;
-    else if (m.toolName) statusChip = `<span class="agent-status agent-status-selected">${escHtml(m.toolIcon || '🔧')} ${escHtml(m.toolName)}</span>`;
-
-    let body = `<span class="agent-msg-text">${escHtml(m.text)}</span>`;
-    if (m.stepState === 'done' && m.draftId) {
-      body += ` <a href="/admin/ai/drafts.html" class="agent-open-draft-btn">Mở Nháp →</a>`;
-    }
-    if (m.stepState === 'done' && m.productId) {
-      body += ` <a href="/admin/products.html" class="agent-open-draft-btn">Mở Sản phẩm →</a>`;
-    }
-
+    const body = `<span class="agent-msg-text">${escHtml(m.text)}</span>`;
+    const plan = m.steps ? renderPlan(m) : '';
     return `<div class="agent-msg agent-msg-agent">
       <div class="agent-msg-bubble">
-        ${renderTimeline(m)}
-        ${statusChip}
         <div class="agent-msg-body">${body}</div>
+        ${plan}
       </div>
     </div>`;
   }
@@ -364,5 +497,5 @@ Quy tắc:
     if (btn) btn.disabled = !enabled;
   }
 
-  return { init, useSuggestion, send };
+  return { init, useSuggestion, send, runAll, runStep, skipStep, cancelStep, retryStep };
 })();

@@ -631,6 +631,47 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Founder Agent V2 (Sprint 13) — Task Planner
+
+V1 xử lý đúng 1 công cụ mỗi lệnh (Understand intent → Select Tool → Execute → Draft). V2 tổng quát hoá thành Task Planner: 1 lệnh có thể cần NHIỀU công cụ theo thứ tự — Agent xây 1 Execution Plan (mảng bước), Founder tự quyết định chạy. **Kiến trúc THAY THẾ hoàn toàn** luồng "1 công cụ" của V1 trong cùng file `js/admin-agent.js` — 1 lệnh chỉ cần 1 công cụ vẫn hoạt động, chỉ là Plan có ĐÚNG 1 phần tử (trường hợp thoái hoá của kiến trúc chung, không phải 2 đường code song song).
+
+### Planner — GPT sinh MẢNG bước có thứ tự, không side-effect
+
+`buildPlan(userText)` gọi GPT-4o-mini qua ĐÚNG Cloud Function `openaiProxy` đã có (giống hệt V1, không thêm Provider/API Key mới) — khác V1 ở chỗ prompt yêu cầu trả về `{"steps":[...]}` thay vì 1 object đơn. Prompt nhúng NGUYÊN VĂN 3 ví dụ few-shot khớp đúng 3 ví dụ trong Requirement (tạo sản phẩm mới → 7 bước; Blog+Facebook trên sản phẩm có sẵn → 2 bước; Banner+Image → 2 bước) để GPT tái tạo đúng format/thứ tự mong muốn. Planner THUẦN — không gọi Permission/PluginManager/Queue ở đây, đúng "The Agent itself never generates content. It only builds ... a plan" (phần "executes" tách hẳn sang `executeStep()`).
+
+### Token `"$product"` — phụ thuộc giữa các bước trong CÙNG 1 Plan
+
+Khi Plan có bước `create-product`, sản phẩm CHƯA TỒN TẠI tại thời điểm lập kế hoạch — Planner không thể biết ID thật trước. Mọi bước sau nhắm vào ĐÚNG sản phẩm đó dùng `productId:"$product"` (token, không phải ID giả). `resolveInputParams(step, allSteps)` thay token bằng ID thật NGAY TRƯỚC KHI chạy 1 bước — CHỈ khi tìm thấy bước `create-product` trong CÙNG mảng `steps` và `status === 'completed'`; nếu không, trả về `null` và bước đó chuyển `failed` với lý do rõ ràng ("Cần hoàn thành bước Tạo Sản phẩm mới trước"). Không bao giờ để chuỗi `"$product"` lọt xuống `plugin.execute()` theo nghĩa đen.
+
+### Bước "SEO" — mốc hiển thị, không gọi Plugin thật
+
+Ví dụ 7-bước liệt kê "SEO" tách biệt khỏi "Product AI", nhưng `product-description-writer` (Sprint 12 Requirement #1, Product AI V2) ĐÃ sinh đủ `seoTitle`/`metaDescription`/`seoKeywords`/`slug` trong CÙNG 1 lệnh gọi JSON — gọi `seo-generator` (Plugin SEO thật) thêm 1 lần nữa cho CÙNG sản phẩm sẽ tạo Draft trùng lặp và tốn thêm 1 lệnh gọi AI không cần thiết, ngược nguyên tắc "tránh gọi AI 2 lần" đã xác lập từ Sprint 12 Requirement #10 (nút "Generate Description"/"Generate SEO" trên `admin/products.html` CÙNG gọi 1 moduleId `product-description-writer`, chỉ khác Preview nhấn trường nào). `executeStep()` xử lý `tool === 'seo'` như 1 NGOẠI LỆ thứ 2 (cùng `create-product`) — không gọi `PermissionService`/`PluginManager`/Queue nào — chỉ tìm bước `product-description-writer` GẦN NHẤT phía trước trong CÙNG Plan, nếu đã `completed` thì tự đánh dấu `completed` (dùng lại `draftId` của bước đó), nếu chưa thì `failed` với lý do rõ ràng.
+
+**Lưu ý kiến trúc quan trọng**: `seo-generator` (Plugin SEO thật, nhắm Blog Post) KHÔNG bị sửa/xóa — vẫn hoạt động bình thường ở "Trợ lý AI" và mọi nơi khác. Founder Agent V2 chỉ đơn giản KHÔNG gọi nó trong ngữ cảnh "SEO cho sản phẩm vừa tạo" (không có target hợp lệ — Plugin đó cần `postId` của 1 Blog Post ĐÃ PUBLISH, một Blog Draft vừa tạo trong CÙNG Plan chưa published nên không có ID thật để nhắm tới).
+
+### Execution — mỗi bước vẫn đi ĐÚNG pipeline V1, không đổi
+
+```
+executeStep(msgId, i):
+  create-product  -> DB.add({name, pubStatus:'draft'})              // không phải Plugin thật
+  seo             -> tự Completed theo bước Product AI liền trước    // không phải Plugin thật
+  <mọi tool khác> -> PermissionService.checkPluginExecution()
+                  -> PluginManager.loadPlugin()
+                  -> plugin.execute([inputParams])
+                  -> AIJobQueue.resume()
+                  -> DraftDB.getAll() (tìm Draft mới nhất)
+```
+
+`runAll(msgId)` lặp qua `steps[]` theo thứ tự, bỏ qua bước đã `completed`/`skipped`, gọi `executeStep()` cho từng bước còn lại — **DỪNG NGAY** (break loop) nếu 1 bước `failed`, đúng "Pause the plan... Do NOT continue blindly". Hàm idempotent — bấm "CHẠY TẤT CẢ" lần 2 (sau khi Retry 1 bước Failed) tự tiếp tục đúng từ bước còn Pending, không chạy lại bước đã Completed.
+
+### Founder Controls — 5 hành động đúng yêu cầu
+
+`runAll`/`runStep`/`skipStep`/`retryStep`/`cancelStep` (export qua `window.AdminAgent`). `cancelStep()` gọi thẳng `skipStep()` — cùng hiệu ứng cho 1 bước còn Pending (chuyển `skipped`, không chạy) — Queue hiện có (`js/ai/job-queue.js`) KHÔNG có cơ chế hủy 1 lệnh gọi mạng đang chạy giữa chừng, và thêm cơ chế đó là sửa Queue, ngoài phạm vi "Do NOT redesign... Queue" của Requirement.
+
+### Report — tính trực tiếp từ `steps[]`, không lưu cờ riêng
+
+`renderReport(m)` chạy MỖI LẦN render, tự tính Completed/Failed/Skipped count + danh sách link (Draft cho bước Plugin thật, Sản phẩm cho bước `create-product`) — chỉ hiện khi KHÔNG còn bước nào `pending`/`running` (mọi bước đã ở trạng thái cuối). Không thêm field/Database mới — dữ liệu Report hoàn toàn suy ra từ state trong bộ nhớ của trang (mất khi tải lại trang, đúng "Do NOT add Memory" — Founder Agent không lưu lại Plan qua các lần tải trang, chỉ Draft/Sản phẩm đã tạo mới lưu Firebase thật).
+
 ## Founder Agent V1 (Sprint 13) — Entry Point AI duy nhất, orchestrator thuần túy
 
 Founder Agent (`admin/ai/agent.html` + `js/admin-agent.js`) là giao diện chat để Founder gõ yêu cầu tự do bằng tiếng Việt, Agent tự hiểu ý định → chọn công cụ → thực thi → hiển thị tiến trình → mở Nháp. Nguyên tắc kiến trúc tuyệt đối: **Agent CHỈ orchestrate, không bao giờ tự sinh nội dung** — mọi generation thật luôn đi qua đúng Plugin đã có, qua đúng Queue, tạo đúng Draft, theo đúng Publish Pipeline đã tồn tại.
