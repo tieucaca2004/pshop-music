@@ -2,6 +2,19 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 13 — Requirement: Founder Agent V3 — CMS Operator
+
+Founder Agent V1/V2 chỉ tạo Nháp AI. V3 thêm khả năng "vận hành CMS thay Founder": mở đúng trang/đúng bản ghi, điền sẵn 1 field trên CHÍNH form thật — Founder tự bấm Lưu. **"The Agent never edits database directly. The Agent operates the existing CMS."**
+
+- **4 tool "CMS Operator" mới** thêm vào cùng danh sách tool Plugin đã có (Execution Plan V2 không đổi kiến trúc): `open-product` (mở trang Sửa 1 Sản phẩm), `update-product-field` (mở trang Sửa + điền sẵn 1 field), `open-draft` (mở Social Media Center + làm nổi bật đúng Nháp mới nhất khớp), `navigate` (mở 1 trang CMS chung — Danh mục/Blog/Banner/Nháp/Image AI). Khi CHẠY, các tool này **ĐIỀU HƯỚNG trình duyệt** (`window.location.href`) sang trang thật kèm query param — KHÔNG gọi `PermissionService`/`PluginManager`/Queue/`DB.update()` nào.
+- **`admin/products.html` + `js/admin-products.js`**: thêm `applyDeepLink()` đọc `?edit=<id>` — tái sử dụng NGUYÊN VẸN `editProduct(id)` đã có (0 logic mở form mới, "Do NOT duplicate Product logic"). Tuỳ chọn `&field=<tên>&value=<giá trị>` — tự điền + đánh dấu field (class `.agent-field-highlight`, hiệu ứng nhấp nháy viền vàng) — **KHÔNG tự gọi `DB.update()`/`saveProduct()`** — Founder tự bấm nút "CẬP NHẬT SẢN PHẨM" thật. Field hỗ trợ: `price`/`oldPrice`/`name`/`warranty`/`stockStatus`/`status`/`sku`.
+- **`admin/social-media-center.html` + `js/admin-social-center.js`**: thêm `applyDeepLink()` đọc `?highlight=<draftId>` — cuộn tới + đánh dấu ĐÚNG thẻ Draft (cùng class `.agent-field-highlight`), tái sử dụng NGUYÊN VẸN `render()`/`loadDrafts()` đã có — KHÔNG tự Publish, nút "Đăng lên Facebook"/"Publish Now" vẫn là nút thật Founder tự bấm.
+- **Planner (GPT-4o-mini, ĐÚNG `openaiProxy` đã có)** dạy thêm 4 tool mới + ví dụ few-shot khớp nguyên văn 2 ví dụ trong Requirement ("Mở RX3" → `open-product`; "Đổi giá RX3 thành 48 triệu" → `update-product-field`, tự parse "48 triệu" → "48.000.000 ₫"). **Quy tắc chặn ghép chuỗi bước sau điều hướng** — 4 tool CMS Operator luôn là bước DUY NHẤT trong 1 Plan (điều hướng phá hủy toàn bộ trạng thái trang, mọi bước sau sẽ không chạy được).
+- **"Viết Blog RX3"/"Tạo Facebook RX3" — 0 thay đổi**: 2 ví dụ này trong Requirement tiếp tục đi ĐÚNG luồng Plugin/Queue/Draft đã có từ V1/V2 (không cần điều hướng trang nào — "Blog AI opens"/"Facebook Draft opens" = 1 Draft mới sẵn sàng, nút "Mở Nháp →" đã có).
+- **0 sửa đổi**: Product/Blog/Facebook/Banner/Image AI, Queue/Provider/Plugin Framework/Draft/Publish Pipeline — cả 4 tool mới đều KHÔNG gọi những lớp này. **0 duplicate**: không viết lại `editProduct()`/render Draft nào — chỉ thêm 1 điểm đọc query param ở mỗi trang đích, gọi lại đúng hàm đã có.
+- **Kiểm thử**: Node `vm` mã nguồn thật cho cả 3 file, 21 assertions — đúng 4 kịch bản Founder Acceptance Test ("Mở RX3" → điều hướng đúng URL; "Đổi giá" → điều hướng kèm field/value đúng mã hoá; "Viết Blog"/"Tạo Facebook" → xác nhận 0 regression, vẫn đi đúng Plugin/Queue/Draft cũ), cộng `open-draft` tìm đúng Nháp MỚI NHẤT khớp từ khóa (không phải bản cũ hơn), guard báo lỗi rõ ràng khi không tìm thấy (không điều hướng mù), `navigate` tới đúng trang CMS thật, và xác nhận `applyDeepLink()` ở `admin-products.js`/`admin-social-center.js` không bao giờ gọi `DB.update()`/`DB.add()` chỉ vì có mặt query param. Preview thật xác nhận cả 3 trang tải đúng, không lỗi JS mới. **Chưa kiểm thử qua UI thật có đăng nhập** (cần tài khoản Founder thật + `OPENAI_API_KEY` đã cấu hình).
+- Cập nhật `PROJECT_ARCHITECTURE.md`, `ROADMAP.md`.
+
 ## Sprint 13 — Requirement: Founder Agent V2 — Task Planner
 
 Founder Agent V1 (1 lệnh → 1 công cụ → 1 Draft) nâng cấp thành Task Planner: 1 lệnh CÓ THỂ cần NHIỀU công cụ, Agent tự xây Execution Plan (danh sách bước), Founder tự quyết định chạy toàn bộ hay từng bước. Agent VẪN chỉ orchestrate — không tự sinh nội dung.

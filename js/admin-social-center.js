@@ -448,8 +448,25 @@ const AdminSocialCenter = (function () {
     scheduleTimer = setInterval(checkScheduled, 60000);
   }
 
+  // Deep link từ Founder Agent V3 (CMS Operator) — ?highlight=<draftId>:
+  // cuộn tới + đánh dấu đúng Draft, tái sử dụng NGUYÊN VẸN render() đã có (0
+  // logic hiển thị mới). KHÔNG tự Publish — Founder tự bấm nút "Đăng lên
+  // Facebook"/"Publish Now" thật đã có sẵn trong Preview ("The Agent never
+  // edits database directly").
+  function applyDeepLink() {
+    const params = new URLSearchParams(location.search);
+    const highlightId = params.get('highlight');
+    if (!highlightId) return;
+    document.querySelectorAll('[data-draft-id]').forEach(card => {
+      if (card.dataset.draftId === highlightId) {
+        card.classList.add('agent-field-highlight');
+        card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+  }
+
   function init() {
-    Promise.all([loadProducts(), loadDrafts()]);
+    Promise.all([loadProducts(), loadDrafts()]).then(applyDeepLink);
 
     const platformSel = document.getElementById('smcFilterPlatform');
     const statusSel = document.getElementById('smcFilterStatus');

@@ -1,21 +1,24 @@
 /*
- * admin-agent.js — Founder Agent V2: Task Planner (Sprint 13)
- * Nâng cấp V1 (1 lệnh -> 1 công cụ -> 1 Draft) thành Task Planner: 1 lệnh CÓ
- * THỂ cần NHIỀU công cụ, Agent tự XÂY DỰNG 1 Execution Plan (danh sách bước,
- * mỗi bước là 1 công cụ + đích nhắm), Founder tự quyết định chạy bước nào,
- * khi nào — Agent KHÔNG BAO GIỜ tự chạy khi chưa được bấm (Do NOT add
- * Autonomous Agent). Agent vẫn CHỈ LÀ ORCHESTRATOR — không tự sinh nội
- * dung, mọi generation thật đi qua ĐÚNG Plugin/Queue/Draft đã có, không
- * viết lại/sửa bất kỳ Plugin nào (giữ nguyên toàn bộ nguyên tắc V1).
+ * admin-agent.js — Founder Agent V3: CMS Operator (Sprint 13)
+ * V1: 1 lệnh -> 1 công cụ -> 1 Draft. V2: 1 lệnh -> nhiều bước (Execution
+ * Plan) -> Plugin/Queue/Draft. V3: THÊM khả năng "vận hành CMS thay Founder"
+ * — mở đúng trang/đúng bản ghi (Sản phẩm/Draft), điền/đánh dấu 1 field trên
+ * CHÍNH form thật đã có — KHÔNG BAO GIỜ tự ghi Firebase trực tiếp ("The
+ * Agent never edits database directly. The Agent operates the existing
+ * CMS."). Founder luôn là người bấm nút Lưu/Publish THẬT trên trang đích.
  *
- * KIẾN TRÚC: V2 THAY THẾ hoàn toàn luồng "1 công cụ" của V1 bằng 1 Plan có
- * thể chỉ có ĐÚNG 1 bước (trường hợp thoái hoá — vd "Viết mô tả RX3" vẫn
- * hoạt động y hệt V1, chỉ khác hiển thị trong khung Execution Plan 1 dòng
- * thay vì Timeline 4 bước cũ) — không giữ 2 đường code song song cho cùng
- * 1 file, tránh trùng lặp logic thực thi Plugin.
+ * KIẾN TRÚC: các bước "CMS Operator" mới (open-product/update-product-field/
+ * open-draft/navigate) là 4 tool THÊM VÀO cùng danh sách tool Plugin đã có
+ * (product-description-writer/blog-writer/...) trong CÙNG 1 Execution Plan —
+ * khi CHẠY, chúng ĐIỀU HƯỚNG trình duyệt (window.location.href) sang trang
+ * CMS thật, kèm query param (?edit=id, ?highlight=id...) — trang đích (đã
+ * sửa THÊM, không viết lại) tự đọc param đó và tái sử dụng ĐÚNG hàm mở form/
+ * hiển thị đã có (editProduct(), render()...) — "Do NOT duplicate Product
+ * logic/Blog logic". Vì điều hướng phá hủy toàn bộ trạng thái trang hiện tại,
+ * Planner được dạy KHÔNG xếp bước nào sau 1 bước điều hướng trong CÙNG Plan.
  *
- * Mỗi bước khi CHẠY vẫn đi ĐÚNG 5 bước cũ (Permission -> PluginManager ->
- * Queue -> Draft), giống hệt V1/AITaskRouter.dispatch() — không đổi.
+ * Mọi bước Plugin (V1/V2) vẫn đi ĐÚNG Permission -> PluginManager -> Queue ->
+ * Draft như cũ, không đổi gì.
  */
 const AdminAgent = (function () {
   const PROXY_URL = 'https://us-central1-pshop-music.cloudfunctions.net/openaiProxy';
@@ -42,16 +45,39 @@ const AdminAgent = (function () {
     'banner-generator':           { label: 'Banner AI',        icon: '🖼' },
     'image-generator':            { label: 'Image AI',         icon: '✨' },
     'slider-generator':           { label: 'Slider AI',        icon: '🎞' },
-    'faq-generator':              { label: 'FAQ AI',           icon: '❓' }
+    'faq-generator':              { label: 'FAQ AI',           icon: '❓' },
+    // Sprint 13 V3 (CMS Operator) — điều hướng trình duyệt, KHÔNG gọi Plugin/
+    // Queue/Draft nào, xem executeStep().
+    'open-product':                { label: 'Mở Sản phẩm',     icon: '📂' },
+    'update-product-field':        { label: 'Sửa Sản phẩm',    icon: '✏️' },
+    'open-draft':                  { label: 'Mở Nháp',          icon: '📄' },
+    'navigate':                    { label: 'Mở trang CMS',    icon: '🧭' }
   };
+
+  // NAV_PAGES — "Navigate CMS": trang CMS thật Agent được phép điều hướng
+  // tới (Reuse existing pages — không tạo trang mới).
+  const NAV_PAGES = {
+    products: '/admin/products.html',
+    categories: '/admin/categories.html',
+    blog: '/admin/blog.html',
+    banners: '/admin/banners.html',
+    drafts: '/admin/ai/drafts.html',
+    'social-media': '/admin/social-media-center.html',
+    images: '/admin/ai/images.html'
+  };
+
+  // AGENT_FIELD_LABELS — field Sản phẩm Agent được phép điền qua
+  // update-product-field (khớp ĐÚNG AGENT_FIELD_MAP ở js/admin-products.js —
+  // 2 danh sách phải cùng bộ khóa, xem PROJECT_ARCHITECTURE.md).
+  const AGENT_FIELD_LABELS = { price: 'Giá', oldprice: 'Giá cũ', name: 'Tên', warranty: 'Bảo hành', stockstatus: 'Trạng thái kho', status: 'Tình trạng', sku: 'SKU' };
 
   const STATUS_LABEL = { pending: 'Chờ chạy', running: 'Đang chạy', completed: 'Hoàn tất', failed: 'Thất bại', skipped: 'Đã bỏ qua' };
 
   const SUGGESTED = [
+    { label: 'Mở sản phẩm',                  text: 'Mở Pioneer RX3' },
+    { label: 'Đổi giá sản phẩm',             text: 'Đổi giá Pioneer RX3 thành 48 triệu' },
     { label: 'Tạo sản phẩm mới (full plan)', text: 'Tạo sản phẩm Pioneer RX3' },
-    { label: 'Blog + Facebook cho RX3',      text: 'Viết Blog và Facebook cho Pioneer RX3' },
-    { label: 'Banner + ảnh Facebook',        text: 'Tạo Banner và ảnh Facebook cho Pioneer RX3' },
-    { label: 'Viết mô tả Pioneer RX3',       text: 'Viết mô tả sản phẩm Pioneer RX3' }
+    { label: 'Blog + Facebook cho RX3',      text: 'Viết Blog và Facebook cho Pioneer RX3' }
   ];
 
   let messages = []; // { id, role:'user'|'agent', text, steps:[...] }
@@ -178,10 +204,22 @@ Available tools (dùng ĐÚNG tên "tool" sau):
 - facebook-post-generator: viết bài Facebook. inputParams: {"productId": "<id thật, hoặc \"$product\", hoặc bỏ trống>"}
 - banner-generator: tạo banner quảng cáo. inputParams: {"productId": "<id thật, hoặc \"$product\", hoặc bỏ trống>"}
 - image-generator: tạo ảnh marketing AI. inputParams: {"productId": "<id thật, hoặc \"$product\", hoặc bỏ trống>"}
+- open-product: MỞ trang Sửa 1 sản phẩm ĐÃ CÓ SẴN (KHÔNG sinh nội dung, chỉ điều hướng). Dùng khi Founder nói "Mở X"/"Xem X"/"Sửa X" mà không nói rõ đổi field nào. inputParams: {"productId": "<id thật>"}
+- update-product-field: MỞ trang Sửa 1 sản phẩm VÀ điền sẵn 1 field cụ thể (Founder tự bấm Lưu — Agent KHÔNG tự lưu). Dùng khi Founder nói "Đổi <field> của X thành <giá trị>". Field hợp lệ: price/oldprice/name/warranty/stockstatus/status/sku. inputParams: {"productId": "<id thật>", "field": "<1 trong các field hợp lệ>", "value": "<giá trị mới, format đúng kiểu hiển thị — vd giá tiền viết đầy đủ số + đơn vị ₫, vd \"48 triệu\" => \"48.000.000 ₫\">"}
+- open-draft: MỞ Social Media Center và làm nổi bật Draft mới nhất khớp yêu cầu (Founder muốn XEM/ĐĂNG 1 Draft ĐÃ TỒN TẠI, không phải tạo mới). Dùng khi Founder nói "Mở Draft Facebook X"/"Đăng Facebook X" (khi RÕ RÀNG muốn xem bản đã có, không phải viết bài mới). inputParams: {"moduleId": "facebook-post-generator" | "banner-generator" | "blog-writer" | "product-description-writer" (tùy loại), "query": "<từ khóa tìm, vd tên sản phẩm>"}
+- navigate: MỞ 1 trang CMS chung (không gắn 1 bản ghi cụ thể). inputParams: {"page": "products"|"categories"|"blog"|"banners"|"drafts"|"social-media"|"images"}
 
 QUY TẮC ĐẶC BIỆT — "$product": nếu Plan có bước create-product, MỌI bước sau đó nhắm vào ĐÚNG sản phẩm vừa tạo phải dùng productId:"$product" (không bịa id giả) — hệ thống sẽ tự thay bằng ID thật sau khi bước create-product chạy xong.
 
+QUY TẮC ĐẶC BIỆT — điều hướng: open-product/update-product-field/open-draft/navigate làm trình duyệt CHUYỂN TRANG NGAY — KHÔNG BAO GIỜ đặt bước nào khác SAU 1 trong 4 tool này trong CÙNG Plan (mọi bước sau sẽ không chạy được vì trang đã đổi). Nếu Founder chỉ muốn "Mở X"/"Đổi field", Plan CHỈ có ĐÚNG 1 bước.
+
 VÍ DỤ ĐÃ XÁC NHẬN ĐÚNG (few-shot, làm mẫu — không phải sản phẩm cố định):
+Founder: "Mở RX3" (RX3 ĐÃ có, id thật vd "p7") →
+{"steps":[{"tool":"open-product","target":"Pioneer XDJ-RX3","inputParams":{"productId":"p7"}}]}
+
+Founder: "Đổi giá RX3 thành 48 triệu" (RX3 ĐÃ có, id "p7") →
+{"steps":[{"tool":"update-product-field","target":"Pioneer XDJ-RX3","inputParams":{"productId":"p7","field":"price","value":"48.000.000 ₫"}}]}
+
 Founder: "Tạo sản phẩm Pioneer RX3" (RX3 CHƯA có trong danh sách) →
 {"steps":[
   {"tool":"create-product","target":"Pioneer RX3","inputParams":{"name":"Pioneer RX3"}},
@@ -303,6 +341,60 @@ Quy tắc:
           step.status = 'failed';
           step.errorText = 'Cần bước Product AI hoàn tất trước (SEO dùng chung 1 lần generate với Product AI, không gọi AI riêng lần 2).';
         }
+      } else if (step.tool === 'open-product') {
+        // CMS Operator — ĐIỀU HƯỚNG, không sinh nội dung, không ghi Firebase
+        // ("The Agent never edits database directly. The Agent operates the
+        // existing CMS."). admin/products.html đọc ?edit= rồi tự gọi
+        // editProduct() ĐÃ CÓ — 0 logic mở form mới ("Do NOT duplicate
+        // Product logic").
+        const pid = resolvedParams.productId;
+        if (!pid) throw new Error('Không xác định được sản phẩm cần mở.');
+        step.productId = pid;
+        step.status = 'completed';
+        renderMessages();
+        window.location.href = '/admin/products.html?edit=' + encodeURIComponent(pid);
+        return step.status;
+      } else if (step.tool === 'update-product-field') {
+        // Điền sẵn field + đánh dấu trên CHÍNH form thật — Founder tự bấm Lưu
+        // ("Locate Product -> Update Price field -> Highlight change -> Ask
+        // Founder to Save"). Agent KHÔNG gọi DB.update() ở đây.
+        const pid = resolvedParams.productId;
+        const field = String(resolvedParams.field || '').toLowerCase();
+        const value = resolvedParams.value;
+        if (!pid) throw new Error('Không xác định được sản phẩm cần sửa.');
+        if (!AGENT_FIELD_LABELS[field]) throw new Error('Field không hợp lệ: ' + field);
+        if (value === undefined || value === null || value === '') throw new Error('Thiếu giá trị mới cần điền.');
+        step.productId = pid;
+        step.status = 'completed';
+        renderMessages();
+        window.location.href = '/admin/products.html?edit=' + encodeURIComponent(pid) + '&field=' + encodeURIComponent(field) + '&value=' + encodeURIComponent(value);
+        return step.status;
+      } else if (step.tool === 'open-draft') {
+        // Tìm Draft mới nhất khớp — tái sử dụng ĐÚNG DraftDB.getAll() đã có,
+        // không viết logic tìm kiếm/lưu trữ mới. Điều hướng tới Social Media
+        // Center (đã có sẵn từ Sprint 12), KHÔNG tự Publish.
+        const drafts = await DraftDB.getAll();
+        let candidates = drafts;
+        if (resolvedParams.moduleId) candidates = candidates.filter(d => d.moduleId === resolvedParams.moduleId);
+        const q = String(resolvedParams.query || '').trim().toLowerCase();
+        if (q) {
+          candidates = candidates.filter(d => JSON.stringify(d.content || {}).toLowerCase().includes(q) || JSON.stringify(d.inputParams || {}).toLowerCase().includes(q));
+        }
+        candidates = candidates.slice().sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+        const found = candidates[0];
+        if (!found) throw new Error('Không tìm thấy Nháp phù hợp.');
+        step.draftId = found.id;
+        step.status = 'completed';
+        renderMessages();
+        window.location.href = '/admin/social-media-center.html?highlight=' + encodeURIComponent(found.id);
+        return step.status;
+      } else if (step.tool === 'navigate') {
+        const page = NAV_PAGES[resolvedParams.page];
+        if (!page) throw new Error('Không nhận diện được trang CMS: ' + resolvedParams.page);
+        step.status = 'completed';
+        renderMessages();
+        window.location.href = page;
+        return step.status;
       } else {
         // Plugin thật — ĐÚNG 4 bước cũ (V1/AITaskRouter.dispatch()), không đổi.
         const perm = await PermissionService.checkPluginExecution(user.uid, user.email, step.tool);
@@ -424,8 +516,13 @@ Quy tắc:
     return ''; // completed/skipped — không còn hành động
   }
 
+  // stepLink — link dự phòng NẾU điều hướng tự động (window.location.href)
+  // vì lý do gì đó không xảy ra (vd trình duyệt chặn) — trỏ ĐÚNG trang thật
+  // Agent đã điều hướng tới cho từng loại bước, không phải 1 URL đoán chung.
   function stepLink(step) {
     if (step.status !== 'completed') return '';
+    if (step.tool === 'open-draft' && step.draftId) return ` <a href="/admin/social-media-center.html?highlight=${encodeURIComponent(step.draftId)}" class="agent-open-draft-btn">Mở Nháp →</a>`;
+    if ((step.tool === 'open-product' || step.tool === 'update-product-field') && step.productId) return ` <a href="/admin/products.html?edit=${encodeURIComponent(step.productId)}" class="agent-open-draft-btn">Mở Sản phẩm →</a>`;
     if (step.draftId) return ` <a href="/admin/ai/drafts.html" class="agent-open-draft-btn">Mở Nháp →</a>`;
     if (step.productId) return ` <a href="/admin/products.html" class="agent-open-draft-btn">Mở Sản phẩm →</a>`;
     return '';

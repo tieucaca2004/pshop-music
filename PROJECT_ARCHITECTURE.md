@@ -631,6 +631,40 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Founder Agent V3 (Sprint 13) — CMS Operator
+
+V1 tạo Nháp qua Plugin. V2 lập Plan nhiều bước Plugin. V3 thêm 1 LOẠI BƯỚC MỚI hoàn toàn khác về bản chất: thay vì gọi Plugin sinh nội dung, bước "CMS Operator" **điều hướng trình duyệt** sang 1 trang CMS thật, mang theo dữ liệu qua query string, để trang đích tự mở đúng bản ghi/điền sẵn đúng field — tuyệt đối không tự ghi Firebase.
+
+### Vì sao PHẢI điều hướng, không thể "vận hành" từ chính trang Agent
+
+`admin/ai/agent.html` chỉ load các script cần cho Plugin Framework (Product/Blog/Facebook/Banner/Image AI + Queue/Draft) — nó KHÔNG load `js/admin-products.js`/form Sản phẩm thật, KHÔNG load `js/admin-social-center.js`/giao diện Draft thật. Không có cách nào "mở form Sản phẩm" MÀ KHÔNG điều hướng sang `admin/products.html` — đúng ý "Reuse: Existing forms. Existing pages." (không dựng lại form Sản phẩm bên trong trang Agent — sẽ là DUPLICATE Product logic, đúng điều cấm).
+
+### Cơ chế truyền dữ liệu qua điều hướng — query string, đọc 1 lần lúc tải trang
+
+4 tool mới (`open-product`/`update-product-field`/`open-draft`/`navigate`) trong `executeStep()` (`js/admin-agent.js`) đều kết thúc bằng chính xác 1 dòng `window.location.href = '<trang thật>?<param>'` — KHÔNG gọi `PermissionService`/`PluginManager`/`AIJobQueue`/`DraftDB.getAll()`... để tạo Job (không có generation nào xảy ra ở các bước này).
+
+Trang đích đọc query param NGAY LÚC TẢI (không phải lúc nào khác):
+
+```
+admin/products.html?edit=<productId>                                    -> mở Sửa đúng sản phẩm
+admin/products.html?edit=<productId>&field=<tên>&value=<giá trị mới>    -> mở Sửa + điền sẵn + đánh dấu 1 field
+admin/social-media-center.html?highlight=<draftId>                      -> cuộn tới + đánh dấu đúng thẻ Draft
+```
+
+`js/admin-products.js` `applyDeepLink()` (gọi trong `.then()` của `loadProducts()`, SAU khi `products[]` đã tải xong — bắt buộc, vì cần list để xác nhận `editId` có thật) — gọi lại ĐÚNG `editProduct(id)` đã có (0 dòng logic mở form mới), sau đó NẾU có `field`/`value` thì set `document.getElementById(<field tương ứng>).value = value` + thêm class `.agent-field-highlight` — dừng lại ở đó, không có dòng nào gọi `DB.update()`/`saveProduct()`. Founder phải tự bấm nút "CẬP NHẬT SẢN PHẨM" thật (form validate/ghi dữ liệu y hệt khi Founder tự gõ tay, 0 đường tắt).
+
+Cờ `deepLinkHandled` (module-level, khởi tạo `false`) đảm bảo chỉ áp dụng ĐÚNG 1 LẦN lúc tải trang — `loadProducts()` còn được gọi lại nhiều lần trong phiên làm việc (sau khi Founder Lưu/Xóa) và KHÔNG được tự mở lại form mỗi lần đó.
+
+`js/admin-social-center.js` `applyDeepLink()` tương tự — gọi trong `.then()` của `Promise.all([loadProducts(), loadDrafts()])` ở `init()`, dùng `document.querySelectorAll('[data-draft-id]')` (thuộc tính đã có sẵn trên mỗi thẻ Draft từ trước, không thêm gì) để tìm đúng thẻ, KHÔNG tự bấm nút "Đăng lên Facebook"/"Publish Now" nào.
+
+### Planner — dạy thêm 4 tool, cấm ghép chuỗi sau điều hướng
+
+Vì điều hướng phá hủy hoàn toàn trạng thái JS của trang Agent hiện tại, `buildPlan()`'s system prompt dạy rõ: 4 tool CMS Operator LUÔN LÀ BƯỚC DUY NHẤT trong 1 Plan — không bao giờ xếp Plugin step nào SAU 1 bước điều hướng (sẽ không chạy được, trang đã đổi). Ví dụ few-shot khớp nguyên văn Requirement: "Mở RX3" → 1 bước `open-product`; "Đổi giá RX3 thành 48 triệu" → 1 bước `update-product-field` (Planner tự parse "48 triệu" thành chuỗi hiển thị "48.000.000 ₫" khớp format Product Editor đang dùng).
+
+### "Viết Blog"/"Tạo Facebook" — không cần đổi gì, đã đúng từ V1/V2
+
+2 ví dụ còn lại của Requirement KHÔNG cần năng lực CMS Operator — "Blog AI opens"/"Facebook Draft opens" nghĩa là 1 Draft mới được tạo xong và SẴN SÀNG MỞ (nút "Mở Nháp →" đã hiển thị) — đúng NGUYÊN VẸN hành vi Plugin/Queue/Draft đã có từ V1/V2, không đổi 1 dòng nào.
+
 ## Founder Agent V2 (Sprint 13) — Task Planner
 
 V1 xử lý đúng 1 công cụ mỗi lệnh (Understand intent → Select Tool → Execute → Draft). V2 tổng quát hoá thành Task Planner: 1 lệnh có thể cần NHIỀU công cụ theo thứ tự — Agent xây 1 Execution Plan (mảng bước), Founder tự quyết định chạy. **Kiến trúc THAY THẾ hoàn toàn** luồng "1 công cụ" của V1 trong cùng file `js/admin-agent.js` — 1 lệnh chỉ cần 1 công cụ vẫn hoạt động, chỉ là Plan có ĐÚNG 1 phần tử (trường hợp thoái hoá của kiến trúc chung, không phải 2 đường code song song).

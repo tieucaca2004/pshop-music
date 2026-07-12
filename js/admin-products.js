@@ -108,11 +108,42 @@ const AdminApp = (function () {
     withTimeout(DB.getAll(), 10000).then(list => {
       products = list;
       renderTable(filter || '');
+      applyDeepLink();
     }).catch(err => {
       console.error('Không tải được dữ liệu sản phẩm:', err);
       document.getElementById('productTableBody').innerHTML =
         '<tr><td colspan="8" style="color:#c0392b;text-align:center;padding:2rem">Không kết nối được database.</td></tr>';
     });
+  }
+
+  // ── Deep link từ Founder Agent V3 (CMS Operator) ────────────────────────────
+  // ?edit=<id> — tự mở đúng form Sửa, tái sử dụng NGUYÊN VẸN editProduct() đã
+  // có (0 logic mở form mới, "Do NOT duplicate Product logic"). Tuỳ chọn
+  // &field=<tên>&value=<giá trị> — tự điền + đánh dấu 1 field (KHÔNG tự Lưu —
+  // Founder tự bấm nút Lưu thật, đúng "The Agent never edits database
+  // directly... Ask Founder to Save"). deepLinkHandled chặn lặp lại mỗi khi
+  // loadProducts() được gọi lại (vd sau khi Founder tự Lưu) — chỉ áp dụng
+  // ĐÚNG 1 LẦN lúc tải trang.
+  let deepLinkHandled = false;
+  const AGENT_FIELD_MAP = { price: 'pPrice', oldprice: 'pOldPrice', name: 'pName', warranty: 'pWarranty', stockstatus: 'pStockStatus', status: 'pStatus', sku: 'pSku' };
+  function applyDeepLink() {
+    if (deepLinkHandled) return;
+    const params = new URLSearchParams(location.search);
+    const editId = params.get('edit');
+    if (!editId || !products.some(p => p.id === editId)) return;
+    deepLinkHandled = true;
+    editProduct(editId);
+    const field = (params.get('field') || '').toLowerCase();
+    const value = params.get('value');
+    const fieldElId = AGENT_FIELD_MAP[field];
+    if (fieldElId && value !== null) {
+      const el = document.getElementById(fieldElId);
+      if (el) {
+        el.value = value;
+        el.classList.add('agent-field-highlight');
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
   }
 
   function renderTable(query) {

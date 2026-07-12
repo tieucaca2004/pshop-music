@@ -18,24 +18,24 @@
     <div class="admin-topbar" id="adminTopbar"></div>
     <div class="admin-wrap" style="max-width:860px">
 
-      <p class="small-muted" style="margin-bottom:1.5rem">Mô tả việc bạn muốn làm bằng tiếng Việt thông thường — Agent tự lập Execution Plan (có thể gồm nhiều bước/công cụ), bạn tự quyết định Chạy tất cả hoặc từng bước, rồi duyệt Nháp.</p>
+      <p class="small-muted" style="margin-bottom:1.5rem">Mô tả việc bạn muốn làm bằng tiếng Việt thông thường — Agent tự lập kế hoạch (mở đúng trang/sửa đúng field, hoặc chạy đúng công cụ AI), bạn tự quyết định Chạy, rồi tự Lưu/duyệt Nháp. Agent KHÔNG BAO GIỜ tự ghi dữ liệu — chỉ vận hành đúng trang/form thật đã có.</p>
 
       <!-- Chat window -->
       <div class="agent-chat-wrap" id="agentChatWrap">
         <div class="agent-chat-messages" id="agentMessages">
           <div class="agent-msg agent-msg-agent">
             <div class="agent-msg-bubble">
-              Xin chào! Tôi là Founder Agent. Hãy cho tôi biết bạn cần làm gì — ví dụ: <em>"Tạo sản phẩm Pioneer RX3"</em> (tự lập kế hoạch nhiều bước), <em>"Viết Blog và Facebook cho RX3"</em>, <em>"Viết mô tả Pioneer RX3"</em>...
+              Xin chào! Tôi là Founder Agent. Hãy cho tôi biết bạn cần làm gì — ví dụ: <em>"Mở Pioneer RX3"</em>, <em>"Đổi giá RX3 thành 48 triệu"</em>, <em>"Tạo sản phẩm Pioneer RX3"</em> (tự lập kế hoạch nhiều bước), <em>"Viết Blog và Facebook cho RX3"</em>...
             </div>
           </div>
         </div>
 
         <!-- Suggested actions -->
         <div class="agent-suggestions" id="agentSuggestions">
+          <button type="button" class="agent-suggestion-chip" onclick="AdminAgent.useSuggestion('Mở Pioneer RX3')">Mở sản phẩm</button>
+          <button type="button" class="agent-suggestion-chip" onclick="AdminAgent.useSuggestion('Đổi giá Pioneer RX3 thành 48 triệu')">Đổi giá sản phẩm</button>
           <button type="button" class="agent-suggestion-chip" onclick="AdminAgent.useSuggestion('Tạo sản phẩm Pioneer RX3')">Tạo sản phẩm mới (full plan)</button>
           <button type="button" class="agent-suggestion-chip" onclick="AdminAgent.useSuggestion('Viết Blog và Facebook cho Pioneer RX3')">Blog + Facebook cho RX3</button>
-          <button type="button" class="agent-suggestion-chip" onclick="AdminAgent.useSuggestion('Tạo Banner và ảnh Facebook cho Pioneer RX3')">Banner + ảnh Facebook</button>
-          <button type="button" class="agent-suggestion-chip" onclick="AdminAgent.useSuggestion('Viết mô tả sản phẩm Pioneer RX3')">Viết mô tả Pioneer RX3</button>
         </div>
 
         <!-- Input row -->

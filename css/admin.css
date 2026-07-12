@@ -212,6 +212,13 @@ body{min-height:100vh;background:var(--bg-alt)}
 .agent-plan-report{margin-top:0.6rem;padding-top:0.6rem;border-top:1px solid var(--line2);font-size:0.82rem}
 .agent-plan-report-links{margin:0.4rem 0 0;padding-left:1.1rem}
 @media(max-width:700px){.agent-plan-row{grid-template-columns:1fr}}
+
+/* Founder Agent V3 (CMS Operator) — đánh dấu field/thẻ Draft vừa được Agent
+   điều hướng tới trên các trang KHÁC (admin/products.html, admin/social-
+   media-center.html) — dùng chung 1 class ở cả 2 nơi. Không tự Lưu/Publish
+   gì — chỉ hiệu ứng nhìn thấy được để Founder biết chỗ cần xem/xác nhận. */
+@keyframes agentHighlightPulse{0%,100%{box-shadow:0 0 0 3px var(--gold-soft)}50%{box-shadow:0 0 0 6px var(--gold-soft)}}
+.agent-field-highlight{outline:2px solid var(--gold) !important;animation:agentHighlightPulse 1.6s ease-in-out 3}
 .agent-suggestions{display:flex;flex-wrap:wrap;gap:0.5rem;padding:0.75rem 1.25rem;border-top:1px solid var(--line2)}
 .agent-suggestion-chip{background:var(--bg-alt);border:1px solid var(--line2);color:var(--ink);font-size:0.76rem;padding:0.35rem 0.8rem;cursor:pointer;transition:border-color 0.15s,background 0.15s;font-family:'Be Vietnam Pro',sans-serif}
 .agent-suggestion-chip:hover{border-color:var(--gold);background:var(--gold-soft);color:var(--gold-ink)}
