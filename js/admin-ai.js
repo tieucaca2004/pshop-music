@@ -728,5 +728,10 @@ const AdminAI = (function () {
     }).join('');
   }
 
-  return { initDashboard, runModule, initDrafts, publishDraft, rejectDraft, publishDraftById, rejectDraftById, initJobs, cancelJob, retryJob, initLogs, copyDraftText, publishVersionToFacebook };
+  // draftBodyHtml — Sprint 12 (Social Media Publishing Center) xuất công khai
+  // để trang mới admin/social-media-center.html tái sử dụng NGUYÊN VẸN cách
+  // hiển thị Preview đã có (Facebook/Banner/JSON thô) thay vì viết lại HTML
+  // template — đúng RULES "Do NOT duplicate Draft logic". Hàm không đổi hành
+  // vi gì, chỉ thêm vào danh sách export.
+  return { initDashboard, runModule, initDrafts, publishDraft, rejectDraft, publishDraftById, rejectDraftById, initJobs, cancelJob, retryJob, initLogs, copyDraftText, publishVersionToFacebook, draftBodyHtml };
 })();

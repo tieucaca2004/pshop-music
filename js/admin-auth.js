@@ -32,6 +32,7 @@ const ADMIN_NAV = [
   { key: 'ai-assistant', label: 'Trợ lý AI', href: '/admin/ai/assistant.html', icon: '&#129302;' },
   { key: 'ai', label: 'Plugin AI (Thủ công)', href: '/admin/ai/index.html', icon: '&#129302;' },
   { key: 'ai-images', label: 'Image AI', href: '/admin/ai/images.html', icon: '&#128444;' },
+  { key: 'social-media-center', label: 'Social Media Center', href: '/admin/social-media-center.html', icon: '&#128241;' },
   { key: 'menu', label: 'Menu', href: '/admin/menu.html', icon: '&#9776;', role: 'admin' },
   { key: 'footer', label: 'Footer', href: '/admin/footer.html', icon: '&#11015;', role: 'admin' },
   { key: 'seo', label: 'SEO', href: '/admin/seo.html', icon: '&#128269;', role: 'admin' },
@@ -68,6 +69,7 @@ const FOUNDER_SMART_NAV = [
   { key: 'ai-image', label: 'AI Image', href: '/admin/ai/images.html', icon: '&#128444;' },
   { key: 'ai-video', label: 'AI Video (Sắp có)', href: null, icon: '&#127916;' },
   { key: 'marketing-drafts', label: 'Marketing Drafts', href: '/admin/ai/drafts.html', icon: '&#128203;' },
+  { key: 'social-media-center', label: 'Social Media Center', href: '/admin/social-media-center.html', icon: '&#128241;' },
   { key: 'settings', label: 'Cài đặt', href: '/admin/settings.html', icon: '&#9881;', role: 'admin' },
   { key: 'facebook-settings', label: 'Facebook Configuration', href: '/admin/facebook-settings.html', icon: '&#128288;', role: 'admin' }
 ];

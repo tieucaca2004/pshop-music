@@ -631,6 +631,43 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Social Media Publishing Center (Sprint 12) — 1 nơi duy nhất quản lý nội dung AI mạng xã hội
+
+Founder cần 1 nơi DUY NHẤT quản lý toàn bộ nội dung AI (Facebook/Banner/Blog/Product) — xem trước, sửa, Publish/Lên lịch, tra cứu Lịch sử — thay vì rải rác ở `admin/ai/drafts.html` + từng trang riêng. Yêu cầu rõ "Reuse everything already built. Do NOT redesign", nên đây là 1 lớp Trải nghiệm (Experience Layer) THUẦN TUÝ phía trên `DraftDB`/`AdminAI` đã có — **không thêm bảng/collection Firebase mới, không viết lại logic Draft hay Publish Pipeline nào**.
+
+### Phạm vi — 4 loại Draft, loại trừ Image AI có chủ đích
+
+`admin/social-media-center.html` + `js/admin-social-center.js` gộp danh sách 4 `moduleId`: `facebook-post-generator`/`banner-generator`/`blog-writer`/`product-description-writer` — đúng 4 mục LIST filter Requirement liệt kê. `image-generator` KHÔNG nằm trong phạm vi này vì đã có Studio riêng (`admin/ai/images.html`, Sprint 12 Requirement #11) — loại trừ có chủ đích, không phải thiếu sót.
+
+### Preview — tái sử dụng nguyên vẹn, không viết lại template
+
+`AdminAI.draftBodyHtml(draft)` được export thêm (trước đây là hàm nội bộ của `js/admin-ai.js`, dùng cho `admin/ai/drafts.html`) — **0 thay đổi hành vi**, chỉ thêm vào danh sách trả về của module. Social Media Center gọi thẳng hàm này để hiển thị Preview Facebook/Banner ĐÚNG như Founder đã quen thấy, không có 1 template HTML thứ hai nào cho cùng loại nội dung.
+
+### Founder Actions — Edit/Duplicate/Delete/Publish/Schedule
+
+- **Sửa**: mỗi loại Draft có 1 form riêng (Facebook: Hook/Caption/CTA/Hashtags theo từng phiên bản + Link YouTube + Ảnh đại diện/Gallery; Banner: Tiêu đề/Phụ đề/CTA/Ảnh; Blog: Tiêu đề/Đoạn trích/Ảnh Cover; Product: Tên/Mô tả ngắn/Tags). Ảnh dùng lại `MediaLibraryPicker.mount()`/`mountMulti()` — mount SAU khi `innerHTML` đã chèn vào DOM, đúng thứ tự mọi trang Product/Blog/Banner khác đã dùng. LƯU ghi qua `DraftDB.update({content: newContent})` — không có đường ghi dữ liệu thứ hai nào ngoài `DraftDB`.
+- **Nhân bản**: `DraftDB.add()` với `content` deep-copy (`JSON.parse(JSON.stringify(...))`, đảm bảo Draft mới độc lập hoàn toàn với Draft gốc), `status` luôn về `'draft'` (không kế thừa `published`/`rejected`).
+- **Xóa**: `DraftDB.remove()`, có `confirm()` chặn thao tác nhầm.
+- **Publish Now**: CHỈ áp dụng Banner/Blog/Product, gọi `AdminAI.publishDraftById()` (đúng `publishToTarget()` có sẵn). Facebook KHÔNG có nút trùng lặp ở đây — nút "Đăng lên Facebook" đã có sẵn NGAY TRONG Preview tái sử dụng (`publishVersionToFacebook()` mỗi phiên bản A/B/C độc lập, đã có từ Facebook Integration V1).
+
+### Lên lịch đăng (Facebook, V1) — giới hạn client-side có chủ đích
+
+Theo đúng khung "For now, implement only Facebook" của Requirement: Founder chọn thời điểm tương lai cho 1 phiên bản Facebook cụ thể → ghi thẳng `scheduledAt` + `publishStatus:'scheduled'` lên chính Draft đó (không bảng mới) → 1 `setInterval` 60 giây chạy khi trang Social Media Center đang MỞ trong trình duyệt, quét mọi Draft Facebook còn Nháp, tự gọi lại `publishVersionToFacebook()` khi tới hạn.
+
+**Giới hạn thật, đã ghi nhận rõ ràng cho Founder trong UI**: chỉ hoạt động khi trang này đang mở — đóng tab/trình duyệt thì lịch đã đặt sẽ KHÔNG tự đăng cho tới khi Founder mở lại trang. Đây là quyết định kiến trúc NHẤT QUÁN với tiền lệ `AIJobQueue` đã có ("V1: xử lý phía trình duyệt Admin... nâng cấp Cloud Functions ở V2 mà không cần đổi hàm enqueue/resume/cancel") — không phải thiếu sót, mà là để tránh tự ý thêm hạ tầng Cloud Scheduler mới ngoài phạm vi "Reuse everything, Do NOT redesign" của Requirement này. Nâng cấp lên Cloud Scheduler thật (đăng đúng giờ dù không mở trình duyệt) để ngỏ cho 1 Requirement riêng sau này.
+
+### Lịch sử đăng bài — không bảng mới, đọc lại field đã có sẵn
+
+`renderHistory()` không tạo collection nào — với Facebook, gộp mọi phần tử `content.versions[]` có `publishStatus === 'published'|'failed'` (đọc `facebookPostId`/`publishedAt`/`selectedPage`/`publishError` đã ghi sẵn bởi `publishVersionToFacebook()`); với Banner/Blog/Product, chỉ lấy Draft có `status === 'published'` (đọc `publishedAt`). Sắp xếp theo `publishedAt` mới nhất trước.
+
+### Kiến trúc mở rộng nền tảng tương lai
+
+`MODULE_LABELS` là điểm mở rộng DUY NHẤT cần sửa khi có Plugin mới muốn xuất hiện ở Social Media Center (thêm 1 dòng `moduleId → nhãn hiển thị`). Kiến trúc Publish (Instagram Business/Threads/TikTok/YouTube Community, theo Requirement liệt kê là "Future destinations") CHƯA được xây — Requirement chỉ yêu cầu "Architecture must support future platforms", không yêu cầu code khung rỗng cho các nền tảng chưa tồn tại; điểm mở rộng thật sự (khi có Requirement riêng) sẽ là thêm 1 hàm `publishVersionTo<Platform>()` mới cạnh `publishVersionToFacebook()` trong `js/admin-ai.js`, tái sử dụng đúng pattern Draft/Version đã có.
+
+### 0 sửa đổi
+
+Facebook Integration/Product AI/Blog AI/Banner AI/Queue/Provider/Workflow/Draft System/Publish Pipeline — đúng "Do NOT redesign" của Requirement. Duy nhất 1 thay đổi ngoài file mới: `js/admin-ai.js` export thêm `draftBodyHtml` (0 đổi hành vi) và `js/admin-auth.js` thêm mục nav "Social Media Center".
+
 ## Facebook Integration V1 (Sprint 12) — App ID động + Mock Mode + Token Refresh + Permission Checking
 
 Hoàn thiện kiến trúc production của "Facebook AI V5" (mục bên dưới) theo đúng yêu cầu "Build the REAL production implementation first... Do NOT wait for App ID" — không hardcode App ID (khác quyết định tạm thời ở V5), thêm Mock Mode để tự kiểm thử toàn bộ luồng ngay cả khi Meta App chưa tồn tại, và hoàn thiện 3 hạng mục còn thiếu ở V5: Token Refresh/Permission Checking/Facebook Graph API Wrapper.
