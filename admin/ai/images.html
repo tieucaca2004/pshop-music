@@ -69,6 +69,16 @@
         <h3>ẢNH ĐÃ TẠO (<span id="imgDraftTotal">0</span>)</h3>
         <div id="imgDraftsGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.2rem;margin-top:1rem"></div>
       </div>
+
+      <div class="panel">
+        <h3>XÓA PHÔNG ẢNH</h3>
+        <p class="small-muted" style="margin-bottom:0.75rem">Upload hoặc dán URL ảnh sản phẩm → AI xóa phông → preview → lưu vào thư viện.</p>
+        <div id="imgBgRemover"></div>
+        <div id="imgBgRemoverSaveRow" style="display:none;margin-top:0.5rem">
+          <button type="button" class="btn-secondary" id="imgBgRemoverSaveBtn">💾 LƯU VÀO THƯ VIỆN ẢNH</button>
+          <span id="imgBgRemoverSaveStatus" class="status-msg" style="display:none;margin-left:0.75rem"></span>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -76,12 +86,16 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="../../js/firebase-config.js"></script>
 <script src="../../js/products-seed.js"></script>
 <script src="../../js/site-content-seed.js"></script>
 <script src="../../js/db.js"></script>
 <script src="../../js/cms-db.js"></script>
 <script src="../../js/admin-auth.js"></script>
+<script src="../../js/storage-upload.js"></script>
+<script src="../../js/media-library.js"></script>
+<script src="../../js/media-library-picker.js"></script>
 
 <script src="../../js/ai/provider-interface.js"></script>
 <script src="../../js/ai/provider-registry.js"></script>
@@ -106,7 +120,46 @@
 <script src="../../js/ai/plugin-manager.js"></script>
 <script src="../../js/ai/permission-service.js"></script>
 <script src="../../js/admin-ai.js"></script>
+<script src="../../js/admin-bg-remover.js"></script>
 <script src="../../js/admin-image-ai.js"></script>
-<script>AdminImageAI.init();</script>
+<script>
+  AdminImageAI.init();
+  if (typeof AdminBgRemover !== 'undefined') {
+    AdminBgRemover.mount('imgBgRemover', {
+      label: 'ẢNH NGUỒN',
+      showUrlInput: true,
+      onResult: function (url) {
+        // Kết quả đã lưu vào Storage (bg-removed/ folder) qua Cloud Function
+        // — hiển thị nút lưu thêm vào thư mục media/ để xuất hiện trong thư viện
+        const saveRow = document.getElementById('imgBgRemoverSaveRow');
+        if (saveRow) { saveRow.style.display = 'block'; saveRow._resultUrl = url; }
+      }
+    });
+    document.getElementById('imgBgRemoverSaveBtn').addEventListener('click', function () {
+      const saveRow = document.getElementById('imgBgRemoverSaveRow');
+      const url = saveRow && saveRow._resultUrl;
+      if (!url) return;
+      const status = document.getElementById('imgBgRemoverSaveStatus');
+      const btn = this;
+      btn.disabled = true;
+      if (status) { status.textContent = 'Đang lưu...'; status.style.display = 'inline'; status.style.color = 'var(--gold-ink)'; }
+      // Tải blob từ URL → upload vào thư mục media/ để xuất hiện trong thư viện ảnh
+      fetch(url)
+        .then(function (r) { return r.blob(); })
+        .then(function (blob) {
+          const file = new File([blob], 'bg-removed-' + Date.now() + '.png', { type: 'image/png' });
+          return MediaLibrary.upload(file);
+        })
+        .then(function () {
+          if (status) { status.textContent = 'Đã lưu vào thư viện ảnh.'; }
+          btn.disabled = false;
+        })
+        .catch(function (err) {
+          if (status) { status.textContent = 'Lỗi: ' + err.message; status.style.color = '#c0392b'; }
+          btn.disabled = false;
+        });
+    });
+  }
+</script>
 </body>
 </html>

@@ -148,3 +148,19 @@ body{min-height:100vh;background:var(--bg-alt)}
 /* ---- Category background image section (Sprint 13) ---- */
 .cat-bg-section{margin:0.6rem 0 0.4rem;padding:0.75rem 0 0.5rem;border-top:1px solid var(--line2)}
 .cat-bg-label{display:block;font-size:0.72rem;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:0.5rem}
+
+/* ---- Xóa phông (AdminBgRemover) ---- */
+.bg-remover-panel{padding:0.75rem 0 0.25rem}
+.bg-remover-heading{font-size:0.72rem;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;color:var(--gold-ink);margin:0 0 0.75rem}
+.bg-remover-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start}
+.bg-remover-col{display:flex;flex-direction:column;gap:0.4rem}
+.bg-remover-col-label{font-size:0.68rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-mute);margin:0}
+.bg-remover-drop-zone{position:relative;width:100%;aspect-ratio:4/3;border:2px dashed var(--line2);background:var(--bg-alt);overflow:hidden;transition:border-color 0.15s,background 0.15s;display:flex;align-items:center;justify-content:center}
+.bg-remover-drop-zone.bg-remover-drag-over{border-color:var(--gold);background:var(--gold-soft)}
+.bg-remover-drop-hint{display:flex;flex-direction:column;align-items:center;gap:0.35rem;font-size:0.78rem;color:var(--ink-mute);text-align:center;padding:0.5rem}
+.bg-remover-preview-wrap{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg-alt)}
+.bg-remover-img-fit{max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain}
+.bg-remover-clear-btn{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,0.5);border:none;color:#fff;font-size:0.7rem;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center}
+.bg-remover-result-wrap{position:relative;width:100%;aspect-ratio:4/3;border:1px solid var(--line2);background:#f8f8f8;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.bg-remover-result-empty{font-size:0.75rem;color:var(--ink-mute);text-align:center;padding:1rem}
+@media(max-width:700px){.bg-remover-row{grid-template-columns:1fr}}

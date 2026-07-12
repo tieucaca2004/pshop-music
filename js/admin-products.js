@@ -213,6 +213,10 @@ const AdminApp = (function () {
     pImagesPicker.refresh();
     document.getElementById('pBgImage').value = p.backgroundImage || '';
     if (pBgImagePicker) pBgImagePicker.refresh();
+    // Sync ảnh đại diện đầu tiên vào BgRemover làm ảnh nguồn gợi ý
+    if (typeof AdminBgRemover !== 'undefined' && images[0]) {
+      AdminBgRemover.setSourceUrl('pBgRemover', images[0]);
+    }
     document.getElementById('formTitle').textContent = 'SỬA SẢN PHẨM';
     document.getElementById('saveBtn').textContent = 'CẬP NHẬT SẢN PHẨM';
     document.getElementById('formPanel').scrollIntoView({ behavior: 'smooth' });
@@ -355,6 +359,16 @@ const AdminApp = (function () {
 
     pImagesPicker = MediaLibraryPicker.mountMulti('pImages', 'pImagesGrid');
     pBgImagePicker = MediaLibraryPicker.mount('pBgImage', 'pBgImageSlot');
+
+    if (typeof AdminBgRemover !== 'undefined') {
+      AdminBgRemover.mount('pBgRemover', {
+        label: 'XÓA PHÔNG ẢNH SẢN PHẨM',
+        onResult: function (url) {
+          document.getElementById('pBgImage').value = url;
+          if (pBgImagePicker) pBgImagePicker.refresh();
+        }
+      });
+    }
 
     if (typeof Quill !== 'undefined') {
       quill = new Quill('#pDescriptionEditor', {
