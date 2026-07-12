@@ -631,6 +631,36 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Founder Agent V1 (Sprint 13) — Entry Point AI duy nhất, orchestrator thuần túy
+
+Founder Agent (`admin/ai/agent.html` + `js/admin-agent.js`) là giao diện chat để Founder gõ yêu cầu tự do bằng tiếng Việt, Agent tự hiểu ý định → chọn công cụ → thực thi → hiển thị tiến trình → mở Nháp. Nguyên tắc kiến trúc tuyệt đối: **Agent CHỈ orchestrate, không bao giờ tự sinh nội dung** — mọi generation thật luôn đi qua đúng Plugin đã có, qua đúng Queue, tạo đúng Draft, theo đúng Publish Pipeline đã tồn tại.
+
+### Quan hệ với "Trợ lý AI" (`admin/ai/assistant.html`) — 2 lớp router khác nhau, không trang nào bị sửa
+
+Codebase đã có sẵn `AITaskRouter` (`js/ai/task-router.js`, Sprint 4) — router RULE-BASED khớp từ khóa cố định, cố tình KHÔNG gọi AI thật để phân loại ý định (ràng buộc kiến trúc của Sprint 4 lúc đó: "Requirement #8 cấm gọi OpenAI trực tiếp"). Router này phục vụ "Trợ lý AI" — 1 trang Experience Layer khác, đã có Conversation History/Ambiguous Target Resolution/Progress Tracking đầy đủ.
+
+Founder Agent KHÔNG tái sử dụng `AITaskRouter` cho bước hiểu ý định — lý do: rule-based khớp từ khóa cố định KHÔNG thể phân biệt "Tạo sản phẩm Pioneer RX3" (ý định: tạo MỚI) với "Viết mô tả Pioneer RX3" (ý định: viết nội dung cho sản phẩm ĐÃ CÓ) — cả 2 câu đều chứa "Pioneer RX3" và không có route nào trong `AI_TASK_ROUTES` biểu diễn được ý định "tạo mới". Đây là năng lực MỚI Requirement này đòi hỏi (hiểu ngôn ngữ tự do linh hoạt hơn), không phải sao chép lại thứ đã có — Founder Agent dùng GPT-4o-mini làm Tool Router, gọi qua ĐÚNG Cloud Function `openaiProxy` đã có (action="generate", không thêm Provider/API Key/Cloud Function mới).
+
+**Phần THỰC THI (sau khi đã chọn công cụ) tái sử dụng NGUYÊN VẸN — đây là phần quan trọng nhất của "reuse existing architecture", không có ngoại lệ**:
+
+```
+PermissionService.checkPluginExecution(uid, email, moduleId)
+  → PluginManager.loadPlugin(moduleId)
+  → plugin.execute([inputParams], uid, email)   // tạo Job, enqueue
+  → AIJobQueue.resume(uid, email)                // chạy generation thật
+  → DraftDB.getAll()                             // tìm Draft mới nhất vừa tạo
+```
+
+Đúng 5 bước, đúng thứ tự, đúng API công khai — giống hệt `AITaskRouter.dispatch()` đã làm cho "Trợ lý AI". Không plugin nào bị sửa, không Queue/Provider/Draft System/Publish Pipeline nào bị viết lại.
+
+### "Tạo sản phẩm X" — trường hợp đặc biệt duy nhất, không qua Plugin/Queue
+
+Không có Plugin nào "tạo sản phẩm mới" trong Plugin Framework hiện có (`product-description-writer` CHỈ viết mô tả cho sản phẩm đã tồn tại, nhận `productId` bắt buộc). Vì đây KHÔNG PHẢI hành động sinh nội dung bằng AI (không vi phạm "Never generate content directly" — Agent không viết bất kỳ câu chữ nào), Founder Agent xử lý ý định `create-product` bằng cách gọi thẳng `DB.add({ name, pubStatus: 'draft' })` — ĐÚNG cơ chế `js/admin-products.js` `saveProduct()` đã dùng khi tạo sản phẩm mới thủ công, `pubStatus:'draft'` khớp đúng quy ước "sản phẩm mới mặc định Nháp" đã có từ Sprint 12 Requirement #10. Founder Agent KHÔNG tự điền Mô tả/Giá/Danh mục/Ảnh — chỉ tạo dòng trống rồi trỏ Founder qua Product Editor thật (`/admin/products.html`) để tự điền tiếp, đúng luồng Mission "Tạo sản phẩm X → Open Product Assistant → Fill Product fields → Create Draft".
+
+### Execution Timeline — 4 bước cố định, không ghi đè mất dấu vết
+
+Mỗi tin nhắn phản hồi của Agent theo dõi `stepIndex` (0-3, ứng với `['Hiểu ý định', 'Chọn công cụ AI', 'Đang thực thi', 'Hoàn tất']`) + `stepState` (`'active'|'done'|'error'`) — luôn render ĐỦ 4 bước với dấu ✓/●/✕/○ tương ứng, khác với thiết kế ban đầu (1 chip trạng thái duy nhất bị ghi đè mỗi bước, mất hiển thị các bước trước đó). "Running Status" (chip trạng thái hiện tại) hiển thị TÁCH BIỆT bên dưới Timeline, đúng yêu cầu UI liệt kê cả 2 thành phần riêng.
+
 ## Hero Slideshow — Kéo thả di chuyển/xóa tiêu đề (Sprint 13, follow-up)
 
 Nâng cấp trực tiếp mục "Hero Slideshow — Khung ảnh ngang + Vị trí chữ tiêu đề" bên dưới — Founder yêu cầu tương tác THẬT là kéo thả (không chỉ bấm chọn 1 trong 9 nút), và thêm khả năng xóa hẳn tiêu đề khỏi 1 Slide.
