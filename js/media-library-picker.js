@@ -44,6 +44,13 @@ const MediaLibraryPicker = (function () {
   function slotHtml(slotId, url, opts) {
     const chooseLabel = (opts && opts.chooseLabel) || 'Chọn ảnh';
     const hasRemoveSlot = !!(opts && opts.onRemoveSlot);
+    // opts.wide (Sprint 13) — khung xem trước ngang/rộng (16:9) thay vì khung
+    // vuông 96x96 mặc định dùng chung mọi nơi khác (Product/Blog/Banner/
+    // Category). CHỈ trang nào truyền wide:true mới đổi (Slider Trang chủ —
+    // ảnh Hero Slideshow thật sự là banner ngang, khung vuông cho cảm giác
+    // sai lệch tỉ lệ). Không ảnh hưởng bất kỳ nơi gọi renderSlot()/mount()/
+    // mountMulti() nào khác — 0 thay đổi hành vi nếu không truyền opts.wide.
+    const thumbClass = 'medialib-slot-thumb' + ((opts && opts.wide) ? ' medialib-slot-thumb-wide' : '');
     // onMoveUp/onMoveDown/onSetFeatured/isFeatured (Sprint 12 Requirement #10,
     // Product Management) - CHỈ mountMulti() truyền các key này (sắp xếp lại
     // ảnh cần biết vị trí trong mảng) - mount()/renderSlot() (Blog/Banner/
@@ -55,7 +62,7 @@ const MediaLibraryPicker = (function () {
     const featuredBadge = (opts && opts.isFeatured) ? `<span class="small-muted" style="margin-left:0.3rem">★ Ảnh đại diện</span>` : '';
     return `
       <div class="medialib-slot" id="${slotId}">
-        <div class="medialib-slot-thumb">
+        <div class="${thumbClass}">
           ${url ? `<img src="${escapeHtml(url)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ''}
           <div class="medialib-thumb-empty" style="display:${url ? 'none' : 'flex'}">${url ? 'Ảnh lỗi' : 'Chưa có ảnh'}</div>
         </div>

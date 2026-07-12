@@ -40,6 +40,20 @@ nav{position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop
 .hero h1 em{font-style:normal;color:var(--gold)}
 .hero-sub{font-size:1.05rem;color:rgba(255,255,255,0.82);max-width:480px;margin:0 0 2.2rem;line-height:1.7;font-weight:300}
 .hero-btns{display:flex;gap:0.9rem;flex-wrap:wrap}
+/* Sprint 13 — Vị trí chữ tiêu đề Hero Slideshow theo từng Slide (lưới 9
+   điểm, js/home.js updateHeroText() ghi data-text-pos lên #heroSection mỗi
+   khi đổi Slide). Mặc định "bottom-left" KHÔNG có rule riêng — giữ NGUYÊN
+   hành vi cũ (.hero{align-items:flex-end}, .container căn trái tự nhiên)
+   cho Slide chưa có field "position" (tương thích ngược, xem
+   js/admin-sliders.js). */
+.hero[data-text-pos^="top-"]{align-items:flex-start}
+.hero[data-text-pos^="middle-"]{align-items:center}
+.hero[data-text-pos$="-center"] .container{margin-left:auto;margin-right:auto;text-align:center}
+.hero[data-text-pos$="-center"] .hero-btns{justify-content:center}
+.hero[data-text-pos$="-center"] h1,.hero[data-text-pos$="-center"] .hero-sub{margin-left:auto;margin-right:auto}
+.hero[data-text-pos$="-right"] .container{margin-left:auto;margin-right:0;text-align:right}
+.hero[data-text-pos$="-right"] .hero-btns{justify-content:flex-end}
+.hero[data-text-pos$="-right"] h1,.hero[data-text-pos$="-right"] .hero-sub{margin-left:auto;margin-right:0}
 .btn-gold{background:#fff;color:var(--black);padding:0.9rem 2.1rem;font-size:0.8rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:700;border:none;cursor:pointer;transition:all 0.2s}
 .btn-gold:hover{background:var(--gold);color:#fff}
 .btn-ghost{background:transparent;color:#fff;padding:0.85rem 2rem;font-size:0.8rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;border:1px solid rgba(255,255,255,0.5);cursor:pointer;transition:all 0.2s;display:inline-block}

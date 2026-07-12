@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "pshop-music"
-  }
+  },
+  "targets": {
+    "pshop-music": {
+      "database": {
+        "default": [
+          "pshop-music"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }

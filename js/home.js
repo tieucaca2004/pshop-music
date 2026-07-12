@@ -52,9 +52,14 @@
     const titleEl = document.getElementById('heroTitle');
     const subEl = document.getElementById('heroSubtitle');
     const ctaBtn = document.getElementById('heroCta');
+    const heroSection = document.getElementById('heroSection');
     if (titleEl && slide.title) titleEl.textContent = slide.title;
     if (subEl && slide.subtitle) subEl.textContent = slide.subtitle;
     if (ctaBtn) ctaBtn.dataset.link = slide.link || '';
+    // Vị trí chữ tiêu đề (Sprint 13) — Slide chưa có field "position" (undefined,
+    // mọi Slide cũ hiện có) mặc định "bottom-left", khớp ĐÚNG vị trí cố định
+    // trước đây — xem css/style.css .hero[data-text-pos].
+    if (heroSection) heroSection.dataset.textPos = slide.position || 'bottom-left';
   }
 
   window.handleHeroCta = function () {
