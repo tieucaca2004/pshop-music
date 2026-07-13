@@ -631,6 +631,46 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Founder Agent V4 (Sprint 13) — Complete Product Creation
+
+V1-V3 chạy 1 công cụ/nhiều công cụ/vận hành CMS. V4 thêm khả năng tạo 1 Sản phẩm GẦN NHƯ ĐẦY ĐỦ chỉ từ 1 dòng gợi ý ("Tạo sản phẩm Pioneer XDJ-RX3") — nghiên cứu tên/thương hiệu, kiểm tra trùng lặp, tự gán Danh mục, viết nội dung (tái dùng Product AI), gợi ý Sản phẩm liên quan, tính Điểm chất lượng, báo cáo thông tin còn thiếu — cộng khả năng đính kèm ảnh/file/Micro ngay tại ô nhập.
+
+### Quyết định phạm vi — đã xác nhận với Chief Architect TRƯỚC KHI code
+
+Requirement gốc yêu cầu "Internet Research" (nguồn: Official Manufacturer/Official Product Page/Documentation/Spec Sheet/YouTube), tự thu thập Ảnh/Video/Manual/Firmware/Driver CHÍNH HÃNG. Hệ thống này **không có** hạ tầng duyệt Internet thật (không Search API, không scraping, không YouTube Data API) — `openaiProxy` chỉ gọi chat completion thuần, không có tool browsing. Xây dựng các khả năng này cần tích hợp API bên thứ ba MỚI (chi phí thật + tài khoản mới) — đúng loại quyết định "chỉ Chief Architect quyết định được" (tiền lệ: Facebook App ID/Secret, Image AI chi phí DALL-E 3).
+
+Đã hỏi Chief Architect qua `AskUserQuestion` trước khi code — chọn phương án: **"Scope V4 to what's honestly buildable now"**. Kết quả: V4 KHÔNG tự thu thập Ảnh/Video/Manual chính hãng thật (sẽ luôn hiện trong "Báo cáo thiếu thông tin", đúng thực tế, không giả) — thay vào đó triển khai đầy đủ mọi phần KHÔNG cần hạ tầng mới: Category Auto-Detection/Duplicate Detection/Smart Brand Resolution (AI đề xuất, LUÔN gắn nhãn "chưa xác minh")/AI content (tái dùng Product AI)/Quality Score/Related Products/Auto Links (đã có từ V2)/Founder Agent Input upgrades (ảnh/file/Micro — không cần hạ tầng trả phí mới).
+
+### 6 tool mới — `js/admin-agent.js`
+
+- **research-product** — "Smart Brand Detection". CHỈ 1 lượt gọi GPT-4o-mini dựa trên kiến thức đã học (KHÔNG duyệt Internet) để đoán Tên đầy đủ/Thương hiệu/Model từ gợi ý ngắn (vd "RX3"). Kết quả LUÔN hiển thị kèm nhãn "🔎 AI đề xuất (chưa xác minh nguồn chính hãng)" — không bao giờ tự nhận là đã tra cứu nguồn thật. Nghiêm cấm bịa thông số kỹ thuật ở bước này (chỉ Tên/Thương hiệu/Model).
+- **check-duplicate** — so khớp Tên/SKU/Model/Slug (chuẩn hoá bỏ dấu/khoảng trắng) với `products[]` đã tải, 0 gọi AI. Tìm thấy trùng → status `duplicate-found`, PAUSE Plan, hiện 3 lựa chọn cho Founder: "📂 Mở Sản phẩm đã có" / "🆕 Tạo bản sao" / "✕ Hủy" (`openDuplicateProduct()`/`createDuplicateCopy()`/`cancelDuplicatePlan()`).
+- **detect-category** — gọi GPT-4o-mini với ĐÚNG danh sách mã Danh mục đang Hoạt động (`active !== false`, không bao giờ gửi Danh mục Ẩn/đã xoá) + Tên/Thương hiệu/Model sản phẩm, yêu cầu trả về tối đa 3 gợi ý kèm % tin cậy + lý do. **>=90%**: tự ghi `categoryIds`/`category`/`categoryLabel` TRỰC TIẾP qua `DB.update()` (dữ liệu CẤU TRÚC — mã Danh mục đã tồn tại + validate, KHÔNG PHẢI "nội dung AI sinh ra", cùng logic ngoại lệ đã áp dụng cho `create-product` từ V1). **<90%**: status `category-review`, PAUSE Plan, hiện gợi ý + nút "✓ Xác nhận & Gán" (`confirmCategorySuggestions()`) / "⏭ Tự gán sau" (`skipCategorySuggestions()`). **Không có gợi ý nào**: hiện "Không tìm thấy Danh mục phù hợp." + link "Mở Quản lý Danh mục →" — KHÔNG BAO GIỜ tự tạo Danh mục mới.
+- **related-products** — heuristic thuần JS (không gọi AI, tránh chi phí/rủi ro bịa đặt thừa): điểm = (số categoryIds chung × 2) + (1 nếu cùng brand), lấy top 5, loại chính nó.
+- **quality-score** — tính điểm 0-100 từ 8 tiêu chí THẬT có trọng số (SEO 20/Thông số 15/Tính năng 10/FAQ 10/Danh mục 15/Hình ảnh 15/Video 10/Tài liệu 5) — đọc Draft thật của `product-description-writer` (`DraftDB.get()`) + field thật trên Product record, KHÔNG suy đoán. "Tài liệu (Manual/Firmware/Driver)" LUÔN 0 điểm — hệ thống chưa có field/hạ tầng đính kèm file cho Sản phẩm, phản ánh đúng thực tế thay vì báo điểm giả cao.
+- **missing-info-report** — liệt kê cụ thể: thiếu Ảnh/Video/Manual-Firmware-Driver (LUÔN thiếu, ghi rõ lý do kiến trúc)/Bảo hành/SKU/Danh mục — không chặn Plan (chỉ thông tin, "Founder quyết định có tiếp tục hay không").
+
+### Token `$research.name`/`$research.brand`/`$research.model`
+
+Mở rộng cùng cơ chế `$product` (V2) — `resolveInputParams()` thay token bằng kết quả THẬT của bước `research-product` trong CÙNG Plan, chỉ khi bước đó đã Completed; nếu chưa, chặn chạy (trả `null`, không để lọt chuỗi token theo nghĩa đen vào `create-product`/`check-duplicate`).
+
+### Đính kèm ảnh/file + Micro — `admin/ai/agent.html` + `js/admin-agent.js`
+
+Tái dùng NGUYÊN VẸN hạ tầng Storage đã có — 0 logic Storage mới:
+- **Đính kèm ảnh** (`attachImage()`) — mở `MediaLibraryPicker.openModal()` đã có (Sprint 8), ảnh vào chung thư mục `media/` — nếu Plan sau đó có bước `create-product`, ảnh THẬT này được gán làm `images[0]`/`image` (media thật do Founder cung cấp, không phải AI sinh — đúng "AI writes text only, code assembles real media").
+- **Đính kèm file** (PDF...) — kéo-thả/dán/nút 📎 đều gọi chung `uploadAttachment()` → `StorageUpload.uploadImage(file, 'agent-files')` (tên hàm lịch sử, không giới hạn kiểu file — xem `js/storage-upload.js`). Hệ thống KHÔNG đọc được nội dung PDF/DOCX/XLSX/ZIP để trích xuất thông số (chưa có thư viện parse) — Agent nói rõ giới hạn này trong phản hồi, không giả vờ đã "đọc" file.
+- **Microphone** (`toggleMic()`) — Web Speech API CÓ SẴN trong trình duyệt (`SpeechRecognition`/`webkitSpeechRecognition`), 100% client-side, 0 API key/chi phí mới. Không hỗ trợ → báo rõ, không im lặng.
+
+`admin/ai/agent.html` thêm 3 script (`storage-upload.js`/`media-library.js`/`media-library-picker.js`, cùng thứ tự load `admin/products.html` đã dùng) — không có script Storage nào viết mới.
+
+### "Tạo sản phẩm X đầy đủ" — Plan 13-14 bước (Founder Acceptance Test)
+
+Planner (`buildPlan()`) được dạy thêm quy tắc thứ tự cố định: `research-product` (nếu tên có vẻ viết tắt) → `check-duplicate` → `create-product` → `detect-category` → `product-description-writer` → `seo` → `blog-writer` → `facebook-post-generator` → `banner-generator` → `image-generator` → `related-products` → `quality-score` → `missing-info-report` → `open-product` (bước cuối — Product Review tự động, đúng "Open Product Editor automatically"). 2 ví dụ few-shot mới khớp NGUYÊN VĂN Acceptance Test (tên đầy đủ + tên viết tắt).
+
+**0 sửa đổi**: Product AI/Blog AI/Facebook AI/Banner AI/Image AI (Plugin Framework), Queue/Provider/PermissionService/Publish Pipeline, `js/admin-products.js`/`js/admin-social-center.js` (deep-link V3 giữ nguyên).
+
+Kiểm thử: Node `vm` mã nguồn thật, 33 assertions mới (research-product/check-duplicate cả 2 nhánh Trùng lặp+Tạo bản sao/detect-category cả 3 nhánh Tự động+Chờ xác nhận+Không tìm thấy/never-assign-hidden-category/related-products/quality-score/missing-info-report/toàn bộ pipeline 13 bước/3 kịch bản Founder Agent Input: upload ảnh/upload PDF/Microphone) + 19 assertions test auth-fix chạy lại xác nhận 0 regression + 5 kịch bản V1-V3 chạy lại trong CHÍNH test V4 (Tool Router/Product Edit/Open Draft/Navigate) xác nhận 0 regression. Preview thật (static server nội bộ) xác nhận trang tải đúng, không lỗi JS mới ngoài `permission_denied` tiêu chuẩn trước đăng nhập.
+
 ## Founder Agent V3 (Sprint 13) — CMS Operator
 
 V1 tạo Nháp qua Plugin. V2 lập Plan nhiều bước Plugin. V3 thêm 1 LOẠI BƯỚC MỚI hoàn toàn khác về bản chất: thay vì gọi Plugin sinh nội dung, bước "CMS Operator" **điều hướng trình duyệt** sang 1 trang CMS thật, mang theo dữ liệu qua query string, để trang đích tự mở đúng bản ghi/điền sẵn đúng field — tuyệt đối không tự ghi Firebase.

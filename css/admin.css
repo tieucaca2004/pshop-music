@@ -227,8 +227,28 @@ body{min-height:100vh;background:var(--bg-alt)}
 .agent-input{width:100%;resize:none;min-height:44px;max-height:140px;padding:0.6rem 5.5rem 0.6rem 0.8rem;font-size:0.87rem;font-family:'Be Vietnam Pro',sans-serif;background:var(--bg-alt);border:1px solid var(--line2);color:var(--ink);line-height:1.5;overflow-y:auto}
 .agent-input:focus{outline:none;border-color:var(--gold)}
 .agent-input-extras{position:absolute;right:0.4rem;bottom:0.4rem;display:flex;gap:0.2rem}
-.agent-extra-btn{width:26px;height:26px;background:none;border:none;color:var(--ink-mute);font-size:0.9rem;cursor:not-allowed;opacity:0.4;line-height:1}
+.agent-extra-btn{width:26px;height:26px;background:none;border:none;color:var(--ink-mute);font-size:0.9rem;cursor:pointer;opacity:0.7;line-height:1;transition:opacity 0.15s,color 0.15s}
+.agent-extra-btn:hover{opacity:1;color:var(--gold-ink)}
+.agent-extra-btn:disabled{cursor:not-allowed;opacity:0.4}
 .agent-send-btn{width:44px;height:44px;background:var(--gold);border:none;color:#fff;font-size:1.1rem;cursor:pointer;flex-shrink:0;transition:background 0.15s}
 .agent-send-btn:hover{background:var(--gold-ink)}
 .agent-send-btn:disabled{background:var(--line2);cursor:not-allowed}
 @media(max-width:700px){.agent-chat-messages{min-height:320px}.agent-msg{max-width:95%}}
+
+/* Founder Agent V4 (Complete Product Creation) — đính kèm ảnh/file chờ gửi +
+   Micro đang ghi âm + trạng thái Trùng lặp/Chờ xác nhận Danh mục + nội dung
+   mở rộng riêng cho từng bước (Nghiên cứu/Danh mục/Sản phẩm liên quan/Điểm
+   chất lượng/Báo cáo thiếu). */
+.agent-mic-active{color:#c0392b;opacity:1;animation:agentMicPulse 1s ease-in-out infinite}
+@keyframes agentMicPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.agent-attachments{display:flex;flex-wrap:wrap;gap:0.4rem;padding:0.5rem 1rem 0;align-items:center}
+.agent-attachment-chip{display:inline-flex;align-items:center;gap:0.35rem;background:var(--bg-alt);border:1px solid var(--line2);font-size:0.74rem;padding:0.25rem 0.5rem;color:var(--ink-soft)}
+.agent-attachment-chip button{background:none;border:none;color:var(--ink-mute);cursor:pointer;font-size:0.75rem;padding:0;line-height:1}
+.agent-attachment-chip button:hover{color:#c0392b}
+.agent-msg-attachment-img{display:block;max-width:160px;max-height:120px;object-fit:cover;margin-top:0.5rem;border:1px solid var(--line2)}
+.agent-plan-row-duplicate-found{border-left-color:#b8860b}
+.agent-plan-row-category-review{border-left-color:#1a6b9a}
+.agent-plan-status-duplicate-found{color:#b8860b;background:#fdf6e3}
+.agent-plan-status-category-review{color:#1a6b9a;background:#eaf4fb}
+.agent-step-extra{grid-column:1/-1;color:var(--ink-soft);font-size:0.76rem;margin-top:0.3rem;line-height:1.5}
+.agent-step-warn{color:#b8860b}

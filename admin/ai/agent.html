@@ -18,14 +18,14 @@
     <div class="admin-topbar" id="adminTopbar"></div>
     <div class="admin-wrap" style="max-width:860px">
 
-      <p class="small-muted" style="margin-bottom:1.5rem">Mô tả việc bạn muốn làm bằng tiếng Việt thông thường — Agent tự lập kế hoạch (mở đúng trang/sửa đúng field, hoặc chạy đúng công cụ AI), bạn tự quyết định Chạy, rồi tự Lưu/duyệt Nháp. Agent KHÔNG BAO GIỜ tự ghi dữ liệu — chỉ vận hành đúng trang/form thật đã có.</p>
+      <p class="small-muted" style="margin-bottom:1.5rem">Mô tả việc bạn muốn làm bằng tiếng Việt thông thường — Agent tự lập kế hoạch (mở đúng trang/sửa đúng field, tạo sản phẩm gần như đầy đủ, hoặc chạy đúng công cụ AI), bạn tự quyết định Chạy, rồi tự Lưu/duyệt Nháp. Agent KHÔNG BAO GIỜ tự ghi nội dung AI trực tiếp — chỉ vận hành đúng trang/form thật đã có. <strong>Lưu ý:</strong> Agent chưa có khả năng tự tra cứu Internet/thu thập ảnh-video-tài liệu chính hãng — mọi tên/thương hiệu/model do Agent đề xuất chỉ dựa trên kiến thức AI đã học (có thể sai), cần Founder tự xác nhận lại.</p>
 
       <!-- Chat window -->
       <div class="agent-chat-wrap" id="agentChatWrap">
         <div class="agent-chat-messages" id="agentMessages">
           <div class="agent-msg agent-msg-agent">
             <div class="agent-msg-bubble">
-              Xin chào! Tôi là Founder Agent. Hãy cho tôi biết bạn cần làm gì — ví dụ: <em>"Mở Pioneer RX3"</em>, <em>"Đổi giá RX3 thành 48 triệu"</em>, <em>"Tạo sản phẩm Pioneer RX3"</em> (tự lập kế hoạch nhiều bước), <em>"Viết Blog và Facebook cho RX3"</em>...
+              Xin chào! Tôi là Founder Agent. Hãy cho tôi biết bạn cần làm gì — ví dụ: <em>"Mở Pioneer RX3"</em>, <em>"Đổi giá RX3 thành 48 triệu"</em>, <em>"Tạo sản phẩm Pioneer XDJ-RX3"</em> (tự nghiên cứu tên/thương hiệu, kiểm tra trùng lặp, tạo sản phẩm, gán Danh mục, viết nội dung, tính Điểm chất lượng, báo cáo thiếu sót), <em>"Viết Blog và Facebook cho RX3"</em>... Bạn cũng có thể đính kèm ảnh/file hoặc dùng Micro ở ô nhập bên dưới.
             </div>
           </div>
         </div>
@@ -34,22 +34,26 @@
         <div class="agent-suggestions" id="agentSuggestions">
           <button type="button" class="agent-suggestion-chip" onclick="AdminAgent.useSuggestion('Mở Pioneer RX3')">Mở sản phẩm</button>
           <button type="button" class="agent-suggestion-chip" onclick="AdminAgent.useSuggestion('Đổi giá Pioneer RX3 thành 48 triệu')">Đổi giá sản phẩm</button>
-          <button type="button" class="agent-suggestion-chip" onclick="AdminAgent.useSuggestion('Tạo sản phẩm Pioneer RX3')">Tạo sản phẩm mới (full plan)</button>
+          <button type="button" class="agent-suggestion-chip" onclick="AdminAgent.useSuggestion('Tạo sản phẩm Pioneer XDJ-RX3')">Tạo sản phẩm đầy đủ</button>
           <button type="button" class="agent-suggestion-chip" onclick="AdminAgent.useSuggestion('Viết Blog và Facebook cho Pioneer RX3')">Blog + Facebook cho RX3</button>
         </div>
+
+        <!-- Pending attachments (image/file chờ gửi kèm tin nhắn tiếp theo) -->
+        <div class="agent-attachments" id="agentAttachments" style="display:none"></div>
 
         <!-- Input row -->
         <div class="agent-input-row">
           <div class="agent-input-wrap">
-            <textarea id="agentInput" class="agent-input" rows="1" placeholder="Nhập yêu cầu... (Enter để gửi, Shift+Enter xuống dòng)"></textarea>
+            <textarea id="agentInput" class="agent-input" rows="1" placeholder="Nhập yêu cầu... (Enter để gửi, Shift+Enter xuống dòng, Ctrl+V để dán ảnh)"></textarea>
             <div class="agent-input-extras">
-              <button type="button" class="agent-extra-btn" title="Đính kèm ảnh (sắp có)" disabled>&#128247;</button>
-              <button type="button" class="agent-extra-btn" title="Đính kèm file (sắp có)" disabled>&#128206;</button>
-              <button type="button" class="agent-extra-btn" title="Ghi âm (sắp có)" disabled>&#127908;</button>
+              <button type="button" class="agent-extra-btn" id="agentImageBtn" title="Đính kèm ảnh (Thư viện ảnh)" onclick="AdminAgent.attachImage()">&#128247;</button>
+              <button type="button" class="agent-extra-btn" id="agentFileBtn" title="Đính kèm file (PDF...)" onclick="AdminAgent.attachFileClick()">&#128206;</button>
+              <button type="button" class="agent-extra-btn" id="agentMicBtn" title="Ghi âm → Văn bản" onclick="AdminAgent.toggleMic()">&#127908;</button>
             </div>
           </div>
           <button type="button" class="agent-send-btn" id="agentSendBtn">&#9658;</button>
         </div>
+        <input type="file" id="agentFileInput" style="display:none" onchange="AdminAgent.handleFileSelected(event)">
       </div>
 
     </div>
@@ -59,12 +63,16 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script src="../../js/firebase-config.js"></script>
 <script src="../../js/products-seed.js"></script>
 <script src="../../js/site-content-seed.js"></script>
 <script src="../../js/db.js"></script>
 <script src="../../js/cms-db.js"></script>
 <script src="../../js/admin-auth.js"></script>
+<script src="../../js/storage-upload.js"></script>
+<script src="../../js/media-library.js"></script>
+<script src="../../js/media-library-picker.js"></script>
 
 <script src="../../js/ai/provider-interface.js"></script>
 <script src="../../js/ai/provider-registry.js"></script>
