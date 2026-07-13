@@ -1,6 +1,6 @@
 # CLAUDE.md — PSH Platform (Pshop Music)
 
-Đây không phải bản copy nguyên trạng nguyên tắc từ dự án khác. Các nguyên tắc dưới đây được đúc kết từ hơn 1 năm phát triển thật của PSH Platform — từ Sprint 1 (CRUD Product/Category/Banner cơ bản) tới Sprint 12 (AI Plugin Framework, Product Management, Image AI) — phản ánh đúng cách Chief Architect thật sự giao việc và cách Claude thật sự đã làm việc trong repo này. (Có tham khảo cấu trúc trình bày — không phải nội dung — từ [andrej-karpathy-skills/CLAUDE.md](https://github.com/multica-ai/andrej-karpathy-skills/blob/main/CLAUDE.md).)
+Đây không phải bản copy nguyên trạng nguyên tắc từ dự án khác. Các nguyên tắc dưới đây được đúc kết từ hơn 1 năm phát triển thật của PSH Platform — từ Sprint 1 (CRUD Product/Category/Banner cơ bản) tới Sprint 13 (AI Plugin Framework, Founder Agent, Product Management) — phản ánh đúng cách Chief Architect thật sự giao việc và cách Claude thật sự đã làm việc trong repo này. (Có tham khảo cấu trúc trình bày — không phải nội dung — từ [andrej-karpathy-skills/CLAUDE.md](https://github.com/multica-ai/andrej-karpathy-skills/blob/main/CLAUDE.md).)
 
 **Bối cảnh bắt buộc phải hiểu trước khi đọc tiếp:** PSH Platform là site thương mại điện tử THẬT (`pshopmusic.com`, DJ & thiết bị âm thanh, Nha Trang) với dữ liệu Production thật (42+ sản phẩm thật) đang phục vụ khách hàng thật. Chief Architect (chủ shop, không phải lập trình viên) giao việc dưới dạng "Sprint Requirement" — 1 khối văn bản có cấu trúc rất rõ ràng (MISSION/GOAL/INPUT/OUTPUT/RULES/ACCEPTANCE TEST/"Do NOT modify") — đây LÀ đặc tả đủ để thực thi ngay, không phải yêu cầu mơ hồ cần được diễn giải lại.
 
@@ -32,9 +32,9 @@ Không xây kiến trúc "cho tương lai" nếu chưa ai cần dùng hôm nay.
 
 Đây là site thật, không phải sandbox — mọi thay đổi phải giả định có dữ liệu thật đang chạy phía sau.
 
-- Trước khi đổi field/schema, luôn tự hỏi: "dữ liệu thật hiện có sẽ ra sao nếu field mới này là `undefined`?" — câu trả lời bắt buộc phải là "vẫn hiển thị/hoạt động đúng như trước" (cách làm cụ thể ở mục 3, "Không Redesign Khi Chưa Cần").
-- Trước khi báo hoàn tất, luôn xác minh bằng dữ liệu Production thật — không chỉ tin "chạy được ở local/Preview" là đủ (quy trình cụ thể ở mục 7, Definition of Done).
-- Firebase Rules/Cloud Functions ảnh hưởng trực tiếp toàn bộ site đang chạy cho khách thật — deploy các hạ tầng này luôn cần Chief Architect tự thao tác (xem mục 6, Development Workflow).
+- Trước khi đổi field/schema, luôn tự hỏi: "dữ liệu thật hiện có sẽ ra sao nếu field mới này là `undefined`?" — câu trả lời bắt buộc phải là "vẫn hiển thị/hoạt động đúng như trước" (cách làm cụ thể ở mục 5, "Không Redesign Khi Chưa Cần").
+- Trước khi báo hoàn tất, luôn xác minh bằng dữ liệu Production thật — không chỉ tin "chạy được ở local/Preview" là đủ (quy trình cụ thể ở mục 9, Definition of Done).
+- Firebase Rules/Cloud Functions ảnh hưởng trực tiếp toàn bộ site đang chạy cho khách thật — deploy các hạ tầng này luôn cần Chief Architect tự thao tác (xem mục 8, Development Workflow).
 
 ---
 
@@ -50,11 +50,8 @@ Mỗi lượt làm việc chỉ giải quyết đúng 1 Requirement được gia
 
 ### Deploy → Founder Test → PASS → Next Requirement
 
-Không có Requirement nào được coi là xong cho tới khi Founder tự xác nhận PASS trên Production thật.
+Quy trình đầy đủ, có thứ tự từng bước từ lúc nhận Requirement tới lúc PASS được quy định chính thức ở mục 3 (Requirement Lifecycle) và mục 4 (PASS Authority) — không lặp lại ở đây.
 
-- Sau khi code + kiểm thử + deploy + cập nhật tài liệu + commit + push → DỪNG LẠI, không tự ý bắt đầu Requirement tiếp theo trong ROADMAP dù đã biết rõ thứ tự ưu tiên tiếp theo.
-- "Deploy thành công, không lỗi console" **không phải** "PASS" — PASS chỉ có nghĩa khi Founder tự dùng thật trên Production và xác nhận.
-- Đã từng có PASS bị tự thu hồi thành FAILED sau khi Founder tự phát hiện lỗi mà đáng lẽ phải tự kiểm thử ra được trước (xem lịch sử trong `CHANGELOG.md`) — không lặp lại việc tuyên bố PASS sớm.
 - Khi Founder chỉ hỏi tiến độ ("What step are you on?") → trả lời đúng câu hỏi, không tranh thủ làm thêm việc trong lúc trả lời.
 
 ### Root Cause First
@@ -69,7 +66,66 @@ Không sửa triệu chứng — luôn tìm nguyên nhân gốc bằng bằng ch
 
 ---
 
-## 3. Kỷ luật kiến trúc — 4 lớp không được bỏ qua + cách mở rộng an toàn
+## 3. Requirement Lifecycle
+
+Đây là quy trình phát triển chính thức cho toàn bộ PSH Platform. Mọi Requirement đều phải đi qua đúng chuỗi bước sau, đúng thứ tự — không bỏ bước, không đảo thứ tự.
+
+**Một Requirement KHÔNG được coi là hoàn thành cho tới khi chính Founder tự xác minh trên Production thật.**
+
+**Chuỗi bước:**
+
+Founder định nghĩa Requirement
+→ Planning
+→ Implementation
+→ Local Testing
+→ Regression Testing
+→ Documentation Update
+→ Commit
+→ Push
+→ Deploy to Production
+→ Production Verification
+→ Founder Acceptance Test
+→ PASS
+→ Update ROADMAP + Update CHANGELOG
+→ chuyển sang Requirement tiếp theo
+
+**Quy tắc:**
+
+- Không bao giờ tuyên bố 1 Requirement là PASS trước khi Founder tự thực hiện Founder Acceptance Test.
+- Không bao giờ bắt đầu Requirement tiếp theo khi Requirement hiện tại chưa PASS.
+- Nếu Founder báo lỗi (bug): dừng phát triển tính năng mới → sửa đúng lỗi được báo → deploy lại → lặp lại Founder Acceptance Test từ đầu.
+- 1 Requirement chỉ thật sự hoàn thành khi có ĐỦ: code hoàn chỉnh, regression test đã pass, tài liệu đã cập nhật, đã commit, đã push, đã deploy Production, đã verify Production, và Founder đã xác nhận PASS — checklist đầy đủ ở mục 9 (Definition of Done).
+
+---
+
+## 4. PASS Authority
+
+Chỉ Founder mới có quyền tuyên bố 1 Requirement là PASS.
+
+Từng có PASS bị chính Founder thu hồi thành FAILED sau khi tự phát hiện ra lỗi lẽ ra phải kiểm thử được từ trước (xem lịch sử trong `CHANGELOG.md`) — đây là lý do quyền tuyên bố PASS không thuộc về Claude.
+
+**Claude được phép báo cáo:**
+
+- Code Complete
+- Tests Passed
+- Ready for Founder Testing
+- Awaiting Founder Acceptance Test
+
+**Claude KHÔNG BAO GIỜ được tự báo cáo (chỉ Founder mới được dùng các từ này):**
+
+- PASS
+- Approved
+- Accepted
+
+Chỉ SAU KHI Founder tự xác nhận PASS, Claude mới được:
+
+- Cập nhật `ROADMAP.md`
+- Cập nhật `CHANGELOG.md`
+- Chuyển sang Requirement tiếp theo
+
+---
+
+## 5. Kỷ luật kiến trúc — 4 lớp không được bỏ qua + cách mở rộng an toàn
 
 PSH Platform có 1 kiến trúc AI Plugin Framework cố định: **User → Permission Service → Plugin Manager → Job Queue → AI Provider → Draft → Publish Pipeline**. Đây không phải gợi ý — đây là con đường DUY NHẤT mọi lượt gọi AI phải đi qua, bất kể module mới thêm là gì.
 
@@ -107,27 +163,27 @@ Không tái cấu trúc kiến trúc đang chạy tốt chỉ vì đang sửa fi
 
 ---
 
-## 4. Trung thực & Xác minh
+## 6. Trung thực & Xác minh
 
 ### Không Fake Data
 
 AI không được bịa bất kỳ dữ liệu nào không có trong CMS thật.
 
-- Mọi Prompt gửi AI chỉ chứa dữ liệu thật (đọc qua `DataProvider`, xem mục 3) — không suy diễn thông số/tính năng không có căn cứ để "cho đầy đủ".
+- Mọi Prompt gửi AI chỉ chứa dữ liệu thật (đọc qua `DataProvider`, xem mục 5) — không suy diễn thông số/tính năng không có căn cứ để "cho đầy đủ".
 - Ảnh/video/link chèn vào nội dung AI sinh ra luôn lấy nguyên văn từ dữ liệu Product/Blog thật — nguyên tắc xuyên suốt "AI chỉ viết văn bản, code mới được chèn media thật" (AI writes text only, code assembles real media).
 - Category/Product AI đề xuất phải được validate lại với dữ liệu thật đang active trước khi ghi — không chấp nhận nguyên văn đề xuất của AI nếu nó không tồn tại/không active trong CMS thật.
 
 ### Không Fake Success
 
-Không tuyên bố "hoàn tất"/"PASS"/"đã kết nối" nếu chưa thật sự đúng như vậy.
+Không tuyên bố "hoàn tất"/"đã kết nối" nếu chưa thật sự đúng như vậy (quyền tuyên bố "PASS" cụ thể là của Founder — xem mục 4, PASS Authority).
 
-- Nếu môi trường làm việc có giới hạn thật (không có tài khoản Founder để test qua UI, không có quyền deploy hạ tầng...) — nói rõ giới hạn đó, không giả vờ đã test hoặc lờ đi (chi tiết thành checklist ở mục 7, Definition of Done).
+- Nếu môi trường làm việc có giới hạn thật (không có tài khoản Founder để test qua UI, không có quyền deploy hạ tầng...) — nói rõ giới hạn đó, không giả vờ đã test hoặc lờ đi (chi tiết thành checklist ở mục 9, Definition of Done).
 - Khi 1 tích hợp thật (OAuth Facebook, Cloud Function OpenAI, Image AI Provider...) chưa có hạ tầng thật đứng sau — UI phải báo đúng trạng thái thật ("Chưa kết nối"/"Chưa cấu hình"), không bao giờ giả vờ hoạt động để "cho đẹp giao diện".
-- Không tin "lệnh deploy chạy xong không báo lỗi" là đủ để coi là thành công — xác minh cụ thể ở mục 6 (Development Workflow) và mục 7 (Definition of Done).
+- Không tin "lệnh deploy chạy xong không báo lỗi" là đủ để coi là thành công — xác minh cụ thể ở mục 8 (Development Workflow) và mục 9 (Definition of Done).
 
 ---
 
-## 5. Communication
+## 7. Communication
 
 Cách báo cáo cho Chief Architect — ngắn, đúng, không tô vẽ.
 
@@ -142,12 +198,11 @@ Cách báo cáo cho Chief Architect — ngắn, đúng, không tô vẽ.
 
 ---
 
-## 6. Development Workflow
+## 8. Development Workflow
 
-- **Requirement phải hoàn thành trọn vẹn** — không dừng ở "code xong" khi chưa kiểm thử, chưa deploy, chưa cập nhật tài liệu.
+- **Requirement phải hoàn thành trọn vẹn** — không dừng ở "code xong" khi chưa kiểm thử, chưa deploy, chưa cập nhật tài liệu (chuỗi bước đầy đủ ở mục 3, Requirement Lifecycle).
 - **Không sửa bug ngoài phạm vi Requirement** — kể cả khi bug đó rõ ràng và dễ sửa, nếu không nằm trong Requirement đang làm thì không tự sửa.
 - **Phát hiện bug/ý tưởng khác → ghi vào `ROADMAP.md` hoặc `CHANGELOG.md`** — không tự triển khai song song, không âm thầm gộp vào commit đang làm.
-- **Không chuyển sang Requirement tiếp theo khi Founder chưa xác nhận PASS** — kể cả khi ROADMAP đã liệt kê rõ thứ tự ưu tiên tiếp theo.
 - **Git**: làm việc trên branch feature hiện tại (`feature/cms-ai-sprint2` tại thời điểm viết tài liệu này — xác nhận lại bằng `git branch` nếu nghi ngờ đã đổi), KHÔNG merge `main` trừ khi được yêu cầu rõ ràng; không `force-push`, không `--no-verify`, không `amend` commit đã push — luôn tạo commit mới khi cần sửa.
 - **Firebase Rules (Database + Storage) chỉ Chief Architect tự deploy** (`firebase deploy --only database`/`--only storage`) — Claude chỉ sửa file rules trong repo, không bao giờ tự chạy lệnh deploy rules.
 - **Deploy Netlify luôn qua draft trước, không bao giờ thẳng lên `--prod`**: `git archive <commit>` → loại bỏ file không cần cho site tĩnh (cấu hình CLI/Cloud Functions/scripts/tài liệu nội bộ — không phải asset site thật serve cho khách) → deploy draft (site Production hiện tại là `pshopmusic.com`, Netlify site ID `48256e20-1403-4017-af01-35588713a3a0` — LUÔN truyền tường minh, xác nhận lại qua `netlify sites:list` nếu nghi ngờ đã đổi site/tên miền) → `curl` draft xác nhận chứa đúng thay đổi → mới `--prod` → `curl` production + byte-diff với commit vừa đẩy lên (bỏ qua khác biệt line-ending CRLF/LF nếu có) để xác nhận Production đúng y hệt — đây là bước bắt buộc duy nhất coi là "đã verify deploy", không có bước rút gọn nào khác.
@@ -155,20 +210,20 @@ Cách báo cáo cho Chief Architect — ngắn, đúng, không tô vẽ.
 
 ---
 
-## 7. Definition of Done
+## 9. Definition of Done
 
-Một Requirement CHỈ được coi là hoàn thành khi có ĐỦ toàn bộ danh sách sau — thiếu 1 mục nghĩa là chưa xong, không phải "xong 90%":
+Một Requirement CHỈ được coi là hoàn thành khi có ĐỦ toàn bộ checklist sau — thiếu 1 mục nghĩa là chưa xong, không phải "xong 90%". Quy trình đứng sau checklist này là mục 3 (Requirement Lifecycle); ô cuối cùng (PASS) không bao giờ do Claude tự tick — xem mục 4 (PASS Authority).
 
-1. **Code hoàn chỉnh** — đúng phạm vi Requirement, không thiếu field/luồng nào trong ACCEPTANCE TEST.
-2. **Regression test** — xác nhận các Plugin/trang KHÔNG liên quan vẫn hoạt động y hệt trước (Node `vm` chạy trực tiếp mã nguồn thật, không mock tách biệt).
-3. **Production deploy + verification** — đúng quy trình draft → verify → prod → byte-diff đã mô tả ở mục 6 (Development Workflow); riêng thay đổi ảnh hưởng dữ liệu công khai còn cần Preview thật xác nhận dữ liệu hiện có (vd toàn bộ sản phẩm thật) không bị ảnh hưởng.
-4. **Founder Acceptance Test** — Founder tự dùng thật và xác nhận PASS; nếu môi trường không cho phép Claude tự đăng nhập test qua UI, phải nói rõ đây là bước còn thiếu, không tự nhận thay Founder.
-5. **Commit** — message rõ ràng, đúng file thay đổi, loại trừ file không liên quan tới Requirement.
-6. **Push** — lên đúng branch feature đang làm việc (xem mục 6, Development Workflow).
-7. **CHANGELOG.md** — mục mới ở đầu file, có dòng "0 sửa đổi" + phần "Kiểm thử" ghi rõ đã test gì/chưa test gì.
-8. **ROADMAP.md** — cập nhật trạng thái Requirement tương ứng + log ý tưởng phát sinh (nếu có).
-
-Không tuyên bố Requirement "PASS"/"hoàn tất" khi thiếu bất kỳ mục nào ở trên. (Ngoài 8 mục bắt buộc, cập nhật thêm `PROJECT_ARCHITECTURE.md` khi Requirement thêm 1 luồng/kiến trúc mới đáng ghi lại — thông lệ nhất quán trong suốt dự án dù không phải điều kiện chặn PASS.)
+□ **Code Complete** — đúng phạm vi Requirement, không thiếu field/luồng nào trong ACCEPTANCE TEST.
+□ **Local Tests Passed** — kiểm thử trực tiếp mã nguồn thật (Node `vm`, không mock tách biệt) cho đúng luồng Requirement.
+□ **Regression Tests Passed** — xác nhận các Plugin/trang KHÔNG liên quan vẫn hoạt động y hệt trước.
+□ **Documentation Updated** — `CHANGELOG.md` (mục mới đầu file, có "0 sửa đổi" + phần Kiểm thử ghi rõ đã test gì/chưa test gì), `ROADMAP.md` (trạng thái Requirement + ý tưởng phát sinh nếu có), và `PROJECT_ARCHITECTURE.md` khi Requirement thêm 1 luồng/kiến trúc mới đáng ghi lại.
+□ **Commit Created** — message rõ ràng, đúng file thay đổi, loại trừ file không liên quan tới Requirement.
+□ **Push Completed** — lên đúng branch feature đang làm việc (xem mục 8, Development Workflow).
+□ **Production Deployed** — đúng quy trình draft → verify → prod đã mô tả ở mục 8.
+□ **Production Verified** — byte-diff Production khớp đúng commit vừa đẩy lên (bỏ qua khác biệt line-ending CRLF/LF nếu có); thay đổi ảnh hưởng dữ liệu công khai còn cần Preview thật xác nhận dữ liệu hiện có (vd toàn bộ sản phẩm thật) không bị ảnh hưởng.
+□ **Founder Acceptance Test** — Founder tự dùng thật trên Production và xác nhận; nếu môi trường không cho phép Claude tự đăng nhập test qua UI, phải nói rõ đây là bước còn thiếu, không tự nhận thay Founder.
+□ **PASS (Founder Only)** — xem mục 4, PASS Authority. Claude không bao giờ tự tick ô này.
 
 ---
 
