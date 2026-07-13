@@ -89,7 +89,7 @@ const AdminAgent = (function () {
   // ── INIT ────────────────────────────────────────────────────────────────────
 
   function init() {
-    AdminAuth.init({ page: 'founder-agent', title: 'FOUNDER AGENT' }).then(u => {
+    AdminAuth.init({ page: 'founder-agent', title: 'FOUNDER AGENT' }).then(({ user: u }) => {
       user = u;
       Promise.all([
         DB.getAll ? DB.getAll() : Promise.resolve([]),
