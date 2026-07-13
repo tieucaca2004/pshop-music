@@ -122,6 +122,18 @@ const AdminAgent = (function () {
   let pendingAttachments = []; // { type:'image'|'file'|'error', name, url, uploading, error } chờ gửi kèm tin nhắn TIẾP THEO
   let micRecognizer = null;
 
+  // pendingClarification — "Conversation Workflow": khi Planner báo thiếu
+  // thông tin (steps rỗng + reason), GIỮ LẠI yêu cầu gốc ở đây thay vì bỏ đi
+  // — câu trả lời TIẾP THEO của Founder sẽ được GHÉP với yêu cầu gốc thành 1
+  // yêu cầu đầy đủ gửi lại Planner, KHÔNG lập kế hoạch lại từ đầu, KHÔNG hỏi
+  // lại y hệt câu đã hỏi (yêu cầu gộp mỗi lần khác nhau tự nhiên đổi câu hỏi
+  // nếu Planner vẫn còn thiếu gì khác).
+  let pendingClarification = null; // { originalText, attachments }
+
+  // Resume Workflow (localStorage, cùng cơ chế UI Mode toggle ở js/admin-
+  // auth.js — KHÔNG ghi Firebase, giới hạn per-browser đã biết trước).
+  const WORKFLOW_SNAPSHOT_KEY = 'pshopFounderAgentWorkflowSnapshot';
+
   // ── INIT ────────────────────────────────────────────────────────────────────
 
   function init() {
@@ -136,6 +148,7 @@ const AdminAgent = (function () {
         blogPosts = Array.isArray(posts) ? posts : [];
         categories = Array.isArray(cats) ? cats : [];
         renderSuggested();
+        tryOfferResume();
       }).catch(() => renderSuggested());
     });
 
@@ -277,12 +290,32 @@ const AdminAgent = (function () {
 
   // ── SEND ─────────────────────────────────────────────────────────────────────
 
+  // Lệnh gõ trực tiếp (không qua Planner) — "Undo last step"/"Workflow
+  // History" là thao tác ĐIỀU KHIỂN Agent, không phải yêu cầu tạo Plan mới.
+  const UNDO_COMMANDS = ['undo last step', 'hoàn tác bước trước', 'hoàn tác bước cuối', 'hoàn tác'];
+  const HISTORY_COMMANDS = ['workflow history', 'lịch sử', 'lịch sử workflow'];
+
   function send() {
     if (isBusy) return;
     const input = document.getElementById('agentInput');
     const text = input.value.trim();
     const attachments = pendingAttachments.filter(a => a.url); // chỉ gửi kèm file đã tải lên xong
     if (!text && !attachments.length) return;
+    const normalized = text.toLowerCase();
+
+    if (UNDO_COMMANDS.indexOf(normalized) !== -1) {
+      input.value = '';
+      const lastPlanMsg = messages.slice().reverse().find(m => m.role === 'agent' && m.steps && m.steps.length);
+      if (lastPlanMsg) undoLastStep(lastPlanMsg.id);
+      else alert('Không có kế hoạch nào để hoàn tác.');
+      return;
+    }
+    if (HISTORY_COMMANDS.indexOf(normalized) !== -1) {
+      input.value = '';
+      showHistory();
+      return;
+    }
+
     input.value = '';
     pendingAttachments = [];
     renderPendingAttachments();
@@ -333,25 +366,43 @@ const AdminAgent = (function () {
   async function planAndShow(userText, attachments) {
     isBusy = true;
     setInputEnabled(false);
-    const msgId = pushAgentMsg({ text: 'Đang lập kế hoạch...', steps: null });
+    const msgId = pushAgentMsg({ text: 'Đang lập kế hoạch...', steps: null, startedAt: Date.now() });
     renderMessages();
 
+    // "Conversation Workflow" — nếu tin nhắn Agent TRƯỚC ĐÓ là 1 câu hỏi làm
+    // rõ còn treo (pendingClarification), GHÉP câu trả lời MỚI với yêu cầu
+    // GỐC thành 1 yêu cầu đầy đủ — "Continue from the exact previous step.
+    // Never restart the workflow." KHÔNG lập kế hoạch chỉ từ câu trả lời
+    // ngắn gọn (thường thiếu ngữ cảnh, Planner sẽ lại không hiểu).
+    let effectiveText = userText;
+    let effectiveAttachments = attachments;
+    if (pendingClarification) {
+      effectiveText = (pendingClarification.originalText + '. ' + userText).trim();
+      effectiveAttachments = (pendingClarification.attachments || []).concat(attachments || []);
+    }
+
     try {
-      const plan = await buildPlan(userText, attachments);
+      const plan = await buildPlan(effectiveText, effectiveAttachments);
       if (!plan || !Array.isArray(plan.steps) || !plan.steps.length) {
+        // Vẫn thiếu thông tin — GIỮ pendingClarification (đã gộp thêm câu trả
+        // lời vừa nhận) để lượt trả lời TIẾP THEO tiếp tục đúng từ đây —
+        // "Never ask duplicate questions" (yêu cầu gộp đổi mỗi lần, Planner
+        // tự nhiên không hỏi lại y hệt câu cũ).
+        pendingClarification = { originalText: effectiveText, attachments: effectiveAttachments };
         updateMsg(msgId, { text: (plan && plan.reason) || 'Không hiểu được yêu cầu này — hãy mô tả cụ thể hơn.', steps: [] });
         renderMessages();
         return;
       }
+      pendingClarification = null; // đủ thông tin — kết thúc chuỗi hỏi-đáp
       const steps = plan.steps.map(s => normalizeStep(s));
       // Ảnh đính kèm (nếu có) dùng làm Ảnh đại diện cho bước create-product
       // trong CÙNG Plan — media THẬT do Founder cung cấp, không phải AI sinh.
-      const imageAttachment = (attachments || []).find(a => a.type === 'image');
+      const imageAttachment = (effectiveAttachments || []).find(a => a.type === 'image');
       if (imageAttachment) {
         const createStep = steps.find(s => s.tool === 'create-product');
         if (createStep) createStep.attachedImageUrl = imageAttachment.url;
       }
-      const fileAttachment = (attachments || []).find(a => a.type === 'file');
+      const fileAttachment = (effectiveAttachments || []).find(a => a.type === 'file');
       let introText = steps.length > 1 ? `Đã lập Execution Plan gồm ${steps.length} bước:` : 'Đã hiểu yêu cầu:';
       if (fileAttachment) {
         introText += ' (Đã nhận file "' + fileAttachment.name + '" — hệ thống hiện chưa tự đọc được nội dung PDF/Word/Excel/ZIP để trích xuất thông số, vui lòng mô tả thêm bằng văn bản nếu cần.)';
@@ -597,6 +648,10 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
         const pid = resolvedParams.productId;
         if (!pid) throw new Error('Không xác định được sản phẩm cần gán danh mục.');
         step.productId = pid;
+        // Lưu lại categoryIds TRƯỚC khi gán — cần cho "Undo last step" (rollback
+        // đúng giá trị cũ, không phải xóa trắng).
+        const prodBefore = products.find(p => p.id === pid) || {};
+        step._previousCategoryIds = Array.isArray(prodBefore.categoryIds) ? prodBefore.categoryIds.slice() : [];
         const activeCats = categories.filter(c => c.active !== false);
         if (!activeCats.length) {
           step.categoryResult = { assignments: [], noMatch: true };
@@ -646,15 +701,23 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
         }
         const catStep = m.steps.find(s => s.tool === 'detect-category');
         const hasCategory = !!(catStep && catStep.categoryResult && (catStep.categoryResult.autoAssigned || []).length) || (Array.isArray(prod.categoryIds) && prod.categoryIds.length > 0);
+        // 9 hạng mục ĐÚNG breakdown Requirement yêu cầu (Product/SEO/Category/
+        // Images/Video/Files/Blog/Facebook/Banner) — Blog/Facebook/Banner tính
+        // "đạt" khi bước tương ứng trong CÙNG Plan đã Completed VÀ có draftId
+        // thật (không tự suy đoán — dùng chính kết quả SELF CHECK ở trên).
+        const blogStep = m.steps.find(s => s.tool === 'blog-writer' && s.status === 'completed' && s.draftId);
+        const fbStep = m.steps.find(s => s.tool === 'facebook-post-generator' && s.status === 'completed' && s.draftId);
+        const bannerStep = m.steps.find(s => s.tool === 'banner-generator' && s.status === 'completed' && s.draftId);
         const dims = [
-          { label: 'SEO', weight: 20, ok: !!(draftContent.seoTitle && draftContent.metaDescription) },
-          { label: 'Thông số kỹ thuật', weight: 15, ok: !!draftContent.specifications },
-          { label: 'Tính năng', weight: 10, ok: Array.isArray(draftContent.features) && draftContent.features.length > 0 },
-          { label: 'FAQ', weight: 10, ok: Array.isArray(draftContent.faq) && draftContent.faq.length > 0 },
+          { label: 'Product', weight: 10, ok: !!descStep },
+          { label: 'SEO', weight: 15, ok: !!(draftContent.seoTitle && draftContent.metaDescription) },
           { label: 'Danh mục', weight: 15, ok: hasCategory },
           { label: 'Hình ảnh', weight: 15, ok: Array.isArray(prod.images) && prod.images.length > 0 },
           { label: 'Video', weight: 10, ok: !!prod.youtubeUrl },
-          { label: 'Tài liệu (Manual/Firmware/Driver)', weight: 5, ok: false } // chưa có hạ tầng đính kèm file cho Sản phẩm — luôn thiếu, xem missing-info-report
+          { label: 'Tài liệu', weight: 5, ok: false }, // chưa có hạ tầng đính kèm file cho Sản phẩm — luôn thiếu, xem missing-info-report
+          { label: 'Blog', weight: 10, ok: !!blogStep },
+          { label: 'Facebook', weight: 10, ok: !!fbStep },
+          { label: 'Banner', weight: 10, ok: !!bannerStep }
         ];
         const score = dims.reduce((sum, d) => sum + (d.ok ? d.weight : 0), 0);
         step.qualityScore = { score, dims };
@@ -662,12 +725,20 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
       } else if (step.tool === 'missing-info-report') {
         const pid = resolvedParams.productId;
         const prod = products.find(p => p.id === pid) || {};
+        const imgCount = Array.isArray(prod.images) ? prod.images.length : 0;
+        // Từng dòng ĐÚNG tên literal Requirement liệt kê (Missing Images/PDF/
+        // Firmware/Driver/Warranty/Video/Gallery) — PDF/Firmware/Driver LUÔN
+        // xuất hiện (hạ tầng đính kèm file cho Sản phẩm chưa tồn tại, không
+        // phải lỗi từng sản phẩm) — phản ánh ĐÚNG THỰC TẾ, không phải lỗi.
         const missing = [];
-        if (!Array.isArray(prod.images) || !prod.images.length) missing.push('Chưa có ảnh sản phẩm chính thức — Founder tự tải lên qua 📷 hoặc Thư viện ảnh.');
-        if (!prod.youtubeUrl) missing.push('Chưa có Video YouTube chính thức.');
-        missing.push('Chưa có Manual/Firmware/Driver — hệ thống hiện chưa hỗ trợ đính kèm file cho Sản phẩm.');
-        if (!prod.warranty) missing.push('Chưa có thông tin Bảo hành.');
-        if (!prod.sku) missing.push('Chưa có SKU.');
+        if (!imgCount) missing.push('Thiếu Ảnh sản phẩm (Missing Images) — Founder tự tải lên qua 📷 hoặc Thư viện ảnh.');
+        else if (imgCount < 2) missing.push('Thiếu Gallery (Missing Gallery) — chỉ có 1 ảnh, cần thêm ảnh các góc khác.');
+        if (!prod.youtubeUrl) missing.push('Thiếu Video YouTube (Missing Video).');
+        missing.push('Thiếu file PDF hướng dẫn (Missing PDF) — hệ thống hiện chưa hỗ trợ đính kèm file cho Sản phẩm.');
+        missing.push('Thiếu Firmware (Missing Firmware) — hệ thống hiện chưa hỗ trợ đính kèm file cho Sản phẩm.');
+        missing.push('Thiếu Driver (Missing Driver) — hệ thống hiện chưa hỗ trợ đính kèm file cho Sản phẩm.');
+        if (!prod.warranty) missing.push('Thiếu thông tin Bảo hành (Missing Warranty).');
+        if (!prod.sku) missing.push('Thiếu SKU.');
         const catStep = m.steps.find(s => s.tool === 'detect-category');
         const hasCategory = !!(catStep && catStep.categoryResult && (catStep.categoryResult.autoAssigned || []).length) || (Array.isArray(prod.categoryIds) && prod.categoryIds.length > 0);
         if (!hasCategory) missing.push('Chưa có Danh mục phù hợp — Founder tự gán qua Quản lý Sản phẩm.');
@@ -748,12 +819,33 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
         const plugin = await PluginManager.loadPlugin(step.tool);
         if (!plugin) throw new Error('Không tìm thấy công cụ: ' + step.tool);
 
-        await plugin.execute([resolvedParams], user.uid, user.email);
-        await AIJobQueue.resume(user.uid, user.email);
+        // SELF CHECK (root cause đã xác nhận với Founder: "Founder Agent
+        // finishes but no Draft is created") — AIJobQueue.resume() KHÔNG BAO
+        // GIỜ throw dù job/item bên trong thất bại (Provider chưa cấu hình/
+        // lỗi API/rate limit) — job-queue.js tự nuốt lỗi, ghi LogDB, đánh dấu
+        // job status:'failed' rồi RESOLVE bình thường (xem PROJECT_
+        // ARCHITECTURE.md). Vì vậy KHÔNG được coi "không throw" = "đã có
+        // Draft thật" — phải tự xác nhận lại bằng cách tìm đúng Draft MỚI
+        // (createdAt >= lúc bắt đầu bước này), không phải "Draft draft mới
+        // nhất bất kỳ" (có thể là Draft CŨ còn sót từ trước, gây báo nhầm).
+        const runOnce = async () => {
+          const startedAt = Date.now();
+          await plugin.execute([resolvedParams], user.uid, user.email);
+          await AIJobQueue.resume(user.uid, user.email);
+          const drafts = await DraftDB.getAll();
+          const sorted = drafts.filter(d => d.status === 'draft' && d.moduleId === step.tool && (d.createdAt || 0) >= startedAt)
+            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          return sorted[0] || null;
+        };
 
-        const drafts = await DraftDB.getAll();
-        const sorted = drafts.filter(d => d.status === 'draft').sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-        step.draftId = sorted[0] ? sorted[0].id : null;
+        // "If any step fails, retry automatically where possible" — 1 lần
+        // thử lại tự động (KHÔNG lặp vô hạn) trước khi báo Thất bại thật.
+        let newDraft = await runOnce();
+        if (!newDraft) newDraft = await runOnce();
+        if (!newDraft) {
+          throw new Error('AI không tạo được nội dung (đã tự thử lại 1 lần) — kiểm tra Provider/Nhật ký lỗi tại "Plugin AI (Thủ công) > Nhật ký".');
+        }
+        step.draftId = newDraft.id;
         step.status = 'completed';
       }
     } catch (err) {
@@ -794,6 +886,13 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
         if (s.status === 'completed' || s.status === 'skipped') continue;
         const result = await executeStep(msgId, i);
         if (result === 'failed' || result === 'duplicate-found' || result === 'category-review') break; // Pause the plan
+      }
+      // WORKFLOW HISTORY — tự ghi lại 1 lần duy nhất khi TOÀN BỘ Plan đã dừng
+      // (Completed/Failed/Skipped, không còn Pending) — "Store Workflow Name/
+      // Created Time/Duration/Completed/Failed/Skipped Steps". Chỉ khoá
+      // _historyRecorded khi ghi THÀNH CÔNG thật (xem recordWorkflowHistory).
+      if (m.steps.length && !m._historyRecorded && m.steps.every(s => ['completed', 'skipped', 'failed'].indexOf(s.status) !== -1)) {
+        recordWorkflowHistory(m).then(ok => { if (ok) m._historyRecorded = true; });
       }
     }
     isBusy = false;
@@ -887,6 +986,220 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
     renderMessages();
   }
 
+  // ── CONTINUE MISSING ITEMS / FINISH — Founder Review Dashboard ──────────
+
+  // continueMissingItems — đặt lại mọi bước Thất bại/Đã bỏ qua về Chờ chạy
+  // rồi CHẠY TẤT CẢ lại — "Founder can click Continue Missing Items."
+  function continueMissingItems(msgId) {
+    if (isBusy) return;
+    const m = findMsg(msgId);
+    if (!m || !m.steps) return;
+    m.steps.forEach(s => {
+      if (s.status === 'failed' || s.status === 'skipped') {
+        s.status = 'pending';
+        s.errorText = null;
+      }
+    });
+    m._historyRecorded = false; // Plan chưa thật sự xong — cho phép ghi History lại khi hoàn tất lần nữa
+    renderMessages();
+    runAll(msgId);
+  }
+
+  // finishWorkflow — Founder xác nhận đã xem xét xong — ghi Lịch sử (nếu
+  // chưa ghi), xoá snapshot Resume (Plan này không còn "dang dở" nữa).
+  function finishWorkflow(msgId) {
+    const m = findMsg(msgId);
+    if (!m) return;
+    m.finished = true;
+    if (!m._historyRecorded) {
+      recordWorkflowHistory(m).then(ok => { if (ok) m._historyRecorded = true; renderMessages(); });
+    }
+    try { localStorage.removeItem(WORKFLOW_SNAPSHOT_KEY); } catch (e) { /* localStorage không khả dụng - bỏ qua */ }
+    renderMessages();
+  }
+
+  // ── UNDO LAST STEP — "Rollback only the previous step." ─────────────────
+  // Chỉ hoàn tác bước HOÀN TẤT GẦN NHẤT trong Plan (theo thứ tự Plan, không
+  // phải theo thời gian bấm). Hành động hoàn tác tuỳ loại bước:
+  //   - Bước tạo Draft (Product/SEO/Blog/Facebook/Banner/Image AI): TỪ CHỐI
+  //     Draft đó qua ĐÚNG AdminAI.rejectDraftById() đã có (giữ lại để tra
+  //     cứu, không xoá — cùng hành vi nút "TỪ CHỐI" ở trang Duyệt nội dung).
+  //   - detect-category (đã tự gán): GHI LẠI categoryIds CŨ (đã lưu từ lúc
+  //     gán) qua ĐÚNG DB.update() — không xoá trắng.
+  //   - create-product: XOÁ THẬT sản phẩm qua ĐÚNG DB.remove() — CHỈ cho
+  //     phép khi đây là bước hoàn tất DUY NHẤT (chưa bước nào SAU nó ghi dữ
+  //     liệu thật), và LUÔN hỏi xác nhận trước (cùng UX confirm() các trang
+  //     Admin khác đã dùng cho xoá thật) — hành động phá huỷ duy nhất trong
+  //     toàn bộ Founder Agent, cần cẩn trọng tối đa.
+  //   - check-duplicate/related-products/quality-score/missing-info-report/
+  //     điều hướng: không ghi gì thật — chỉ đặt lại Chờ chạy.
+  const UNDOABLE_DRAFT_TOOLS = ['product-description-writer', 'seo', 'blog-writer', 'facebook-post-generator', 'banner-generator', 'image-generator'];
+
+  function undoLastStep(msgId) {
+    if (isBusy) return;
+    const m = findMsg(msgId);
+    if (!m || !m.steps) { alert('Không có kế hoạch nào để hoàn tác.'); return; }
+    let idx = -1;
+    for (let i = m.steps.length - 1; i >= 0; i--) {
+      if (m.steps[i].status === 'completed') { idx = i; break; }
+    }
+    if (idx === -1) { alert('Không có bước nào đã Hoàn tất để hoàn tác.'); return; }
+    const step = m.steps[idx];
+
+    if (UNDOABLE_DRAFT_TOOLS.indexOf(step.tool) !== -1) {
+      if (!step.draftId || typeof AdminAI === 'undefined' || !AdminAI.rejectDraftById) {
+        step.status = 'pending'; step.draftId = null;
+        renderMessages();
+        return;
+      }
+      AdminAI.rejectDraftById(step.draftId).then(() => {
+        step.status = 'pending'; step.draftId = null; step.errorText = null;
+        renderMessages();
+      });
+      return;
+    }
+    if (step.tool === 'detect-category') {
+      if (step.categoryResult && step.categoryResult.autoAssigned && step._previousCategoryIds !== undefined) {
+        const activeCats = categories.filter(c => c.active !== false);
+        const prevIds = step._previousCategoryIds;
+        const first = activeCats.find(c => c.code === prevIds[0]);
+        DB.update(step.productId, { categoryIds: prevIds, category: prevIds[0] || '', categoryLabel: first ? first.label : '' }).then(() => {
+          const p = products.find(x => x.id === step.productId);
+          if (p) p.categoryIds = prevIds;
+          step.status = 'pending'; step.categoryResult = null;
+          renderMessages();
+        });
+        return;
+      }
+      step.status = 'pending'; step.categoryResult = null;
+      renderMessages();
+      return;
+    }
+    if (step.tool === 'create-product') {
+      const laterCompleted = m.steps.slice(idx + 1).some(s => s.status === 'completed');
+      if (laterCompleted) { alert('Không thể hoàn tác — đã có bước SAU đó hoàn tất (Danh mục/Draft/...). Hãy hoàn tác các bước sau trước, theo đúng thứ tự.'); return; }
+      if (!confirm('Hoàn tác sẽ XOÁ VĨNH VIỄN sản phẩm "' + step.target + '" vừa tạo. Không thể khôi phục. Tiếp tục?')) return;
+      DB.remove(step.productId).then(() => {
+        products = products.filter(p => p.id !== step.productId);
+        step.status = 'pending'; step.productId = null;
+        renderMessages();
+      });
+      return;
+    }
+    // check-duplicate / related-products / quality-score / missing-info-report / điều hướng — không ghi dữ liệu thật.
+    step.status = 'pending';
+    renderMessages();
+  }
+
+  // ── RESUME WORKFLOW / AUTO SAVE (localStorage) ───────────────────────────
+  // "Save progress after every successful step. If the browser closes, save
+  // the workflow. Next time, display: Resume previous workflow?" — dùng
+  // localStorage (KHÔNG ghi Firebase, cùng cơ chế/giới hạn UI Mode toggle ở
+  // js/admin-auth.js: per-browser, không theo tài khoản).
+
+  function saveWorkflowSnapshot() {
+    try {
+      const m = messages.slice().reverse().find(x => x.role === 'agent' && x.steps && x.steps.length && !x.finished);
+      if (!m || m.steps.every(s => ['completed', 'skipped', 'failed'].indexOf(s.status) !== -1)) {
+        localStorage.removeItem(WORKFLOW_SNAPSHOT_KEY);
+        return;
+      }
+      localStorage.setItem(WORKFLOW_SNAPSHOT_KEY, JSON.stringify({ savedAt: Date.now(), message: m }));
+    } catch (e) { /* localStorage không khả dụng - bỏ qua */ }
+  }
+
+  function tryOfferResume() {
+    try {
+      const raw = localStorage.getItem(WORKFLOW_SNAPSHOT_KEY);
+      if (!raw) return;
+      const snap = JSON.parse(raw);
+      if (!snap || !snap.message || !snap.message.steps || !snap.message.steps.length) {
+        localStorage.removeItem(WORKFLOW_SNAPSHOT_KEY);
+        return;
+      }
+      pushAgentMsg({
+        text: 'Tìm thấy 1 kế hoạch chưa hoàn tất từ phiên trước (' + new Date(snap.savedAt).toLocaleString('vi-VN') + '). Tiếp tục kế hoạch trước đó?',
+        steps: null,
+        resumeOffer: snap.message
+      });
+      renderMessages();
+    } catch (e) { /* dữ liệu snapshot lỗi - bỏ qua, không chặn trang tải */ }
+  }
+
+  function resumeWorkflow(offerMsgId) {
+    const offerMsg = findMsg(offerMsgId);
+    if (!offerMsg || !offerMsg.resumeOffer) return;
+    const restored = offerMsg.resumeOffer;
+    restored.id = 'msg_' + (++msgCounter);
+    messages.push(restored);
+    offerMsg.resumeOffer = null;
+    offerMsg.text = 'Đã tiếp tục kế hoạch trước đó.';
+    renderMessages();
+  }
+
+  function discardWorkflow(offerMsgId) {
+    try { localStorage.removeItem(WORKFLOW_SNAPSHOT_KEY); } catch (e) { /* bỏ qua */ }
+    const offerMsg = findMsg(offerMsgId);
+    if (offerMsg) { offerMsg.text = 'Đã bỏ qua kế hoạch trước đó.'; offerMsg.resumeOffer = null; }
+    renderMessages();
+  }
+
+  // ── WORKFLOW HISTORY — WorkflowDB (js/ai/ai-db.js, factory makeListDB() có
+  // sẵn — không viết CRUD mới). Cần Chief Architect deploy thêm rule
+  // "founderAgentWorkflows" trong database.rules.json (Firebase Rules chỉ
+  // Chief Architect tự deploy) — cho tới lúc đó, mọi lỗi ở đây được bắt và
+  // báo rõ, KHÔNG chặn phần còn lại của Founder Agent hoạt động.
+
+  // recordWorkflowHistory — trả về Promise<boolean> (true = đã ghi thành
+  // công) để CALLER tự quyết định có đánh dấu m._historyRecorded hay không —
+  // KHÔNG được khoá "đã ghi" khi thật ra ghi thất bại (vd Database Rules cho
+  // "founderAgentWorkflows" chưa được Chief Architect deploy), nếu không sẽ
+  // MẤT VĨNH VIỄN cơ hội ghi lại Workflow đó kể cả sau khi Rules đã deploy.
+  function recordWorkflowHistory(m) {
+    if (typeof WorkflowDB === 'undefined' || !WorkflowDB.add) return Promise.resolve(false);
+    const completed = m.steps.filter(s => s.status === 'completed').length;
+    const failed = m.steps.filter(s => s.status === 'failed').length;
+    const skipped = m.steps.filter(s => s.status === 'skipped').length;
+    const idx = messages.indexOf(m);
+    const firstUserMsg = idx > 0 ? messages.slice(0, idx).reverse().find(x => x.role === 'user') : null;
+    const name = ((firstUserMsg && firstUserMsg.text) || m.text || 'Workflow').slice(0, 80);
+    const productStep = m.steps.find(s => s.productId);
+    return WorkflowDB.add({
+      name,
+      startedAt: m.startedAt || null,
+      finishedAt: Date.now(),
+      durationMs: m.startedAt ? (Date.now() - m.startedAt) : null,
+      completedCount: completed,
+      failedCount: failed,
+      skippedCount: skipped,
+      productId: productStep ? productStep.productId : null
+    }).then(() => true).catch(() => false); // Database Rules có thể chưa deploy — không chặn Founder, chỉ báo "chưa ghi được"
+  }
+
+  function showHistory() {
+    if (typeof WorkflowDB === 'undefined' || !WorkflowDB.getAll) {
+      pushAgentMsg({ text: 'Lịch sử Workflow chưa khả dụng trên trang này.', steps: [] });
+      renderMessages();
+      return;
+    }
+    const msgId = pushAgentMsg({ text: 'Đang tải Lịch sử Workflow...', steps: null });
+    renderMessages();
+    WorkflowDB.getAll().then(list => {
+      const sorted = list.slice().sort((a, b) => (b.finishedAt || b.createdAt || 0) - (a.finishedAt || a.createdAt || 0)).slice(0, 10);
+      if (!sorted.length) { updateMsg(msgId, { text: 'Chưa có Workflow nào trong Lịch sử.', steps: [] }); renderMessages(); return; }
+      const rows = sorted.map(w => {
+        const dur = w.durationMs ? Math.round(w.durationMs / 1000) + 's' : '—';
+        const link = w.productId ? ` <a href="/admin/products.html?edit=${encodeURIComponent(w.productId)}" class="agent-open-draft-btn">Mở Sản phẩm →</a>` : '';
+        return `<li>${escHtml(w.name)} — ${new Date(w.finishedAt || w.createdAt).toLocaleString('vi-VN')} (${dur}) — ${w.completedCount || 0} Hoàn tất / ${w.failedCount || 0} Thất bại / ${w.skippedCount || 0} Bỏ qua${link}</li>`;
+      }).join('');
+      updateMsg(msgId, { text: 'Lịch sử Workflow gần đây:', steps: [], historyHtml: `<ul class="agent-plan-report-links">${rows}</ul>` });
+      renderMessages();
+    }).catch(err => {
+      updateMsg(msgId, { text: 'Không tải được Lịch sử Workflow: ' + err.message + ' (có thể do Database Rules cho "founderAgentWorkflows" chưa được Chief Architect deploy).', steps: [] });
+      renderMessages();
+    });
+  }
+
   // ── MESSAGE HELPERS ──────────────────────────────────────────────────────────
 
   let msgCounter = 0;
@@ -917,6 +1230,7 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
       return renderAgentMsg(m);
     }).join('');
     list.scrollTop = list.scrollHeight;
+    saveWorkflowSnapshot(); // Auto Save — "Save progress after every successful step."
   }
 
   function stepActions(m, step, i) {
@@ -1024,11 +1338,48 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
   }
 
   // renderReport — "After completion show: Completed / Failed / Skipped /
-  // Draft links" — tính TRỰC TIẾP từ steps[], không lưu cờ riêng.
+  // Draft links" — tính TRỰC TIẾP từ steps[], không lưu cờ riêng. Plan có
+  // bước quality-score/missing-info-report (Complete Product Creation) hiện
+  // "Founder Review Dashboard" đầy đủ hơn (Completed/Missing/Warnings/
+  // Quality Score + nút Open Product/Open <X> Draft/Continue Missing Items/
+  // Finish) — Plan V1-V3 đơn giản (Mở Sản phẩm/Đổi field/Blog+Facebook...)
+  // vẫn giữ NGUYÊN báo cáo gọn cũ, không đổi hành vi.
   function renderReport(m) {
     const completed = m.steps.filter(s => s.status === 'completed');
     const failed = m.steps.filter(s => s.status === 'failed');
     const skipped = m.steps.filter(s => s.status === 'skipped');
+    const qualityStep = m.steps.find(s => s.tool === 'quality-score' && s.qualityScore);
+    const missingStep = m.steps.find(s => s.tool === 'missing-info-report' && s.missingInfo);
+
+    if (qualityStep || missingStep) {
+      const catStep = m.steps.find(s => s.tool === 'detect-category');
+      const productStep = m.steps.find(s => s.productId);
+      const pid = productStep ? productStep.productId : null;
+      const draftBtn = (tool, label) => {
+        const s = m.steps.find(x => x.tool === tool && x.status === 'completed' && x.draftId);
+        return s ? `<button type="button" class="agent-plan-btn" onclick="window.location.href='/admin/ai/drafts.html'">${label}</button>` : '';
+      };
+      const buttons = [
+        pid ? `<button type="button" class="agent-plan-btn" onclick="window.location.href='/admin/products.html?edit=${encodeURIComponent(pid)}'">Mở Sản phẩm</button>` : '',
+        draftBtn('product-description-writer', 'Mở Product AI Draft'),
+        draftBtn('blog-writer', 'Mở Blog Draft'),
+        draftBtn('facebook-post-generator', 'Mở Facebook Draft'),
+        draftBtn('banner-generator', 'Mở Banner Draft'),
+        (failed.length || skipped.length) ? `<button type="button" class="agent-plan-btn" onclick="AdminAgent.continueMissingItems('${m.id}')">Tiếp tục mục còn thiếu</button>` : '',
+        !m.finished ? `<button type="button" class="agent-plan-btn" onclick="AdminAgent.finishWorkflow('${m.id}')">Hoàn tất</button>` : ''
+      ].filter(Boolean).join(' ');
+      const warnings = [];
+      if (catStep && catStep.categoryResult && catStep.categoryResult.noMatch) warnings.push('Không tìm thấy Danh mục phù hợp — Founder tự gán qua Quản lý Sản phẩm.');
+      return `<div class="agent-plan-report agent-dashboard">
+        <p><strong>Founder Review Dashboard</strong></p>
+        <p>${completed.length} Hoàn tất · ${failed.length} Thất bại · ${skipped.length} Đã bỏ qua</p>
+        ${qualityStep ? `<p><strong>Điểm chất lượng (Quality Score): ${qualityStep.qualityScore.score}/100</strong></p>` : ''}
+        ${missingStep && missingStep.missingInfo.length ? `<p><strong>Còn thiếu (Missing):</strong><br>${missingStep.missingInfo.map(escHtml).join('<br>')}</p>` : ''}
+        ${warnings.length ? `<p class="agent-step-warn"><strong>Cảnh báo (Warnings):</strong><br>${warnings.map(escHtml).join('<br>')}</p>` : ''}
+        <div class="agent-plan-actions">${buttons}</div>
+      </div>`;
+    }
+
     const draftLinks = completed.filter(s => s.draftId || s.productId).map(s => {
       const tool = TOOL_MAP[s.tool] || { label: s.tool };
       const href = s.draftId ? '/admin/ai/drafts.html' : '/admin/products.html';
@@ -1044,10 +1395,16 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
   function renderAgentMsg(m) {
     const body = `<span class="agent-msg-text">${escHtml(m.text)}</span>`;
     const plan = m.steps ? renderPlan(m) : '';
+    const resumeButtons = m.resumeOffer
+      ? `<div class="agent-plan-actions"><button type="button" class="agent-plan-btn" onclick="AdminAgent.resumeWorkflow('${m.id}')">Tiếp tục</button><button type="button" class="agent-plan-btn agent-plan-btn-danger" onclick="AdminAgent.discardWorkflow('${m.id}')">Bỏ qua</button></div>`
+      : '';
+    const history = m.historyHtml || '';
     return `<div class="agent-msg agent-msg-agent">
       <div class="agent-msg-bubble">
         <div class="agent-msg-body">${body}</div>
         ${plan}
+        ${resumeButtons}
+        ${history}
       </div>
     </div>`;
   }
@@ -1067,6 +1424,8 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
     init, useSuggestion, send, runAll, runStep, skipStep, cancelStep, retryStep,
     openDuplicateProduct, createDuplicateCopy, cancelDuplicatePlan,
     confirmCategorySuggestions, skipCategorySuggestions,
-    attachImage, attachFileClick, handleFileSelected, removeAttachment, toggleMic
+    attachImage, attachFileClick, handleFileSelected, removeAttachment, toggleMic,
+    continueMissingItems, finishWorkflow, undoLastStep,
+    resumeWorkflow, discardWorkflow
   };
 })();

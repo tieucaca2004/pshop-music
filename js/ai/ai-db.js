@@ -8,6 +8,12 @@
 const DraftDB = makeListDB('aiDrafts', []);
 const JobDB = makeListDB('aiJobs', []);
 const LogDB = makeListDB('aiLogs', []);
+// WorkflowDB — Sprint 13 (Founder Agent V4, Workflow History). Cần thêm rule
+// "founderAgentWorkflows" trong database.rules.json (đã thêm — Chief
+// Architect tự deploy, xem js/admin-agent.js recordWorkflowHistory()/
+// showHistory() — cả 2 tự bắt lỗi permission_denied nếu chưa deploy, không
+// chặn phần còn lại của Founder Agent).
+const WorkflowDB = makeListDB('founderAgentWorkflows', []);
 
 const ProviderConfigDB = (function () {
   function ref() {

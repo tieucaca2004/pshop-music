@@ -252,3 +252,9 @@ body{min-height:100vh;background:var(--bg-alt)}
 .agent-plan-status-category-review{color:#1a6b9a;background:#eaf4fb}
 .agent-step-extra{grid-column:1/-1;color:var(--ink-soft);font-size:0.76rem;margin-top:0.3rem;line-height:1.5}
 .agent-step-warn{color:#b8860b}
+
+/* Founder Review Dashboard (Complete Product Creation summary) + Resume
+   Workflow prompt — tái dùng .agent-plan-report/.agent-plan-btn đã có, chỉ
+   thêm khung nổi bật hơn báo cáo đơn giản V1-V3. */
+.agent-dashboard{background:var(--gold-soft);border:1px solid var(--gold)}
+.agent-dashboard .agent-plan-actions{margin-top:0.6rem;flex-wrap:wrap}

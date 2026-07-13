@@ -631,6 +631,48 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Founder Agent V4.1 (Sprint 13) — Workflow (Conversation/Self-Check/Undo/Resume/History)
+
+Mở rộng THÊM vào V4 (Complete Product Creation) trong CÙNG Requirement — Founder yêu cầu Agent trở thành 1 "Workflow Executor" thật: hỏi-đáp khi thiếu thông tin (không lập lại từ đầu), tự xác nhận Draft THẬT SỰ đã tạo trước khi báo Hoàn tất, Dashboard tổng hợp cuối Plan, Hoàn tác, Lưu/Tiếp tục Plan dang dở, Lịch sử Workflow.
+
+### Root Cause đã sửa trong lượt này — "Founder Agent finishes but no Draft is created"
+
+Đây chính là quy trình xử lý regression Founder báo trước đó (xem CHANGELOG mục "Fix: Founder Agent user.getIdToken..." — KHÔNG PHẢI bug đó, đây là 1 bug THẬT KHÁC được phát hiện trong lúc điều tra: `AIJobQueue.resume()` (`js/ai/job-queue.js`) không bao giờ `throw` dù `processItem()` bên trong thất bại (Provider chưa cấu hình/lỗi API/rate limit) — job/item tự chuyển `status:'failed'`, ghi `LogDB`, rồi RESOLVE bình thường. `executeStep()` (`js/admin-agent.js`) trước đây coi "không throw" = "đã có Draft" — SAI. **SELF CHECK** mới: `runOnce()` tự xác nhận có 1 Draft THẬT `status:'draft'`, ĐÚNG `moduleId` (tránh nhận nhầm Draft của bước khác), `createdAt >= startedAt` của CHÍNH lượt chạy này — nếu không có, tự động THỬ LẠI đúng 1 lần trước khi báo `'failed'` thật kèm hướng dẫn kiểm tra "Plugin AI (Thủ công) > Nhật ký". **0 sửa đổi** `js/ai/job-queue.js`/`PluginManager`/Provider Framework — sửa đúng 1 chỗ duy nhất ở tầng gọi (Founder Agent), đúng "Do NOT redesign Queue".
+
+### CONVERSATION WORKFLOW — hỏi-đáp không lập lại từ đầu
+
+`pendingClarification` (module-level) giữ yêu cầu GỐC khi Planner trả về `steps:[]` (không đủ thông tin). Tin nhắn TIẾP THEO của Founder được GHÉP với yêu cầu gốc (`originalText + '. ' + reply`) thành 1 yêu cầu ĐẦY ĐỦ gửi lại Planner — không tạo cơ chế "slot-filling" phức tạp mới, tái dùng NGUYÊN VẸN `buildPlan()` đã có. Nếu vẫn thiếu, `pendingClarification` tiếp tục giữ (đã gộp thêm), câu hỏi tự nhiên đổi khác mỗi lần (không hỏi lặp y hệt).
+
+### FOUNDER REVIEW DASHBOARD + PRODUCT COMPLETENESS + MISSING ITEMS
+
+`renderReport()` phân nhánh: Plan có bước `quality-score`/`missing-info-report` (Complete Product Creation) → Dashboard đầy đủ (Completed/Failed/Skipped, Quality Score, Missing, Warnings, nút Mở Sản phẩm/Mở Product AI Draft/Mở Blog Draft/Mở Facebook Draft/Mở Banner Draft/Tiếp tục mục còn thiếu/Hoàn tất) — Plan V1-V3 đơn giản GIỮ NGUYÊN báo cáo gọn cũ, 0 thay đổi hành vi.
+
+`quality-score` nay tính ĐÚNG 9 hạng mục Requirement liệt kê (Product/SEO/Category/Images/Video/Files/Blog/Facebook/Banner, tổng 100 điểm) — Blog/Facebook/Banner tính "đạt" dựa vào chính kết quả SELF CHECK (bước đó Completed VÀ có draftId thật, không suy đoán).
+
+`missing-info-report` tách riêng từng dòng ĐÚNG tên Requirement liệt kê (Missing Images/Missing Gallery/Missing PDF/Missing Firmware/Missing Driver/Missing Video/Missing Warranty) — PDF/Firmware/Driver LUÔN xuất hiện (hệ thống chưa có field/hạ tầng đính kèm file cho Sản phẩm — kiến trúc, không phải lỗi từng sản phẩm).
+
+### UNDO LAST STEP
+
+`undoLastStep(msgId)` tìm bước Hoàn tất GẦN NHẤT theo THỨ TỰ Plan (không phải thời gian bấm) — "Rollback only the previous step":
+- Bước tạo Draft (Product/SEO/Blog/Facebook/Banner/Image AI): tái dùng ĐÚNG `AdminAI.rejectDraftById()` đã có (giữ lại để tra cứu, không xoá — cùng hành vi nút "TỪ CHỐI").
+- `detect-category` (đã tự gán): `step._previousCategoryIds` (snapshot lưu lúc gán) ghi lại qua ĐÚNG `DB.update()`.
+- `create-product`: XOÁ THẬT qua ĐÚNG `DB.remove()` — CHỈ cho phép khi đây là bước hoàn tất DUY NHẤT (chưa bước nào SAU nó hoàn tất), LUÔN `confirm()` trước — hành động phá huỷ duy nhất trong Founder Agent.
+- Còn lại (check-duplicate/related-products/quality-score/missing-info-report/điều hướng): không ghi gì thật, chỉ đặt lại Chờ chạy.
+
+Gõ "undo last step"/"hoàn tác bước trước" trong ô chat cũng gọi đúng hàm này (nhắm vào tin nhắn Agent gần nhất có Plan).
+
+### RESUME WORKFLOW / AUTO SAVE (localStorage)
+
+`saveWorkflowSnapshot()` chạy sau MỖI lần `renderMessages()` (= sau mỗi bước thay đổi trạng thái) — lưu tin nhắn Agent GẦN NHẤT còn dang dở (chưa `allDone`, chưa `finished`) vào `localStorage` (key `pshopFounderAgentWorkflowSnapshot`) — cùng cơ chế/giới hạn UI Mode toggle ở `js/admin-auth.js` (KHÔNG ghi Firebase, per-browser, không theo tài khoản). `tryOfferResume()` chạy lúc `init()` — nếu có snapshot, hiện "Tiếp tục kế hoạch trước đó?" kèm nút Tiếp tục (`resumeWorkflow()`, khôi phục NGUYÊN VẸN toàn bộ Plan) / Bỏ qua (`discardWorkflow()`).
+
+### WORKFLOW HISTORY
+
+`WorkflowDB` (`js/ai/ai-db.js`) — `makeListDB('founderAgentWorkflows', [])`, tái dùng ĐÚNG factory CRUD đã có (0 logic mới). **Cần Chief Architect tự deploy** rule `founderAgentWorkflows` mới trong `database.rules.json` (đã thêm vào repo, cùng mẫu quyền `aiJobs`/`aiDrafts` — admin/editor đọc-ghi) — cho tới lúc deploy, `recordWorkflowHistory()`/`showHistory()` tự bắt lỗi `permission_denied` và báo rõ, KHÔNG chặn phần còn lại của Founder Agent. `recordWorkflowHistory()` trả về `Promise<boolean>` — CHỈ khoá `m._historyRecorded = true` khi ghi THÀNH CÔNG THẬT (tránh mất vĩnh viễn cơ hội ghi lại nếu Rules chưa deploy lúc Plan hoàn tất). Ghi tự động khi Plan `allDone`, hoặc khi Founder bấm "Hoàn tất" trên Dashboard. Gõ "lịch sử"/"workflow history" hiện tối đa 10 bản ghi gần nhất kèm link Sản phẩm.
+
+**0 sửa đổi**: Product/Blog/Facebook/Banner/Image AI, Queue/Provider/PermissionService/Publish Pipeline, `js/ai/job-queue.js` (chỉ SELF CHECK ở tầng gọi, không sửa Queue).
+
+Kiểm thử: Node `vm` mã nguồn thật, 53 assertions (SELF CHECK cả 2 nhánh Retry-thành-công/Thất bại-thật-2-lần, Conversation Workflow gộp yêu cầu, Dashboard/Quality Score 70 điểm đúng breakdown/Missing Items đủ 7 dòng literal, Undo 3 mắt xích Draft→Category→create-product kèm chặn xoá khi có bước sau đã hoàn tất, Workflow History cả 2 trạng thái Rules chưa/đã deploy, Resume Workflow qua 1 phiên `vm` MỚI mô phỏng tải lại trang) + 5 kịch bản V1-V3 chạy lại (open-product/update-product-field/open-draft/navigate/2-bước Blog+Facebook) xác nhận 0 regression. Preview thật (static server nội bộ) xác nhận trang tải đúng, không lỗi JS mới ngoài `permission_denied` tiêu chuẩn trước đăng nhập.
+
 ## Founder Agent V4 (Sprint 13) — Complete Product Creation
 
 V1-V3 chạy 1 công cụ/nhiều công cụ/vận hành CMS. V4 thêm khả năng tạo 1 Sản phẩm GẦN NHƯ ĐẦY ĐỦ chỉ từ 1 dòng gợi ý ("Tạo sản phẩm Pioneer XDJ-RX3") — nghiên cứu tên/thương hiệu, kiểm tra trùng lặp, tự gán Danh mục, viết nội dung (tái dùng Product AI), gợi ý Sản phẩm liên quan, tính Điểm chất lượng, báo cáo thông tin còn thiếu — cộng khả năng đính kèm ảnh/file/Micro ngay tại ô nhập.

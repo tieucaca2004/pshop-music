@@ -47,6 +47,10 @@
       ".read": "auth != null && root.child('roles').child(auth.uid).exists()",
       ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')"
     },
+    "founderAgentWorkflows": {
+      ".read": "auth != null && root.child('roles').child(auth.uid).exists()",
+      ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')"
+    },
     "aiLogs": {
       ".read": "auth != null && root.child('roles').child(auth.uid).exists()",
       ".write": "auth != null && root.child('roles').child(auth.uid).exists()"
