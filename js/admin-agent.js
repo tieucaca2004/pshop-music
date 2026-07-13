@@ -1,12 +1,20 @@
 /*
- * admin-agent.js — Founder Agent V4: Complete Product Creation (Sprint 13)
+ * admin-agent.js — Founder Agent V5: Final Polish (Sprint 13)
  * V1: 1 lệnh -> 1 công cụ -> 1 Draft. V2: 1 lệnh -> nhiều bước (Execution
  * Plan) -> Plugin/Queue/Draft. V3: THÊM khả năng "vận hành CMS thay Founder"
  * (điều hướng trang thật). V4: THÊM khả năng tạo 1 Sản phẩm gần như đầy đủ
  * chỉ từ 1 dòng gợi ý — nghiên cứu tên/thương hiệu, kiểm tra trùng lặp, tự
  * gán Danh mục, viết nội dung (tái dùng Product AI), gợi ý Sản phẩm liên
  * quan, tính Điểm chất lượng, báo cáo thông tin còn thiếu — cộng khả năng
- * đính kèm ảnh/file/Micro ngay tại ô nhập.
+ * đính kèm ảnh/file/Micro ngay tại ô nhập. V4.1: hỏi-đáp không lập lại từ
+ * đầu, SELF CHECK (root cause "no Draft created" đã sửa), Dashboard/Undo/
+ * Resume/History. V5 (bản cuối Sprint 13): SMART BACKGROUND tự động (phát
+ * hiện + xóa phông nền trắng ngay trong luồng tạo sản phẩm — không cần
+ * Founder tự bấm), hiểu thêm lệnh "Cập nhật X"/"Xuất bản X", Final Review mở
+ * rộng (Featured Image/Gallery/Background/Internal Links), điểm phong cách
+ * Category Cover "Technology", và các điểm mở rộng (extension points) cho
+ * Web Search/YouTube/Official Document/Background Provider trong tương lai
+ * — KHÔNG triển khai API trả phí nào, chỉ chuẩn bị chỗ gắn vào sau.
  *
  * GIỚI HẠN THẬT ĐÃ XÁC NHẬN VỚI CHIEF ARCHITECT (không tự bịa để "cho đủ"):
  * hệ thống KHÔNG có khả năng duyệt Internet thật (không có Search API/
@@ -79,7 +87,24 @@ const AdminAgent = (function () {
     'detect-category':             { label: 'Tự động gán Danh mục', icon: '🏷' },
     'related-products':            { label: 'Sản phẩm liên quan', icon: '🔗' },
     'quality-score':               { label: 'Điểm chất lượng', icon: '⭐' },
-    'missing-info-report':         { label: 'Báo cáo thiếu thông tin', icon: '📋' }
+    'missing-info-report':         { label: 'Báo cáo thiếu thông tin', icon: '📋' },
+    // Sprint 13 V5 (Final Polish) — xem chú thích đầu file.
+    'smart-background':            { label: 'Xóa phông tự động', icon: '🎨' }
+  };
+
+  // EXTERNAL_PROVIDERS (Sprint 13 V5 — "FOUNDATION FOR FUTURE") — điểm mở
+  // rộng cho 4 nguồn dữ liệu bên ngoài Requirement liệt kê, CHƯA triển khai
+  // (đúng "without implementing paid APIs"). Founder gõ đúng từ khóa liên
+  // quan → Agent trả lời rõ CHƯA có provider thật, KHÔNG giả vờ tra cứu được
+  // (cùng nguyên tắc "Provider Not Configured" đã dùng cho Internet
+  // Background ở Category Cover). Khi có provider thật, chỉ cần thêm URL/
+  // key vào đây + 1 nhánh gọi thật trong hàm tương ứng — KHÔNG đổi cấu trúc
+  // Plan/Execution đã có.
+  const EXTERNAL_PROVIDERS = {
+    webSearch: { label: 'Web Search Provider', configured: false, keywords: ['tìm trên internet', 'tìm kiếm web', 'search internet', 'tra cứu internet'] },
+    youtube: { label: 'YouTube Provider', configured: false, keywords: ['tìm video youtube', 'youtube chính hãng', 'video chính thức'] },
+    officialDocument: { label: 'Official Document Provider', configured: false, keywords: ['tài liệu chính hãng', 'manual chính thức', 'tìm datasheet', 'tìm firmware chính hãng'] },
+    backgroundProvider: { label: 'Background Provider (Internet)', configured: false, keywords: ['ảnh nền internet', 'ảnh nền từ mạng'] }
   };
 
   // NAV_PAGES — "Navigate CMS": trang CMS thật Agent được phép điều hướng
@@ -110,6 +135,7 @@ const AdminAgent = (function () {
     { label: 'Mở sản phẩm',            text: 'Mở Pioneer RX3' },
     { label: 'Đổi giá sản phẩm',       text: 'Đổi giá Pioneer RX3 thành 48 triệu' },
     { label: 'Tạo sản phẩm đầy đủ',    text: 'Tạo sản phẩm Pioneer XDJ-RX3' },
+    { label: 'Cập nhật nội dung RX3',  text: 'Cập nhật Pioneer RX3' },
     { label: 'Blog + Facebook cho RX3', text: 'Viết Blog và Facebook cho Pioneer RX3' }
   ];
 
@@ -315,6 +341,17 @@ const AdminAgent = (function () {
       showHistory();
       return;
     }
+    // EXTERNAL_PROVIDERS stub (V5, "FOUNDATION FOR FUTURE") — nhận diện đúng
+    // ý định cần nguồn NGOÀI hệ thống, trả lời trung thực "chưa cấu hình"
+    // thay vì lặng lẽ bỏ qua hoặc chuyển cho Planner (dễ khiến AI tự bịa).
+    const providerKey = Object.keys(EXTERNAL_PROVIDERS).find(k => EXTERNAL_PROVIDERS[k].keywords.some(kw => normalized.indexOf(kw) !== -1));
+    if (providerKey) {
+      input.value = '';
+      const provider = EXTERNAL_PROVIDERS[providerKey];
+      pushAgentMsg({ text: `Provider Not Configured — ${provider.label} chưa được kết nối trong hệ thống này. Đây là điểm mở rộng đã chuẩn bị sẵn cho tương lai, chưa triển khai (không dùng API trả phí khi chưa được Chief Architect xác nhận).`, steps: [] });
+      renderMessages();
+      return;
+    }
 
     input.value = '';
     pendingAttachments = [];
@@ -354,6 +391,42 @@ const AdminAgent = (function () {
       if (match) { try { return JSON.parse(match[0]); } catch (e2) { return null; } }
       return null;
     }
+  }
+
+  // detectWhiteBackground(imageUrl) -> Promise<boolean> — "SMART BACKGROUND:
+  // Automatically remove obvious white backgrounds" — lấy mẫu màu 6 điểm
+  // (4 góc + 2 điểm giữa cạnh) qua Canvas API CÓ SẴN trình duyệt (KHÔNG cần
+  // Cloud Function/API mới cho bước PHÁT HIỆN — chỉ bước XÓA PHÔNG sau đó
+  // mới gọi ĐÚNG remove_background đã có). Lỗi đọc pixel (CORS/ảnh hỏng) ->
+  // resolve(false) — "không xác định được" không chặn Plan, không coi là
+  // false-positive nguy hiểm hơn false-negative (thà bỏ qua còn hơn tự ý xử
+  // lý nhầm 1 ảnh không phải nền trắng).
+  function detectWhiteBackground(imageUrl) {
+    return new Promise(resolve => {
+      if (!imageUrl || typeof Image === 'undefined' || typeof document.createElement !== 'function') { resolve(false); return; }
+      try {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            const w = canvas.width = Math.min(img.naturalWidth || img.width || 0, 100) || 100;
+            const h = canvas.height = Math.min(img.naturalHeight || img.height || 0, 100) || 100;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            const samples = [[0, 0], [w - 1, 0], [0, h - 1], [w - 1, h - 1], [Math.floor(w / 2), 0], [0, Math.floor(h / 2)]];
+            let whiteCount = 0;
+            samples.forEach(([x, y]) => {
+              const px = ctx.getImageData(x, y, 1, 1).data;
+              if (px[0] > 235 && px[1] > 235 && px[2] > 235) whiteCount++;
+            });
+            resolve(whiteCount >= samples.length - 1); // hầu hết góc/viền gần trắng thuần
+          } catch (e) { resolve(false); }
+        };
+        img.onerror = () => resolve(false);
+        img.src = imageUrl;
+      } catch (e) { resolve(false); }
+    });
   }
 
   // ── PLANNER — GPT-4o-mini qua ĐÚNG Cloud Function openaiProxy đã có ─────────
@@ -444,6 +517,7 @@ Available tools (dùng ĐÚNG tên "tool" sau):
 - research-product: Dùng KIẾN THỨC AI đã học (KHÔNG duyệt Internet thật) để đoán TÊN ĐẦY ĐỦ/THƯƠNG HIỆU/MODEL từ 1 gợi ý ngắn (vd "RX3"). CHỈ dùng khi Founder gõ tên sản phẩm CÓ VẺ viết tắt/không đầy đủ VÀ đang muốn TẠO sản phẩm mới. inputParams: {"hint": "<đúng nguyên văn Founder gõ>"}
 - check-duplicate: Kiểm tra Sản phẩm đã tồn tại trước khi tạo mới (Tên/SKU/Model/Slug). LUÔN đặt NGAY TRƯỚC create-product khi Founder muốn TẠO sản phẩm mới. inputParams: {"name": "<tên, hoặc \"$research.name\" nếu có bước research-product trước đó>"}
 - create-product: TẠO MỚI 1 sản phẩm trống (chỉ có Tên/Thương hiệu/Model). Dùng khi Founder nói "tạo sản phẩm X" và X CHƯA có trong danh sách sản phẩm dưới đây. inputParams: {"name": "<tên, hoặc \"$research.name\">", "brand": "<hoặc \"$research.brand\", có thể bỏ trống>", "model": "<hoặc \"$research.model\", có thể bỏ trống>"}
+- smart-background: Tự động phát hiện + xóa phông nền trắng cho ảnh sản phẩm (nếu Sản phẩm có ảnh). Đặt NGAY SAU create-product khi tạo sản phẩm mới VÀ Founder đã đính kèm ảnh. inputParams: {"productId": "<id thật, hoặc \"$product\">"}
 - detect-category: Tự động phân tích và gán Danh mục phù hợp cho 1 sản phẩm ĐÃ CÓ (dùng danh sách Danh mục thật bên dưới, KHÔNG bịa mã mới). Đặt SAU create-product khi tạo sản phẩm mới. inputParams: {"productId": "<id thật, hoặc \"$product\">"}
 - product-description-writer: viết mô tả + SEO cho 1 sản phẩm (ĐÃ CÓ SẴN hoặc VỪA được tạo ở bước create-product trong CÙNG Plan này). inputParams: {"productId": "<id thật, hoặc \"$product\" nếu là sản phẩm vừa tạo ở bước create-product CÙNG Plan>", "tone": "Chuyên nghiệp"}
 - seo: mốc hiển thị "SEO đã gộp chung vào Product AI" — CHỈ thêm bước này NGAY SAU 1 bước product-description-writer trong CÙNG Plan (không dùng riêng lẻ). inputParams: {}
@@ -463,7 +537,11 @@ QUY TẮC ĐẶC BIỆT — "$product": nếu Plan có bước create-product, M
 
 QUY TẮC ĐẶC BIỆT — "$research.name"/"$research.brand"/"$research.model": nếu Plan có bước research-product, các bước check-duplicate/create-product SAU ĐÓ có thể dùng token này thay vì bịa tên/thương hiệu — hệ thống tự thay bằng kết quả nghiên cứu thật sau khi bước research-product chạy xong.
 
-QUY TẮC ĐẶC BIỆT — "Tạo sản phẩm X đầy đủ" (Complete Product Creation): khi Founder muốn TẠO 1 sản phẩm mới ĐẦY ĐỦ (không chỉ tạo trống), LUÔN dùng ĐÚNG thứ tự: research-product (nếu tên có vẻ viết tắt) → check-duplicate → create-product → detect-category → product-description-writer → seo → blog-writer → facebook-post-generator → banner-generator → image-generator → related-products → quality-score → missing-info-report → open-product (bước cuối, để Founder Review). Nếu tên Founder gõ ĐÃ đầy đủ rõ ràng (có thương hiệu + model), có thể bỏ qua research-product và dùng thẳng tên đó.
+QUY TẮC ĐẶC BIỆT — "Tạo sản phẩm X đầy đủ" (Complete Product Creation): khi Founder muốn TẠO 1 sản phẩm mới ĐẦY ĐỦ (không chỉ tạo trống), LUÔN dùng ĐÚNG thứ tự: research-product (nếu tên có vẻ viết tắt) → check-duplicate → create-product → smart-background (chỉ khi có ảnh đính kèm) → detect-category → product-description-writer → seo → blog-writer → facebook-post-generator → banner-generator → image-generator → related-products → quality-score → missing-info-report → open-product (bước cuối, để Founder Review). Nếu tên Founder gõ ĐÃ đầy đủ rõ ràng (có thương hiệu + model), có thể bỏ qua research-product và dùng thẳng tên đó.
+
+QUY TẮC ĐẶC BIỆT — "Cập nhật X" (Sản phẩm ĐÃ CÓ): khi Founder nói "Cập nhật X"/"Làm mới nội dung X" mà KHÔNG nói rõ cần làm gì cụ thể, hiểu là viết lại Product AI + SEO cho ĐÚNG sản phẩm đó (KHÔNG tạo sản phẩm mới, KHÔNG chạy lại check-duplicate/create-product). Nếu Founder nói rõ hơn (vd "Cập nhật giá X") thì dùng đúng tool tương ứng (update-product-field).
+
+QUY TẮC ĐẶC BIỆT — "Xuất bản X" (Publish): Agent KHÔNG BAO GIỜ tự Publish/Xuất bản thay Founder (Draft Before Publish). Khi Founder nói "Xuất bản X"/"Đăng X"/"Publish X", LUÔN dùng open-draft (nếu rõ loại Draft, vd "Xuất bản Blog X" → moduleId "blog-writer") hoặc open-product (nếu nói chung chung "Xuất bản X") để MỞ ĐÚNG trang — Founder tự bấm nút Lưu/Publish/Duyệt & Publish thật trên trang đó.
 
 QUY TẮC ĐẶC BIỆT — điều hướng: open-product/update-product-field/open-draft/navigate làm trình duyệt CHUYỂN TRANG NGAY — KHÔNG BAO GIỜ đặt bước nào khác SAU 1 trong 4 tool này trong CÙNG Plan (mọi bước sau sẽ không chạy được vì trang đã đổi). Nếu Founder chỉ muốn "Mở X"/"Đổi field", Plan CHỈ có ĐÚNG 1 bước.
 
@@ -516,6 +594,32 @@ Founder: "Tạo Banner và ảnh Facebook cho RX3" (RX3 ĐÃ có, id "p7") →
   {"tool":"image-generator","target":"Pioneer RX3","inputParams":{"productId":"p7"}},
   {"tool":"banner-generator","target":"Pioneer RX3","inputParams":{"productId":"p7"}}
 ]}
+
+Founder: "Tạo sản phẩm Denon SC6000" kèm đính kèm 1 Ảnh sản phẩm (SC6000 CHƯA có trong danh sách) →
+{"steps":[
+  {"tool":"check-duplicate","target":"Denon SC6000","inputParams":{"name":"Denon SC6000"}},
+  {"tool":"create-product","target":"Denon SC6000","inputParams":{"name":"Denon SC6000","brand":"Denon DJ"}},
+  {"tool":"smart-background","target":"Denon SC6000","inputParams":{"productId":"$product"}},
+  {"tool":"detect-category","target":"Denon SC6000","inputParams":{"productId":"$product"}},
+  {"tool":"product-description-writer","target":"Denon SC6000","inputParams":{"productId":"$product","tone":"Chuyên nghiệp"}},
+  {"tool":"seo","target":"Denon SC6000","inputParams":{}},
+  {"tool":"related-products","target":"Denon SC6000","inputParams":{"productId":"$product"}},
+  {"tool":"quality-score","target":"Denon SC6000","inputParams":{"productId":"$product"}},
+  {"tool":"missing-info-report","target":"Denon SC6000","inputParams":{"productId":"$product"}},
+  {"tool":"open-product","target":"Denon SC6000","inputParams":{"productId":"$product"}}
+]}
+
+Founder: "Cập nhật RX3" (RX3 ĐÃ có, id "p7") →
+{"steps":[
+  {"tool":"product-description-writer","target":"Pioneer XDJ-RX3","inputParams":{"productId":"p7","tone":"Chuyên nghiệp"}},
+  {"tool":"seo","target":"Pioneer XDJ-RX3","inputParams":{}}
+]}
+
+Founder: "Xuất bản Blog RX3" (RX3 ĐÃ có, id "p7") →
+{"steps":[{"tool":"open-draft","target":"Pioneer XDJ-RX3","inputParams":{"moduleId":"blog-writer","query":"rx3"}}]}
+
+Founder: "Xuất bản RX3" (chung chung, không rõ loại Draft, RX3 ĐÃ có, id "p7") →
+{"steps":[{"tool":"open-product","target":"Pioneer XDJ-RX3","inputParams":{"productId":"p7"}}]}
 
 Danh sách sản phẩm hiện có:
 ${productList || '(chưa có)'}
@@ -678,6 +782,49 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
             step.status = 'completed'; // "No suitable Category found" — không chặn Plan, đã hiện trong categoryResult
           }
         }
+      } else if (step.tool === 'smart-background') {
+        // "SMART BACKGROUND: Automatically remove obvious white backgrounds.
+        // Blend Products naturally." — CHỈ xử lý khi Sản phẩm CÓ ảnh thật
+        // (Founder tự tải lên qua đính kèm chat/Product Editor) VÀ ảnh đó
+        // được phát hiện nền trắng rõ ràng — không đụng vào ảnh không có,
+        // không đụng vào ảnh KHÔNG phải nền trắng (tránh xử lý nhầm). Tái
+        // dùng ĐÚNG AdminBgRemover.removeBackgroundUrl() (Cloud Function
+        // remove_background đã có) — KHÔNG gọi API xóa phông mới.
+        const pid = resolvedParams.productId;
+        step.productId = pid;
+        const prod = products.find(p => p.id === pid) || {};
+        const firstImage = Array.isArray(prod.images) && prod.images.length ? prod.images[0] : (prod.image || '');
+        if (!firstImage) {
+          step.smartBackground = { applied: false, reason: 'Sản phẩm chưa có ảnh — bỏ qua.' };
+          step.status = 'completed';
+        } else if (typeof AdminBgRemover === 'undefined' || !AdminBgRemover.removeBackgroundUrl) {
+          step.smartBackground = { applied: false, reason: 'Công cụ xóa phông chưa sẵn sàng trên trang này.' };
+          step.status = 'completed';
+        } else {
+          const isWhiteBg = await detectWhiteBackground(firstImage);
+          if (!isWhiteBg) {
+            step.smartBackground = { applied: false, reason: 'Không phát hiện nền trắng rõ ràng — giữ nguyên ảnh gốc.' };
+            step.status = 'completed';
+          } else {
+            try {
+              const resultUrl = await AdminBgRemover.removeBackgroundUrl(firstImage);
+              // Lưu ảnh GỐC để "Undo last step" khôi phục đúng — dữ liệu THẬT
+              // Founder tải lên, không phải AI sinh, nên phải giữ lại được.
+              step._previousImages = Array.isArray(prod.images) ? prod.images.slice() : [];
+              step._previousImage = prod.image || '';
+              const newImages = step._previousImages.length ? [resultUrl].concat(step._previousImages.slice(1)) : [resultUrl];
+              await DB.update(pid, { images: newImages, image: resultUrl });
+              Object.assign(prod, { images: newImages, image: resultUrl });
+              step.smartBackground = { applied: true, resultUrl };
+              step.status = 'completed';
+            } catch (err) {
+              // Xóa phông thất bại (Provider/Cloud Function lỗi) — KHÔNG chặn
+              // toàn bộ Plan, chỉ báo rõ và giữ nguyên ảnh gốc thật.
+              step.smartBackground = { applied: false, reason: 'Lỗi xóa phông: ' + err.message };
+              step.status = 'completed';
+            }
+          }
+        }
       } else if (step.tool === 'related-products') {
         const pid = resolvedParams.productId;
         const prod = products.find(p => p.id === pid) || {};
@@ -701,26 +848,37 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
         }
         const catStep = m.steps.find(s => s.tool === 'detect-category');
         const hasCategory = !!(catStep && catStep.categoryResult && (catStep.categoryResult.autoAssigned || []).length) || (Array.isArray(prod.categoryIds) && prod.categoryIds.length > 0);
-        // 9 hạng mục ĐÚNG breakdown Requirement yêu cầu (Product/SEO/Category/
-        // Images/Video/Files/Blog/Facebook/Banner) — Blog/Facebook/Banner tính
-        // "đạt" khi bước tương ứng trong CÙNG Plan đã Completed VÀ có draftId
-        // thật (không tự suy đoán — dùng chính kết quả SELF CHECK ở trên).
+        // 11 hạng mục ĐÚNG "FINAL REVIEW" Requirement V5 liệt kê (Product/SEO/
+        // Categories/Featured Image/Gallery/Background/Video/Files/Blog/
+        // Facebook/Banner — "Internal Links" là chỉ số THÔNG TIN riêng, không
+        // cộng điểm — trùng lặp với Blog/Facebook/Banner đã tính rồi, cộng
+        // thêm sẽ tính 2 lần). Blog/Facebook/Banner tính "đạt" khi bước tương
+        // ứng trong CÙNG Plan đã Completed VÀ có draftId thật (không tự suy
+        // đoán — dùng chính kết quả SELF CHECK). "Background" tính "đạt" khi
+        // bước smart-background ĐÃ CHẠY (dù áp dụng xóa phông hay xác nhận
+        // không cần) — nghĩa là trình bày ảnh ĐÃ được xem xét, không phải bỏ
+        // qua hoàn toàn.
         const blogStep = m.steps.find(s => s.tool === 'blog-writer' && s.status === 'completed' && s.draftId);
         const fbStep = m.steps.find(s => s.tool === 'facebook-post-generator' && s.status === 'completed' && s.draftId);
         const bannerStep = m.steps.find(s => s.tool === 'banner-generator' && s.status === 'completed' && s.draftId);
+        const bgStep = m.steps.find(s => s.tool === 'smart-background' && s.status === 'completed');
+        const imgCount = Array.isArray(prod.images) ? prod.images.length : 0;
         const dims = [
           { label: 'Product', weight: 10, ok: !!descStep },
-          { label: 'SEO', weight: 15, ok: !!(draftContent.seoTitle && draftContent.metaDescription) },
-          { label: 'Danh mục', weight: 15, ok: hasCategory },
-          { label: 'Hình ảnh', weight: 15, ok: Array.isArray(prod.images) && prod.images.length > 0 },
-          { label: 'Video', weight: 10, ok: !!prod.youtubeUrl },
-          { label: 'Tài liệu', weight: 5, ok: false }, // chưa có hạ tầng đính kèm file cho Sản phẩm — luôn thiếu, xem missing-info-report
+          { label: 'SEO', weight: 12, ok: !!(draftContent.seoTitle && draftContent.metaDescription) },
+          { label: 'Categories', weight: 12, ok: hasCategory },
+          { label: 'Featured Image', weight: 10, ok: imgCount > 0 },
+          { label: 'Gallery', weight: 6, ok: imgCount >= 2 },
+          { label: 'Background', weight: 10, ok: !!bgStep },
+          { label: 'Video', weight: 6, ok: !!prod.youtubeUrl },
+          { label: 'Tài liệu', weight: 4, ok: false }, // chưa có hạ tầng đính kèm file cho Sản phẩm — luôn thiếu, xem missing-info-report
           { label: 'Blog', weight: 10, ok: !!blogStep },
           { label: 'Facebook', weight: 10, ok: !!fbStep },
           { label: 'Banner', weight: 10, ok: !!bannerStep }
         ];
         const score = dims.reduce((sum, d) => sum + (d.ok ? d.weight : 0), 0);
-        step.qualityScore = { score, dims };
+        const hasInternalLinks = !!(blogStep || fbStep || bannerStep);
+        step.qualityScore = { score, dims, hasInternalLinks };
         step.status = 'completed';
       } else if (step.tool === 'missing-info-report') {
         const pid = resolvedParams.productId;
@@ -739,6 +897,8 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
         missing.push('Thiếu Driver (Missing Driver) — hệ thống hiện chưa hỗ trợ đính kèm file cho Sản phẩm.');
         if (!prod.warranty) missing.push('Thiếu thông tin Bảo hành (Missing Warranty).');
         if (!prod.sku) missing.push('Thiếu SKU.');
+        const bgStepForMissing = m.steps.find(s => s.tool === 'smart-background' && s.status === 'completed');
+        if (!bgStepForMissing) missing.push('Chưa xử lý Ảnh nền (Missing Background) — Founder tự kiểm tra qua "Xóa phông ảnh sản phẩm".');
         const catStep = m.steps.find(s => s.tool === 'detect-category');
         const hasCategory = !!(catStep && catStep.categoryResult && (catStep.categoryResult.autoAssigned || []).length) || (Array.isArray(prod.categoryIds) && prod.categoryIds.length > 0);
         if (!hasCategory) missing.push('Chưa có Danh mục phù hợp — Founder tự gán qua Quản lý Sản phẩm.');
@@ -1086,6 +1246,20 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
       });
       return;
     }
+    if (step.tool === 'smart-background') {
+      if (step.smartBackground && step.smartBackground.applied && step._previousImages !== undefined) {
+        DB.update(step.productId, { images: step._previousImages, image: step._previousImage || '' }).then(() => {
+          const p = products.find(x => x.id === step.productId);
+          if (p) Object.assign(p, { images: step._previousImages, image: step._previousImage || '' });
+          step.status = 'pending'; step.smartBackground = null;
+          renderMessages();
+        });
+        return;
+      }
+      step.status = 'pending'; step.smartBackground = null;
+      renderMessages();
+      return;
+    }
     // check-duplicate / related-products / quality-score / missing-info-report / điều hướng — không ghi dữ liệu thật.
     step.status = 'pending';
     renderMessages();
@@ -1259,6 +1433,11 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
   // trùng lặp/danh mục/liên quan/điểm chất lượng/báo cáo thiếu) — hiển thị
   // NGAY DƯỚI hàng trạng thái, tách biệt errorText.
   function stepExtra(step) {
+    if (step.tool === 'smart-background' && step.smartBackground) {
+      const sb = step.smartBackground;
+      if (sb.applied) return `<div class="agent-step-extra">🎨 <strong>Đã tự động phát hiện + xóa phông nền trắng.</strong> Ảnh gốc vẫn giữ lại (gõ "hoàn tác" nếu muốn khôi phục).</div>`;
+      return `<div class="agent-step-extra">🎨 ${escHtml(sb.reason || 'Không có gì để xử lý.')}</div>`;
+    }
     if (step.tool === 'research-product' && step.research) {
       const r = step.research;
       let html = `<div class="agent-step-extra">🔎 <strong>AI đề xuất (chưa xác minh nguồn chính hãng):</strong> ${escHtml(r.name)}`;
@@ -1288,7 +1467,8 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
     if (step.tool === 'quality-score' && step.qualityScore) {
       const q = step.qualityScore;
       const rows = q.dims.map(d => `${d.ok ? '✓' : '✗'} ${escHtml(d.label)} (${d.weight} điểm)`).join(' · ');
-      return `<div class="agent-step-extra">⭐ <strong>Điểm chất lượng: ${q.score}/100</strong><br>${rows}</div>`;
+      const linksLine = `<br>${q.hasInternalLinks ? '✓' : '✗'} Internal Links <span class="small-muted">(không cộng điểm — tự tính từ Blog/Facebook/Banner ở trên)</span>`;
+      return `<div class="agent-step-extra">⭐ <strong>Điểm chất lượng: ${q.score}/100</strong><br>${rows}${linksLine}</div>`;
     }
     if (step.tool === 'missing-info-report' && step.missingInfo) {
       if (!step.missingInfo.length) return `<div class="agent-step-extra">📋 Không thiếu thông tin nào.</div>`;

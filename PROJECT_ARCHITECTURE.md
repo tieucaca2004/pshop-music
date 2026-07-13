@@ -631,6 +631,38 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Founder Agent V5 (Sprint 13) — Final Polish
+
+Requirement CUỐI CÙNG của chuỗi Founder Agent trong Sprint 13 (sau V5 KHÔNG tạo V6 — Founder thực hiện 1 Acceptance Test DUY NHẤT gộp V1→V5 + toàn bộ CMS, xem ROADMAP). Mở rộng THÊM vào Execution Plan đã có (`js/admin-agent.js`) — 0 file/collection Firebase mới.
+
+### SMART BACKGROUND — tự động phát hiện + xóa phông trắng
+
+`detectWhiteBackground(imageUrl)` (mới) lấy mẫu màu 6 điểm (4 góc + 2 điểm giữa cạnh) qua Canvas API trình duyệt CÓ SẴN — 100% client-side, KHÔNG gọi Cloud Function/API trả phí nào cho bước PHÁT HIỆN. Chỉ khi phát hiện nền trắng rõ ràng (≥5/6 mẫu RGB > 235) mới gọi bước XÓA PHÔNG thật, tái sử dụng NGUYÊN VẸN Cloud Function `remove_background` đã có qua hàm mới trích xuất `AdminBgRemover.removeBackgroundUrl(imageUrl)` (`js/admin-bg-remover.js` — logic gọi API tách ra khỏi `run()` để dùng chung được cho cả UI panel cũ VÀ bước Founder Agent mới, 0 trùng lặp code gọi API). Bước `smart-background` trong Execution Plan: không có ảnh → bỏ qua; không phải nền trắng → giữ nguyên, báo rõ lý do; xóa phông thất bại (lỗi Provider/Cloud Function) → báo lỗi thật, giữ nguyên ảnh gốc, KHÔNG chặn phần còn lại của Plan. Ảnh gốc luôn được snapshot (`step._previousImages`/`step._previousImage`) để "Hoàn tác bước cuối" khôi phục đúng — không phải AI sinh ra nên phải giữ lại được.
+
+### CẬP NHẬT X / XUẤT BẢN X — 2 lệnh hội thoại mới
+
+Planner `systemPrompt` thêm 2 quy tắc: "Cập nhật X" (Sản phẩm ĐÃ CÓ) → chỉ chạy lại `product-description-writer`+`seo`, KHÔNG chạy lại `check-duplicate`/`create-product`. "Xuất bản X" → KHÔNG BAO GIỜ tự Publish — chỉ điều hướng tới đúng Draft (`open-draft`) hoặc Sản phẩm (`open-product`) để Founder tự bấm Xuất bản/Lưu — giữ đúng nguyên tắc xuyên suốt "Agent operates the existing CMS, never bypasses Founder's final action".
+
+### FINAL REVIEW — Quality Score 11 hạng mục + Internal Links
+
+`quality-score` (V4.1: 9 hạng mục) nay tính ĐÚNG 11 hạng mục Requirement V5 liệt kê: Product/SEO/Categories/**Featured Image**/**Gallery** (tách riêng khỏi "Images" gộp cũ)/**Background** (đạt khi bước `smart-background` ĐÃ CHẠY, dù áp dụng xóa phông hay xác nhận không cần — nghĩa là ảnh ĐÃ được xem xét)/Video/Files/Blog/Facebook/Banner — tổng vẫn 100 điểm (trọng số: 10+12+12+10+6+10+6+4+10+10+10). "Internal Links" là chỉ số THÔNG TIN riêng (`hasInternalLinks` — có ít nhất 1 trong Blog/Facebook/Banner), KHÔNG cộng điểm (tránh tính trùng 2 lần với Blog/Facebook/Banner đã có). `missing-info-report` thêm dòng "Missing Background" khi bước `smart-background` chưa chạy trong Plan.
+
+### CATEGORY DESIGN — style "Technology"
+
+`js/ai/modules/image-generator.js`: thêm `'Technology'` vào `style` field (Dark/Minimal/Studio/Technology/Luxury — đúng danh sách Requirement liệt kê), nối vào `STYLE_DIRECTION` map — không thay 7 `imageType`/6 style gốc.
+
+### FOUNDATION FOR FUTURE — EXTERNAL_PROVIDERS stub
+
+`EXTERNAL_PROVIDERS` (mới, `js/admin-agent.js`) — 4 điểm mở rộng đã chuẩn bị sẵn cho tương lai (Web Search/YouTube/Official Document/Background Provider), MỖI cái `configured:false`. `send()` nhận diện đúng từ khóa (vd "tìm trên internet", "tìm video youtube") TRƯỚC KHI chuyển cho Planner — trả lời trung thực "Provider Not Configured", không lặng lẽ bỏ qua/không để Planner tự bịa — cùng nguyên tắc `internetBackgroundStub()` đã dùng ở Category Cover.
+
+### Không xây dựng (quyết định phạm vi có chủ đích, không phải thiếu sót)
+
+Không xây Live Preview riêng cho Product Background (như Category Cover đã có) — `Product.backgroundImage` hiện chưa có nơi hiển thị công khai nào tiêu thụ field này (Product Detail page không dùng Cover kiểu Category Header), nên thêm Live Preview lúc này sẽ là UI không có tác dụng thật. Google Trend/tồn kho AI dự đoán không nằm trong Requirement V5.
+
+**0 sửa đổi**: Plugin Framework/Queue/Provider Manager/Draft System, `js/ai/job-queue.js`, Category Cover (V4), toàn bộ 9 trang CMS Admin khác.
+
+Kiểm thử: Node `vm` mã nguồn thật, 33 assertions (Smart Background cả 4 nhánh phát hiện-áp dụng/không-phải-nền-trắng/không-có-ảnh/lỗi-Cloud-Function, Hoàn tác Smart Background khôi phục đúng ảnh gốc, Quality Score 11 hạng mục đúng 84/100 cho 1 kịch bản đủ dữ kiện, Missing Background xuất hiện/biến mất đúng điều kiện, "Cập nhật X" không chạy lại check-duplicate/create-product, "Xuất bản X" chỉ điều hướng không tự Publish, EXTERNAL_PROVIDERS chặn đúng 3 từ khóa TRƯỚC Planner, style "Technology" không phá 7 style gốc) + 3 kịch bản V1-V2 chạy lại (open-product/update-product-field/2-bước Blog+Facebook) xác nhận 0 regression. Preview thật (static server nội bộ) xác nhận `admin/ai/agent.html` tải đúng, không lỗi JS mới ngoài `permission_denied` tiêu chuẩn trước đăng nhập.
+
 ## Product Image Presentation — Category Cover (Sprint 13)
 
 Requirement độc lập với Founder Agent (Product/Category Management, không phải AI Agent) — triển khai TRƯỚC KHI Founder Agent V4 được xác nhận PASS (Chief Architect chủ động yêu cầu bỏ qua "One Requirement in flight", xem ROADMAP).

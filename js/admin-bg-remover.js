@@ -174,6 +174,26 @@ const AdminBgRemover = (function () {
     btn.textContent = running ? '⏳ Đang xử lý...' : '✂ XÓA PHÔNG';
   }
 
+  // removeBackgroundUrl(imageUrl) -> Promise<string kết quả> — CORE gọi Cloud
+  // Function, tách khỏi run() (DOM-heavy) để Founder Agent V5 (SMART
+  // BACKGROUND — tự động phát hiện + xóa phông nền trắng trong luồng Tạo sản
+  // phẩm) TÁI SỬ DỤNG được đúng 1 lệnh gọi API này, không viết lại/gọi trùng
+  // Cloud Function. UI (run()) vẫn là nơi DUY NHẤT thao tác DOM.
+  async function removeBackgroundUrl(imageUrl) {
+    if (!imageUrl) throw new Error('Thiếu URL ảnh nguồn.');
+    const user = firebase.auth().currentUser;
+    if (!user) throw new Error('Chưa đăng nhập.');
+    const token = await user.getIdToken();
+    const r = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ action: 'remove_background', imageUrl })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Lỗi server.');
+    return data.imageUrl;
+  }
+
   async function run(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -197,24 +217,8 @@ const AdminBgRemover = (function () {
         imageUrl = await _uploadDataUrlToStorage(dataUrl);
       }
 
-      // Lấy Firebase ID token
-      const user = firebase.auth().currentUser;
-      if (!user) throw new Error('Chưa đăng nhập.');
-      const token = await user.getIdToken();
-
       _setStatus(containerId, 'Đang xóa phông (GPT-4o + DALL-E)...', false);
-      const r = await fetch(PROXY_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + token
-        },
-        body: JSON.stringify({ action: 'remove_background', imageUrl })
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || 'Lỗi server.');
-
-      const resultUrl = data.imageUrl;
+      const resultUrl = await removeBackgroundUrl(imageUrl);
       container._bgRemoverResultUrl = resultUrl;
 
       // Hiển thị kết quả
@@ -260,5 +264,5 @@ const AdminBgRemover = (function () {
     _setSourceUrl(containerId, url);
   }
 
-  return { mount, run, clearSource, loadUrl, setSourceUrl };
+  return { mount, run, clearSource, loadUrl, setSourceUrl, removeBackgroundUrl };
 })();

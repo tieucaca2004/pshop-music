@@ -42,7 +42,7 @@ AIModuleRegistry.register({
     // loại "Background Image" mới, nhưng để optional cho MỌI imageType thay
     // vì thêm cơ chế field điều kiện mới (0 thay đổi UI render engine đã có,
     // Founder chỉ cần bỏ trống nếu không dùng loại ảnh nền).
-    { key: 'style', label: 'Phong cách nền (chỉ áp dụng cho Category/Product Background Image)', type: 'select', options: ['Mặc định', 'Studio', 'Lifestyle', 'Dark', 'Light', 'Luxury', 'Minimal'], optional: true },
+    { key: 'style', label: 'Phong cách nền (chỉ áp dụng cho Category/Product Background Image)', type: 'select', options: ['Mặc định', 'Studio', 'Lifestyle', 'Dark', 'Light', 'Luxury', 'Minimal', 'Technology'], optional: true },
     { key: 'size', label: 'Kích thước', type: 'select', options: ['1:1', '4:5', '16:9'] }
   ],
 
@@ -71,16 +71,18 @@ AIModuleRegistry.register({
     'Product Background Image': 'clean professional background composition for product photography, subtle negative space reserved for a product overlay, no visible product in frame, no text'
   },
 
-  // STYLE_DIRECTION (Sprint 13) — chỉ áp dụng thêm khi Founder chọn, nối vào
-  // SAU direction gốc — không thay thế IMAGE_TYPE_DIRECTION, tránh 6 phong
-  // cách làm mất định hướng riêng đã có cho từng loại ảnh.
+  // STYLE_DIRECTION (Sprint 13 V4, +'Technology' ở V5 "CATEGORY DESIGN": Dark/
+  // Minimal/Studio/Technology/Luxury) — chỉ áp dụng thêm khi Founder chọn,
+  // nối vào SAU direction gốc — không thay thế IMAGE_TYPE_DIRECTION, tránh
+  // các phong cách làm mất định hướng riêng đã có cho từng loại ảnh.
   STYLE_DIRECTION: {
     'Studio': 'studio background style, seamless clean backdrop, professional even lighting',
     'Lifestyle': 'lifestyle setting background style, real-world environment, natural ambient lighting',
     'Dark': 'dark theme background style, deep tones, moody dramatic lighting',
     'Light': 'light theme background style, bright airy tones, soft even lighting',
     'Luxury': 'luxury premium background style, elegant refined aesthetic, rich materials',
-    'Minimal': 'minimal background style, clean negative space, simple geometric composition'
+    'Minimal': 'minimal background style, clean negative space, simple geometric composition',
+    'Technology': 'technology theme background style, sleek modern digital aesthetic, cool tones, subtle circuit/grid motif'
   },
 
   // buildPrompt() — chỉ dùng dữ liệu THẬT đọc được qua loadContext() (Product/
