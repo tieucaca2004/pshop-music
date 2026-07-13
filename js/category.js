@@ -216,6 +216,9 @@
 
   function updateCategoryHeader(cat) {
     const header = document.getElementById('categoryHeader');
+    const bgLayer = document.getElementById('categoryHeaderBg');
+    const productImg = document.getElementById('categoryHeaderProductImg');
+    const logoImg = document.getElementById('categoryHeaderLogo');
     const titleEl = document.getElementById('categoryHeaderTitle');
     const crumbEl = document.getElementById('breadcrumbCat');
     const label = CAT_LABELS[cat] || 'Sản phẩm';
@@ -229,7 +232,34 @@
     const bgFromCat = catObj && catObj.backgroundImage;
     const tile = !bgFromCat && categoryTiles.find(t => t.category === cat && t.image);
     const bg = bgFromCat || (tile && tile.image) || '';
-    if (header) header.style.backgroundImage = bg ? `url('${bg}')` : 'none';
+    if (bgLayer) bgLayer.style.backgroundImage = bg ? `url('${bg}')` : 'none';
+
+    // Category Cover (Sprint 13, Product Image Presentation) — lớp Ảnh sản
+    // phẩm/Logo/vị trí/zoom/opacity/blur/overlay chồng lên Ảnh nền. Founder
+    // KHÔNG bắt buộc thiết lập — nếu chưa có coverProductImage, chỉ hiện Ảnh
+    // nền + tiêu đề như trước (0 regression cho Danh mục chưa dùng tính năng
+    // này). Áp qua CSS custom property + data-attribute — KHÔNG viết logic vẽ
+    // ảnh mới (Canvas/SVG), tái dùng nguyên object-fit:contain đã có.
+    if (header) {
+      header.style.setProperty('--cover-blur', (catObj && catObj.coverBlur ? catObj.coverBlur : 0) + 'px');
+      header.style.setProperty('--cover-overlay', (catObj && typeof catObj.coverOverlay === 'number' ? catObj.coverOverlay : 100) / 100);
+    }
+    if (productImg) {
+      const coverImg = catObj && catObj.coverProductImage;
+      if (coverImg) {
+        productImg.src = coverImg;
+        productImg.style.display = 'block';
+        productImg.setAttribute('data-cover-position', (catObj && catObj.coverPosition) || 'center-right');
+        productImg.style.setProperty('--cover-zoom', ((catObj && catObj.coverZoom ? catObj.coverZoom : 100) / 100));
+        productImg.style.setProperty('--cover-opacity', ((catObj && typeof catObj.coverOpacity === 'number' ? catObj.coverOpacity : 100) / 100));
+      } else {
+        productImg.style.display = 'none';
+      }
+    }
+    if (logoImg) {
+      const logo = catObj && catObj.coverLogo;
+      if (logo) { logoImg.src = logo; logoImg.style.display = 'block'; } else { logoImg.style.display = 'none'; }
+    }
   }
 
   window.filterP = function (cat, btn, opts) {

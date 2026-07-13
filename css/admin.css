@@ -153,8 +153,48 @@ body{min-height:100vh;background:var(--bg-alt)}
 @media(max-width:900px){.slide-panel-top{grid-template-columns:1fr}.slide-preview-col{max-width:100%}}
 
 /* ---- Category background image section (Sprint 13) ---- */
+/* .cat-row-expand — hàng Danh mục có thêm khối full-width bên dưới 3 field
+   chính (Mã/Tên/Hoạt động) — cần flex-wrap để khối đó xuống dòng riêng thay
+   vì bị ép chung 1 hàng ngang với "cms-row-fields". Áp dụng cho CẢ Ảnh nền
+   (cat-bg-section, đã có từ trước) LẪN Category Cover (cat-cover-section,
+   mới) — cùng 1 nhu cầu bố cục. */
+.cms-row.cat-row-expand{flex-wrap:wrap}
+.cat-bg-section,.cat-cover-section{flex:1 1 100%}
 .cat-bg-section{margin:0.6rem 0 0.4rem;padding:0.75rem 0 0.5rem;border-top:1px solid var(--line2)}
 .cat-bg-label{display:block;font-size:0.72rem;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:0.5rem}
+
+/* ---- Category Cover (Sprint 13, Product Image Presentation) ---- */
+.cat-cover-section{margin:0.4rem 0;padding:0.75rem 0 0.5rem;border-top:1px solid var(--line2)}
+.cat-cover-viewport-toggle{display:flex;gap:0.3rem;margin-bottom:0.5rem}
+.cat-cover-viewport-toggle button{font-size:0.68rem;padding:0.3rem 0.6rem}
+.cat-cover-viewport-toggle button.active{background:var(--gold-soft);border-color:var(--gold);color:var(--gold-ink)}
+.cat-cover-preview-frame{position:relative;height:180px;background:#111;overflow:hidden;margin:0 auto 0.75rem;transition:width 0.2s ease;border:1px solid var(--line2)}
+.cat-cover-preview-frame[data-viewport="desktop"]{width:100%;max-width:640px}
+.cat-cover-preview-frame[data-viewport="tablet"]{width:420px}
+.cat-cover-preview-frame[data-viewport="mobile"]{width:240px}
+.cat-cover-preview-inner{position:absolute;inset:0;background:center/cover no-repeat;transform:scale(1.06)}
+.cat-cover-preview-overlay{position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0.3) 60%,rgba(0,0,0,0.15) 100%)}
+.cat-cover-preview-product{position:absolute;z-index:2;max-width:42%;max-height:78%;object-fit:contain;top:50%;right:1.2rem;transform:translateY(-50%) scale(var(--cover-zoom,1));opacity:var(--cover-opacity,1);filter:drop-shadow(0 10px 18px rgba(0,0,0,0.35))}
+.cat-cover-preview-product[data-cover-position="top-left"]{top:1rem;left:1rem;right:auto;bottom:auto;transform:scale(var(--cover-zoom,1))}
+.cat-cover-preview-product[data-cover-position="top-center"]{top:1rem;left:50%;right:auto;bottom:auto;transform:translateX(-50%) scale(var(--cover-zoom,1))}
+.cat-cover-preview-product[data-cover-position="top-right"]{top:1rem;right:1.2rem;left:auto;bottom:auto;transform:scale(var(--cover-zoom,1))}
+.cat-cover-preview-product[data-cover-position="center-left"]{top:50%;left:1rem;right:auto;bottom:auto;transform:translateY(-50%) scale(var(--cover-zoom,1))}
+.cat-cover-preview-product[data-cover-position="center"]{top:50%;left:50%;right:auto;bottom:auto;transform:translate(-50%,-50%) scale(var(--cover-zoom,1))}
+.cat-cover-preview-product[data-cover-position="center-right"]{top:50%;right:1.2rem;left:auto;bottom:auto;transform:translateY(-50%) scale(var(--cover-zoom,1))}
+.cat-cover-preview-product[data-cover-position="bottom-left"]{bottom:1rem;left:1rem;right:auto;top:auto;transform:scale(var(--cover-zoom,1))}
+.cat-cover-preview-product[data-cover-position="bottom-center"]{bottom:1rem;left:50%;right:auto;top:auto;transform:translateX(-50%) scale(var(--cover-zoom,1))}
+.cat-cover-preview-product[data-cover-position="bottom-right"]{bottom:1rem;right:1.2rem;left:auto;top:auto;transform:scale(var(--cover-zoom,1))}
+.cat-cover-preview-logo{position:absolute;z-index:3;top:0.6rem;right:0.6rem;max-width:36px;max-height:36px;object-fit:contain}
+.cat-cover-preview-title{position:absolute;z-index:3;left:1rem;bottom:0.75rem;color:#fff;font-weight:800;font-size:1rem;letter-spacing:-0.01em}
+.cat-cover-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:0.75rem}
+.cat-cover-controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.75rem;align-items:end;margin-bottom:0.6rem}
+.cat-cover-slider-label{display:flex;flex-direction:column;gap:0.3rem;font-size:0.7rem;color:var(--ink-soft)}
+.cat-cover-position-grid{display:grid;grid-template-columns:repeat(3,22px);grid-template-rows:repeat(3,22px);gap:0.25rem}
+.cat-cover-pos-btn{width:22px;height:22px;padding:0;background:var(--bg-alt);border:1px solid var(--line2);cursor:pointer}
+.cat-cover-pos-btn:hover{border-color:var(--gold)}
+.cat-cover-pos-btn.active{background:var(--gold);border-color:var(--gold)}
+.cat-cover-source-row{display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap}
+@media(max-width:700px){.cat-cover-grid{grid-template-columns:1fr}}
 
 /* ---- Xóa phông (AdminBgRemover) ---- */
 .bg-remover-panel{padding:0.75rem 0 0.25rem}

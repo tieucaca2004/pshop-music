@@ -631,6 +631,33 @@ Hoàn thiện UX — CHỈ Experience Layer, không đổi số bước/cấu tr
 - **Minh bạch tuyệt đối về giới hạn Foundation**: nút "GENERATE" trên Review Screen không gọi bất kỳ API/mạng nào — chỉ hiển thị thông báo rõ ràng rằng AI Generation thật chưa được kết nối, đúng Objective "Chưa triển khai AI Generation thật. Chỉ xây dựng Workflow và Experience Layer" và Testing Constraint "Không tuyên bố AI PASS nếu chưa Generate thật".
 - **Có thể mở rộng thành Generate thật ở Requirement sau** (kết nối `buildMarketingPackage()`'s 6 output thành input cho Workflow Automation/Plugin thật tương ứng — Banner Generator/Facebook Post Generator/SEO Generator/Blog Writer) — chưa quyết định thiết kế cụ thể, để ngỏ cho Requirement riêng.
 
+## Product Image Presentation — Category Cover (Sprint 13)
+
+Requirement độc lập với Founder Agent (Product/Category Management, không phải AI Agent) — triển khai TRƯỚC KHI Founder Agent V4 được xác nhận PASS (Chief Architect chủ động yêu cầu bỏ qua "One Requirement in flight", xem ROADMAP).
+
+### Reuse — không xây lại gì đã có
+
+Trước khi code, đã khảo sát toàn bộ hạ tầng liên quan (không lặp lại business logic):
+- **Xóa phông ảnh** — `AdminBgRemover.mount(containerId, opts)` (`js/admin-bg-remover.js`) + Cloud Function `openaiProxy` action `remove_background` (GPT-4o Vision + DALL-E 3) ĐÃ CÓ SẴN, đã gắn vào form Sản phẩm từ trước — Category Cover TÁI SỬ DỤNG y hệt, không viết logic xóa phông mới.
+- **Ảnh nền Danh mục** — field `Category.backgroundImage` + `MediaLibraryPicker.renderSlot({wide:true})` + `category.js updateCategoryHeader()` ĐÃ CÓ SẴN từ Sprint 13 trước — Category Cover MỞ RỘNG thêm layer, không thay thế.
+- **Chọn/Tải ảnh** — `MediaLibraryPicker` (mount/renderSlot/openModal) dùng NGUYÊN VẸN cho Ảnh sản phẩm đại diện + Logo.
+
+### Category Cover — layer mới chồng lên Ảnh nền đã có
+
+7 field mới ghi thẳng vào record Category có sẵn qua ĐÚNG `CategoryDB.update()` (0 collection Firebase mới): `coverProductImage`, `coverLogo`, `coverPosition` (9 điểm, cùng cơ chế `data-attribute` + CSS attribute selector Hero Slideshow đã dùng cho `data-text-pos`), `coverZoom`, `coverOpacity`, `coverBlur`, `coverOverlay`. Founder KHÔNG bắt buộc dùng — để trống `coverProductImage` = chỉ hiện Ảnh nền như cũ (0 regression cho toàn bộ Danh mục hiện có).
+
+**Admin** (`admin/categories.html` + `js/admin-categories.js`): mỗi Danh mục có thêm khối "CATEGORY COVER" — Live Preview (Desktop/Tablet/Mobile, đổi khung xem tức thời qua `setPreviewViewport()`, không ghi Firebase) cập nhật NGAY khi đổi Ảnh nền/Ảnh sản phẩm/Zoom/Opacity/Blur/Overlay (`updateCoverPreview()`/`setCoverField()` chỉnh DOM trực tiếp, không `render()` lại toàn bộ danh sách — tránh giật/mất focus slider). Nút "✂ Xóa phông ảnh sản phẩm" mount `AdminBgRemover` ngay trong hàng Danh mục. "🌐 Ảnh nền từ Internet" hiện đúng `"Provider Not Configured"` — Requirement tự nêu rõ "Do NOT require external APIs in this Requirement", không giả vờ có provider thật.
+
+**Public** (`category.html` + `js/category.js`): `#categoryHeader` tách thành 3 lớp — `#categoryHeaderBg` (Ảnh nền, nhận `filter:blur()`), `::before` (gradient overlay có sẵn, nhận `opacity` điều chỉnh qua CSS var `--cover-overlay`), `#categoryHeaderProductImg`/`#categoryHeaderLogo` (layer mới, `object-fit:contain`, không bao giờ méo/tràn khung — cùng quy ước `.prod-img-wrap`/`.bg-remover-img-fit` đã có). Đã xác nhận `.category-header` còn dùng chung ở `blog.html`/`blog-post.html`/`videos.html` — cả 3 trang này KHÔNG set ảnh nền qua JS, chỉ dùng `background:#111` mặc định, nên việc tách `background` sang layer con mới KHÔNG ảnh hưởng gì (verify bằng grep + đọc trực tiếp 3 file trước khi sửa CSS).
+
+### AI Generated Background — mở rộng Image AI, không Plugin mới
+
+`js/ai/modules/image-generator.js` thêm 2 `imageType` (`Category Background Image`/`Product Background Image`, cố tình mô tả "negative space reserved for product overlay, no visible product in frame" vì Founder tự chồng ảnh sản phẩm thật lên SAU) + 1 field `style` tùy chọn (Studio/Lifestyle/Dark/Light/Luxury/Minimal, nối thêm vào `direction` gốc trong `buildPrompt()`, không thay thế). Ảnh sinh ra lưu Storage như mọi Draft Image AI khác — vì `MediaLibrary.list()` quét TOÀN BỘ bucket (không giới hạn thư mục `media/`), ảnh AI tự động xuất hiện trong "Chọn ảnh" ở MỌI nơi dùng `MediaLibraryPicker`, KỂ CẢ 2 slot Category Cover mới — 0 code nối dây riêng cần thiết giữa Image AI Studio và Category Cover.
+
+**0 sửa đổi**: `js/admin-bg-remover.js`, Cloud Function `openaiProxy` (`remove_background`/`generate_image` không đổi), `MediaLibraryPicker`, 7 `imageType` gốc của Image AI, Plugin Framework/Queue/Draft System.
+
+Kiểm thử: Node `vm` mã nguồn thật, 47 assertions (Live Preview cập nhật tức thời khi đổi Ảnh nền/Zoom/Opacity/Blur/Overlay/Position, tích hợp Xóa phông vào luồng chọn Ảnh sản phẩm đại diện, `save()` ghi đúng 7 field mới dạng Number không phải String, `resetCover()` trả về đúng mặc định, Internet Background hiện đúng "Provider Not Configured", public rendering ẩn Ảnh sản phẩm/Logo khi Danh mục chưa dùng Cover (0 regression), 2 `imageType` mới + `style` field không phá 7 `imageType` gốc, `buildPrompt()` nối đúng style/không bịa style khi chọn "Mặc định"). Preview thật (static server nội bộ) xác nhận cả `category.html` (public) lẫn `admin/categories.html` tải đúng, không lỗi JS mới ngoài `permission_denied` tiêu chuẩn.
+
 ## Founder Agent V4.1 (Sprint 13) — Workflow (Conversation/Self-Check/Undo/Resume/History)
 
 Mở rộng THÊM vào V4 (Complete Product Creation) trong CÙNG Requirement — Founder yêu cầu Agent trở thành 1 "Workflow Executor" thật: hỏi-đáp khi thiếu thông tin (không lập lại từ đầu), tự xác nhận Draft THẬT SỰ đã tạo trước khi báo Hoàn tất, Dashboard tổng hợp cuối Plan, Hoàn tác, Lưu/Tiếp tục Plan dang dở, Lịch sử Workflow.
