@@ -2,6 +2,19 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 14 — Phase 1: Core API Foundation
+
+Sprint 14 mở ra 1 track riêng — thiết kế API đầy đủ cho toàn bộ CMS + chuẩn bị cho OpenClaw (agent điều khiển bên ngoài, tương lai). Track này có tài liệu kiến trúc riêng thay vì Requirement đơn lẻ: `ARCHITECTURE_AUDIT_SPRINT1-13.md` (audit toàn bộ Sprint 1-13) → `SPRINT14_API_ARCHITECTURE.md` (V1) → `SPRINT14_API_ARCHITECTURE_V2.md` (Self-Review) → `SPRINT14_API_ARCHITECTURE_FINAL.md` (bản duyệt cuối, Founder PASS). Phase 1 = hạ tầng API thuần (Founder điều chỉnh phạm vi so với tài liệu FINAL mục 20 — dời "Core CMS APIs" xuống Phase 2), **KHÔNG có bất kỳ API nghiệp vụ nào** (Products/Categories/Blog/.../Founder Agent/Media AI/OpenClaw đều CHƯA đụng tới).
+
+- **Cloud Function mới hoàn toàn `apiGateway`** (`functions/index.js`, thêm vào CUỐI file, 0 dòng nào của `openaiProxy`/4 Cloud Function Facebook bị sửa) — điểm vào DUY NHẤT cho mọi API `/v1/...` từ Sprint 14 trở đi.
+- **10 module hạ tầng dùng chung mới** (`functions/shared/*.js`, `functions/routes/health.js`): `response.js` (Standard Response/Error `{success,data,meta}`/`{success:false,error:{code,message},meta}`), `auth.js` (xác thực Bearer token + đọc `roles/{uid}`, song song KHÔNG thay thế `validateRequest()` cũ trong `openaiProxy`), `permissions.js` (bảng quyền `admin`/`editor`/`agent` — **role `agent` cố tình để RỖNG `[]`**, chờ Decision Record riêng trước khi kích hoạt), `validation.js` (schema validator + allowlist model/size/origin ảnh, sẵn sàng dùng nhưng CHƯA gắn vào action nghiệp vụ nào), `rateLimit.js` (giới hạn tần suất qua RTDB, node MỚI `rateLimits/`), `auditLog.js` (ghi Ý ĐỊNH trước khi thực thi + Kết quả sau, node MỚI `apiAuditLog/`), `webhook.js` (gửi callback ký HMAC-SHA256, cần Secret MỚI `WEBHOOK_SIGNING_SECRET` — đã tạo trên Secret Manager), `asyncJob.js` (khung Job bất đồng bộ, node MỚI `apiAsyncJobs/`), `retry.js` (retry có backoff, hàm thuần không phụ thuộc Firebase), `routes/health.js` (Health API 2 tầng: `GET /v1/health` công khai cho uptime monitor, `GET /v1/system/health` Admin-only chi tiết RTDB/Storage/OpenAI Secret).
+- **Cố ý dùng node RTDB MỚI, tách biệt hoàn toàn khỏi `aiJobs`/`aiLogs`/`aiDrafts`** (hàng đợi AI Plugin Framework đã kiểm chứng 13 Sprint) — Phase 1 không chạm, không regression-test lại hệ thống AI đang chạy thật hàng ngày.
+- **Chỉ 3 route thật được mount**: `GET /v1/health` (public), `GET /v1/system/health` (Admin), `POST /v1/system/self-test` (Admin — tự kiểm tra Async Job/Retry/Webhook Framework hoạt động đúng, không có nghiệp vụ nào khác).
+- **Kiểm thử**: 15/15 unit test Node thuần cho 4 module logic (Response/Permissions/Validation/Retry — không cần Firebase Emulator, dự án chưa cấu hình emulator). Regression: xác nhận `openaiProxy` trả về đúng response gốc, không đổi. Production Verification qua `curl` thật sau deploy: `/v1/health` → 200 công khai; `/v1/system/health`, `/v1/system/self-test` → 401 khi thiếu token; path ngoài `/v1/` → 404; `openaiProxy` cũ → 401 y hệt trước khi có Phase 1 (0 regression).
+- **Git**: commit `7ed137a` (`feature/cms-ai-sprint2`, đã push) — CHỈ 11 file Phase 1, tách riêng khỏi các thay đổi khác đang chờ commit trong cùng working tree (Product Banner AI, CMS category grouping, search box...).
+- **Deploy Production**: `firebase deploy --only functions:apiGateway --project pshop-music` thành công — `https://us-central1-pshop-music.cloudfunctions.net/apiGateway`.
+- **Founder PASS Sprint 14 Phase 1** — cho phép bắt đầu Phase 2 (Core CMS APIs).
+
 ## Sprint 13 — Requirement: Founder Agent V3 — CMS Operator
 
 Founder Agent V1/V2 chỉ tạo Nháp AI. V3 thêm khả năng "vận hành CMS thay Founder": mở đúng trang/đúng bản ghi, điền sẵn 1 field trên CHÍNH form thật — Founder tự bấm Lưu. **"The Agent never edits database directly. The Agent operates the existing CMS."**
