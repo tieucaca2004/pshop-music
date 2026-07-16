@@ -620,3 +620,130 @@ exports.facebookRefreshToken = onRequest({ secrets: [FACEBOOK_APP_SECRET], cors:
     res.status(502).json({ success: false, error: err.message });
   }
 });
+
+
+/*
+ * ════════════════════════════════════════════════════════════════════════
+ * apiGateway — Sprint 14 Phase 1 (SPRINT14_API_ARCHITECTURE_FINAL.md, đã
+ * Founder PASS với phạm vi ĐIỀU CHỈNH: CHỈ xây API Gateway/Auth/Permission/
+ * Validation/Rate Limit/Logging/Audit Log/Response chuẩn/Error chuẩn/
+ * Versioning/Health/Retry Framework/Async Job Framework/Webhook Framework —
+ * KHÔNG xây bất kỳ API nghiệp vụ nào (Products/Categories/Blog/.../Founder
+ * Agent/Media AI/OpenClaw) ở Cloud Function MỚI này.
+ *
+ * openaiProxy + 4 Facebook Function ở TRÊN giữ NGUYÊN VẸN, KHÔNG đổi — đây
+ * là Cloud Function HOÀN TOÀN MỚI, tách biệt, 0 rủi ro regression cho hệ
+ * thống đang chạy thật hàng ngày.
+ *
+ * Route thật DUY NHẤT ở Phase 1: GET /v1/health (public) — chứng minh toàn
+ * bộ pipeline Gateway hoạt động đúng. GET/POST /v1/system/* (admin-only) là
+ * route NỘI BỘ để tự kiểm tra hạ tầng (Health chi tiết + self-test Async
+ * Job/Retry/Webhook Framework) — KHÔNG phải API nghiệp vụ, không lộ ra
+ * ngoài cho Founder/OpenClaw dùng thường ngày.
+ * ════════════════════════════════════════════════════════════════════════
+ */
+const { authenticate, isPublicPath } = require('./shared/auth');
+const { hasPermission } = require('./shared/permissions');
+const { validateSchema } = require('./shared/validation');
+const { checkAndIncrement } = require('./shared/rateLimit');
+const auditLog = require('./shared/auditLog');
+const { sendWebhook, WEBHOOK_SIGNING_SECRET } = require('./shared/webhook');
+const { createJob, getJob, updateJobStatus } = require('./shared/asyncJob');
+const { withRetry } = require('./shared/retry');
+const { sendSuccess, sendError, makeRequestId } = require('./shared/response');
+const healthRoutes = require('./routes/health');
+
+exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRET], cors: true }, async (req, res) => {
+  const requestId = makeRequestId();
+  res.locals = { requestId };
+  const path = (req.path || '/').replace(/\/+$/, '') || '/';
+
+  // Versioning (mục 15) — CHỈ chấp nhận /v1/... ở Phase 1.
+  if (!path.startsWith('/v1/')) {
+    return sendError(res, 'NOT_FOUND', 'Không tìm thấy route (thiếu tiền tố /v1/).');
+  }
+
+  try {
+    // ── GET /v1/health — PUBLIC, không cần token ──────────────────────────
+    if (path === '/v1/health' && req.method === 'GET') {
+      const rl = await checkAndIncrement('ip:' + (req.ip || 'unknown'), 'healthPublic');
+      if (!rl.allowed) return sendError(res, 'RATE_LIMITED', 'Vượt giới hạn gọi Health API.');
+      const result = await healthRoutes.publicHealth();
+      return sendSuccess(res, result, { status: result.healthy ? 200 : 503 });
+    }
+
+    // ── Mọi route còn lại trong Phase 1 đều nội bộ (system/*), cần Auth ──
+    if (req.method !== 'GET' && req.method !== 'POST') {
+      return sendError(res, 'METHOD_NOT_ALLOWED', 'Method không được hỗ trợ.');
+    }
+
+    const auth = await authenticate(req);
+    if (!auth.ok) {
+      await auditLog.logSimple({ action: 'apiGateway.auth_failed', requestId, status: 'failed', details: { path, error: auth.error } });
+      return sendError(res, auth.code, auth.error);
+    }
+
+    const rl = await checkAndIncrement('uid:' + auth.uid, 'authenticated');
+    if (!rl.allowed) return sendError(res, 'RATE_LIMITED', 'Vượt giới hạn request (' + rl.max + '/phút).');
+
+    // ── GET /v1/system/health — Admin only, chi tiết đầy đủ ───────────────
+    if (path === '/v1/system/health' && req.method === 'GET') {
+      if (!hasPermission(auth.role, '*')) {
+        await auditLog.logSimple({ uid: auth.uid, email: auth.email, action: 'system.health', requestId, status: 'permission_denied', details: { path } });
+        return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin được xem Health chi tiết.');
+      }
+      let openaiConfigured = false;
+      try { openaiConfigured = !!OPENAI_API_KEY.value(); } catch (e) { openaiConfigured = false; }
+      const result = await healthRoutes.systemHealth(openaiConfigured);
+      return sendSuccess(res, result, { status: result.healthy ? 200 : 503 });
+    }
+
+    // ── POST /v1/system/self-test — Admin only, tự kiểm tra Async Job +
+    // Retry + Webhook Framework (Phase 1 chưa có nghiệp vụ thật để test qua
+    // đường vòng, nên tự kiểm tra trực tiếp từng framework) ─────────────────
+    if (path === '/v1/system/self-test' && req.method === 'POST') {
+      if (!hasPermission(auth.role, '*')) {
+        await auditLog.logSimple({ uid: auth.uid, email: auth.email, action: 'system.self_test', requestId, status: 'permission_denied', details: {} });
+        return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin được chạy self-test hạ tầng.');
+      }
+
+      const bodyCheck = validateSchema(req.body, { webhookUrl: { required: false, type: 'string' } });
+      if (!bodyCheck.valid) return sendError(res, 'INVALID_REQUEST', bodyCheck.issues.join(' '));
+
+      const intentKey = await auditLog.logIntent({ uid: auth.uid, email: auth.email, action: 'system.self_test', requestId, details: {} });
+
+      const report = { asyncJob: null, retry: null, webhook: null };
+
+      // 1) Async Job Framework: tạo job giả lập → cập nhật completed → đọc lại.
+      const job = await createJob({ uid: auth.uid, type: 'self-test', payload: { requestId } });
+      const finished = await updateJobStatus(job.id, 'completed', { note: 'self-test ok' });
+      report.asyncJob = { created: !!job.id, finalStatus: finished.status, jobId: job.id };
+
+      // 2) Retry Framework: cố tình fail 2 lần đầu, thành công lần 3 — xác
+      // nhận withRetry() thật sự thử lại đúng số lần trước khi trả kết quả.
+      let attemptCount = 0;
+      const retryResult = await withRetry(async () => {
+        attemptCount++;
+        if (attemptCount < 3) throw new Error('giả lập lỗi lần ' + attemptCount);
+        return 'ok-after-' + attemptCount + '-attempts';
+      }, { attempts: 3, backoffMs: () => 50 });
+      report.retry = { attemptsUsed: attemptCount, result: retryResult };
+
+      // 3) Webhook Framework: CHỈ gửi nếu Founder cung cấp webhookUrl thật
+      // trong body — không tự bịa URL gọi ra ngoài.
+      if (req.body && req.body.webhookUrl) {
+        const webhookResult = await sendWebhook(req.body.webhookUrl, { test: true, requestId, from: 'apiGateway.self-test' });
+        report.webhook = webhookResult;
+      } else {
+        report.webhook = { skipped: true, reason: 'Không cung cấp webhookUrl để test.' };
+      }
+
+      await auditLog.logResult(intentKey, { status: 'completed', resultDetails: report });
+      return sendSuccess(res, report);
+    }
+
+    return sendError(res, 'NOT_FOUND', 'Không tìm thấy route.');
+  } catch (err) {
+    return sendError(res, 'UPSTREAM_ERROR', 'Lỗi hệ thống: ' + err.message);
+  }
+});
