@@ -85,7 +85,7 @@ async function handle(req, res, helpers) {
       const step = plan.steps[i];
       if (!step) return sendError(res, 'NOT_FOUND', 'Không tìm thấy Step.');
       if (step.status === 'running') return sendError(res, 'INVALID_REQUEST', 'Step đang chạy.');
-      const updatedStep = await executeStep(step, plan.steps, { authHeader });
+      const updatedStep = await executeStep(step, plan.steps, { authHeader, uid: auth.uid, email: auth.email });
       plan.steps[i] = updatedStep;
       const allDone = plan.steps.every(s => ['completed', 'skipped', 'failed'].indexOf(s.status) !== -1);
       const updated = await listResource.update(PLANS_NODE, planId, { steps: plan.steps, status: allDone ? 'finished' : 'active' });

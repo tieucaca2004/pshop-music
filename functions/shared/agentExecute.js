@@ -12,17 +12,17 @@
  *   sang action `remove_background`/`edit_image` có sẵn trong `openaiProxy`
  *   (forward Authorization) thay vì `AdminBgRemover` (chỉ tồn tại phía
  *   client) — CÙNG Cloud Function xử lý ảnh thật, không viết lại.
- * - Nhóm "Generic Plugin" (8 module AI content-generation + marker "seo"):
- *   pipeline PermissionService → PluginManager → AIJobQueue → DraftDB CHỈ
- *   tồn tại phía CLIENT — CHƯA có API `/v1/ai/{module}/generate` (Phase
- *   sau, chưa được Founder giao). Trả `status:'failed'` + `errorText` rõ
- *   ràng thay vì giả vờ chạy được — CÙNG triết lý stub 503 của
- *   `/v1/ai/one-click-marketing` ở Phase 3 (routes/founder.js).
+ * - Nhóm "Generic Plugin" (5 tool content-generation, "seo" xử lý riêng ở
+ *   nhánh của nó): Phase 4 ban đầu trả `status:'failed'` (chưa có API Media
+ *   AI Generate). Phase 5 nối dây thật — gọi `generateForModule()` (CÙNG
+ *   hàm 9 route `/v1/ai/{module}/generate` dùng, routes/aiGenerate.js), 1
+ *   nguồn logic sinh nội dung duy nhất, không viết lại.
  * - Nhóm "Ghi Firebase trực tiếp"/"Đọc thuần": port ĐẦY ĐỦ, hoạt động thật
  *   100% (không phụ thuộc bất kỳ Phase nào sau).
  */
 const listResource = require('./listResource');
 const { callOpenAI, parseAIJson } = require('./agentPlanner');
+const { generateForModule } = require('./aiGenerate');
 const {
   PRODUCT_TOKEN, RESEARCH_TOKENS, CATEGORY_CONFIDENCE_AUTO,
   TOOL_GROUPS, TOOL_MAP, NAV_PAGES, AGENT_FIELD_LABELS, UNDOABLE_DRAFT_TOOLS,
@@ -326,10 +326,20 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
       }
 
     } else if (group === GROUP_GENERIC_PLUGIN) {
-      // Media AI Generate APIs (/v1/ai/{module}/generate) chưa được xây —
-      // Phase sau, chưa được Founder giao. KHÔNG giả vờ chạy được.
-      step.status = 'failed';
-      step.errorText = 'Tool "' + (TOOL_MAP[step.tool] ? TOOL_MAP[step.tool].label : step.tool) + '" cần API Media AI Generate (/v1/ai/{module}/generate) — chưa được xây ở Phase này.';
+      // Phase 5 — cùng hàm generateForModule() 4 route /v1/ai/{module}/
+      // generate dùng (routes/aiGenerate.js), không viết lại logic sinh nội
+      // dung riêng cho Founder Agent — 1 nguồn duy nhất.
+      const draft = await generateForModule(step.tool, resolvedParams, ctx.uid, ctx.email);
+      step.draftId = draft.id;
+      step.status = 'completed';
+      // Port nguyên văn hành vi tự nối Ảnh nền sản phẩm AI vừa vẽ vào ô "ẢNH
+      // NỀN SẢN PHẨM" (js/admin-agent.js:1093-1098) — CHỈ khi Founder chọn
+      // đúng loại ảnh "Product Background Image" + đã chọn đúng 1 Sản phẩm
+      // thật, không tự suy đoán/ghi nhầm sản phẩm khác.
+      if (step.tool === 'image-generator' && resolvedParams.imageType === 'Product Background Image' && resolvedParams.productId && draft.content && draft.content.imageUrl) {
+        await listResource.update('products', resolvedParams.productId, { bgImage: draft.content.imageUrl });
+        step.autoAppliedBgImage = { productId: resolvedParams.productId, imageUrl: draft.content.imageUrl };
+      }
 
     } else {
       step.status = 'failed';

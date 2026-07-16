@@ -661,10 +661,26 @@ exports.facebookRefreshToken = onRequest({ secrets: [FACEBOOK_APP_SECRET], cors:
  * "Điều hướng" (open-product/update-product-field/open-draft/navigate) được
  * THIẾT KẾ LẠI trả `deepLinkUrl` thay vì tự điều hướng trình duyệt. Nhóm
  * "Generic Plugin" (8 module AI + marker "seo") trả `status:'failed'` rõ
- * ràng — phụ thuộc API Media AI Generate (Phase sau, chưa xây), cùng triết
- * lý stub `/v1/ai/one-click-marketing` ở Phase 3. Routing ở routes/agent.js
- * — Planner/Executor port ở shared/agentPlanner.js, shared/agentExecute.js,
- * shared/agentTools.js.
+ * ràng ở Phase 4 — Phase 5 (khối dưới đây) nối dây thật. Routing ở
+ * routes/agent.js — Planner/Executor port ở shared/agentPlanner.js,
+ * shared/agentExecute.js, shared/agentTools.js.
+ *
+ * Phase 5 (khối này thêm vào) = Media AI APIs theo mục 20 (bản gốc "Phase
+ * 4", Founder xác nhận gọi là "Phase 5"): port 9 module AI content-
+ * generation (`js/ai/modules/*.js`) sang `shared/aiModules.js` (prompt/parse/
+ * mapToDraftContent NGUYÊN VĂN) + `shared/aiGenerate.js` (gọi OpenAI TRỰC
+ * TIẾP bằng lại `OPENAI_API_KEY` Secret đã có — không vòng qua `openaiProxy`
+ * — rồi ghi `aiDrafts`, CÙNG shape `AIJobQueue.processItem()` đã làm phía
+ * client). 9 route thật `POST /v1/ai/{blog|product-description|seo|
+ * facebook-post|banner|image|image-prompt|slider|faq}/generate`
+ * (routes/aiGenerate.js) + 3 route khung Video/Voice/Subtitle (trả 503 rõ
+ * ràng, "chưa impl thật, chỉ chuẩn bị shape" đúng mục 20). Đồng bộ trong 1
+ * request (CHƯA có worker nền thật — xem ghi chú trong aiGenerate.js).
+ * Nối dây 2 chỗ đã stub ở Phase 3/4: `/v1/ai/one-click-marketing`
+ * (routes/founder.js, gọi lại 4 route generate — Blog/Facebook/Banner/
+ * ImagePrompt) và nhóm "Generic Plugin" của Founder Agent
+ * (shared/agentExecute.js, gọi `generateForModule()` — 1 nguồn logic sinh
+ * nội dung duy nhất cho cả 3 lối vào).
  *
  * openaiProxy + 4 Facebook Function ở TRÊN giữ NGUYÊN VẸN, KHÔNG đổi.
  * ════════════════════════════════════════════════════════════════════════
@@ -689,8 +705,10 @@ const facebookRoutes = require('./routes/facebook');
 const socialMediaCenterRoutes = require('./routes/socialMediaCenter');
 const founderRoutes = require('./routes/founder');
 const agentRoutes = require('./routes/agent');
+const aiGenerateRoutes = require('./routes/aiGenerate');
+const { OPENAI_API_KEY: AI_GENERATE_OPENAI_KEY } = require('./shared/aiGenerate');
 
-exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRET], cors: true }, async (req, res) => {
+exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, AI_GENERATE_OPENAI_KEY, WEBHOOK_SIGNING_SECRET], cors: true, timeoutSeconds: 120 }, async (req, res) => {
   const requestId = makeRequestId();
   res.locals = { requestId };
   const path = (req.path || '/').replace(/\/+$/, '') || '/';
@@ -800,7 +818,7 @@ exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRE
     const routers = [
       cmsListsRoutes, cmsSingletonRoutes, mediaRoutes, usersRoutes,
       draftsRoutes, jobsLogsRoutes, facebookRoutes, socialMediaCenterRoutes, founderRoutes,
-      agentRoutes
+      agentRoutes, aiGenerateRoutes
     ];
     for (const router of routers) {
       const result = await router.handle(req, res, helpers);
