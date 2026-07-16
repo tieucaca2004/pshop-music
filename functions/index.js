@@ -706,9 +706,7 @@ const socialMediaCenterRoutes = require('./routes/socialMediaCenter');
 const founderRoutes = require('./routes/founder');
 const agentRoutes = require('./routes/agent');
 const aiGenerateRoutes = require('./routes/aiGenerate');
-const { OPENAI_API_KEY: AI_GENERATE_OPENAI_KEY } = require('./shared/aiGenerate');
-
-exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, AI_GENERATE_OPENAI_KEY, WEBHOOK_SIGNING_SECRET], cors: true, timeoutSeconds: 120 }, async (req, res) => {
+exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRET], cors: true, timeoutSeconds: 120 }, async (req, res) => {
   const requestId = makeRequestId();
   res.locals = { requestId };
   const path = (req.path || '/').replace(/\/+$/, '') || '/';

@@ -3,12 +3,18 @@
  * (`shared/aiModules.js`): loadContext → buildPrompt → gọi OpenAI → parse →
  * mapToDraftContent → `DraftDB.add()` — CÙNG 4 bước `AIJobQueue.processItem()`
  * đã làm phía client (job-queue.js:88-145), khác ở chỗ gọi OpenAI TRỰC TIẾP
- * (dùng lại ĐÚNG `OPENAI_API_KEY` Secret đã `defineSecret` trong
- * functions/index.js — `defineSecret` cùng tên trỏ về CÙNG 1 secret, không
- * tạo secret mới, cùng cách `shared/webhook.js` đã làm cho
- * `WEBHOOK_SIGNING_SECRET` ở Phase 1) thay vì gọi vòng qua Cloud Function
+ * (dùng lại ĐÚNG `OPENAI_API_KEY` Secret) thay vì gọi vòng qua Cloud Function
  * `openaiProxy` — đỡ 1 lượt HTTP nội bộ không cần thiết. `openaiProxy` GIỮ
  * NGUYÊN, không đổi — client cũ vẫn gọi được như trước.
+ *
+ * `defineSecret('OPENAI_API_KEY')` ở đây trỏ về CÙNG 1 secret Cloud Run thật
+ * đã có trong `functions/index.js` (đã nằm sẵn trong `secrets:[...]` của
+ * `apiGateway`) — KHÔNG được liệt kê THÊM 1 lần nữa vào mảng `secrets` của
+ * `apiGateway` (khác `WEBHOOK_SIGNING_SECRET` ở Phase 1, vốn là secret hoàn
+ * toàn MỚI, chưa có ở đâu khác) — Cloud Run từ chối deploy nếu cùng 1 tên
+ * secret bị liệt kê 2 lần ("Duplicate secret environment variable") — đã
+ * gặp lỗi này thật lúc deploy Phase 5, sửa bằng cách bỏ khỏi mảng, KHÔNG bỏ
+ * dòng `defineSecret()` này (vẫn cần để gọi `.value()` trong file này).
  *
  * Đồng bộ (synchronous) trong 1 request — CHƯA có worker nền thật (Cloud
  * Task/Pub-Sub) để làm đúng tinh thần "KHÔNG chờ đồng bộ" của FINAL mục 9 —
