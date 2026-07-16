@@ -2,6 +2,22 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 14 — Phase 4: Agent APIs
+
+Phase 4 (Founder xác nhận số Phase — tài liệu FINAL mục 20 bản gốc gọi đây là "Phase 3 — Agent APIs"): Founder Agent Plan/Execute (5 nhóm hành vi), Undo/Resume/Discard, Conversation Session.
+
+- **Port `buildPlan()`/`executeStep()`/`resolveInputParams()`/`undoLastStep()`** (js/admin-agent.js:544-1408) — CÙNG system prompt (19 tool, 6 quy tắc đặc biệt, 9 few-shot), CÙNG logic mỗi tool, sang `shared/agentPlanner.js`/`shared/agentExecute.js`/`shared/agentTools.js`.
+- **2 node RTDB MỚI HOÀN TOÀN**: `agentPlans/{id}` (Plan+Step sống bền — trước đây chỉ là biến JS mất khi tải lại trang) và `agentConversations/{id}` (chat + `pendingClarification` — cơ chế "hỏi lại khi thiếu thông tin" chuyển hẳn từ biến JS phía client vào Backend, TTL mềm 30 phút không hoạt động — kiểm tra tại thời điểm gọi API, CHƯA có Cloud Scheduler dọn dẹp bản ghi hết hạn thật).
+- **Nhóm "Điều hướng" THIẾT KẾ LẠI** (tài liệu FINAL mục 18.1 yêu cầu rõ) — `open-product`/`update-product-field`/`open-draft`/`navigate` trả `deepLinkUrl` thay vì tự `window.location.href` (vô nghĩa với OpenClaw không có trình duyệt) — Founder/client tự mở URL.
+- **Nhóm "Xử lý ảnh đơn lẻ"** (`smart-background`/`product-banner`) — gọi PROXY sang action `remove_background`/`edit_image` có sẵn trong `openaiProxy` (forward Authorization), KHÔNG viết lại logic OpenAI Images Edit.
+- **Nhóm "Generic Plugin"** (8 module AI + marker `seo`) — trả `status:'failed'` + lý do rõ ràng ("cần API Media AI Generate, chưa xây") thay vì giả vờ chạy được — pipeline Plugin/Queue/Draft đầy đủ (PermissionService → PluginManager → AIJobQueue → DraftDB) vẫn CHỈ tồn tại phía client, cần `/v1/ai/{module}/generate` (Phase sau) trước khi port được. Cùng triết lý stub `/v1/ai/one-click-marketing` ở Phase 3.
+- **Nhóm "Ghi Firebase trực tiếp"/"Đọc thuần"** (`create-product`/`detect-category`/`check-duplicate`/`research-product`/`related-products`/`quality-score`/`missing-info-report`) — port ĐẦY ĐỦ, hoạt động thật 100%, không phụ thuộc Phase nào sau.
+- **`undoLastStep()` server-side bỏ qua `confirm()`** (chỉ có ở trình duyệt) khi hoàn tác `create-product` (xoá sản phẩm thật) — caller (UI Founder/OpenClaw) phải tự xác nhận với người dùng TRƯỚC khi gọi endpoint undo cho bước này.
+- **`routes/agent.js`**: `GET /v1/agent/tools`, `POST /v1/agent/plan`, `POST /v1/agent/plan/{id}/steps/{i}/execute`, `POST /v1/agent/plan/{id}/undo`, `POST /v1/agent/plan/{id}/resume`, `POST /v1/agent/plan/{id}/discard`, `POST /v1/agent/conversations`, `POST /v1/agent/conversations/{id}/messages` — tất cả Admin/Editor (role `agent` vẫn RỖNG, chưa kích hoạt).
+- **Kiểm thử**: 34/34 test Node thuần mới (mock `listResource`/`global.fetch`) — resolveInputParams token substitution, cả 5 nhóm hành vi, undo cho 4 loại tool có ghi dữ liệu thật, dispatch/permission routes/agent.js, Conversation Session merge-and-retry + hết hạn TTL. Regression: 15/15 (Phase 1) + 22/22 (Phase 2) + 25/25 (Phase 3) chạy lại, không đổi.
+- **Git + Deploy**: commit tách riêng chỉ file Phase 4, push `feature/cms-ai-sprint2`, deploy `firebase deploy --only functions:apiGateway`. Production Verification qua `curl`.
+- **Founder PASS Sprint 14 Phase 4** — chờ duyệt Phase 5 (Media AI APIs).
+
 ## Sprint 14 — Phase 3: Founder APIs
 
 Phase 3 (Founder xác nhận số Phase — tài liệu FINAL mục 20 bản gốc gọi đây là "Phase 2 — Founder APIs"): Draft/Publish Pipeline, Queue/Jobs, Facebook Integration, Social Media Center, Logs/History/Workflows, Founder Home, One Click Marketing (stub).

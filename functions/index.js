@@ -652,6 +652,20 @@ exports.facebookRefreshToken = onRequest({ secrets: [FACEBOOK_APP_SECRET], cors:
  * routes/socialMediaCenter.js, routes/founder.js — publishToTarget() port ở
  * shared/publishToTarget.js.
  *
+ * Phase 4 (khối này thêm vào) = Agent APIs theo mục 20 (bản gốc "Phase 3",
+ * Founder xác nhận gọi là "Phase 4"): Founder Agent Plan/Execute (5 nhóm
+ * hành vi, mục 18.1), Undo/Resume/Discard, Conversation Session (mục 18.3,
+ * pendingClarification chuyển hẳn vào Backend, TTL mềm 30 phút). 2 node RTDB
+ * MỚI: `agentPlans/`, `agentConversations/` — Plan/Step trước đây chỉ sống
+ * trong biến JS phía client, giờ có nơi lưu bền cho API stateless. Nhóm
+ * "Điều hướng" (open-product/update-product-field/open-draft/navigate) được
+ * THIẾT KẾ LẠI trả `deepLinkUrl` thay vì tự điều hướng trình duyệt. Nhóm
+ * "Generic Plugin" (8 module AI + marker "seo") trả `status:'failed'` rõ
+ * ràng — phụ thuộc API Media AI Generate (Phase sau, chưa xây), cùng triết
+ * lý stub `/v1/ai/one-click-marketing` ở Phase 3. Routing ở routes/agent.js
+ * — Planner/Executor port ở shared/agentPlanner.js, shared/agentExecute.js,
+ * shared/agentTools.js.
+ *
  * openaiProxy + 4 Facebook Function ở TRÊN giữ NGUYÊN VẸN, KHÔNG đổi.
  * ════════════════════════════════════════════════════════════════════════
  */
@@ -674,6 +688,7 @@ const jobsLogsRoutes = require('./routes/jobsLogs');
 const facebookRoutes = require('./routes/facebook');
 const socialMediaCenterRoutes = require('./routes/socialMediaCenter');
 const founderRoutes = require('./routes/founder');
+const agentRoutes = require('./routes/agent');
 
 exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRET], cors: true }, async (req, res) => {
   const requestId = makeRequestId();
@@ -784,7 +799,8 @@ exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRE
 
     const routers = [
       cmsListsRoutes, cmsSingletonRoutes, mediaRoutes, usersRoutes,
-      draftsRoutes, jobsLogsRoutes, facebookRoutes, socialMediaCenterRoutes, founderRoutes
+      draftsRoutes, jobsLogsRoutes, facebookRoutes, socialMediaCenterRoutes, founderRoutes,
+      agentRoutes
     ];
     for (const router of routers) {
       const result = await router.handle(req, res, helpers);
