@@ -2,6 +2,34 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 14 — Phase 3: Founder APIs
+
+Phase 3 (Founder xác nhận số Phase — tài liệu FINAL mục 20 bản gốc gọi đây là "Phase 2 — Founder APIs"): Draft/Publish Pipeline, Queue/Jobs, Facebook Integration, Social Media Center, Logs/History/Workflows, Founder Home, One Click Marketing (stub).
+
+- **`shared/publishToTarget.js`** — port NGUYÊN VẸN `publishToTarget()` (js/admin-ai.js:558-604, "chuyển business logic rẽ nhánh theo targetCollection vào Backend", audit Phần 5 mục 5) — cùng 5 nhánh (không target/blogPosts/products/banners/siteContent.heroSlides), cùng logic strip code-fence + validate category hợp lệ. Client-side giữ nguyên, không xoá.
+- **`routes/drafts.js`**: `GET /v1/drafts`, `GET /v1/drafts/{id}`, `POST /v1/drafts/{id}/publish` (gọi publishToTarget rồi đánh dấu `status:'published'`), `POST /v1/drafts/{id}/reject` (chỉ đổi status, không xoá) — Admin/Editor.
+- **`routes/jobsLogs.js`**: `GET /v1/jobs`/`GET /v1/logs` (phân trang cursor MỚI — chưa có tiền lệ trong code cũ, dựa trên `createdAt`/`timestamp`), `POST /v1/jobs/{id}/retry` (port `retryFailed()`), `POST /v1/jobs/{id}/cancel` (port `.cancel()`, có ghi Log), `GET /v1/history/conversations` (suy từ `aiJobs`+lookup Product/Blog — CỐ TÌNH không chép bảng nhãn `AITaskRouter.ROUTES`/`AIModuleRegistry` từ client, tránh 2 nơi giữ 1 bảng dễ lệch nhau — trả `moduleId` thô, client tự map nhãn), `GET /v1/workflows` (đọc `founderAgentWorkflows`).
+- **`routes/facebook.js`**: `GET /v1/facebook/connection`, `GET /v1/facebook/health` (MỚI — tự phát hiện Mock Mode qua `facebookAppConfig/appId` + `facebookConnection.isMock`), `POST /v1/facebook/oauth/start` (MỚI — sinh nonce + URL, port từ `admin-facebook-connect.js`) đọc/ghi RTDB trực tiếp; `POST /v1/facebook/pages/select`, `POST /v1/facebook/publish`, `POST /v1/facebook/token/refresh` là PROXY (forward Authorization header) sang 3 Cloud Function Facebook đã có — KHÔNG viết lại Graph API logic. `oauth/callback` KHÔNG có route mới — giữ nguyên dạng redirect target thật của `facebookOAuthCallback`.
+- **`routes/socialMediaCenter.js`**: `GET /v1/social-media-center/drafts` (lọc 4 module liên quan), `POST .../publish` (port `publishVersionToFacebookAfterPermission()`, js/admin-ai.js:378-437 — chỉ đổi version trong `content.versions[]`, không đổi `draft.status`), `POST .../schedule` (port `schedulePublish()` — **CHỈ lưu ý định lịch, CHƯA có Cloud Scheduler/Cloud Task thật kích hoạt tự động** — tạo hạ tầng GCP mới là quyết định vận hành riêng, không tự ý provision, xem ROADMAP).
+- **`routes/founder.js`**: `GET /v1/founder/home` (tổng hợp Draft đang chờ + Log gần nhất — không có đặc tả riêng trong tài liệu, tự tổng hợp từ API đã có thay vì bịa khái niệm mới), `POST /v1/ai/one-click-marketing` trả **503 SERVICE_UNAVAILABLE rõ ràng** (phụ thuộc `/v1/ai/{module}/generate` — Phase sau, chưa xây — không giả vờ hoạt động).
+- **Phát hiện + sửa 1 lỗi thật lúc viết Local Test**: `retryFailed()` bản đầu trộn lẫn `admin.database().ref().update()` trực tiếp với `listResource` (2 đường ghi khác nhau) — sửa lại dùng thống nhất `listResource.update()`.
+- **Kiểm thử**: 25/25 test Node thuần mới (mock `firebase-admin`/`listResource`/`global.fetch`) cho toàn bộ nhánh `publishToTarget()`, dispatch/permission 5 router mới, retry/cancel/pagination. Regression: 15/15 (Phase 1) + 22/22 (Phase 2) chạy lại, không đổi. Production Verification qua `curl` thật sau deploy.
+- **Git + Deploy**: commit tách riêng chỉ file Phase 3, push `feature/cms-ai-sprint2`, deploy `firebase deploy --only functions:apiGateway`.
+- **Founder PASS Sprint 14 Phase 3** — chờ duyệt Phase 4 (Media AI APIs).
+
+## Sprint 14 — Phase 2: Core CMS APIs
+
+Phase 2 (Founder xác nhận số Phase — tài liệu FINAL mục 20 bản gốc gọi đây là "Phase 1 — Core CMS APIs"): Products, Categories, Brands (mới), Tags (mới), Blog, Banner, Slider, Video, Menu, Footer, SEO, Media/Storage, Settings, Users/Roles.
+
+- **`shared/listResource.js`** (CRUD RTDB generic dạng danh sách, song song `makeListDB()` phía client) + **`shared/objectResource.js`** (đọc/ghi RTDB dạng object cấu hình, PATCH = merge nông).
+- **`routes/cmsLists.js`**: Products/Categories/Brands/Tags/Blog/Banners/Videos — GET public lọc `pubStatus==='published'` (Products, mặc định published nếu thiếu field — tương thích sản phẩm cũ)/`status==='published'` (Blog)/`active!==false` (còn lại); ẩn hẳn (404) bản ghi chưa published với người chưa đăng nhập, không lộ tồn tại. POST/PATCH = Admin+Editor, DELETE = Admin only, đúng bảng Permission mục 17. Brands/Tags là node RTDB MỚI HOÀN TOÀN (tài liệu FINAL mục 17.4/17.5 yêu cầu rõ) — field `brand`/`tags` tự do trên Product/Blog GIỮ NGUYÊN, chưa đồng bộ 2 phía (ngoài phạm vi — "API only").
+- **`routes/cmsSingletons.js`**: Sliders (`PUT` ghi đè cả mảng, đúng Save-All hiện tại), Menu/Footer/SEO (PATCH merge, Admin only), Settings (PATCH chặn ghi đè `heroSlides`/`menu`/`footer` — phải dùng đúng endpoint riêng).
+- **`routes/media.js`**: upload nhận `{dataUrl hoặc base64}` JSON (Cloud Function không có multipart parser sẵn — khác client upload thẳng binary), list qua `bucket.getFiles()`, delete Admin-only.
+- **`routes/users.js`**: List/Create/Delete dùng thẳng Admin SDK (`createUser`/`deleteUser`) — Create KHÔNG dùng cơ chế "Secondary App instance" của client (chỉ cần thiết trong trình duyệt để không tự đăng xuất Admin, không áp dụng ở Backend); Delete **nâng cấp thật**: xoá cả `roles/{uid}` LẪN tài khoản Firebase Auth (Client SDK cũ chỉ xoá được role).
+- **Kiểm thử**: 22/22 test Node thuần mới (mock `listResource`/`objectResource`) — permission/validation/visibility-filter/tags-not-patchable/settings-forbidden-keys. Regression: 15/15 Phase 1 chạy lại, không đổi.
+- **Git + Deploy**: commit `30bb6f4`, push, deploy `apiGateway`. Production Verification xác nhận GET public hoạt động, write/delete/admin-only đều chặn đúng khi thiếu quyền.
+- **Founder PASS Sprint 14 Phase 2** — cho phép bắt đầu Phase 3 (Founder APIs).
+
 ## Sprint 14 — Phase 1: Core API Foundation
 
 Sprint 14 mở ra 1 track riêng — thiết kế API đầy đủ cho toàn bộ CMS + chuẩn bị cho OpenClaw (agent điều khiển bên ngoài, tương lai). Track này có tài liệu kiến trúc riêng thay vì Requirement đơn lẻ: `ARCHITECTURE_AUDIT_SPRINT1-13.md` (audit toàn bộ Sprint 1-13) → `SPRINT14_API_ARCHITECTURE.md` (V1) → `SPRINT14_API_ARCHITECTURE_V2.md` (Self-Review) → `SPRINT14_API_ARCHITECTURE_FINAL.md` (bản duyệt cuối, Founder PASS). Phase 1 = hạ tầng API thuần (Founder điều chỉnh phạm vi so với tài liệu FINAL mục 20 — dời "Core CMS APIs" xuống Phase 2), **KHÔNG có bất kỳ API nghiệp vụ nào** (Products/Categories/Blog/.../Founder Agent/Media AI/OpenClaw đều CHƯA đụng tới).

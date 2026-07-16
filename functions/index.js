@@ -639,6 +639,19 @@ exports.facebookRefreshToken = onRequest({ secrets: [FACEBOOK_APP_SECRET], cors:
  * KHÔNG BẮT BUỘC cho GET công khai → dispatch) rồi giao cho từng router tự
  * quyết định quyền theo đúng bảng Permission mục 17.
  *
+ * Phase 3 (khối này thêm vào) = Founder APIs theo mục 20 (bản gốc "Phase 2",
+ * Founder xác nhận gọi là "Phase 3"): Draft/Publish Pipeline (17.14, kèm
+ * chuyển publishToTarget() vào Backend), Queue/Jobs (17.15), Facebook
+ * Integration (17.21, wrap 3 Cloud Function Facebook có sẵn qua proxy, giữ
+ * nguyên oauth/callback dạng redirect), Social Media Center (17.20, publish/
+ * schedule — schedule CHỈ lưu ý định, CHƯA có Cloud Scheduler thật kích hoạt
+ * — xem routes/socialMediaCenter.js), Logs/History/Workflows (17.23),
+ * Founder Home + One Click Marketing (17.19 orchestration, trả 503 rõ ràng
+ * vì phụ thuộc AI Generate APIs chưa xây — xem routes/founder.js). Routing ở
+ * routes/drafts.js, routes/jobsLogs.js, routes/facebook.js,
+ * routes/socialMediaCenter.js, routes/founder.js — publishToTarget() port ở
+ * shared/publishToTarget.js.
+ *
  * openaiProxy + 4 Facebook Function ở TRÊN giữ NGUYÊN VẸN, KHÔNG đổi.
  * ════════════════════════════════════════════════════════════════════════
  */
@@ -656,6 +669,11 @@ const cmsListsRoutes = require('./routes/cmsLists');
 const cmsSingletonRoutes = require('./routes/cmsSingletons');
 const mediaRoutes = require('./routes/media');
 const usersRoutes = require('./routes/users');
+const draftsRoutes = require('./routes/drafts');
+const jobsLogsRoutes = require('./routes/jobsLogs');
+const facebookRoutes = require('./routes/facebook');
+const socialMediaCenterRoutes = require('./routes/socialMediaCenter');
+const founderRoutes = require('./routes/founder');
 
 exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRET], cors: true }, async (req, res) => {
   const requestId = makeRequestId();
@@ -764,7 +782,10 @@ exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRE
     const rl = await checkAndIncrement(rlKey, rlName);
     if (!rl.allowed) return sendError(res, 'RATE_LIMITED', 'Vượt giới hạn request (' + rl.max + '/' + (rlName === 'public' ? 'phút/IP' : 'phút') + ').');
 
-    const routers = [cmsListsRoutes, cmsSingletonRoutes, mediaRoutes, usersRoutes];
+    const routers = [
+      cmsListsRoutes, cmsSingletonRoutes, mediaRoutes, usersRoutes,
+      draftsRoutes, jobsLogsRoutes, facebookRoutes, socialMediaCenterRoutes, founderRoutes
+    ];
     for (const router of routers) {
       const result = await router.handle(req, res, helpers);
       if (result !== null) return result; // đã xử lý (đã res.json())
