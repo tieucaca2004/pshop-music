@@ -2,9 +2,9 @@
 
 **Status: AWAITING FOUNDER ACCEPTANCE TEST — NOT YET MARKED PASS.**
 
-Date: 2026-07-17
+Date: 2026-07-17 (updated after Production Readiness pass)
 Branch: `feature/cms-ai-sprint2` (all commits pushed, none merged to `main`)
-Scope covered: Phase 1 → Phase 6, per `SPRINT14_API_ARCHITECTURE_FINAL.md`
+Scope covered: Phase 1 → Phase 6, per `SPRINT14_API_ARCHITECTURE_FINAL.md`, plus a post-Phase-6 Production Readiness pass (see `SPRINT14_PRODUCTION_AUDIT.md` and `SPRINT14_ACCEPTANCE_CHECKLIST.md` for full detail — this report gives the summary).
 
 ---
 
@@ -12,7 +12,7 @@ Scope covered: Phase 1 → Phase 6, per `SPRINT14_API_ARCHITECTURE_FINAL.md`
 
 Sprint 14 built a complete REST API layer (`apiGateway`, one Cloud Function, `/v1/...`) in front of the existing PSH Platform CMS — 68 endpoints across CMS content, Founder workflows, the Founder Agent, AI content generation, Self-Healing diagnostics, and an OpenClaw discovery surface. All 6 phases are code-complete, tested, committed, pushed, and deployed to production.
 
-**One finding requires your decision before this is truly done end-to-end**: the 4 pre-existing Facebook Cloud Functions (`facebookOAuthCallback`, `facebookSelectPage`, `facebookPublish`, `facebookRefreshToken`) that Phase 3/6's Facebook routes proxy to are **not currently deployed to production** — only `apiGateway` and `openaiProxy` exist live (confirmed via `firebase functions:list`). See §5, Critical Finding #1.
+**Update — the one open finding from the first version of this report is now resolved**: the 4 Facebook Cloud Functions (`facebookOAuthCallback`, `facebookSelectPage`, `facebookPublish`, `facebookRefreshToken`) were investigated against the approved architecture (`SPRINT14_API_ARCHITECTURE_FINAL.md` §17.21 explicitly requires them as real, separately-deployed functions — not something `apiGateway` replaces), confirmed as a deploy gap rather than an intentional design change, deployed, and verified live. See §6 (revised).
 
 Two other things worth knowing before you test:
 - Phase 6 (OpenClaw Integration) was built in the same Sprint the API was written, ahead of the architecture doc's own recommended "run stably 1 full Sprint first" migration guidance. This was your explicit, deliberate instruction — flagged for the record in §7, not a mistake.
@@ -26,7 +26,7 @@ Two other things worth knowing before you test:
 |---|---|---|
 | 1 | Core API Foundation — Gateway, Auth, Permission, Validation, Rate Limit, Audit Log, Standard Response/Error, Versioning, Health, Retry/Async Job/Webhook Framework | ✅ Done |
 | 2 | Core CMS APIs — Products, Categories, Brands (new), Tags (new), Blog, Banner, Slider, Video, Menu, Footer, SEO, Media/Storage, Settings, Users/Roles | ✅ Done |
-| 3 | Founder APIs — Draft/Publish, Queue/Jobs, Facebook Integration (proxy), Social Media Center, Logs/History/Workflows, Founder Home, One Click Marketing | ✅ Done (Facebook proxy target not deployed — see §5) |
+| 3 | Founder APIs — Draft/Publish, Queue/Jobs, Facebook Integration (proxy), Social Media Center, Logs/History/Workflows, Founder Home, One Click Marketing | ✅ Done (Facebook proxy targets deployed + verified in Production Readiness pass — see §6) |
 | 4 | Agent APIs — Founder Agent Plan/Execute (5 behavior groups), Undo/Resume/Discard, Conversation Session | ✅ Done |
 | 5 | Media AI APIs — 9 real generate endpoints, 3 Video/Voice/Subtitle stubs, wired the Phase 3/4 stubs for real | ✅ Done |
 | 6 | Self-Healing API + OpenClaw Integration — status/validate/repair, Event Bus/Webhooks, `/v1/openclaw/capabilities` | ✅ Done |
@@ -137,22 +137,19 @@ Verified with real unit tests (not just permission checks) that each repair path
 
 ---
 
-## 6. Critical Finding — Facebook Cloud Functions Not Deployed
+## 6. Facebook Cloud Functions — Investigated and Resolved
 
-**Discovered during this audit, not previously known.** Running `firebase functions:list --project pshop-music` shows only 2 functions live in production:
+**Originally flagged as a Critical Finding in the first version of this report; now resolved.** At that time, `firebase functions:list --project pshop-music` showed only 2 functions live in production (`apiGateway`, `openaiProxy`) — `facebookOAuthCallback`, `facebookSelectPage`, `facebookPublish`, and `facebookRefreshToken` existed correctly in `functions/index.js` but were not deployed, so their URLs 404'd.
 
+**Investigation**: cross-checked against `SPRINT14_API_ARCHITECTURE_FINAL.md` §17.21 (Facebook Integration), which explicitly lists these 4 as required, separately-deployed Cloud Functions — not something `apiGateway` was ever meant to absorb. In particular, the doc calls out `facebookOAuthCallback` by name as needing to stay a real redirect target ("GIỮ NGUYÊN dạng redirect target thật... KHÔNG ép thành API chuẩn REST") specifically because Facebook's OAuth redirect is a raw browser navigation with no `Authorization` header — it structurally cannot go through `apiGateway`'s bearer-token pipeline. Conclusion: this was a deploy gap, not an intentional architectural replacement.
+
+**Resolution**: deployed all 4 —
 ```
-apiGateway   v2   https   us-central1
-openaiProxy  v2   https   us-central1
+firebase deploy --only functions:facebookOAuthCallback,functions:facebookSelectPage,functions:facebookPublish,functions:facebookRefreshToken
 ```
+Confirmed via `firebase functions:list` (now 6 functions live: `apiGateway`, `openaiProxy`, and all 4 Facebook functions) and via direct `curl` to each — all four now return their own real logic (401 "missing Bearer token" for the 3 POST endpoints, a 302 redirect with an error reason for the GET callback) instead of a 404. `routes/facebook.js`'s proxy endpoints and Phase 6's `POST /v1/facebook/repair` now have a real, reachable upstream target — no broken proxy endpoints remain.
 
-`facebookOAuthCallback`, `facebookSelectPage`, `facebookPublish`, and `facebookRefreshToken` all exist correctly in `functions/index.js` (confirmed via source `grep`) but **are not deployed** — direct `curl` requests to their URLs return HTTP 404 from Google's infrastructure, not from our code.
-
-**Practical impact**: `routes/facebook.js`'s proxy endpoints (`POST /v1/facebook/pages/select`, `/publish`, `/token/refresh`) and Phase 6's `POST /v1/facebook/repair` (which calls the refresh-token proxy when a token is expiring) will all correctly pass the Auth/Permission gate, then fail with `UPSTREAM_ERROR` once they actually try to reach the upstream function — because it isn't there. This was not caught earlier because every prior Production Verification pass tested these routes *without* a valid token, which fails at the permission check before ever reaching the proxy call.
-
-**This gap predates Sprint 14** — it isn't something Phase 3 or Phase 6 broke; the underlying functions were apparently never deployed (or were removed at some point) independent of this session's work.
-
-**I have not deployed these functions.** Deploying 4 new live Cloud Functions that handle real Facebook OAuth and can publish to a real Facebook Page is a more consequential action than what you asked me to deploy this turn (`apiGateway` updates for what I built). If you'd like me to deploy them, say so and I will — it's a one-line `firebase deploy --only functions:facebookOAuthCallback,functions:facebookSelectPage,functions:facebookPublish,functions:facebookRefreshToken`.
+Full verification detail (every direct-function check + the proxy-chain check) is in `SPRINT14_PRODUCTION_AUDIT.md` §Facebook.
 
 ---
 
@@ -181,8 +178,8 @@ One real bug was caught and fixed **during this Phase's Production Verification*
 
 ## 9. All Open Items (Consolidated From Every Phase's ROADMAP Notes)
 
-1. **`database.rules.json`/`storage.rules` deployment status to Production is still unconfirmed** (flagged since Sprint 9) — matters more now that Phase 6 has opened a path toward external (OpenClaw) API usage.
-2. **Facebook Cloud Functions not deployed** — see §6, new finding this Phase.
+1. **`database.rules.json`/`storage.rules` deployment status to Production is still unconfirmed** (flagged since Sprint 9) — matters more now that Phase 6 has opened a path toward external (OpenClaw) API usage, and now that the Facebook functions (§6) are also live.
+2. ~~Facebook Cloud Functions not deployed~~ — **resolved**, see §6.
 3. **Social Media Center's `schedule` only stores intent** — no Cloud Scheduler/Cloud Tasks trigger exists to fire it automatically.
 4. **Founder Agent Conversation Session TTL is soft** — checked only when an API call happens, no scheduled cleanup of expired `agentConversations`/`agentPlans` records.
 5. **AI Generate runs synchronously** (up to the 120s Cloud Function timeout) — no true background worker (Cloud Tasks/Pub-Sub) exists yet, despite Webhook Events now being real for other event types.
@@ -195,7 +192,9 @@ Items 3, 4, and 5 share a common theme: each would benefit from real background/
 
 ## 10. Founder Acceptance Test — Suggested Checklist
 
-- [ ] Read §6 (Facebook functions not deployed) and decide whether to deploy them now.
+A fuller, standalone checklist now lives in `SPRINT14_ACCEPTANCE_CHECKLIST.md` (Completed Features / Remaining Risks / Infrastructure Decisions / Known Limitations / Manual Tests / Recommended Founder Tests). Quick pointer here:
+
+- [x] ~~Read §6 (Facebook functions not deployed) and decide whether to deploy them now.~~ Resolved — deployed and verified.
 - [ ] Confirm `database.rules.json`/`storage.rules` deployment status (§9.1) before any real external API consumer (OpenClaw or otherwise) is pointed at write endpoints.
 - [ ] Spot-check a few endpoints yourself with a real Admin/Editor token (Products CRUD, a Draft publish, one AI generate call, `GET /v1/system/diagnostics`).
 - [ ] Decide whether `role: agent` should be activated now, later, or not without a dedicated Decision Record (§9.7) — this determines what OpenClaw can actually do if connected.

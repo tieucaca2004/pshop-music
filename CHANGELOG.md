@@ -2,6 +2,16 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 14 — Production Readiness (sau Phase 6, trước Founder Acceptance Test)
+
+Founder giao 4 việc trước khi cho Founder Acceptance Test: điều tra dứt điểm phát hiện Facebook Cloud Function ở Final Report bản đầu, chạy Production Audit đầy đủ, viết Founder Acceptance Checklist, cập nhật lại toàn bộ tài liệu.
+
+- **Điều tra Facebook Cloud Functions**: đối chiếu `SPRINT14_API_ARCHITECTURE_FINAL.md` mục 17.21 — xác nhận 4 hàm (`facebookOAuthCallback`/`facebookSelectPage`/`facebookPublish`/`facebookRefreshToken`) ĐÚNG là kiến trúc đã Founder duyệt, KHÔNG bị thay thế bởi `apiGateway` (`facebookOAuthCallback` đặc biệt được tài liệu yêu cầu GIỮ NGUYÊN dạng redirect target thật, không ép thành REST vì Facebook gọi trực tiếp bằng navigation, không phải `fetch()` có Authorization header). Kết luận: đây là thiếu sót deploy, không phải thiết kế lại có chủ đích — **đã deploy cả 4 hàm** (`firebase deploy --only functions:facebookOAuthCallback,functions:facebookSelectPage,functions:facebookPublish,functions:facebookRefreshToken`), xác nhận qua `firebase functions:list` (6/6 hàm) và `curl` trực tiếp từng hàm (cả 4 trả đúng lỗi Auth/redirect thật từ chính hàm, không còn 404 "hàm không tồn tại"). Route proxy Facebook trong `routes/facebook.js` (đã xây từ Phase 3, mở rộng Phase 6) nay có đích thật để kết nối — không còn "broken proxy endpoint" nào.
+- **Production Audit đầy đủ**: quét 80 endpoint (68 route nghiệp vụ + 6 route Facebook trực tiếp + 6 kiểm tra bổ sung, gồm 1 negative-control route không tồn tại để xác nhận `apiGateway` KHÔNG khớp bừa mọi request) — 80/80 đúng hành vi kỳ vọng (public trả 200, cần Auth trả 401, thiếu quyền trả 403, route lạ trả 404 thật). Chạy lại 149/149 test local (không đổi code nên không có regression nào). Chi tiết đầy đủ: `SPRINT14_PRODUCTION_AUDIT.md`.
+- **Tài liệu mới**: `SPRINT14_PRODUCTION_AUDIT.md` (audit đầy đủ theo từng nhóm: Auth/Authorization/Validation/CMS/Founder/AI/Media AI/Self-Healing/OpenClaw/Webhook/Event Bus/Diagnostics/Retry/Repair/Health), `SPRINT14_ACCEPTANCE_CHECKLIST.md` (Completed Features/Remaining Risks/Infrastructure Decisions/Known Limitations/Manual Tests đã làm/Recommended Founder Tests).
+- **Cập nhật**: `ROADMAP.md` (đánh dấu Production Readiness hoàn tất), `SPRINT14_FINAL_REPORT.md` (mục Critical Finding #1 cập nhật từ "chưa deploy" sang "đã deploy + xác minh", không còn là finding chặn Acceptance Test).
+- **KHÔNG thêm feature mới, KHÔNG bắt đầu Sprint 15, KHÔNG tự đánh dấu Sprint 14 PASS** — đúng chỉ thị. Chờ Founder Acceptance Test.
+
 ## Sprint 14 — Phase 6: Self-Healing API + OpenClaw Integration
 
 Founder giao chung Self-Healing API (mục 20 bản gốc "Phase 5") + OpenClaw Integration (mục 20 bản gốc "Phase 6") trong 1 lượt, gọi là "Phase 6". **Xác nhận lại nguyên tắc "No Self-Auto-Fix"** trước khi triển khai (hỏi rõ qua AskUserQuestion): Repair vẫn PHẢI có 1 request rõ ràng gọi tới, KHÔNG có job nền/schedule nào tự sửa — đúng nguyên văn tài liệu FINAL mục 13.
