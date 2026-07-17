@@ -28,6 +28,7 @@ const admin = require('firebase-admin');
 const { defineSecret } = require('firebase-functions/params');
 const listResource = require('./listResource');
 const asyncJob = require('./asyncJob');
+const eventBus = require('./eventBus');
 const { MODULES, parseJsonResponse } = require('./aiModules');
 
 const OPENAI_API_KEY = defineSecret('OPENAI_API_KEY');
@@ -89,9 +90,11 @@ async function generateForModule(moduleId, inputParams, uid, email) {
     });
 
     await asyncJob.updateJobStatus(job.id, 'completed', { draftId: draft.id });
+    await eventBus.emit('ai.generate.completed', { moduleId, jobId: job.id, draftId: draft.id, uid });
     return draft;
   } catch (err) {
     await asyncJob.updateJobStatus(job.id, 'failed', err);
+    await eventBus.emit('ai.generate.failed', { moduleId, jobId: job.id, uid, error: err.message });
     throw err;
   }
 }

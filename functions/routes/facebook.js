@@ -103,6 +103,58 @@ async function handle(req, res, helpers) {
     return proxyToFunction(req, res, helpers, 'facebookRefreshToken');
   }
 
+  // ── Self-Healing (Phase 6, FINAL mục 13) — status/validate/repair cho
+  // module Facebook Integration, đúng Ma trận trạng thái theo module ──────
+  if (path === '/v1/facebook/status' && req.method === 'GET') {
+    if (!isAdmin) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin được xem Status Facebook.');
+    const connSnap = await admin.database().ref('facebookConnection').once('value');
+    const conn = connSnap.val() || { status: 'disconnected' };
+    return sendSuccess(res, { status: conn.status === 'connected' ? 'ok' : (conn.status === 'token_expiring' ? 'degraded' : 'down'), details: conn });
+  }
+
+  if (path === '/v1/facebook/validate' && req.method === 'POST') {
+    if (!isAdmin) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin được Validate Facebook.');
+    const connSnap = await admin.database().ref('facebookConnection').once('value');
+    const conn = connSnap.val() || {};
+    const issues = [];
+    if (conn.status !== 'connected' && conn.status !== 'token_expiring') {
+      issues.push({ issue: 'Chưa kết nối Facebook (status: ' + (conn.status || 'disconnected') + ').', safe: false });
+    } else if (conn.tokenExpiresAt && conn.tokenExpiresAt < Date.now()) {
+      issues.push({ issue: 'Token đã hết hạn.', safe: true });
+    } else if (conn.tokenExpiresAt && conn.tokenExpiresAt < Date.now() + 3 * 24 * 60 * 60 * 1000) {
+      issues.push({ issue: 'Token sắp hết hạn trong vòng 3 ngày.', safe: true });
+    }
+    return sendSuccess(res, { valid: issues.length === 0, issues });
+  }
+
+  // repair — CHỈ hành động an toàn: refresh token qua ĐÚNG API đã có
+  // (`facebookRefreshToken`, mục 17.21) khi token sắp/đã hết hạn. Chưa kết
+  // nối lần nào (status !== connected/token_expiring) là quyết định nghiệp
+  // vụ (cần Founder tự OAuth) — KHÔNG tự thực thi.
+  if (path === '/v1/facebook/repair' && req.method === 'POST') {
+    if (!isAdmin) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin được Repair Facebook.');
+    const connSnap = await admin.database().ref('facebookConnection').once('value');
+    const conn = connSnap.val() || {};
+    if (conn.status !== 'connected' && conn.status !== 'token_expiring') {
+      return sendSuccess(res, { repaired: false, requiresApproval: true, proposedActions: [{ proposedAction: 'Chưa kết nối Facebook — Founder tự thực hiện OAuth qua "Cài đặt" → "Facebook Configuration".' }] });
+    }
+    const tokenNeedsRefresh = conn.tokenExpiresAt && conn.tokenExpiresAt < Date.now() + 3 * 24 * 60 * 60 * 1000;
+    if (!tokenNeedsRefresh) return sendSuccess(res, { repaired: false, actions: [] });
+    let refreshData;
+    try {
+      const upstream = await fetch(FUNCTIONS_BASE + '/facebookRefreshToken', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: req.get('Authorization') || '' },
+        body: JSON.stringify({})
+      });
+      refreshData = await upstream.json();
+      if (!upstream.ok) return sendError(res, 'UPSTREAM_ERROR', refreshData.error || 'Làm mới Token thất bại.');
+    } catch (err) {
+      return sendError(res, 'UPSTREAM_ERROR', 'Không gọi được facebookRefreshToken: ' + err.message);
+    }
+    return sendSuccess(res, { repaired: true, actions: [{ action: 'Làm mới Token Facebook thành công.', tokenExpiresAt: refreshData.tokenExpiresAt }] });
+  }
+
   return sendError(res, 'NOT_FOUND', 'Không tìm thấy route Facebook.');
 }
 

@@ -7,6 +7,7 @@
  */
 const listResource = require('../shared/listResource');
 const { publishToTarget } = require('../shared/publishToTarget');
+const eventBus = require('../shared/eventBus');
 
 const NODE = 'aiDrafts';
 
@@ -44,6 +45,7 @@ async function handle(req, res, helpers) {
       return sendError(res, 'UPSTREAM_ERROR', 'Publish thất bại: ' + err.message);
     }
     const updated = await listResource.update(NODE, id, { status: 'published', publishedAt: Date.now() });
+    await eventBus.emit('draft.published', { draftId: id, moduleId: draft.moduleId, targetCollection: draft.targetCollection });
     return sendSuccess(res, updated);
   }
 

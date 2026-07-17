@@ -682,6 +682,46 @@ exports.facebookRefreshToken = onRequest({ secrets: [FACEBOOK_APP_SECRET], cors:
  * (shared/agentExecute.js, gọi `generateForModule()` — 1 nguồn logic sinh
  * nội dung duy nhất cho cả 3 lối vào).
  *
+ * Phase 6 (khối này thêm vào) = Self-Healing API (mục 20 bản gốc "Phase 5")
+ * + OpenClaw Integration (mục 20 bản gốc "Phase 6") — Founder giao chung 1
+ * lượt, gọi là "Phase 6". Founder XÁC NHẬN LẠI nguyên tắc "No Self-Auto-Fix"
+ * (mục 13) trước khi giao: Repair CHỈ chạy khi có request rõ ràng gọi tới,
+ * KHÔNG có job nền/schedule nào tự sửa — xem shared/selfHealing.js.
+ * - **Self-Healing** (`routes/selfHealing.js` + `shared/selfHealing.js`):
+ *   `GET /v1/{module}/status`, `POST /v1/{module}/validate`, `POST
+ *   /v1/{module}/repair` cho queue/drafts/media/rules/ai-provider (Facebook
+ *   có route riêng trong routes/facebook.js — đã sở hữu domain đó từ Phase
+ *   3). Repair CHỈ tự thực thi hành động HẠ TẦNG THUẦN (nhả lock Job quá
+ *   TTL, xoá OAuth state nonce hết hạn, refresh Facebook Token qua đúng API
+ *   đã có) — đụng DỮ LIỆU NGHIỆP VỤ THẬT (Draft/Rules/API Key) LUÔN trả
+ *   `requiresApproval:true`, không tự sửa. `POST /v1/queue/retry` là alias
+ *   gọi lại `retryFailed()` đã có (routes/jobsLogs.js), không viết logic
+ *   retry thứ 2, đúng "Reconcile với Jobs Retry" mục 13. Thêm `GET
+ *   /v1/system/diagnostics` (tổng hợp toàn bộ module) + `GET
+ *   /v1/system/jobs/monitor` ("Job Monitor" — đếm theo status, phát hiện
+ *   Job "running" kẹt quá 10 phút).
+ * - **Event Bus + Webhook Events** (`shared/eventBus.js` + `routes/
+ *   webhooks.js`) — KHÔNG tạo message broker mới, tái dùng
+ *   `shared/webhook.js` (Phase 1, `sendWebhook()` có sẵn nhưng chưa từng
+ *   được gọi) — `emit()` được gọi TỪ sự kiện THẬT đã xảy ra
+ *   (`draft.published` ở routes/drafts.js, `ai.generate.completed`/`.failed`
+ *   ở shared/aiGenerate.js), ghi `apiEvents` (log ngắn hạn, giữ 200 gần
+ *   nhất) + gửi HTTP callback tới URL đã đăng ký qua `POST /v1/webhooks`.
+ *   `GET /v1/events` cho phép poll lại (dự phòng khi không có URL public
+ *   nhận webhook). AI Generate (Phase 5) VẪN đồng bộ trong 1 request — CHƯA
+ *   có worker nền thật xử lý bất đồng bộ thật sự (jobId trả về ngay rồi xử
+ *   lý sau) như tài liệu FINAL mục 14 mô tả — ngoài phạm vi mission Phase 6
+ *   được giao (không có trong danh sách "Implement ONLY"), ghi nhận ROADMAP.
+ * - **OpenClaw Integration** (`routes/openclaw.js`) — ĐÚNG nguyên tắc mục
+ *   19: OpenClaw KHÔNG có quyền đặc biệt, dùng CHUNG Auth/Permission/Rate-
+ *   Limit như mọi client — vì vậy KHÔNG có 1 "OpenClaw API" tách biệt nào,
+ *   chỉ có `GET /v1/openclaw/capabilities` (discovery — trả về nhóm API
+ *   nào người gọi ĐANG có quyền dùng thật, dựa theo role thật) để tự biết
+ *   được làm gì thay vì đoán/thử-sai qua 403. Mọi thao tác nghiệp vụ thật
+ *   đi thẳng qua API Phase 1-5 đã có. `structural.write.*` (create-product/
+ *   detect-category qua Founder Agent) vẫn KHÔNG mở mặc định — role `agent`
+ *   vẫn RỖNG, chưa có Decision Record riêng nào kích hoạt.
+ *
  * openaiProxy + 4 Facebook Function ở TRÊN giữ NGUYÊN VẸN, KHÔNG đổi.
  * ════════════════════════════════════════════════════════════════════════
  */
@@ -706,6 +746,10 @@ const socialMediaCenterRoutes = require('./routes/socialMediaCenter');
 const founderRoutes = require('./routes/founder');
 const agentRoutes = require('./routes/agent');
 const aiGenerateRoutes = require('./routes/aiGenerate');
+const selfHealingRoutes = require('./routes/selfHealing');
+const webhooksRoutes = require('./routes/webhooks');
+const openclawRoutes = require('./routes/openclaw');
+
 exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRET], cors: true, timeoutSeconds: 120 }, async (req, res) => {
   const requestId = makeRequestId();
   res.locals = { requestId };
@@ -816,7 +860,7 @@ exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRE
     const routers = [
       cmsListsRoutes, cmsSingletonRoutes, mediaRoutes, usersRoutes,
       draftsRoutes, jobsLogsRoutes, facebookRoutes, socialMediaCenterRoutes, founderRoutes,
-      agentRoutes, aiGenerateRoutes
+      agentRoutes, aiGenerateRoutes, selfHealingRoutes, webhooksRoutes, openclawRoutes
     ];
     for (const router of routers) {
       const result = await router.handle(req, res, helpers);
