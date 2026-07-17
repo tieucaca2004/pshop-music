@@ -857,10 +857,19 @@ exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRE
     const rl = await checkAndIncrement(rlKey, rlName);
     if (!rl.allowed) return sendError(res, 'RATE_LIMITED', 'Vượt giới hạn request (' + rl.max + '/' + (rlName === 'public' ? 'phút/IP' : 'phút') + ').');
 
+    // selfHealingRoutes PHẢI đứng TRƯỚC draftsRoutes — regex của nó
+    // (/v1/{module}/status|validate|repair) rất hẹp (không khớp nếu {module}
+    // không phải đúng 1 trong 5 tên cố định), nhưng draftsRoutes khớp BẤT KỲ
+    // path nào bắt đầu "/v1/drafts/" (coi phần sau là Draft ID) — nếu để
+    // draftsRoutes trước, nó sẽ "nuốt" mất /v1/drafts/status (hiểu nhầm
+    // "status" là 1 Draft ID) trước khi tới lượt selfHealingRoutes, làm 3
+    // route Self-Healing của module "drafts" không bao giờ chạm tới được.
+    // Phát hiện qua Production Verification (Phase 6) sau khi deploy lần 1.
     const routers = [
       cmsListsRoutes, cmsSingletonRoutes, mediaRoutes, usersRoutes,
+      selfHealingRoutes,
       draftsRoutes, jobsLogsRoutes, facebookRoutes, socialMediaCenterRoutes, founderRoutes,
-      agentRoutes, aiGenerateRoutes, selfHealingRoutes, webhooksRoutes, openclawRoutes
+      agentRoutes, aiGenerateRoutes, webhooksRoutes, openclawRoutes
     ];
     for (const router of routers) {
       const result = await router.handle(req, res, helpers);
