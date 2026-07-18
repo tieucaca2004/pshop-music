@@ -37,6 +37,27 @@ body{min-height:100vh;background:var(--bg-alt)}
 
 @media(max-width:700px){.field-grid{grid-template-columns:1fr}.admin-topbar{padding:1rem}.admin-wrap{padding:1.25rem}}
 
+/* ---- KHUNG ẢNH SẢN PHẨM (Category Card Image Container, settings.html) ---- */
+.pci-editor{display:grid;grid-template-columns:280px 1fr;gap:1.75rem;align-items:start}
+.pci-preview-stage{width:280px}
+.pci-frame{cursor:move;user-select:none}
+.pci-frame img{pointer-events:auto;cursor:move}
+.pci-resize-handle{position:absolute;right:6px;bottom:6px;width:16px;height:16px;background:var(--gold);border:2px solid #fff;border-radius:50%;cursor:nwse-resize;box-shadow:0 1px 4px rgba(0,0,0,0.35);z-index:3}
+.pci-zoom-handle{position:absolute;left:6px;top:6px;width:14px;height:14px;background:#fff;border:2px solid var(--gold);border-radius:50%;cursor:nesw-resize;box-shadow:0 1px 4px rgba(0,0,0,0.3);z-index:3}
+.pci-fields-col{align-content:start}
+@media(max-width:700px){.pci-editor{grid-template-columns:1fr}.pci-preview-stage{width:100%;max-width:280px;margin:0 auto}}
+
+/* ---- Nhóm sản phẩm theo Danh mục (admin/products.html) ---- */
+.admin-cat-group-row td{padding:0!important;border:none!important}
+.admin-cat-group{border-bottom:1px solid var(--line2)}
+.admin-cat-group summary{cursor:pointer;list-style:none;padding:0.85rem 0.6rem;font-weight:700;font-size:0.85rem;color:var(--black);display:flex;align-items:center;gap:0.5rem;user-select:none}
+.admin-cat-group summary::-webkit-details-marker{display:none}
+.admin-cat-group summary::before{content:'▸';color:var(--gold-ink);font-size:0.75rem;transition:transform 0.15s}
+.admin-cat-group[open] summary::before{transform:rotate(90deg)}
+.admin-cat-count{color:var(--ink-mute);font-weight:400;font-size:0.78rem}
+.admin-table-nested{margin:0 0 0.5rem}
+.admin-table-nested td{padding-left:1.6rem}
+
 /* ---- Shared CMS shell: sidebar + topbar (admin/*.html) ---- */
 .admin-shell{display:flex;min-height:100vh}
 .admin-sidebar{width:230px;flex-shrink:0;background:#fff;border-right:1px solid var(--line2);padding:1.5rem 0;position:sticky;top:0;height:100vh;overflow-y:auto}
@@ -131,21 +152,36 @@ body{min-height:100vh;background:var(--bg-alt)}
 .slide-preview-col{display:flex;flex-direction:column;gap:0.5rem}
 .slide-preview-col>label{font-size:0.72rem;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--ink-soft)}
 
-/* Mini hero preview — tỉ lệ 16:9, nền ảnh slide */
+/* Mini hero preview — tỉ lệ 16:9, khung NGOÀI cố định (không transform) */
 .hero-mini-preview{position:relative;width:100%;aspect-ratio:16/9;border:1px solid var(--line2);overflow:hidden;background:#111}
-/* Nhãn tiêu đề kéo thả được — vị trí đặt theo POS_STYLE (js/admin-sliders.js),
-   khớp đúng 9 điểm .hero[data-text-pos] trên trang thật. */
+/* Lớp ẢNH NỀN kéo TỰ DO Zoom/Vị trí (Sprint 14) — TÁCH RIÊNG khỏi khung
+   ngoài để transform:scale() (Zoom) chỉ ảnh hưởng ảnh, không kéo lệch Tiêu
+   đề/Mô tả (2 lớp con độc lập). Zoom SÀN 100% (background-size:cover đã phủ
+   đủ khung ở 100%, không cho nhỏ hơn để tránh hở nền). */
+.hero-mini-preview-bg{position:absolute;inset:0;background-size:cover;cursor:grab;touch-action:none;transition:background-color 0.1s}
+.hero-mini-preview-bg:active,.hero-mini-preview-bg.dragging-bg{cursor:grabbing}
+.hero-mini-preview-bg.zooming-bg{outline:1px dashed var(--gold);outline-offset:-1px}
+/* Ảnh sản phẩm chồng lên khi có "ẢNH NỀN" riêng (Sprint 14) — khớp đúng vị
+   trí/tỉ lệ .hero-subject-img trên trang thật (css/style.css). */
+.hero-mini-subject{position:absolute;z-index:2;right:6%;top:50%;transform:translateY(-50%);max-width:38%;max-height:72%;object-fit:contain;filter:drop-shadow(0 6px 12px rgba(0,0,0,0.5));pointer-events:none}
+.hero-mini-zoom-handle{position:absolute;z-index:5;bottom:4px;right:4px;width:14px;height:14px;background:var(--gold);border:1px solid #fff;border-radius:50%;cursor:nwse-resize;touch-action:none;opacity:0.85}
+.hero-mini-zoom-handle:hover{opacity:1}
+/* Nhãn Tiêu đề/Mô tả kéo TỰ DO được (Sprint 14 — bỏ hẳn lưới 9 điểm cũ) —
+   vị trí đặt theo % thật (js/admin-sliders.js), khớp đúng .hero-title-block/
+   .hero-sub-block trên trang thật (css/style.css, neo góc trên-trái, không
+   center). font-size mặc định 0.62rem CHỈ là sàn dự phòng — luôn bị ghi đè
+   bằng inline style tính từ titleScale/subScale thật. */
 .hero-mini-label{position:absolute;max-width:72%;font-size:0.62rem;line-height:1.35;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.85);padding:3px 18px 3px 5px;border-radius:3px;background:rgba(0,0,0,0.25);cursor:grab;user-select:none;touch-action:none;transition:background 0.1s}
 .hero-mini-label:hover{background:rgba(0,0,0,0.45)}
 .hero-mini-label.dragging{cursor:grabbing;background:rgba(0,0,0,0.55)}
+.hero-mini-label.resizing-text{outline:1px dashed var(--gold)}
+.hero-mini-sub{font-weight:300;padding:2px 16px 2px 5px}
 .hero-mini-label-del{position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:rgba(0,0,0,0.6);color:#fff;border:none;font-size:0.5rem;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center}
 .hero-mini-label-empty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:0.65rem;color:rgba(255,255,255,0.55);text-align:center;padding:0 1rem;pointer-events:none}
-
-/* Lưới 9 nút vị trí phủ toàn bộ preview */
-.pos-grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:3px;padding:3px}
-.pos-dot{background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);border-radius:3px;cursor:pointer;transition:background 0.15s,border-color 0.15s;padding:0}
-.pos-dot:hover{background:rgba(255,255,255,0.35);border-color:rgba(255,255,255,0.7)}
-.pos-dot-active{background:var(--gold) !important;border-color:var(--gold) !important}
+.hero-mini-hidden-chip{position:absolute;max-width:72%;font-size:0.58rem;line-height:1.3;color:rgba(255,255,255,0.7);padding:3px 8px;border-radius:3px;border:1px dashed rgba(255,255,255,0.4);background:rgba(0,0,0,0.2);cursor:pointer;user-select:none}
+.hero-mini-hidden-chip:hover{color:#fff;border-color:var(--gold)}
+/* Tay cầm góc dưới-phải nhãn để kéo TỰ DO cỡ chữ — không giới hạn mức nào. */
+.hero-mini-resize-handle{position:absolute;bottom:-4px;right:-4px;width:10px;height:10px;background:var(--gold);border:1px solid #fff;border-radius:50%;cursor:nwse-resize;touch-action:none}
 
 /* Ghost khi đang kéo slide */
 .slide-drag-ghost{opacity:0.4;background:var(--gold-soft) !important}
@@ -172,6 +208,16 @@ body{min-height:100vh;background:var(--bg-alt)}
 .cat-cover-preview-frame[data-viewport="desktop"]{width:100%;max-width:640px}
 .cat-cover-preview-frame[data-viewport="tablet"]{width:420px}
 .cat-cover-preview-frame[data-viewport="mobile"]{width:240px}
+/* .cat-tile-cover-frame — CHỈ khung Cover Preview của Ô Danh mục Trang chủ
+   (KHÔNG đụng .cat-cover-preview-frame gốc — Category Header ở trên luôn
+   ĐÚNG là 1 banner ngang, giữ nguyên). Ô Trang chủ có thể Vuông/2-cột/Banner
+   tùy Founder chọn ở "KÍCH CỠ Ô" — khung xem trước phải đổi hình dạng THẬT
+   theo lựa chọn đó, nếu không sẽ luôn trông như 1 banner ngang bất kể chọn
+   gì (đúng lỗi Founder báo — "toàn ô ngang", "sao không chỉnh được"). */
+.cat-tile-cover-frame[data-tile-size="small"]{height:auto;aspect-ratio:1/0.72;max-width:300px}
+.cat-tile-cover-frame[data-tile-size="normal"]{height:auto;aspect-ratio:1/1;max-width:300px}
+.cat-tile-cover-frame[data-tile-size="large"]{height:auto;aspect-ratio:2/1.05;max-width:460px}
+.cat-tile-cover-frame[data-tile-size="wide"]{height:180px;max-width:640px}
 .cat-cover-preview-inner{position:absolute;inset:0;background:center/cover no-repeat;transform:scale(1.06)}
 .cat-cover-preview-overlay{position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0.3) 60%,rgba(0,0,0,0.15) 100%)}
 .cat-cover-preview-product{position:absolute;z-index:2;max-width:42%;max-height:78%;object-fit:contain;top:50%;right:1.2rem;transform:translateY(-50%) scale(var(--cover-zoom,1));opacity:var(--cover-opacity,1);filter:drop-shadow(0 10px 18px rgba(0,0,0,0.35))}
@@ -195,6 +241,51 @@ body{min-height:100vh;background:var(--bg-alt)}
 .cat-cover-pos-btn.active{background:var(--gold);border-color:var(--gold)}
 .cat-cover-source-row{display:flex;gap:0.75rem;align-items:center;flex-wrap:wrap}
 @media(max-width:700px){.cat-cover-grid{grid-template-columns:1fr}}
+
+/* Kéo-thả ảnh sản phẩm CHỈ trong Live Preview của Ô Danh mục Trang chủ
+   (class riêng .cat-tile-cover-draggable, KHÔNG đụng .cat-cover-preview-
+   product gốc — Category Cover ở trên vẫn giữ nguyên bấm-chọn như cũ, không
+   tự ý thêm kéo-thả nơi Founder chưa yêu cầu), cùng convention cursor:grab/
+   touch-action/.dragging đã dùng cho kéo tiêu đề Hero Slideshow. */
+.cat-tile-cover-draggable{cursor:grab;touch-action:none;user-select:none}
+.cat-tile-cover-draggable.dragging{cursor:grabbing;filter:drop-shadow(0 4px 10px rgba(0,0,0,0.5)) brightness(1.05)}
+
+/* Kéo góc để đổi Kích cỡ Ô — CHỈ trong khung Live Preview TỔNG (đầu panel),
+   nơi có ngữ cảnh các Ô lân cận thật (Kích cỡ chỉ có ý nghĩa khi xem cùng
+   lưới) — thả tay tự động snap về 1 trong 4 mức Nhỏ/Vừa/Lớn/Banner ngang. */
+.cat-tile-resize-handle{position:absolute;z-index:5;bottom:4px;right:4px;width:16px;height:16px;cursor:nwse-resize;background:var(--gold);border:1px solid #fff;border-radius:3px;opacity:0.8;touch-action:none}
+.cat-tile-resize-handle:hover{opacity:1}
+.cat-tile.resizing{outline:2px dashed var(--gold);outline-offset:2px}
+
+/* Kéo TỰ DO chiều cao chính KHUNG ĐEN (Cover Preview riêng từng Ô) — khác
+   .cat-tile-resize-handle ở trên (đổi SỐ CỘT/preset ở khung Live Preview
+   TỔNG, có snap) — tay cầm này nằm NGAY GIỮA cạnh dưới khung đen, kéo lên/
+   xuống đổi chiều cao liên tục, không giới hạn 4 mức. */
+.cat-tile-frame-resize-handle{position:absolute;z-index:6;bottom:4px;left:50%;transform:translateX(-50%);width:36px;height:12px;cursor:ns-resize;background:var(--gold);border:1px solid #fff;border-radius:6px;opacity:0.85;touch-action:none}
+.cat-tile-frame-resize-handle:hover{opacity:1}
+.cat-tile-frame-resize-handle::before{content:'';position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:16px;height:2px;background:#fff;border-radius:1px;box-shadow:0 -4px 0 #fff,0 4px 0 #fff}
+.cat-tile-cover-frame.resizing-height{outline:2px dashed var(--gold);outline-offset:2px}
+
+/* Ô Danh mục hiển thị Trang chủ — đồng bộ style với Category Cover ở trên
+   (cùng .cat-bg-section/.cat-bg-label/.cat-cover-viewport-toggle), + 1 khung
+   Live Preview DUY NHẤT cho TOÀN BỘ lưới Ô (không phải từng ô riêng lẻ) vì
+   kích cỡ "Lớn"/"Banner ngang" chỉ có ý nghĩa khi xem cùng các ô lân cận. */
+.cat-tile-viewport-toggle{display:flex;gap:0.3rem;margin-bottom:0.5rem}
+.cat-tile-viewport-toggle button{font-size:0.68rem;padding:0.3rem 0.6rem}
+.cat-tile-viewport-toggle button.active{background:var(--gold-soft);border-color:var(--gold);color:var(--gold-ink)}
+.cat-tile-preview-frame{margin:0 auto 0.5rem;border:1px solid var(--line2);background:#0c0c0c;padding:1rem;transition:width 0.2s ease}
+.cat-tile-preview-frame[data-viewport="desktop"]{width:100%;max-width:560px}
+.cat-tile-preview-frame[data-viewport="mobile"]{width:280px}
+.cat-tile-preview-frame .cat-tile-grid{display:grid;gap:0.5rem;grid-template-columns:repeat(3,1fr)}
+.cat-tile-preview-frame[data-viewport="mobile"] .cat-tile-grid{grid-template-columns:repeat(2,1fr)}
+.cat-tile-preview-frame[data-viewport="mobile"] .cat-tile.wide{height:150px}
+/* Chữ trong khung preview dùng cỡ cố định thay vì clamp(...vw) của trang thật
+   — vw tính theo viewport TRÌNH DUYỆT thật (rộng), không theo khung nhỏ này,
+   nên giữ nguyên clamp() sẽ làm chữ to lệch tỉ lệ (cùng cách Category Cover
+   preview ở trên đã xử lý cho .cat-cover-preview-title). */
+.cat-tile-preview-frame .cat-tile-label{font-size:0.8rem!important;margin-top:0.4rem!important}
+.cat-tile-preview-frame .cat-tile.wide .cat-tile-label{font-size:1.15rem!important;left:1rem!important}
+.cat-tile-preview-frame .cat-tile.large .cat-tile-label{font-size:0.95rem!important}
 
 /* ---- Xóa phông (AdminBgRemover) ---- */
 .bg-remover-panel{padding:0.75rem 0 0.25rem}

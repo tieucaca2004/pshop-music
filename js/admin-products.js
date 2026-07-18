@@ -146,18 +146,10 @@ const AdminApp = (function () {
     }
   }
 
-  function renderTable(query) {
-    const q = (query || '').toLowerCase();
-    const filtered = products.filter(p => !q || (p.name + ' ' + p.brand).toLowerCase().includes(q));
-    document.getElementById('productTotal').textContent = products.length;
-
-    const body = document.getElementById('productTableBody');
-    if (filtered.length === 0) {
-      body.innerHTML = '<tr><td colspan="8" style="color:var(--muted2);text-align:center;padding:2rem">Không có sản phẩm.</td></tr>';
-      return;
-    }
-
-    body.innerHTML = filtered.map(p => `
+  // rowHtml — 1 dòng sản phẩm (tách riêng khỏi renderTable để dùng lại được
+  // trong từng khối Danh mục bên dưới).
+  function rowHtml(p) {
+    return `
       <tr>
         <td>${p.image ? `<img src="${escapeHtml(p.image)}" onerror="this.style.display='none'">` : '—'}</td>
         <td>${escapeHtml(p.name)}</td>
@@ -172,7 +164,45 @@ const AdminApp = (function () {
             <button class="btn-danger" onclick="AdminApp.deleteProduct('${p.id}')">Xóa</button>
           </div>
         </td>
-      </tr>`).join('');
+      </tr>`;
+  }
+
+  // renderTable — Founder báo "tất cả sản phẩm chung 1 chỗ khó tìm" → nhóm
+  // theo Danh mục CHÍNH (categoryIds[0]), mỗi nhóm 1 khối thu gọn/mở rộng
+  // (<details>) hiện sẵn số lượng, giữ NGUYÊN cột/hành động Sửa/Xóa cũ. Sản
+  // phẩm chưa gán Danh mục vẫn hiện đủ ở khối riêng "Chưa gán Danh mục" (0
+  // sản phẩm nào biến mất). Đang gõ tìm kiếm → chỉ khối có kết quả khớp mới
+  // hiện + tự mở sẵn, khỏi phải bấm mở từng khối để tìm.
+  function renderTable(query) {
+    const q = (query || '').toLowerCase();
+    const filtered = products.filter(p => !q || (p.name + ' ' + p.brand).toLowerCase().includes(q));
+    document.getElementById('productTotal').textContent = products.length;
+
+    const body = document.getElementById('productTableBody');
+    if (filtered.length === 0) {
+      body.innerHTML = '<tr><td colspan="8" style="color:var(--muted2);text-align:center;padding:2rem">Không có sản phẩm.</td></tr>';
+      return;
+    }
+
+    const NONE_CODE = '__none__';
+    const groups = {};
+    filtered.forEach(p => {
+      const code = productCategoryIds(p)[0] || NONE_CODE;
+      (groups[code] = groups[code] || []).push(p);
+    });
+    const orderedCodes = categories.map(c => c.code).filter(code => groups[code]);
+    if (groups[NONE_CODE]) orderedCodes.push(NONE_CODE);
+
+    body.innerHTML = orderedCodes.map(code => {
+      const label = code === NONE_CODE ? 'Chưa gán Danh mục' : catLabel(code);
+      const rows = groups[code];
+      return `<tr class="admin-cat-group-row"><td colspan="8" style="padding:0;border:none">
+        <details class="admin-cat-group"${q ? ' open' : ''}>
+          <summary>${escapeHtml(label)} <span class="admin-cat-count">(${rows.length})</span></summary>
+          <table class="admin-table admin-table-nested"><tbody>${rows.map(rowHtml).join('')}</tbody></table>
+        </details>
+      </td></tr>`;
+    }).join('');
   }
 
   // pubStatus mới thêm (Sprint 12 Requirement #10) — 42 sản phẩm thật hiện có

@@ -9,12 +9,20 @@
  * Publish vẫn gọi BannerDB.add() có sẵn trong js/cms-db.js (ngoài phạm vi
  * plugin, xem js/admin-ai.js publishToTarget() — không cần sửa, field mới
  * chỉ CỘNG THÊM vào content đã có, không đổi field cũ).
+ *
+ * Refactored Sprint 15 Phase 2 (AI Architecture Consolidation, Option B —
+ * approved by Founder): `buildPrompt()`/`mapToDraftContent()` now delegate
+ * to `AiModulesCore.MODULES['banner-generator']` (js/ai/modules-core.js) —
+ * the single source of truth also used verbatim by
+ * `functions/shared/aiModules.js` server-side. Prompt wording and parsing
+ * logic did NOT change — only where the code physically lives.
+ * `loadContext`/`inputFields` stay here (client-specific, uses DataProvider).
  */
 AIModuleRegistry.register({
   id: 'banner-generator',
   label: 'Banner AI V2',
   description: 'Sinh banner quảng cáo publish-ready (Tiêu đề/Phụ đề/CTA) từ Sản phẩm, Khuyến mãi, hoặc Sự kiện — tự gắn ảnh sản phẩm thật nếu có, không tự bịa ảnh.',
-  targetCollection: 'banners',
+  targetCollection: AiModulesCore.MODULES['banner-generator'].targetCollection,
 
   inputFields: [
     { key: 'productId', label: 'Sản phẩm (chọn 1 trong 3: Sản phẩm / Khuyến mãi / Sự kiện)', type: 'productSelect', optional: true },
@@ -31,93 +39,11 @@ AIModuleRegistry.register({
     ]).then(([product, categories]) => ({ product, categories: categories || [] }));
   },
 
-  // productCategoryLabels — Sprint 13 (Product Management V2: Category
-  // Assignment). "Reuse the selected Categories" — cùng logic đã dùng ở
-  // Product AI V2/Facebook AI V3, lặp lại vì đây là Experience Layer riêng.
-  productCategoryLabels(p, categories) {
-    const ids = Array.isArray(p.categoryIds) && p.categoryIds.length ? p.categoryIds : (p.category ? [p.category] : []);
-    const byCode = {};
-    (categories || []).forEach(c => { byCode[c.code] = c; });
-    return ids.map(id => byCode[id]).filter(Boolean).map(c => c.label);
-  },
-
   buildPrompt(inputParams, context) {
-    const p = context.product || {};
-    const categoryLabels = this.productCategoryLabels(p, context.categories);
-    let grounding;
-    if (p.name) {
-      grounding = `sản phẩm thật sau — chỉ dùng đúng thông tin đã cho, không bịa thêm: Tên: ${p.name}. Thương hiệu: ${p.brand || ''}.${categoryLabels.length ? ` Thuộc danh mục: ${categoryLabels.join(', ')}.` : ''}`;
-    } else if (inputParams.promotion) {
-      grounding = `chương trình khuyến mãi sau: ${inputParams.promotion}.`;
-    } else if (inputParams.event) {
-      grounding = `sự kiện sau: ${inputParams.event}.`;
-    } else {
-      grounding = `giới thiệu chung về Pshop Music (không có sản phẩm/khuyến mãi/sự kiện cụ thể nào được chọn).`;
-    }
-    return `Viết nội dung banner quảng cáo ngắn gọn, thu hút cho Pshop Music (shop thiết bị DJ & âm thanh chuyên nghiệp tại Nha Trang), xoay quanh ${grounding}
-
-Trả về DUY NHẤT 1 đối tượng JSON hợp lệ — không kèm giải thích, không bọc trong khối markdown, đúng các khóa sau:
-{
-  "title": "Tiêu đề banner ngắn gọn, thu hút, tối đa 8 từ",
-  "subtitle": "Phụ đề bổ sung 1 câu ngắn",
-  "cta": "Cụm từ kêu gọi hành động ngắn (VD: Mua ngay, Xem thêm)"
-}
-
-TUYỆT ĐỐI KHÔNG tự chèn ảnh, không tự bịa URL ảnh nào — hệ thống sẽ tự chèn ảnh sản phẩm thật vào banner nếu có.`;
-  },
-
-  // parseJsonResponse — cùng pattern đã dùng ở Product AI V2/Blog AI V2/
-  // Facebook AI V2-V3 (Sprint 12 Requirement #4/#5/#6/#7) — loại bỏ code
-  // fence AI có thể tự thêm, khoan dung nếu AI chèn thêm câu giải thích,
-  // không bao giờ throw.
-  parseJsonResponse(text) {
-    const cleaned = String(text || '')
-      .replace(/^\s*```[a-zA-Z]*\s*\n?/, '')
-      .replace(/\n?\s*```\s*$/, '')
-      .trim();
-    try {
-      return JSON.parse(cleaned);
-    } catch (e) {
-      const match = cleaned.match(/\{[\s\S]*\}/);
-      if (match) {
-        try { return JSON.parse(match[0]); } catch (e2) { return null; }
-      }
-      return null;
-    }
+    return AiModulesCore.MODULES['banner-generator'].buildPrompt(inputParams, context);
   },
 
   mapToDraftContent(providerOutput, inputParams, context) {
-    const p = context.product || {};
-    // "If no Product is selected, generate text only" — image/galleryImages
-    // chỉ lấy khi CÓ chọn Sản phẩm, nguyên văn từ dữ liệu thật qua
-    // DataProvider — không có Sản phẩm thì cả 2 field này đều rỗng.
-    const images = Array.isArray(p.images) && p.images.length ? p.images : (p.image ? [p.image] : []);
-    const parsed = this.parseJsonResponse(providerOutput.text);
-
-    let title = '', subtitle = '', cta = '';
-    if (parsed) {
-      title = parsed.title || '';
-      subtitle = parsed.subtitle || '';
-      cta = parsed.cta || '';
-    } else {
-      // Fallback an toàn: JSON không parse được vẫn giữ lại dòng đầu của
-      // toàn văn phản hồi làm title — không bao giờ để Draft rỗng.
-      title = String(providerOutput.text || '')
-        .replace(/^\s*```[a-zA-Z]*\s*\n?/, '').replace(/\n?\s*```\s*$/, '').trim()
-        .split('\n')[0];
-    }
-    if (!title) title = inputParams.promotion || inputParams.event || (p.name ? ('Banner ' + p.name) : 'Banner quảng cáo mới');
-
-    return {
-      title,
-      subtitle,
-      cta,
-      image: images[0] || '',
-      galleryImages: images.slice(1),
-      link: inputParams.link || '',
-      zone: 'home-top',
-      order: 0,
-      active: true
-    };
+    return AiModulesCore.MODULES['banner-generator'].mapToDraftContent(providerOutput, inputParams, context);
   }
 });

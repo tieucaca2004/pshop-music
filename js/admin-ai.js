@@ -110,6 +110,13 @@ const AdminAI = (function () {
       const opts = options || [];
       return `<div class="form-group"><label>${escapeHtml(field.label)}</label><select id="${id}">${field.optional ? '<option value="">(không chọn)</option>' : ''}${opts.map(o => `<option value="${escapeHtml(o.value)}">${escapeHtml(o.label)}</option>`).join('')}</select></div>`;
     }
+    if (field.type === 'imageList') {
+      return `<div class="form-group full">
+        <label>${escapeHtml(field.label)}</label>
+        <textarea id="${id}" style="display:none"></textarea>
+        <div id="${id}-grid"></div>
+      </div>`;
+    }
     return `<div class="form-group"><label>${escapeHtml(field.label)}</label><input type="text" id="${id}" placeholder="${escapeHtml(field.placeholder || '')}"></div>`;
   }
 
@@ -118,6 +125,13 @@ const AdminAI = (function () {
     if (!container) return;
     Promise.all(module.inputFields.map(fieldOptionsIfNeeded)).then(optionsList => {
       container.innerHTML = module.inputFields.map((f, i) => renderFieldHtml(module.id, f, i, optionsList[i])).join('');
+      // imageList — mount MediaLibraryPicker SAU khi DOM đã có (giống hệt cách
+      // admin/products.html mount ẢNH SẢN PHẨM), tái dùng mountMulti() có sẵn.
+      module.inputFields.forEach(f => {
+        if (f.type !== 'imageList' || typeof MediaLibraryPicker === 'undefined') return;
+        const id = `f-${module.id}-${f.key}`;
+        MediaLibraryPicker.mountMulti(id, id + '-grid', f.maxImages ? { maxImages: f.maxImages } : {});
+      });
     });
   }
 
@@ -187,6 +201,8 @@ const AdminAI = (function () {
           if (i === 0 && field.type === 'text') {
             primaryKey = field.key;
             batchLines = el.value.split('\n').map(l => l.trim()).filter(Boolean);
+          } else if (field.type === 'imageList') {
+            values[field.key] = el.value.split('\n').map(l => l.trim()).filter(Boolean);
           } else {
             values[field.key] = el.value;
           }
@@ -534,6 +550,7 @@ const AdminAI = (function () {
         <div class="admin-actions">
           <button class="submit-btn" onclick="AdminAI.publishDraft('${d.id}')">DUYỆT &amp; PUBLISH</button>
           <button class="btn-danger" onclick="AdminAI.rejectDraft('${d.id}')">TỪ CHỐI</button>
+          <button class="btn-danger" onclick="AdminAI.deleteDraft('${d.id}')">XOÁ</button>
         </div>
       </div>`;
     }).join('');
@@ -599,6 +616,32 @@ const AdminAI = (function () {
   function rejectDraft(id) {
     if (!confirm('Từ chối nội dung này? Vẫn giữ lại để tra cứu, không xóa.')) return;
     DraftDB.update(id, { status: 'rejected' }).then(loadDrafts);
+  }
+
+  // deleteDraft — Sprint 15, AI Draft Lifecycle Audit (Founder directive).
+  // Xoá THẬT, không thể khôi phục — khác rejectDraft() (chỉ đổi status, giữ
+  // lại bản ghi). Đi qua API Gateway (DELETE /v1/drafts/{id}, Admin-only) —
+  // KHÔNG dùng DraftDB.remove() trực tiếp như publish/reject ở trên, vì đây
+  // là chức năng MỚI và nguyên tắc hiện tại là "API Gateway là cửa ngõ Backend
+  // duy nhất" cho mọi năng lực mới thêm vào (publish/reject giữ nguyên đường
+  // Firebase trực tiếp cũ, không đổi — ngoài phạm vi Requirement này).
+  function deleteDraft(id) {
+    const draft = drafts.find(d => d.id === id);
+    if (!draft) return;
+    if (!confirm('Xoá VĨNH VIỄN nội dung này? Không thể khôi phục lại.')) return;
+    const user = firebase.auth().currentUser;
+    if (!user) { alert('Phiên đăng nhập đã hết hạn, tải lại trang.'); return; }
+    user.getIdToken()
+      .then(token => fetch('https://us-central1-pshop-music.cloudfunctions.net/apiGateway/v1/drafts/' + id, {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer ' + token }
+      }))
+      .then(r => r.json())
+      .then(data => {
+        if (!data.success) { alert('Lỗi khi xoá: ' + (data.error && data.error.message || 'không rõ nguyên nhân')); return; }
+        loadDrafts();
+      })
+      .catch(err => alert('Lỗi khi xoá: ' + err.message));
   }
 
   // publishDraftById/rejectDraftById (Sprint 4, Requirement #2) — tái sử dụng
@@ -733,5 +776,5 @@ const AdminAI = (function () {
   // hiển thị Preview đã có (Facebook/Banner/JSON thô) thay vì viết lại HTML
   // template — đúng RULES "Do NOT duplicate Draft logic". Hàm không đổi hành
   // vi gì, chỉ thêm vào danh sách export.
-  return { initDashboard, runModule, initDrafts, publishDraft, rejectDraft, publishDraftById, rejectDraftById, initJobs, cancelJob, retryJob, initLogs, copyDraftText, publishVersionToFacebook, draftBodyHtml };
+  return { initDashboard, runModule, initDrafts, publishDraft, rejectDraft, deleteDraft, publishDraftById, rejectDraftById, initJobs, cancelJob, retryJob, initLogs, copyDraftText, publishVersionToFacebook, draftBodyHtml };
 })();

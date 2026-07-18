@@ -194,6 +194,28 @@ const AdminBgRemover = (function () {
     return data.imageUrl;
   }
 
+  // editImageUrl — CORE gọi action "edit_image" (Cloud Function, model
+  // gpt-image-1 /v1/images/edits) — nhận ẢNH GỐC THẬT + prompt mô tả cần
+  // sửa gì (đổi nền/thêm chữ...), trả về 1 ảnh DUY NHẤT đã chỉnh sửa. Dùng
+  // cho "Banner sản phẩm" (Founder Agent) — khác removeBackgroundUrl() ở
+  // chỗ KHÔNG cố định prompt/transparent, Founder Agent tự soạn prompt theo
+  // phong cách + tên sản phẩm.
+  async function editImageUrl(imageUrl, prompt, size) {
+    if (!imageUrl) throw new Error('Thiếu URL ảnh nguồn.');
+    if (!prompt) throw new Error('Thiếu mô tả cần chỉnh sửa.');
+    const user = firebase.auth().currentUser;
+    if (!user) throw new Error('Chưa đăng nhập.');
+    const token = await user.getIdToken();
+    const r = await fetch(PROXY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+      body: JSON.stringify({ action: 'edit_image', imageUrl, prompt, size })
+    });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Lỗi server.');
+    return data.imageUrl;
+  }
+
   async function run(containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -264,5 +286,5 @@ const AdminBgRemover = (function () {
     _setSourceUrl(containerId, url);
   }
 
-  return { mount, run, clearSource, loadUrl, setSourceUrl, removeBackgroundUrl };
+  return { mount, run, clearSource, loadUrl, setSourceUrl, removeBackgroundUrl, editImageUrl };
 })();

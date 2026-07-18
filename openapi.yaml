@@ -1,0 +1,405 @@
+openapi: 3.0.3
+info:
+  title: PSH Platform API (apiGateway)
+  version: "1.0.0"
+  description: |
+    REST API surface for the Pshop Music CMS, built Sprint 14, consolidated
+    Sprint 15 Phase 2 (AI module logic), extended with Agent RBAC (Sprint 15,
+    Agent RBAC Foundation) and async AI Generate (Sprint 15 Phase 3, Task 3.2).
+
+    Every response follows the Standard Response/Error format
+    (`SPRINT14_API_ARCHITECTURE_FINAL.md` §10-11): `{success, data, meta}` on
+    success, `{success:false, error:{code,message,details}, meta}` on error.
+
+    Auth: Bearer Firebase ID Token on every endpoint except `GET /v1/health`.
+    `x-required-role` on each operation lists which role(s) may call it —
+    `admin`, `editor`, `agent` — reflecting the exact checks in
+    `functions/routes/*.js` as of `AGENT_RBAC_AUDIT.md`'s full matrix, not an
+    aspirational/future state. Endpoints not listing `agent` reject it with
+    `403 PERMISSION_DENIED` today, even though `role: agent` itself is now
+    populated (`AGENT_RBAC_IMPLEMENTATION_REPORT.md`).
+
+    Scope: `apiGateway` only (`/v1/...`). `openaiProxy` and the 4 standalone
+    Facebook Cloud Functions (`facebookOAuthCallback` etc.) are separate
+    Cloud Functions, not part of this Gateway, and are out of scope for this
+    spec (SPRINT15_TASK_BREAKDOWN.md Task 3.3's stated scope: "all 68
+    apiGateway endpoints").
+  contact:
+    name: Pshop Music — 86 Lạc Long Quân, Nha Trang
+servers:
+  - url: https://us-central1-pshop-music.cloudfunctions.net/apiGateway
+    description: Production (single Cloud Function, all /v1/... routes)
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Health & System
+  - name: CMS Lists (Products/Categories/Brands/Tags/Blog/Banners/Videos)
+  - name: CMS Singletons (Sliders/Menu/Footer/SEO/Settings)
+  - name: Media
+  - name: Users & Roles
+  - name: Drafts
+  - name: Jobs, Logs & History
+  - name: AI Generate
+  - name: Facebook
+  - name: Social Media Center
+  - name: Founder
+  - name: Founder Agent
+  - name: Self-Healing
+  - name: Webhooks & Events
+  - name: OpenClaw Discovery
+
+paths:
+  # ── Health & System ──────────────────────────────────────────────────────
+  /v1/health:
+    get:
+      tags: [Health & System]
+      summary: Public health check (no auth)
+      security: []
+      x-required-role: public
+      responses: { "200": { $ref: '#/components/responses/Success' } }
+
+  /v1/system/health:
+    get:
+      tags: [Health & System]
+      summary: Detailed system health (OpenAI configured, secrets present)
+      x-required-role: admin
+      responses: { "200": { $ref: '#/components/responses/Success' }, "403": { $ref: '#/components/responses/Forbidden' } }
+
+  /v1/system/self-test:
+    post:
+      tags: [Health & System]
+      summary: Self-test the Async Job / Retry / Webhook frameworks
+      x-required-role: admin
+      requestBody: { content: { application/json: { schema: { type: object, properties: { webhookUrl: { type: string } } } } } }
+      responses: { "200": { $ref: '#/components/responses/Success' } }
+
+  /v1/system/diagnostics:
+    get:
+      tags: [Self-Healing]
+      summary: Aggregated status across queue/drafts/media/rules/ai-provider
+      x-required-role: admin
+      responses: { "200": { $ref: '#/components/responses/Success' } }
+
+  /v1/system/jobs/monitor:
+    get:
+      tags: [Self-Healing]
+      summary: Job queue health summary (stuck jobs, oldest queued age)
+      x-required-role: admin
+      responses: { "200": { $ref: '#/components/responses/Success' } }
+
+  /v1/auth/me:
+    get:
+      tags: [Health & System]
+      summary: Return the authenticated caller's identity and role
+      x-required-role: any-authenticated
+      responses: { "200": { $ref: '#/components/responses/Success' } }
+
+  # ── CMS Lists (7 modules share one route file, parameterized by module) ──
+  /v1/{module}:
+    parameters:
+      - $ref: '#/components/parameters/CmsListModule'
+    get:
+      tags: [CMS Lists (Products/Categories/Brands/Tags/Blog/Banners/Videos)]
+      summary: List items (public sees published/active only; staff sees all)
+      security: []
+      x-required-role: public (filtered) / admin / editor (unfiltered)
+      responses: { "200": { $ref: '#/components/responses/Success' } }
+    post:
+      tags: [CMS Lists (Products/Categories/Brands/Tags/Blog/Banners/Videos)]
+      summary: Create an item
+      x-required-role: admin / editor
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses: { "201": { $ref: '#/components/responses/Success' }, "400": { $ref: '#/components/responses/BadRequest' }, "403": { $ref: '#/components/responses/Forbidden' } }
+
+  /v1/{module}/{id}:
+    parameters:
+      - $ref: '#/components/parameters/CmsListModule'
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [CMS Lists (Products/Categories/Brands/Tags/Blog/Banners/Videos)]
+      summary: Get one item by id (Blog also resolves by slug)
+      security: []
+      x-required-role: public (filtered) / admin / editor (unfiltered)
+      responses: { "200": { $ref: '#/components/responses/Success' }, "404": { $ref: '#/components/responses/NotFound' } }
+    patch:
+      tags: [CMS Lists (Products/Categories/Brands/Tags/Blog/Banners/Videos)]
+      summary: Update an item (not supported for "tags")
+      x-required-role: admin / editor
+      requestBody: { content: { application/json: { schema: { type: object } } } }
+      responses: { "200": { $ref: '#/components/responses/Success' }, "404": { $ref: '#/components/responses/NotFound' } }
+    delete:
+      tags: [CMS Lists (Products/Categories/Brands/Tags/Blog/Banners/Videos)]
+      summary: Delete an item
+      x-required-role: admin
+      responses: { "200": { $ref: '#/components/responses/Success' }, "403": { $ref: '#/components/responses/Forbidden' }, "404": { $ref: '#/components/responses/NotFound' } }
+
+  # ── CMS Singletons ────────────────────────────────────────────────────────
+  /v1/sliders:
+    get: { tags: [CMS Singletons (Sliders/Menu/Footer/SEO/Settings)], summary: Get hero slides array, security: [], x-required-role: public, responses: { "200": { $ref: '#/components/responses/Success' } } }
+    put: { tags: [CMS Singletons (Sliders/Menu/Footer/SEO/Settings)], summary: Replace the entire hero slides array, x-required-role: admin / editor, requestBody: { required: true, content: { application/json: { schema: { type: array } } } }, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/menu:
+    get: { tags: [CMS Singletons (Sliders/Menu/Footer/SEO/Settings)], summary: Get menu config, security: [], x-required-role: public, responses: { "200": { $ref: '#/components/responses/Success' } } }
+    patch: { tags: [CMS Singletons (Sliders/Menu/Footer/SEO/Settings)], summary: Merge-update menu config, x-required-role: admin, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/footer:
+    get: { tags: [CMS Singletons (Sliders/Menu/Footer/SEO/Settings)], summary: Get footer config, security: [], x-required-role: public, responses: { "200": { $ref: '#/components/responses/Success' } } }
+    patch: { tags: [CMS Singletons (Sliders/Menu/Footer/SEO/Settings)], summary: Merge-update footer config, x-required-role: admin, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/seo:
+    get: { tags: [CMS Singletons (Sliders/Menu/Footer/SEO/Settings)], summary: Get global SEO settings, security: [], x-required-role: public, responses: { "200": { $ref: '#/components/responses/Success' } } }
+    patch: { tags: [CMS Singletons (Sliders/Menu/Footer/SEO/Settings)], summary: Merge-update global SEO settings, x-required-role: admin, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/settings:
+    get: { tags: [CMS Singletons (Sliders/Menu/Footer/SEO/Settings)], summary: Get site identity/contact settings, security: [], x-required-role: public, responses: { "200": { $ref: '#/components/responses/Success' } } }
+    patch: { tags: [CMS Singletons (Sliders/Menu/Footer/SEO/Settings)], summary: Merge-update settings (rejects heroSlides/menu/footer keys — use their own endpoints), x-required-role: admin, responses: { "200": { $ref: '#/components/responses/Success' }, "400": { $ref: '#/components/responses/BadRequest' } } }
+
+  # ── Media ─────────────────────────────────────────────────────────────────
+  /v1/media/upload:
+    post:
+      tags: [Media]
+      summary: Upload a file (base64/data-URL JSON body, not multipart)
+      x-required-role: admin / editor
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { dataUrl: { type: string }, base64: { type: string }, contentType: { type: string }, folder: { type: string }, filename: { type: string } } } } } }
+      responses: { "201": { $ref: '#/components/responses/Success' }, "400": { $ref: '#/components/responses/BadRequest' } }
+  /v1/media:
+    get: { tags: [Media], summary: List files in Storage (optionally filtered by folder prefix), x-required-role: any-authenticated, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/media/{path}:
+    parameters: [{ name: path, in: path, required: true, schema: { type: string }, description: URL-encoded Storage path }]
+    delete: { tags: [Media], summary: Delete a file, x-required-role: admin, responses: { "200": { $ref: '#/components/responses/Success' }, "404": { $ref: '#/components/responses/NotFound' } } }
+
+  # ── Users & Roles ─────────────────────────────────────────────────────────
+  /v1/users:
+    get: { tags: [Users & Roles], summary: List all CMS accounts, x-required-role: admin, responses: { "200": { $ref: '#/components/responses/Success' } } }
+    post: { tags: [Users & Roles], summary: Create a new account (email/password/role), x-required-role: admin, requestBody: { required: true, content: { application/json: { schema: { type: object, required: [email, password], properties: { email: { type: string }, password: { type: string }, name: { type: string }, role: { type: string, enum: [admin, editor] } } } } } }, responses: { "201": { $ref: '#/components/responses/Success' }, "400": { $ref: '#/components/responses/BadRequest' } } }
+  /v1/users/{uid}:
+    parameters: [{ $ref: '#/components/parameters/Uid' }]
+    delete: { tags: [Users & Roles], summary: 'Delete an account (roles/{uid} + Firebase Auth user)', x-required-role: admin, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/roles/{uid}:
+    parameters: [{ $ref: '#/components/parameters/Uid' }]
+    get: { tags: [Users & Roles], summary: Get one account's role record, x-required-role: admin, responses: { "200": { $ref: '#/components/responses/Success' }, "404": { $ref: '#/components/responses/NotFound' } } }
+    patch: { tags: [Users & Roles], summary: Update a role record, x-required-role: admin, responses: { "200": { $ref: '#/components/responses/Success' } } }
+
+  # ── Drafts ────────────────────────────────────────────────────────────────
+  /v1/drafts:
+    get: { tags: [Drafts], summary: List all AI Drafts, x-required-role: 'admin / editor / agent (drafts.manage)', responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/drafts/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get: { tags: [Drafts], summary: Get one Draft, x-required-role: 'admin / editor / agent (drafts.manage)', responses: { "200": { $ref: '#/components/responses/Success' }, "404": { $ref: '#/components/responses/NotFound' } } }
+    delete: { tags: [Drafts], summary: 'Permanently delete a Draft (Sprint 15, AI Draft Lifecycle — new)', x-required-role: admin, responses: { "200": { $ref: '#/components/responses/Success' }, "403": { $ref: '#/components/responses/Forbidden' }, "404": { $ref: '#/components/responses/NotFound' } } }
+  /v1/drafts/{id}/publish:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post: { tags: [Drafts], summary: 'Publish a Draft to its target (Products/Blog/Banners/Sliders)', x-required-role: 'admin / editor / agent (drafts.manage)', responses: { "200": { $ref: '#/components/responses/Success' }, "404": { $ref: '#/components/responses/NotFound' }, "502": { $ref: '#/components/responses/UpstreamError' } } }
+  /v1/drafts/{id}/reject:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post: { tags: [Drafts], summary: 'Reject a Draft (status change only — does not delete)', x-required-role: 'admin / editor / agent (drafts.manage)', responses: { "200": { $ref: '#/components/responses/Success' }, "404": { $ref: '#/components/responses/NotFound' } } }
+
+  # ── Jobs, Logs & History ─────────────────────────────────────────────────
+  /v1/jobs:
+    get: { tags: [Jobs, Logs & History], summary: List AI generation jobs (paginated, cursor=createdAt), x-required-role: 'admin / editor / agent (jobs.view, read-only)', parameters: [{ $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' }], responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/jobs/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get: { tags: [Jobs, Logs & History], summary: 'Get one job by id — checks the aiJobs node first (client-triggered jobs), then falls back to apiAsyncJobs (Production Readiness Review fix: this is where jobIds returned by ?async=true on AI Generate actually live)', x-required-role: 'admin / editor / agent (jobs.view, read-only)', responses: { "200": { $ref: '#/components/responses/Success' }, "404": { $ref: '#/components/responses/NotFound' } } }
+  /v1/jobs/{id}/retry:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post: { tags: [Jobs, Logs & History], summary: Retry a failed job's failed items, x-required-role: admin / editor, responses: { "200": { $ref: '#/components/responses/Success' }, "404": { $ref: '#/components/responses/NotFound' } } }
+  /v1/jobs/{id}/cancel:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post: { tags: [Jobs, Logs & History], summary: Cancel a running job, x-required-role: admin / editor, responses: { "200": { $ref: '#/components/responses/Success' }, "404": { $ref: '#/components/responses/NotFound' } } }
+  /v1/logs:
+    get: { tags: [Jobs, Logs & History], summary: List AI job attempt logs (paginated, cursor=timestamp), x-required-role: admin / editor, parameters: [{ $ref: '#/components/parameters/Cursor' }, { $ref: '#/components/parameters/Limit' }], responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/history/conversations:
+    get: { tags: [Jobs, Logs & History], summary: 'Inferred conversation history (from aiJobs/aiDrafts)', x-required-role: admin / editor, parameters: [{ $ref: '#/components/parameters/Limit' }], responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/workflows:
+    get: { tags: [Jobs, Logs & History], summary: Founder Agent workflow run history, x-required-role: admin / editor, parameters: [{ $ref: '#/components/parameters/Limit' }], responses: { "200": { $ref: '#/components/responses/Success' } } }
+
+  # ── AI Generate ───────────────────────────────────────────────────────────
+  /v1/ai/{route}/generate:
+    parameters:
+      - name: route
+        in: path
+        required: true
+        schema: { type: string, enum: [blog, product-description, seo, facebook-post, banner, image, image-prompt, slider, faq, video, voice, subtitle] }
+      - name: async
+        in: query
+        required: false
+        schema: { type: boolean, default: false }
+        description: |
+          Sprint 15 Phase 3, Task 3.2. `true`/`1` → returns `202 {jobId, status:"queued"}`
+          immediately; a background worker (`aiGenerateWorker`, RTDB-triggered
+          Cloud Function) completes the generation and fires the same
+          `ai.generate.completed`/`.failed` webhook events the sync path always
+          has. Omitted/`false` → original synchronous behavior, unchanged.
+    post:
+      tags: [AI Generate]
+      summary: |
+        Generate AI content for one of 9 real modules (blog/product-description/
+        seo/facebook-post/banner/image/image-prompt/slider/faq) or receive
+        503 for the 3 unimplemented stub routes (video/voice/subtitle).
+      x-required-role: |
+        blog, image, image-prompt: admin / editor / agent.
+        All other 6 real modules + all 3 stub routes: admin / editor only.
+      requestBody: { content: { application/json: { schema: { type: object }, example: { topic: "Cách chọn loa kiểm âm", tone: "Chuyên nghiệp" } } } }
+      responses:
+        "201": { description: "Draft created (sync mode)", content: { application/json: { schema: { $ref: '#/components/schemas/StandardResponse' } } } }
+        "202": { description: "Job queued (async mode)", content: { application/json: { schema: { $ref: '#/components/schemas/StandardResponse' } } } }
+        "400": { $ref: '#/components/responses/BadRequest' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+        "429": { $ref: '#/components/responses/RateLimited' }
+        "503": { description: "Stub route, not implemented" }
+
+  # ── Facebook ──────────────────────────────────────────────────────────────
+  /v1/facebook/connection:
+    get: { tags: [Facebook], summary: Get current Facebook Page connection status, x-required-role: admin / editor, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/facebook/health:
+    get: { tags: [Facebook], summary: Facebook integration health check, x-required-role: admin / editor, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/facebook/oauth/start:
+    post: { tags: [Facebook], summary: Begin the Facebook OAuth flow, x-required-role: admin, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/facebook/pages/select:
+    post: { tags: [Facebook], summary: 'Select a Facebook Page to publish as (proxy to facebookSelectPage)', x-required-role: admin / editor, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/facebook/publish:
+    post: { tags: [Facebook], summary: 'Publish to Facebook (proxy to facebookPublish)', x-required-role: admin / editor, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/facebook/token/refresh:
+    post: { tags: [Facebook], summary: 'Refresh the Page access token (proxy to facebookRefreshToken)', x-required-role: admin / editor, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/facebook/status:
+    get: { tags: [Self-Healing], summary: Self-Healing status check for Facebook module, x-required-role: admin, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/facebook/validate:
+    post: { tags: [Self-Healing], summary: Self-Healing validation for Facebook module, x-required-role: admin, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/facebook/repair:
+    post: { tags: [Self-Healing], summary: Self-Healing repair for Facebook module (No Self-Auto-Fix — explicit call only), x-required-role: admin, responses: { "200": { $ref: '#/components/responses/Success' } } }
+
+  # ── Social Media Center ───────────────────────────────────────────────────
+  /v1/social-media-center/drafts:
+    get: { tags: [Social Media Center], summary: List Drafts relevant to Social Media Center (facebook-post/banner/blog/product-description modules), x-required-role: admin / editor, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/social-media-center/drafts/{id}/schedule:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post: { tags: [Social Media Center], summary: 'Mark a Draft version as scheduled (intent only — no Cloud Scheduler yet)', x-required-role: admin / editor, responses: { "200": { $ref: '#/components/responses/Success' }, "400": { $ref: '#/components/responses/BadRequest' } } }
+  /v1/social-media-center/drafts/{id}/publish:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post: { tags: [Social Media Center], summary: Publish one Draft version to Facebook now, x-required-role: admin / editor, responses: { "200": { $ref: '#/components/responses/Success' } } }
+
+  # ── Founder ───────────────────────────────────────────────────────────────
+  /v1/founder/home:
+    get: { tags: [Founder], summary: Aggregated dashboard (pending Drafts + recent Logs), x-required-role: admin / editor, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/ai/one-click-marketing:
+    post: { tags: [Founder], summary: 'Orchestrate 4 AI Generate calls in parallel (blog/facebook-post/banner/image-prompt)', x-required-role: admin / editor, requestBody: { content: { application/json: { schema: { type: object, properties: { productId: { type: string }, topic: { type: string }, promotion: { type: string } } } } } }, responses: { "200": { $ref: '#/components/responses/Success' }, "400": { $ref: '#/components/responses/BadRequest' } } }
+
+  # ── Founder Agent ─────────────────────────────────────────────────────────
+  /v1/agent/tools:
+    get: { tags: [Founder Agent], summary: List available Founder Agent tools, x-required-role: admin / editor, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/agent/plan:
+    post: { tags: [Founder Agent], summary: Create a new execution Plan from natural-language text, x-required-role: admin / editor, requestBody: { required: true, content: { application/json: { schema: { type: object, required: [text], properties: { text: { type: string }, attachments: { type: array, items: { type: object } } } } } } }, responses: { "201": { $ref: '#/components/responses/Success' }, "200": { description: "Clarification needed, no plan created" } } }
+  /v1/agent/plan/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get: { tags: [Founder Agent], summary: Get a Plan, x-required-role: admin / editor, responses: { "200": { $ref: '#/components/responses/Success' }, "404": { $ref: '#/components/responses/NotFound' } } }
+  /v1/agent/plan/{id}/steps/{i}/execute:
+    parameters: [{ $ref: '#/components/parameters/Id' }, { name: i, in: path, required: true, schema: { type: integer } }]
+    post: { tags: [Founder Agent], summary: Execute one step of a Plan, x-required-role: admin / editor, responses: { "200": { $ref: '#/components/responses/Success' }, "404": { $ref: '#/components/responses/NotFound' } } }
+  /v1/agent/plan/{id}/undo:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post: { tags: [Founder Agent], summary: Undo the last completed step, x-required-role: admin / editor, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/agent/plan/{id}/resume:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post: { tags: [Founder Agent], summary: Resume a discarded/stalled Plan, x-required-role: admin / editor, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/agent/plan/{id}/discard:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post: { tags: [Founder Agent], summary: Discard a Plan, x-required-role: admin / editor, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/agent/conversations:
+    post: { tags: [Founder Agent], summary: Start a new Conversation session (TTL 30 min idle), x-required-role: admin / editor, responses: { "201": { $ref: '#/components/responses/Success' } } }
+  /v1/agent/conversations/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    get: { tags: [Founder Agent], summary: Get a Conversation, x-required-role: admin / editor, responses: { "200": { $ref: '#/components/responses/Success' }, "404": { $ref: '#/components/responses/NotFound' } } }
+  /v1/agent/conversations/{id}/messages:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    post: { tags: [Founder Agent], summary: Send a message in a Conversation (may trigger a Plan or a clarification request), x-required-role: admin / editor, requestBody: { required: true, content: { application/json: { schema: { type: object, required: [text], properties: { text: { type: string }, attachments: { type: array, items: { type: object } } } } } } }, responses: { "200": { $ref: '#/components/responses/Success' }, "400": { $ref: '#/components/responses/BadRequest' } } }
+
+  # ── Self-Healing (5 modules share one route file) ─────────────────────────
+  /v1/{healModule}/status:
+    parameters: [{ $ref: '#/components/parameters/HealModule' }]
+    get: { tags: [Self-Healing], summary: Module health status, x-required-role: admin, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/{healModule}/validate:
+    parameters: [{ $ref: '#/components/parameters/HealModule' }]
+    post: { tags: [Self-Healing], summary: Validate module integrity, x-required-role: admin, responses: { "200": { $ref: '#/components/responses/Success' } } }
+  /v1/{healModule}/repair:
+    parameters: [{ $ref: '#/components/parameters/HealModule' }]
+    post:
+      tags: [Self-Healing]
+      summary: |
+        Repair the module. "No Self-Auto-Fix" principle: only ever executes
+        on this explicit call — never scheduled, never triggered by another
+        event. Infrastructure-only fixes auto-execute; anything touching
+        business data returns `requiresApproval:true` instead of acting.
+      x-required-role: admin
+      responses: { "200": { $ref: '#/components/responses/Success' } }
+  /v1/queue/retry:
+    post: { tags: [Self-Healing], summary: 'Retry every currently-failed job (alias for bulk /v1/jobs/{id}/retry)', x-required-role: admin, responses: { "200": { $ref: '#/components/responses/Success' } } }
+
+  # ── Webhooks & Events ─────────────────────────────────────────────────────
+  /v1/webhooks:
+    get: { tags: [Webhooks & Events], summary: List registered webhook subscriptions, x-required-role: admin, responses: { "200": { $ref: '#/components/responses/Success' } } }
+    post: { tags: [Webhooks & Events], summary: Register a new webhook subscription, x-required-role: admin, requestBody: { required: true, content: { application/json: { schema: { type: object, required: [url, eventType], properties: { url: { type: string, format: uri }, eventType: { type: string, description: 'e.g. draft.published, ai.generate.completed, ai.generate.failed, or "*"' } } } } } }, responses: { "201": { $ref: '#/components/responses/Success' }, "400": { $ref: '#/components/responses/BadRequest' } } }
+  /v1/webhooks/{id}:
+    parameters: [{ $ref: '#/components/parameters/Id' }]
+    delete: { tags: [Webhooks & Events], summary: Unregister a webhook subscription, x-required-role: admin, responses: { "200": { $ref: '#/components/responses/Success' }, "404": { $ref: '#/components/responses/NotFound' } } }
+  /v1/events:
+    get: { tags: [Webhooks & Events], summary: 'Poll recent events (last 200 kept) — fallback for consumers without a public webhook URL', x-required-role: admin, parameters: [{ name: eventType, in: query, schema: { type: string } }, { $ref: '#/components/parameters/Limit' }], responses: { "200": { $ref: '#/components/responses/Success' } } }
+
+  # ── OpenClaw Discovery ────────────────────────────────────────────────────
+  /v1/openclaw/capabilities:
+    get:
+      tags: [OpenClaw Discovery]
+      summary: |
+        Self-discovery: which capability groups the CALLING token's actual
+        role can use right now. No special "OpenClaw API" exists — this
+        reports real availability computed the same way every route's own
+        permission check works (AGENT_RBAC_AUDIT.md).
+      x-required-role: any-authenticated
+      responses: { "200": { $ref: '#/components/responses/Success' } }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Firebase ID Token
+
+  parameters:
+    Id: { name: id, in: path, required: true, schema: { type: string } }
+    Uid: { name: uid, in: path, required: true, schema: { type: string } }
+    Cursor: { name: cursor, in: query, schema: { type: number }, description: 'Timestamp of the last item from the previous page' }
+    Limit: { name: limit, in: query, schema: { type: integer, default: 50, minimum: 1, maximum: 200 } }
+    CmsListModule: { name: module, in: path, required: true, schema: { type: string, enum: [products, categories, brands, tags, blog, banners, videos] } }
+    HealModule: { name: healModule, in: path, required: true, schema: { type: string, enum: [queue, drafts, media, rules, ai-provider] } }
+
+  schemas:
+    StandardResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        data: {}
+        meta:
+          type: object
+          properties:
+            requestId: { type: string }
+            timestamp: { type: string, format: date-time }
+            apiVersion: { type: string, example: v1 }
+        pagination:
+          type: object
+          properties: { cursor: { type: number, nullable: true }, hasMore: { type: boolean }, limit: { type: integer } }
+    StandardError:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        error:
+          type: object
+          properties:
+            code: { type: string, enum: [INVALID_REQUEST, UNAUTHENTICATED, PERMISSION_DENIED, NOT_FOUND, METHOD_NOT_ALLOWED, RATE_LIMITED, UPSTREAM_ERROR, SERVICE_UNAVAILABLE] }
+            message: { type: string }
+            details: { nullable: true }
+        meta: { type: object, properties: { requestId: { type: string }, timestamp: { type: string, format: date-time } } }
+
+  responses:
+    Success: { description: OK, content: { application/json: { schema: { $ref: '#/components/schemas/StandardResponse' } } } }
+    BadRequest: { description: Invalid request, content: { application/json: { schema: { $ref: '#/components/schemas/StandardError' } } } }
+    Forbidden: { description: Permission denied, content: { application/json: { schema: { $ref: '#/components/schemas/StandardError' } } } }
+    NotFound: { description: Not found, content: { application/json: { schema: { $ref: '#/components/schemas/StandardError' } } } }
+    RateLimited: { description: Rate limit exceeded, content: { application/json: { schema: { $ref: '#/components/schemas/StandardError' } } } }
+    UpstreamError: { description: Upstream (OpenAI/Facebook) call failed, content: { application/json: { schema: { $ref: '#/components/schemas/StandardError' } } } }

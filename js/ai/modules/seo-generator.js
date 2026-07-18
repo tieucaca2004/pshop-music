@@ -10,12 +10,20 @@
  * Nhắm vào Blog Post (không nhắm Product) vì Product hiện không có trang
  * riêng để áp Meta Title/OG/Schema — xem AI_RULES.md mục "Giới hạn kiến
  * trúc" và ROADMAP.md "SEO cho trang sản phẩm riêng".
+ *
+ * Refactored Sprint 15 Phase 2 (AI Architecture Consolidation, Option B —
+ * approved by Founder): `buildPrompt()`/`mapToDraftContent()` now delegate
+ * to `AiModulesCore.MODULES['seo-generator']` (js/ai/modules-core.js) — the
+ * single source of truth also used verbatim by
+ * `functions/shared/aiModules.js` server-side. Prompt wording and parsing
+ * logic did NOT change — only where the code physically lives.
+ * `loadContext`/`inputFields` stay here (client-specific, uses DataProvider).
  */
 AIModuleRegistry.register({
   id: 'seo-generator',
   label: 'SEO Generator',
   description: 'Tạo gói SEO đầy đủ (Meta Title/Description, Keywords, Open Graph, gợi ý Schema) cho 1 bài blog đã có.',
-  targetCollection: 'blogPosts',
+  targetCollection: AiModulesCore.MODULES['seo-generator'].targetCollection,
 
   inputFields: [
     { key: 'postId', label: 'Chọn bài viết', type: 'blogSelect' }
@@ -39,41 +47,11 @@ AIModuleRegistry.register({
     });
   },
 
-  productCategoryLabels(p, categories) {
-    if (!p) return [];
-    const ids = Array.isArray(p.categoryIds) && p.categoryIds.length ? p.categoryIds : (p.category ? [p.category] : []);
-    const byCode = {};
-    (categories || []).forEach(c => { byCode[c.code] = c; });
-    return ids.map(id => byCode[id]).filter(Boolean).map(c => c.label);
-  },
-
   buildPrompt(inputParams, context) {
-    const post = context.post || {};
-    const categoryLabels = this.productCategoryLabels(context.product, context.categories);
-    const categoryLine = categoryLabels.length ? ` Sản phẩm liên quan thuộc danh mục: ${categoryLabels.join(', ')}.` : '';
-    return [
-      `Dựa trên bài viết sau, tạo gói SEO gồm đúng 6 dòng:`,
-      `dòng 1 = Meta Title (dưới 60 ký tự),`,
-      `dòng 2 = Meta Description (dưới 160 ký tự),`,
-      `dòng 3 = danh sách từ khóa (phân tách bằng dấu phẩy),`,
-      `dòng 4 = Open Graph Title,`,
-      `dòng 5 = Open Graph Description,`,
-      `dòng 6 = gợi ý loại Schema.org phù hợp (vd: Article, Product, FAQPage) kèm lý do ngắn gọn.`,
-      `Tiêu đề gốc: "${post.title || ''}". Mô tả ngắn: "${post.excerpt || ''}".${categoryLine}`
-    ].join(' ');
+    return AiModulesCore.MODULES['seo-generator'].buildPrompt(inputParams, context);
   },
 
   mapToDraftContent(providerOutput, inputParams, context) {
-    const lines = (providerOutput.text || '').split('\n').filter(Boolean);
-    return {
-      seoTitle: lines[0] || '',
-      seoDescription: lines[1] || '',
-      keywords: (lines[2] || '').split(',').map(k => k.trim()).filter(Boolean),
-      ogTitle: lines[3] || '',
-      ogDescription: lines[4] || '',
-      ogImage: (context.post && context.post.coverImage) || '',
-      schemaSuggestion: lines[5] || '',
-      _postTitle: (context.post && context.post.title) || inputParams.postId
-    };
+    return AiModulesCore.MODULES['seo-generator'].mapToDraftContent(providerOutput, inputParams, context);
   }
 });

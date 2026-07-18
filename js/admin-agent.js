@@ -89,7 +89,14 @@ const AdminAgent = (function () {
     'quality-score':               { label: 'Điểm chất lượng', icon: '⭐' },
     'missing-info-report':         { label: 'Báo cáo thiếu thông tin', icon: '📋' },
     // Sprint 13 V5 (Final Polish) — xem chú thích đầu file.
-    'smart-background':            { label: 'Xóa phông tự động', icon: '🎨' }
+    'smart-background':            { label: 'Xóa phông tự động', icon: '🎨' },
+    // Founder yêu cầu "đưa ảnh gốc lên AI xử lý nền rồi bỏ chữ vào ảnh" —
+    // khác hẳn image-generator (dall-e-3, chỉ vẽ ảnh MỚI từ mô tả, không
+    // nhận ảnh đầu vào) — tool này NHẬN ẢNH THẬT sản phẩm, model gpt-image-1
+    // chỉnh sửa trực tiếp trên ảnh đó (đổi nền + in chữ tên sản phẩm), trả về
+    // 1 ảnh DUY NHẤT. Xem executeStep() nhánh riêng (không qua PluginManager/
+    // Queue/DraftDB — giống smart-background, một tác vụ ảnh đơn lẻ).
+    'product-banner':              { label: 'Banner sản phẩm (AI)', icon: '🪧' }
   };
 
   // EXTERNAL_PROVIDERS (Sprint 13 V5 — "FOUNDATION FOR FUTURE") — điểm mở
@@ -163,8 +170,15 @@ const AdminAgent = (function () {
   // ── INIT ────────────────────────────────────────────────────────────────────
 
   function init() {
+    // Khoá ô nhập/nút Gửi ngay từ đầu — trước đây 2 nút này BẬT SẴN trước khi
+    // AdminAuth.init() xác nhận xong "user" (chờ mạng/Firebase), Founder gõ
+    // + Enter quá nhanh sẽ gọi callOpenAI() với user còn null -> "Cannot read
+    // properties of null (reading 'getIdToken')". Mở khoá lại NGAY khi user
+    // đã sẵn sàng.
+    setInputEnabled(false);
     AdminAuth.init({ page: 'founder-agent', title: 'FOUNDER AGENT' }).then(({ user: u }) => {
       user = u;
+      setInputEnabled(true);
       Promise.all([
         DB.getAll ? DB.getAll() : Promise.resolve([]),
         BlogDB && BlogDB.getAll ? BlogDB.getAll() : Promise.resolve([]),
@@ -193,17 +207,29 @@ const AdminAgent = (function () {
 
   // ── SUGGESTED ACTIONS ───────────────────────────────────────────────────────
 
+  // renderSuggested — TRƯỚC ĐÂY nhúng JSON.stringify(s.text) (dấu ngoặc kép)
+  // thẳng vào bên trong thuộc tính onclick="..." (cũng dùng dấu ngoặc kép) —
+  // 2 dấu ngoặc kép ĐỤNG NHAU làm hỏng HTML, khiến bấm nút không chạy được gì
+  // (im lặng, không báo lỗi — đúng hiện tượng Founder mô tả). Giờ lưu câu mẫu
+  // vào thuộc tính data-* (đã escape đúng chuẩn HTML), đọc lại qua
+  // this.dataset — không còn xung đột dấu ngoặc.
   function renderSuggested() {
     const wrap = document.getElementById('agentSuggestions');
     if (!wrap) return;
     wrap.innerHTML = SUGGESTED.map(s =>
-      `<button type="button" class="agent-suggestion-chip" onclick="AdminAgent.useSuggestion(${JSON.stringify(s.text)})">${escHtml(s.label)}</button>`
+      `<button type="button" class="agent-suggestion-chip" data-suggestion-text="${escHtml(s.text)}" onclick="AdminAgent.useSuggestion(this.dataset.suggestionText)">${escHtml(s.label)}</button>`
     ).join('');
   }
 
+  // useSuggestion — CHỈ điền sẵn câu mẫu vào ô nhập, KHÔNG tự gửi ngay — trước
+  // đây gửi ngay khiến Founder bấm thẻ gợi ý (dùng tên mẫu cố định "Pioneer
+  // RX3") mà không có cơ hội sửa lại thành đúng tên sản phẩm thật đang có,
+  // lệnh gửi đi tìm không thấy sản phẩm nên trông như "không dùng được".
   function useSuggestion(text) {
-    document.getElementById('agentInput').value = text;
-    send();
+    const input = document.getElementById('agentInput');
+    input.value = text;
+    input.focus();
+    input.setSelectionRange(0, input.value.length);
   }
 
   // ── INPUT: ĐÍNH KÈM ẢNH / FILE / DÁN / KÉO-THẢ / MICRO ──────────────────────
@@ -470,10 +496,22 @@ const AdminAgent = (function () {
       const steps = plan.steps.map(s => normalizeStep(s));
       // Ảnh đính kèm (nếu có) dùng làm Ảnh đại diện cho bước create-product
       // trong CÙNG Plan — media THẬT do Founder cung cấp, không phải AI sinh.
-      const imageAttachment = (effectiveAttachments || []).find(a => a.type === 'image');
+      const imageAttachments = (effectiveAttachments || []).filter(a => a.type === 'image');
+      const imageAttachment = imageAttachments[0];
       if (imageAttachment) {
         const createStep = steps.find(s => s.tool === 'create-product');
         if (createStep) createStep.attachedImageUrl = imageAttachment.url;
+      }
+      // Founder đính kèm ảnh khi nhờ viết Blog (không đi qua create-product) —
+      // trước đây ảnh đính kèm bị BỎ QUA hoàn toàn cho blog-writer, khiến bài
+      // ra không có ảnh dù Founder đã gửi. Gán trực tiếp vào inputParams.images
+      // (field mới, tối đa 5) của bước blog-writer trong CÙNG Plan.
+      if (imageAttachments.length) {
+        const blogStep = steps.find(s => s.tool === 'blog-writer');
+        if (blogStep) {
+          const existing = Array.isArray(blogStep.inputParams.images) ? blogStep.inputParams.images : [];
+          blogStep.inputParams.images = existing.concat(imageAttachments.map(a => a.url)).slice(0, 5);
+        }
       }
       const fileAttachment = (effectiveAttachments || []).find(a => a.type === 'file');
       let introText = steps.length > 1 ? `Đã lập Execution Plan gồm ${steps.length} bước:` : 'Đã hiểu yêu cầu:';
@@ -504,7 +542,13 @@ const AdminAgent = (function () {
   }
 
   async function buildPlan(userText, attachments) {
-    const productList = products.slice(0, 30).map(p => `- ${p.name} (id:${p.id}, sku:${p.sku || ''})`).join('\n');
+    // Trước đây giới hạn 30 sản phẩm đầu — sản phẩm nằm ngoài top-30 sẽ vô
+    // hình với AI, khiến AI không tìm được id thật và dùng nhầm token
+    // "$product" cho sản phẩm ĐÃ CÓ (chỉ hợp lệ khi Plan có bước create-
+    // product) → bước Product AI/SEO báo lỗi "cần bước trước hoàn tất" dù
+    // sản phẩm đã tồn tại. Bỏ giới hạn — AI cần thấy TOÀN BỘ danh sách thật
+    // để chọn đúng id.
+    const productList = products.map(p => `- ${p.name} (id:${p.id}, sku:${p.sku || ''})`).join('\n');
     const blogList = blogPosts.slice(0, 10).map(b => `- ${b.title} (id:${b.id})`).join('\n');
     const categoryList = categories.filter(c => c.active !== false).map(c => `${c.code} (${c.label})`).join(', ');
     const attachmentNote = (attachments || []).length
@@ -524,7 +568,8 @@ Available tools (dùng ĐÚNG tên "tool" sau):
 - blog-writer: viết bài blog. inputParams: {"topic": "<chủ đề>", "tone": "Chuyên nghiệp", "keywords": "", "productId": "<id thật, hoặc \"$product\", hoặc bỏ trống nếu không liên quan sản phẩm nào>"}
 - facebook-post-generator: viết bài Facebook. inputParams: {"productId": "<id thật, hoặc \"$product\", hoặc bỏ trống>"}
 - banner-generator: tạo banner quảng cáo. inputParams: {"productId": "<id thật, hoặc \"$product\", hoặc bỏ trống>"}
-- image-generator: tạo ảnh marketing AI. inputParams: {"productId": "<id thật, hoặc \"$product\", hoặc bỏ trống>"}
+- image-generator: tạo ảnh marketing AI HOÀN TOÀN MỚI từ mô tả chữ (không dùng ảnh sản phẩm thật). inputParams: {"productId": "<id thật, hoặc \"$product\", hoặc bỏ trống>"}
+- product-banner: chỉnh sửa TRỰC TIẾP trên ảnh sản phẩm THẬT đã có sẵn (đổi nền + in chữ tên sản phẩm vào ảnh) — ra 1 ảnh banner hoàn chỉnh, giữ nguyên sản phẩm gốc. CHỈ dùng khi Founder nói rõ muốn "đổi nền ảnh có sẵn"/"làm banner từ ảnh thật"/"giữ nguyên ảnh sản phẩm chỉ đổi nền" — sản phẩm PHẢI đã có ảnh thật (image/images), không dùng được nếu chưa có ảnh. inputParams: {"productId": "<id thật, KHÔNG dùng \"$product\">", "style": "<phong cách nền, vd Dark/Luxury/Technology/Studio, mặc định Dark nếu Founder không nói rõ>", "tagline": "<câu mô tả ngắn tuỳ chọn hiện dưới tên sản phẩm, để trống nếu Founder không yêu cầu>"}
 - related-products: gợi ý Sản phẩm liên quan (cùng Danh mục/Thương hiệu). Đặt SAU detect-category khi tạo sản phẩm mới. inputParams: {"productId": "<id thật, hoặc \"$product\">"}
 - quality-score: tính Điểm chất lượng Sản phẩm (dựa trên dữ liệu THẬT đã có, không bịa). Đặt gần cuối Plan tạo sản phẩm mới, SAU các bước AI content. inputParams: {"productId": "<id thật, hoặc \"$product\">"}
 - missing-info-report: báo cáo thông tin còn thiếu (Ảnh/Video/Tài liệu/Bảo hành/Danh mục). Đặt SAU quality-score. inputParams: {"productId": "<id thật, hoặc \"$product\">"}
@@ -672,6 +717,18 @@ Quy tắc:
         } else {
           ok = false;
         }
+      } else if (key === 'productId' && !val && step.target) {
+        // AI thà để trống productId còn hơn bịa id giả (đúng nguyên tắc) khi
+        // không chắc — nhưng sản phẩm ĐÃ CÓ thật trong danh sách thì vẫn nên
+        // tự đối chiếu lại được. Dùng ĐÚNG cách so khớp (chuẩn hoá + fuzzy
+        // substring) mà bước check-duplicate đang dùng, tránh báo lỗi oan.
+        const norm = s => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const target = norm(step.target);
+        const match = target ? products.find(p => {
+          if (norm(p.name) === target || norm(p.sku) === target || norm(p.model) === target) return true;
+          return target.length > 4 && (norm(p.name).indexOf(target) !== -1 || target.indexOf(norm(p.name)) !== -1);
+        }) : null;
+        if (match) params[key] = match.id;
       }
     });
     return ok ? params : null;
@@ -825,6 +882,26 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
             }
           }
         }
+      } else if (step.tool === 'product-banner') {
+        // "đưa ảnh gốc lên AI xử lý nền rồi bỏ chữ vào ảnh" (Founder yêu cầu
+        // trực tiếp) — CHỈNH SỬA ảnh THẬT (model gpt-image-1 /v1/images/edits
+        // qua AdminBgRemover.editImageUrl(), KHÁC hẳn image-generator dall-e-3
+        // chỉ vẽ ảnh mới). Không tự ghi đè ảnh sản phẩm/bgImage nào — CHỈ trả
+        // về 1 ảnh kết quả để Founder tự xem/tải, tự quyết định dùng ở đâu
+        // (đúng "Draft Before Publish", tránh ghi nhầm ảnh chính sản phẩm).
+        const pid = resolvedParams.productId;
+        step.productId = pid;
+        const prod = products.find(p => p.id === pid);
+        if (!prod) throw new Error('Không xác định được sản phẩm cần làm banner.');
+        const sourceImage = (Array.isArray(prod.images) && prod.images.length ? prod.images[0] : prod.image) || '';
+        if (!sourceImage) throw new Error('Sản phẩm "' + prod.name + '" chưa có ảnh thật — cần tải ảnh lên trước (Quản lý Sản phẩm) rồi mới làm banner được.');
+        if (typeof AdminBgRemover === 'undefined' || !AdminBgRemover.editImageUrl) throw new Error('Công cụ chỉnh sửa ảnh chưa sẵn sàng trên trang này.');
+        const style = String(resolvedParams.style || 'Dark').trim();
+        const tagline = String(resolvedParams.tagline || '').trim();
+        const editPrompt = `Professional product marketing banner background for a DJ/audio equipment store. Style: ${style} theme — dramatic gradient, spot lighting, premium tech aesthetic. Add bold, clearly legible white text overlay in the lower-left area saying exactly: "${prod.name}"${tagline ? `, with a smaller subtitle line below it saying exactly: "${tagline}"` : ''}. Keep the product in the photo exactly as it is — same shape, colors, logos, and details, do not redraw or alter the product itself.`;
+        const resultUrl = await AdminBgRemover.editImageUrl(sourceImage, editPrompt, '16:9');
+        step.productBannerResult = { productId: pid, imageUrl: resultUrl };
+        step.status = 'completed';
       } else if (step.tool === 'related-products') {
         const pid = resolvedParams.productId;
         const prod = products.find(p => p.id === pid) || {};
@@ -1007,6 +1084,18 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
         }
         step.draftId = newDraft.id;
         step.status = 'completed';
+        // Tự động nối Ảnh nền sản phẩm AI vừa vẽ vào đúng ô "ẢNH NỀN SẢN
+        // PHẨM" (pBgImage, admin/products.html) — Founder yêu cầu tự động,
+        // khỏi phải tự vào "Duyệt nội dung" copy link rồi dán tay. CHỈ áp
+        // dụng khi Founder RÕ RÀNG chọn đúng loại ảnh "Product Background
+        // Image" + đã chọn đúng 1 Sản phẩm thật (productId) — không tự suy
+        // đoán/ghi nhầm sản phẩm khác, không áp dụng cho các loại ảnh khác.
+        if (step.tool === 'image-generator' && resolvedParams.imageType === 'Product Background Image' && resolvedParams.productId && newDraft.content && newDraft.content.imageUrl) {
+          await DB.update(resolvedParams.productId, { bgImage: newDraft.content.imageUrl });
+          const prod = products.find(p => p.id === resolvedParams.productId);
+          if (prod) prod.bgImage = newDraft.content.imageUrl;
+          step.autoAppliedBgImage = { productId: resolvedParams.productId, imageUrl: newDraft.content.imageUrl };
+        }
       }
     } catch (err) {
       step.status = 'failed';
@@ -1433,6 +1522,28 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
   // trùng lặp/danh mục/liên quan/điểm chất lượng/báo cáo thiếu) — hiển thị
   // NGAY DƯỚI hàng trạng thái, tách biệt errorText.
   function stepExtra(step) {
+    // Plan "Cập nhật/SEO cho sản phẩm ĐÃ CÓ" (chỉ Product AI + SEO, không có
+    // bước detect-category riêng) không hề hiện Danh mục hiện tại ở đâu —
+    // Founder không biết sản phẩm đang nằm trong mục nào. Hiện luôn ngay khi
+    // productId đã resolve được (không chờ Hoàn tất, để Founder thấy sớm).
+    if (step.tool === 'product-description-writer' && step.productId) {
+      const prod = products.find(p => p.id === step.productId);
+      if (prod) {
+        const catLabel = prod.categoryLabel || (Array.isArray(prod.categoryIds) && prod.categoryIds.length ? prod.categoryIds.join(', ') : '');
+        return `<div class="agent-step-extra">🏷 Danh mục hiện tại: <strong>${escHtml(catLabel || 'Chưa gán Danh mục')}</strong></div>`;
+      }
+    }
+    if (step.tool === 'product-banner' && step.productBannerResult) {
+      const url = step.productBannerResult.imageUrl;
+      return `<div class="agent-step-extra">🪧 <strong>Banner sản phẩm đã xong.</strong><br>
+        <img src="${escHtml(url)}" alt="Banner sản phẩm" style="max-width:280px;margin-top:0.5rem;border-radius:4px;display:block">
+        <a href="${escHtml(url)}" target="_blank" rel="noopener" class="agent-open-draft-btn">Xem/Tải ảnh đầy đủ →</a>
+      </div>`;
+    }
+    if (step.tool === 'image-generator' && step.autoAppliedBgImage) {
+      const prod = products.find(p => p.id === step.autoAppliedBgImage.productId);
+      return `<div class="agent-step-extra">🖼 <strong>Đã tự động gắn làm Ảnh nền sản phẩm${prod ? ' cho "' + escHtml(prod.name) + '"' : ''}.</strong> Xem/chỉnh lại ở <a href="/admin/products.html?edit=${encodeURIComponent(step.autoAppliedBgImage.productId)}" class="agent-open-draft-btn">Sửa Sản phẩm →</a></div>`;
+    }
     if (step.tool === 'smart-background' && step.smartBackground) {
       const sb = step.smartBackground;
       if (sb.applied) return `<div class="agent-step-extra">🎨 <strong>Đã tự động phát hiện + xóa phông nền trắng.</strong> Ảnh gốc vẫn giữ lại (gõ "hoàn tác" nếu muốn khôi phục).</div>`;

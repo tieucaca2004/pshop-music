@@ -24,6 +24,8 @@
  */
 const admin = require('firebase-admin');
 const listResource = require('../shared/listResource');
+const { canAccess } = require('../shared/permissions');
+const asyncJob = require('../shared/asyncJob');
 
 const JOBS_NODE = 'aiJobs';
 const LOGS_NODE = 'aiLogs';
@@ -98,7 +100,17 @@ async function handle(req, res, helpers) {
   const isWorkflows = path === '/v1/workflows';
   if (!isJobs && !isLogs && !isHistory && !isWorkflows) return null;
 
-  if (!isStaff(auth)) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin/Editor được xem Queue/Logs/History.');
+  // Agent RBAC Foundation (Sprint 15) — "AI Jobs" trong phạm vi Founder chỉ
+  // định NGHĨA LÀ chỉ xem (GET /v1/jobs, GET /v1/jobs/{id}), KHÔNG
+  // retry/cancel, KHÔNG Logs/History/Workflows. Admin/Editor KHÔNG đổi hành
+  // vi (isStaff() vẫn cho qua y hệt cũ, kiểm tra trước, không đụng route
+  // nào không thuộc "AI Jobs" — Logs/History/Workflows/retry/cancel vẫn
+  // Admin/Editor-only tuyệt đối, agent luôn bị chặn ở gate này vì
+  // agentJobsView chỉ đúng khi VỪA isJobs VỪA GET).
+  if (!isStaff(auth)) {
+    const agentJobsView = isJobs && req.method === 'GET' && canAccess(auth, 'jobs.view');
+    if (!agentJobsView) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin/Editor được xem Queue/Logs/History.');
+  }
 
   if (path === '/v1/jobs' && req.method === 'GET') {
     const all = await listResource.getAll(JOBS_NODE);
@@ -113,8 +125,20 @@ async function handle(req, res, helpers) {
 
     if (!action && req.method === 'GET') {
       const job = await listResource.getOne(JOBS_NODE, id);
-      if (!job) return sendError(res, 'NOT_FOUND', 'Không tìm thấy Job.');
-      return sendSuccess(res, job);
+      if (job) return sendSuccess(res, job);
+      // Sprint 15 Production Readiness Review — CRITICAL fix. `apiAsyncJobs`
+      // (shared/asyncJob.js, Phase 1) là node RIÊNG, TÁCH KHỎI `aiJobs` theo
+      // đúng thiết kế gốc (xem asyncJob.js đầu file) — nhưng `POST /v1/ai/
+      // {module}/generate?async=true` (Phase 3, Task 3.2) trả về jobId từ
+      // ĐÚNG node đó, trong khi endpoint này (trước bản sửa) CHỈ tra `aiJobs`
+      // — nghĩa là KHÔNG BAO GIỜ tìm thấy Job vừa tạo qua đường async, phá vỡ
+      // đúng cơ chế "poll bằng jobId" mà Task 3.2 xây ra, và khiến quyền
+      // "jobs.view" vừa cấp cho agent (Agent RBAC Foundation) vô nghĩa với
+      // chính Job agent tự tạo. Fallback tra thêm apiAsyncJobs — dùng ĐÚNG 1
+      // endpoint đã có, không thêm route mới.
+      const asyncJobRecord = await asyncJob.getJob(id);
+      if (asyncJobRecord) return sendSuccess(res, asyncJobRecord);
+      return sendError(res, 'NOT_FOUND', 'Không tìm thấy Job.');
     }
     if (action === 'retry' && req.method === 'POST') {
       const updated = await retryFailed(id);

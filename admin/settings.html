@@ -69,6 +69,115 @@
       </div>
 
       <div class="panel">
+        <h3>HERO TRANG CHỦ (khối lớn đầu trang)</h3>
+        <p class="small-muted">3 dòng chữ dùng CHUNG cho mọi Slide (khác Tiêu đề/Mô tả/Link — 3 field đó riêng từng Slide, sửa ở "Slider trang chủ"). Vị trí của cả khối (nhãn + tiêu đề + mô tả + 2 nút) đổi theo Slide đang chọn, xem "Slider trang chủ".</p>
+        <div class="field-grid">
+          <div class="form-group">
+            <label>NHÃN ĐỊA DANH (chữ vàng nhỏ)</label>
+            <input type="text" id="heroTagInput" placeholder="Nha Trang · Khánh Hòa">
+          </div>
+          <div class="form-group">
+            <label>CHỮ NÚT 1 (nút vàng chính)</label>
+            <input type="text" id="heroCtaInput" placeholder="XEM SẢN PHẨM">
+          </div>
+          <div class="form-group">
+            <label>CHỮ NÚT 2 (nút viền)</label>
+            <input type="text" id="heroCta2Input" placeholder="DỊCH VỤ CHO THUÊ">
+          </div>
+        </div>
+        <div class="admin-actions">
+          <button class="submit-btn" id="saveHeroTextBtn">LƯU HERO TRANG CHỦ</button>
+        </div>
+        <p class="status-msg" id="heroTextStatus"></p>
+      </div>
+
+      <div class="panel">
+        <h3>TIÊU ĐỀ KHU "DANH MỤC SẢN PHẨM" (TRANG CHỦ)</h3>
+        <p class="small-muted">Dòng chữ phía trên lưới Ô Danh mục ở trang chủ. Có thể tắt hẳn để lưới Ô chiếm nhiều diện tích hơn.</p>
+        <div class="field-grid">
+          <div class="form-group full">
+            <label class="cms-toggle"><input type="checkbox" id="catIntroEnabled"> Hiển thị tiêu đề này phía trên lưới Ô Danh mục</label>
+          </div>
+          <div class="form-group">
+            <label>NHÃN NHỎ (eyebrow)</label>
+            <input type="text" id="catIntroEyebrow" placeholder="DANH MỤC SẢN PHẨM">
+          </div>
+          <div class="form-group full">
+            <label>TIÊU ĐỀ LỚN <span class="small-muted">(xuống dòng bằng phím Enter)</span></label>
+            <textarea id="catIntroTitle" rows="2" placeholder="CHỌN DANH MỤC ĐỂ XEM&#10;ĐẦY ĐỦ SẢN PHẨM"></textarea>
+          </div>
+          <div class="form-group full">
+            <label>MÔ TẢ NGẮN</label>
+            <textarea id="catIntroDesc" rows="2"></textarea>
+          </div>
+        </div>
+        <div class="admin-actions">
+          <button class="submit-btn" id="saveCatIntroBtn">LƯU TIÊU ĐỀ KHU DANH MỤC</button>
+        </div>
+        <p class="status-msg" id="catIntroStatus"></p>
+      </div>
+
+      <div class="panel">
+        <h3>KHUNG ẢNH SẢN PHẨM (Category Card)</h3>
+        <p class="small-muted">Khung chứa ảnh sản phẩm trong lưới Danh mục (trang category.html). Kéo góc dưới-phải để đổi kích cỡ khung, kéo giữa khung để dịch chuyển, kéo ảnh để chỉnh vị trí ảnh trong khung, kéo núm tròn trên ảnh để phóng to. Xem trước cập nhật ngay.</p>
+        <div class="pci-editor">
+          <div class="pci-preview-col">
+            <div class="pci-preview-stage">
+              <div class="prod-img-wrap pci-frame" id="pciFrame">
+                <img id="pciImg" src="https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg" alt="Xem trước">
+                <div class="pci-resize-handle" id="pciResizeHandle" title="Kéo để đổi kích cỡ khung"></div>
+                <div class="pci-zoom-handle" id="pciZoomHandle" title="Kéo để phóng to ảnh"></div>
+              </div>
+            </div>
+            <p class="small-muted" style="text-align:center">Ảnh mẫu chỉ để xem trước — không ảnh hưởng sản phẩm thật.</p>
+          </div>
+          <div class="pci-fields-col field-grid">
+            <div class="form-group">
+              <label>RIGHT (px, để trống = tự động)</label>
+              <input type="number" id="pciRight" placeholder="auto">
+            </div>
+            <div class="form-group">
+              <label>BOTTOM (px, để trống = tự động)</label>
+              <input type="number" id="pciBottom" placeholder="auto">
+            </div>
+            <div class="form-group">
+              <label>SCALE KHUNG (%)</label>
+              <input type="number" id="pciScale" placeholder="100">
+            </div>
+            <div class="form-group">
+              <label>OBJECT FIT (cách ảnh lấp khung)</label>
+              <select id="pciFit">
+                <option value="contain">Contain — vừa khung, không cắt</option>
+                <option value="cover">Cover — lấp đầy khung, có thể cắt ảnh</option>
+                <option value="fill">Fill — kéo giãn lấp đầy khung</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>OBJECT POSITION NGANG (%)</label>
+              <input type="range" min="0" max="100" id="pciPosX">
+            </div>
+            <div class="form-group">
+              <label>OBJECT POSITION DỌC (%)</label>
+              <input type="range" min="0" max="100" id="pciPosY">
+            </div>
+            <div class="form-group">
+              <label>PADDING (khoảng đệm quanh ảnh, rem)</label>
+              <input type="number" step="0.1" id="pciPadding" placeholder="1.4">
+            </div>
+            <div class="form-group">
+              <label>BO GÓC KHUNG (px)</label>
+              <input type="number" id="pciRadius" placeholder="0">
+            </div>
+          </div>
+        </div>
+        <div class="admin-actions">
+          <button class="submit-btn" id="savePciBtn">LƯU KHUNG ẢNH SẢN PHẨM</button>
+          <button type="button" class="btn-secondary" id="resetPciBtn">KHÔI PHỤC MẶC ĐỊNH</button>
+        </div>
+        <p class="status-msg" id="pciStatus"></p>
+      </div>
+
+      <div class="panel">
         <h3>NỘI DUNG MỤC "DỊCH VỤ" (TRANG CHỦ)</h3>
         <div class="field-grid">
           <div class="form-group full">

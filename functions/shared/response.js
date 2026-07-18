@@ -21,7 +21,19 @@ function makeRequestId() {
   return 'req_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
 }
 
+// setSecurityHeaders — Sprint 15 Phase 1 (Security & Verification
+// Foundation). apiGateway trả về JSON luôn — nosniff chặn trình duyệt tự
+// đoán content-type khác đi; no-store vì mọi response (kể cả GET công khai
+// như Products) có thể đi kèm dữ liệu theo phiên đăng nhập (staff thấy
+// nhiều hơn khách qua cùng route) nên không nên để proxy/browser cache lại.
+function setSecurityHeaders(res) {
+  if (!res || typeof res.set !== 'function') return;
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('Cache-Control', 'no-store');
+}
+
 function sendSuccess(res, data, extra) {
+  setSecurityHeaders(res);
   const meta = Object.assign({
     requestId: res.locals && res.locals.requestId || makeRequestId(),
     timestamp: new Date().toISOString(),
@@ -33,6 +45,7 @@ function sendSuccess(res, data, extra) {
 }
 
 function sendError(res, code, message, details) {
+  setSecurityHeaders(res);
   const status = ERROR_CODES[code] || 500;
   const meta = {
     requestId: (res.locals && res.locals.requestId) || makeRequestId(),
@@ -45,4 +58,4 @@ function sendError(res, code, message, details) {
   });
 }
 
-module.exports = { ERROR_CODES, makeRequestId, sendSuccess, sendError };
+module.exports = { ERROR_CODES, makeRequestId, sendSuccess, sendError, setSecurityHeaders };

@@ -1,6 +1,9 @@
 // Default site content — used to seed Firebase once, and as the fallback
 // shown before Firebase data arrives (progressive enhancement, no blank flash).
 const SEED_SITE_CONTENT = {
+  heroTag: 'Nha Trang · Khánh Hòa',
+  heroCtaLabel: 'XEM SẢN PHẨM',
+  heroCta2Label: 'DỊCH VỤ CHO THUÊ',
   heroSlides: [
     {
       image: 'https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg',
@@ -41,6 +44,15 @@ const SEED_SITE_CONTENT = {
     { category: 'tainghe', label: 'Tai nghe', size: 'normal', skin: 'dark', image: 'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/Sennheiser_hd-25_headphones.jpg/800px-Sennheiser_hd-25_headphones.jpg' },
     { category: 'phukien', label: 'Phụ kiện', size: 'normal', skin: 'dark', image: '' }
   ],
+  productCardImage: {
+    ratio: '4 / 5', top: 0, left: 0, right: null, bottom: null,
+    scale: 100, zoom: 100, fit: 'contain', position: '50% 50%',
+    padding: 1.4, radius: 0
+  },
+  categoriesIntroEnabled: false,
+  categoriesEyebrow: 'DANH MỤC SẢN PHẨM',
+  categoriesTitle: 'CHỌN DANH MỤC ĐỂ XEM\nĐẦY ĐỦ SẢN PHẨM',
+  categoriesDesc: 'Hàng chính hãng, mới và qua sử dụng, bảo hành rõ ràng. Giao hàng toàn quốc.',
   servicesIntro: 'Không chỉ mua bán — Pshop Music đồng hành từ setup đến vận hành cho bar, café, lounge, club.',
   serviceItems: [
     { title: 'CHO THUÊ LOA KIỂM ÂM', desc: 'Loa active theo ngày / tuần / tháng. Phù hợp sự kiện, phòng thu tạm thời, triển lãm, thu âm dự án.' },

@@ -22,17 +22,30 @@ async function getOne(node, id) {
   return Object.assign({ id }, snap.val());
 }
 
+// add() — GHI "id" NGAY TRONG bản ghi (không chỉ trả về ở response) — đúng
+// hành vi makeListDB() phía client (js/cms-db.js add()) đã làm từ trước.
+// Bug phát hiện qua kiểm thử thật (Founder dùng OpenClaw tạo 1 bài Blog qua
+// API): bản ghi tạo qua API trước đây KHÔNG có "id" bên trong dữ liệu lưu —
+// giao diện Admin (BlogDB/DraftDB/... đều dùng chung makeListDB()) đọc
+// nguyên văn dữ liệu lưu (không tự suy ra "id" từ RTDB key khi đọc), nên nút
+// Sửa/Xóa gọi với id=undefined, không tìm thấy bản ghi nào khớp, im lặng
+// không phản ứng. Lỗi này ảnh hưởng MỌI node dùng listResource.js (Products/
+// Categories/Brands/Tags/Blog/Banners/Videos qua routes/cmsLists.js, và
+// aiDrafts qua shared/aiGenerate.js/agentExecute.js) — không riêng Blog.
 async function add(node, data) {
   const ref = admin.database().ref(node).push();
-  const record = Object.assign({}, data, { createdAt: admin.database.ServerValue.TIMESTAMP });
+  const record = Object.assign({}, data, { id: ref.key, createdAt: admin.database.ServerValue.TIMESTAMP });
   await ref.set(record);
-  return Object.assign({ id: ref.key }, record);
+  return record;
 }
 
+// update() — cùng lý do trên: luôn ghi lại "id" đúng trong lượt update (vô
+// hại nếu đã có sẵn, tự "chữa" các bản ghi cũ tạo trước khi sửa lỗi này nếu
+// sau này được update lại).
 async function update(node, id, changes) {
   const existing = await getOne(node, id);
   if (!existing) return null;
-  await admin.database().ref(node + '/' + id).update(changes);
+  await admin.database().ref(node + '/' + id).update(Object.assign({}, changes, { id }));
   return getOne(node, id);
 }
 

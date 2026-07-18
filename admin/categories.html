@@ -33,6 +33,16 @@
           <button class="submit-btn" id="addTileBtn">+ THÊM Ô</button>
         </div>
         <p class="small-muted">Các ô hiển thị trong lưới danh mục ở trang chủ. Có thể tạo 2 ô cùng danh mục với tên khác nhau (VD "Máy DJ" và "Controller" cùng trỏ tới mã dj).</p>
+
+        <div class="cat-bg-section" style="border-top:none;padding-top:0">
+          <label class="cat-bg-label">XEM TRƯỚC TRANG CHỦ</label>
+          <div class="cat-tile-viewport-toggle" id="tileViewportToggle">
+            <button type="button" class="btn-secondary active" data-vp="desktop" onclick="AdminCategories.setTileViewport('desktop')">Desktop</button>
+            <button type="button" class="btn-secondary" data-vp="mobile" onclick="AdminCategories.setTileViewport('mobile')">Mobile</button>
+          </div>
+          <div class="cat-tile-preview-frame" data-viewport="desktop" id="tilePreviewFrame"></div>
+        </div>
+
         <div id="tileList" style="margin-top:1rem"></div>
         <div class="admin-actions">
           <button class="submit-btn" id="saveTilesBtn">LƯU Ô DANH MỤC</button>

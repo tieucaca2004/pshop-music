@@ -51,6 +51,10 @@
       <a href="#contact">LIÊN HỆ</a>
       <a href="https://shopee.vn/music_store_79" target="_blank">Shopee</a>
     </div>
+    <form class="search-box nav-search" action="category.html" method="GET">
+      <span class="icon">&#128269;</span>
+      <input type="text" name="q" placeholder="Tìm sản phẩm...">
+    </form>
     <button class="nav-cta" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">TƯ VẤN NGAY</button>
     <button class="nav-toggle" onclick="document.getElementById('mobileNav').classList.toggle('open')" aria-label="Menu">&#9776;</button>
   </div>
@@ -69,14 +73,23 @@
   <div class="hero-slides" id="heroSlides">
     <div class="hero-slide active" style="background-image:url('https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg')"></div>
   </div>
+  <img class="hero-subject-img" id="heroSubjectImg" style="display:none" alt="">
   <div class="hero-dots" id="heroDots"></div>
   <div class="container">
-    <p class="hero-tag">Nha Trang · Khánh Hòa</p>
-    <h1 id="heroTitle">THIẾT BỊ DJ<br><em>&amp; ÂM THANH</em><br>CHUYÊN NGHIỆP</h1>
-    <p class="hero-sub" id="heroSubtitle">Mua bán, cho thuê thiết bị DJ, loa kiểm âm, soundcard, tai nghe chính hãng. Tư vấn setup âm thanh bar, café, lounge toàn quốc.</p>
-    <div class="hero-btns">
-      <button class="btn-gold" id="heroCta" onclick="handleHeroCta()">XEM SẢN PHẨM</button>
-      <button class="btn-ghost" onclick="document.getElementById('services').scrollIntoView({behavior:'smooth'})">DỊCH VỤ CHO THUÊ</button>
+    <div class="hero-tag-block" id="heroTagBlock">
+      <p class="hero-tag" id="heroTag">Nha Trang · Khánh Hòa</p>
+    </div>
+    <div class="hero-title-block" id="heroTitleBlock">
+      <h1 id="heroTitle">THIẾT BỊ DJ<br><em>&amp; ÂM THANH</em><br>CHUYÊN NGHIỆP</h1>
+    </div>
+    <div class="hero-sub-block" id="heroSubBlock">
+      <p class="hero-sub" id="heroSubtitle">Mua bán, cho thuê thiết bị DJ, loa kiểm âm, soundcard, tai nghe chính hãng. Tư vấn setup âm thanh bar, café, lounge toàn quốc.</p>
+    </div>
+    <div class="hero-btns-block" id="heroBtnsBlock">
+      <div class="hero-btns">
+        <button class="btn-gold" id="heroCta" onclick="handleHeroCta()">XEM SẢN PHẨM</button>
+        <button class="btn-ghost" id="heroCta2" onclick="document.getElementById('services').scrollIntoView({behavior:'smooth'})">DỊCH VỤ CHO THUÊ</button>
+      </div>
     </div>
   </div>
 </section>
@@ -85,10 +98,12 @@
 
 <section class="section cat-tiles-section" id="categories">
   <div class="container">
-    <p class="sec-eyebrow">DANH MỤC SẢN PHẨM</p>
-    <h2 class="sec-title">CHỌN DANH MỤC ĐỂ XEM<br>ĐẦY ĐỦ SẢN PHẨM</h2>
-    <p class="sec-desc">Hàng chính hãng, mới và qua sử dụng, bảo hành rõ ràng. Giao hàng toàn quốc.</p>
-    <div class="cat-tile-grid" id="catTileGrid" style="margin-top:2.5rem"></div>
+    <div id="catTilesIntro" class="cat-tiles-intro" style="display:none">
+      <p class="sec-eyebrow" id="catTilesEyebrow"></p>
+      <h2 class="sec-title" id="catTilesTitle"></h2>
+      <p class="sec-desc" id="catTilesDesc"></p>
+    </div>
+    <div class="cat-tile-grid" id="catTileGrid"></div>
   </div>
 </section>
 
@@ -229,9 +244,15 @@
         <a href="admin.html">Quản trị</a>
       </div>
     </div>
+    <p class="footer-trust">Hàng chính hãng, mới và qua sử dụng, bảo hành rõ ràng. Giao hàng toàn quốc.</p>
     <p class="footer-copy">&#169; 2026 Pshop Music &middot; 86 Lạc Long Quân, Nha Trang, Khánh Hòa &middot; pshopmusic.com</p>
   </div>
 </footer>
+
+<a class="messenger-chat-btn" id="messengerChatBtn" href="https://m.me/ChoThueThietBiDJ" target="_blank" rel="noopener" aria-label="Chat qua Messenger">
+  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.1 2 11.2c0 2.9 1.5 5.5 3.9 7.2V22l3.5-1.9c.9.3 1.9.4 2.9.4 5.5 0 10-4.1 10-9.3S17.5 2 12 2zm1 12.4l-2.5-2.7-5 2.7 5.5-5.8 2.6 2.7 4.9-2.7-5.5 5.8z"/></svg>
+  <span>Chat với chúng tôi</span>
+</a>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>

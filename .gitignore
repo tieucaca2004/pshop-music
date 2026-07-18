@@ -1,9 +1,44 @@
-node_modules/
-.DS_Store
-Thumbs.db
-.netlify/
-.claude/
-.firebase/
+# OpenClaw agent workspace — local only, do not commit
+AGENTS.md
+SOUL.md
+TOOLS.md
+USER.md
+IDENTITY.md
+HEARTBEAT.md
+OPTIMIZATION.md
+openclaw-workspace-state.json
+
+# Agent-generated analysis documents (ephemeral)
+AGENT_*.md
+AI_*.md
+ARCHITECTURE_AUDIT_*.md
+CHANGE_SUMMARY.md
+DEPLOYMENT_CHECKLIST.md
+FINAL_*.md
+IMPLEMENTATION_QUEUE.md
+OPENCLAW_*.md
+PHASE*_IMPLEMENTATION_REPORT.md
+PRE_DEPLOYMENT_VERIFICATION.md
+REPOSITORY_AUDIT.md
+SECURITY_AUDIT_REPORT.md
+SPRINT14_API_ARCHITECTURE*.md
+SPRINT15_*.md
+TEST_REPORT.md
+
+# Firebase emulator logs
+database-debug.log
 firebase-debug.log
-functions/.env
-functions/.env.*
+
+# Temp scripts
+fix-java-path.ps1
+start-emulators.bat
+discord-patch.json
+
+# Generated media uploads
+media/
+
+# Personal documents
+họp đồng thuê xe.pdf
+
+# Firebase Functions dependencies
+functions/node_modules/

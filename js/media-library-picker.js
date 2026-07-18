@@ -219,19 +219,25 @@ const MediaLibraryPicker = (function () {
           renderInto();
         } : null
       }, opts))).join('');
+      const maxImages = opts && opts.maxImages;
+      const atMax = maxImages && urls.length >= maxImages;
       const addSlotId = 'medialib-add-' + (++slotCounter);
-      container.innerHTML = `<div class="medialib-grid">${slotsHtml}
-        <div class="medialib-slot medialib-slot-add" id="${addSlotId}">
+      const addSlotHtml = atMax
+        ? `<div class="medialib-slot medialib-slot-add medialib-slot-max"><span class="small-muted">Tối đa ${maxImages} ảnh</span></div>`
+        : `<div class="medialib-slot medialib-slot-add" id="${addSlotId}">
           <button type="button" class="link-btn" onclick="MediaLibraryPicker.addTo('${addSlotId}')">+ Thêm ảnh</button>
-        </div></div>`;
-      slotRegistry[addSlotId] = {
-        onAdd: url => {
-          const list = currentUrls();
-          list.push(url);
-          setUrls(list);
-          renderInto();
-        }
-      };
+        </div>`;
+      container.innerHTML = `<div class="medialib-grid">${slotsHtml}${addSlotHtml}</div>`;
+      if (!atMax) {
+        slotRegistry[addSlotId] = {
+          onAdd: url => {
+            const list = currentUrls();
+            list.push(url);
+            setUrls(list);
+            renderInto();
+          }
+        };
+      }
     }
     renderInto();
     return { refresh: renderInto };

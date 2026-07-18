@@ -1,12 +1,19 @@
 /*
  * Image Prompt Generator — sinh prompt mô tả ảnh (để dán vào công cụ tạo
  * ảnh AI khác). targetCollection = null — chỉ tạo văn bản tham khảo.
+ *
+ * Refactored Sprint 15 Phase 2 (AI Architecture Consolidation, Option B —
+ * approved by Founder): `buildPrompt()`/`mapToDraftContent()` now delegate
+ * to `AiModulesCore.MODULES['image-prompt-generator']`
+ * (js/ai/modules-core.js) — the single source of truth also used verbatim
+ * by `functions/shared/aiModules.js` server-side. Wording did NOT change —
+ * only where the code physically lives.
  */
 AIModuleRegistry.register({
   id: 'image-prompt-generator',
   label: 'Image Prompt Generator',
   description: 'Tạo prompt mô tả ảnh chi tiết để dùng với công cụ tạo ảnh AI khác.',
-  targetCollection: null,
+  targetCollection: AiModulesCore.MODULES['image-prompt-generator'].targetCollection,
 
   inputFields: [
     { key: 'subject', label: 'Chủ thể ảnh', type: 'text', placeholder: 'VD: Loa kiểm âm KRK đặt trên bàn DJ, ánh sáng studio' },
@@ -18,10 +25,10 @@ AIModuleRegistry.register({
   },
 
   buildPrompt(inputParams) {
-    return `Viết 1 prompt tiếng Anh chi tiết để tạo ảnh AI, chủ thể: "${inputParams.subject}", phong cách: ${inputParams.style || 'Ảnh sản phẩm studio'}. Mô tả rõ bố cục, ánh sáng, góc máy.`;
+    return AiModulesCore.MODULES['image-prompt-generator'].buildPrompt(inputParams);
   },
 
   mapToDraftContent(providerOutput) {
-    return { imagePrompt: providerOutput.text || '' };
+    return AiModulesCore.MODULES['image-prompt-generator'].mapToDraftContent(providerOutput);
   }
 });

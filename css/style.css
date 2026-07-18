@@ -26,34 +26,45 @@ nav{position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop
 .mobile-nav a{font-size:1rem;letter-spacing:0.04em;text-transform:uppercase;color:var(--ink);font-weight:600;padding:0.5rem 0;border-bottom:1px solid var(--line)}
 
 /* HERO — full-bleed image, bold overlay text */
-.hero{position:relative;min-height:86vh;display:flex;align-items:flex-end;background:#000;overflow:hidden}
+.hero{position:relative;min-height:86vh;background:#000;overflow:hidden}
 .hero-slides{position:absolute;inset:0;z-index:0}
-.hero-slide{position:absolute;inset:0;background-size:cover;background-position:center 30%;opacity:0;transition:opacity 1.4s ease}
+/* background-position/transform:scale() (Zoom) ghi INLINE riêng từng Slide
+   (js/home.js renderHeroSlides — mặc định 50% 30%/zoom 100% khớp ĐÚNG giá
+   trị cố định "center 30%" cũ, 0 regression cho Slide chưa từng chỉnh).
+   Zoom dùng transform (không đổi background-size) để ẢNH LUÔN PHỦ ĐỦ khung
+   dù zoom bao nhiêu (background-size:cover đã đảm bảo phủ đủ ở 100%, phóng
+   to thêm chỉ crop nhiều hơn, không bao giờ hở nền). */
+.hero-slide{position:absolute;inset:0;background-size:cover;opacity:0;transition:opacity 1.4s ease}
 .hero-slide.active{opacity:1}
 .hero::before{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(0deg,rgba(0,0,0,0.82) 0%,rgba(0,0,0,0.35) 45%,rgba(0,0,0,0.15) 100%)}
-.hero .container{position:relative;z-index:2;padding-bottom:4rem;padding-top:8rem}
+.hero .container{position:absolute;inset:0;z-index:2;max-width:none;padding:0;pointer-events:none}
+/* Ảnh sản phẩm (Sprint 14) — CHỈ hiện khi Founder đặt "ẢNH NỀN" riêng ở
+   admin/sliders.html (2 lớp: ẢNH NỀN = backdrop toàn khung, ẢNH SLIDE = chủ
+   thể chồng lên). Founder KHÔNG đặt Ảnh nền = ẢNH SLIDE tự lùi về làm luôn
+   backdrop toàn khung như trước (0 regression) — .hero-slide dùng ảnh đã
+   TỰ ĐỘNG xóa phông trắng (nếu phát hiện, xem js/admin-sliders.js) nên phần
+   trong suốt lộ đúng nền đen #000 của .hero, không còn mảng trắng xấu. z-
+   index:2 = NGANG hàng .container, đặt TRÊN lớp phủ tối .hero::before (z1)
+   — sản phẩm không bị tối đi, cùng quy ước .category-header-product-img. */
+.hero-subject-img{position:absolute;z-index:2;right:6%;top:50%;transform:translateY(-50%);max-width:38%;max-height:72%;object-fit:contain;filter:drop-shadow(0 25px 50px rgba(0,0,0,0.5));pointer-events:none}
 .hero-dots{position:absolute;z-index:2;right:2rem;bottom:2rem;display:flex;gap:0.5rem}
 .hero-dots button{width:8px;height:8px;border-radius:50%;border:1px solid rgba(255,255,255,0.6);background:transparent;padding:0;cursor:pointer;transition:all 0.2s}
 .hero-dots button.active{background:var(--gold);border-color:var(--gold);width:22px;border-radius:5px}
-.hero-tag{display:inline-flex;align-items:center;gap:0.6rem;font-size:0.75rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);margin-bottom:1.2rem;font-weight:600}
-.hero h1{font-family:'Be Vietnam Pro',sans-serif;font-size:clamp(2.6rem,6.5vw,5.2rem);font-weight:700;line-height:0.98;color:#fff;letter-spacing:-0.01em;margin-bottom:1.3rem;max-width:780px}
+/* Kéo TỰ DO vị trí (thay 9 điểm cũ) + cỡ chữ TỰ DO cho Tiêu đề/Mô tả — mỗi
+   khối định vị bằng % thật (không snap), ghi qua CSS custom property trên
+   #heroSection (js/home.js updateHeroText()) — Founder chỉnh trong
+   admin/sliders.html, kéo trực tiếp trên khung xem trước 16:9 (WYSIWYG, cùng
+   %, không quy đổi). Neo ở GÓC TRÊN-TRÁI của khối (không phải tâm) để tránh
+   tràn ra ngoài màn hình khi kéo gần mép phải/dưới. */
+.hero-tag-block{position:absolute;left:var(--hero-tag-x,8%);top:var(--hero-tag-y,48%);max-width:min(780px,88vw);pointer-events:auto}
+.hero-title-block{position:absolute;left:var(--hero-title-x,8%);top:var(--hero-title-y,58%);max-width:min(780px,88vw);pointer-events:auto}
+.hero-sub-block{position:absolute;left:var(--hero-sub-x,8%);top:var(--hero-sub-y,80%);max-width:min(480px,80vw);pointer-events:auto}
+.hero-btns-block{position:absolute;left:var(--hero-btns-x,8%);top:var(--hero-btns-y,90%);max-width:min(480px,80vw);pointer-events:auto}
+.hero-tag{display:inline-flex;align-items:center;gap:0.6rem;font-size:0.75rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);font-weight:600}
+.hero h1{font-family:'Be Vietnam Pro',sans-serif;font-size:calc(clamp(2.6rem,6.5vw,5.2rem) * var(--hero-title-scale,1));font-weight:700;line-height:0.98;color:#fff;letter-spacing:-0.01em;margin-bottom:1.3rem;max-width:100%}
 .hero h1 em{font-style:normal;color:var(--gold)}
-.hero-sub{font-size:1.05rem;color:rgba(255,255,255,0.82);max-width:480px;margin:0 0 2.2rem;line-height:1.7;font-weight:300}
+.hero-sub{font-size:calc(1.05rem * var(--hero-sub-scale,1));color:rgba(255,255,255,0.82);max-width:100%;margin:0 0 2.2rem;line-height:1.7;font-weight:300}
 .hero-btns{display:flex;gap:0.9rem;flex-wrap:wrap}
-/* Sprint 13 — Vị trí chữ tiêu đề Hero Slideshow theo từng Slide (lưới 9
-   điểm, js/home.js updateHeroText() ghi data-text-pos lên #heroSection mỗi
-   khi đổi Slide). Mặc định "bottom-left" KHÔNG có rule riêng — giữ NGUYÊN
-   hành vi cũ (.hero{align-items:flex-end}, .container căn trái tự nhiên)
-   cho Slide chưa có field "position" (tương thích ngược, xem
-   js/admin-sliders.js). */
-.hero[data-text-pos^="top-"]{align-items:flex-start}
-.hero[data-text-pos^="middle-"]{align-items:center}
-.hero[data-text-pos$="-center"] .container{margin-left:auto;margin-right:auto;text-align:center}
-.hero[data-text-pos$="-center"] .hero-btns{justify-content:center}
-.hero[data-text-pos$="-center"] h1,.hero[data-text-pos$="-center"] .hero-sub{margin-left:auto;margin-right:auto}
-.hero[data-text-pos$="-right"] .container{margin-left:auto;margin-right:0;text-align:right}
-.hero[data-text-pos$="-right"] .hero-btns{justify-content:flex-end}
-.hero[data-text-pos$="-right"] h1,.hero[data-text-pos$="-right"] .hero-sub{margin-left:auto;margin-right:0}
 .btn-gold{background:#fff;color:var(--black);padding:0.9rem 2.1rem;font-size:0.8rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:700;border:none;cursor:pointer;transition:all 0.2s}
 .btn-gold:hover{background:var(--gold);color:#fff}
 .btn-ghost{background:transparent;color:#fff;padding:0.85rem 2rem;font-size:0.8rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;border:1px solid rgba(255,255,255,0.5);cursor:pointer;transition:all 0.2s;display:inline-block}
@@ -68,7 +79,8 @@ nav{position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop
 .banner-zone .banner-item:last-child{margin-bottom:0}
 
 /* CATEGORY TILES — Pioneer-DJ-store style: big bold label on top, product image floating on a gradient. */
-.cat-tiles-section{padding:4rem 0 1rem}
+.cat-tiles-section{padding:2rem 0 1rem}
+.cat-tiles-intro{margin-bottom:2rem;white-space:pre-line}
 .cat-tile-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem}
 .cat-tile{
   position:relative;aspect-ratio:1/1;border-radius:16px;overflow:hidden;display:flex;
@@ -89,6 +101,41 @@ nav{position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop
 .cat-tile.wide img{width:44%;height:88%;left:auto;right:6%;top:50%;transform:translateY(-50%)}
 .cat-tile.wide:hover img{transform:translateY(-50%) scale(1.06)}
 .cat-tile.wide .cat-tile-label{position:absolute;left:3rem;top:50%;transform:translateY(-50%);margin:0;text-align:left;font-size:clamp(1.8rem,4.5vw,3.4rem)}
+/* Kích cỡ ô mở rộng — "Nhỏ" (ô vuông thấp hơn) và "Lớn" (chiếm 2 cột) thêm
+   vào normal (mặc định)/wide đã có, cùng lưới 3 cột (2 cột ở mobile) */
+.cat-tile.small{aspect-ratio:1/0.72}
+.cat-tile.small img{width:70%;height:52%}
+.cat-tile.small .cat-tile-label{font-size:clamp(1.1rem,2.6vw,1.7rem);margin-top:0.6rem}
+.cat-tile.large{grid-column:span 2;aspect-ratio:2/1.05}
+.cat-tile.large img{width:58%;height:64%}
+.cat-tile.large .cat-tile-label{font-size:clamp(1.6rem,3.8vw,2.8rem)}
+/* Ô Danh Mục Trang Chủ — Cover đầy đủ (Ảnh nền/Logo/Vị trí/Zoom/Opacity/Blur/
+   Overlay), ĐÚNG cơ chế Category Cover (category-header-bg/-product-img/-logo
+   ở trên) — chỉ kích hoạt khi Founder thật sự đặt 1 trong các field mới
+   (.has-cover, gắn ở js/home.js/js/admin-categories.js) — Ô CHƯA từng chỉnh
+   (không có class này) giữ NGUYÊN 100% rendering cũ, 0 regression. */
+.cat-tile.has-cover{background:#111}
+.cat-tile-bg{position:absolute;inset:0;z-index:0;background:center/cover no-repeat;transform:scale(1.06)}
+.cat-tile-cover-overlay{position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(0,0,0,0.05) 0%,rgba(0,0,0,0.55) 100%);pointer-events:none}
+.cat-tile.has-cover .cat-tile-product-img{
+  position:absolute;z-index:2;object-fit:contain;pointer-events:none;
+  max-width:70%;max-height:62%;top:56%;left:50%;
+  transform:translate(-50%,-50%) scale(var(--cover-zoom,1));opacity:var(--cover-opacity,1);
+  transition:transform 0.5s cubic-bezier(.22,1,.36,1);filter:drop-shadow(0 10px 18px rgba(0,0,0,0.35))
+}
+.cat-tile.has-cover:hover .cat-tile-product-img:not([data-cover-position]){transform:translate(-50%,-50%) scale(calc(var(--cover-zoom,1) * 1.07))}
+.cat-tile.has-cover .cat-tile-product-img[data-cover-position="top-left"]{top:14%;left:14%;transform:scale(var(--cover-zoom,1))}
+.cat-tile.has-cover .cat-tile-product-img[data-cover-position="top-center"]{top:14%;left:50%;transform:translateX(-50%) scale(var(--cover-zoom,1))}
+.cat-tile.has-cover .cat-tile-product-img[data-cover-position="top-right"]{top:14%;left:86%;transform:translate(-100%,0) scale(var(--cover-zoom,1))}
+.cat-tile.has-cover .cat-tile-product-img[data-cover-position="center-left"]{top:56%;left:14%;transform:translateY(-50%) scale(var(--cover-zoom,1))}
+.cat-tile.has-cover .cat-tile-product-img[data-cover-position="center"]{top:56%;left:50%;transform:translate(-50%,-50%) scale(var(--cover-zoom,1))}
+.cat-tile.has-cover .cat-tile-product-img[data-cover-position="center-right"]{top:56%;left:86%;transform:translate(-100%,-50%) scale(var(--cover-zoom,1))}
+.cat-tile.has-cover .cat-tile-product-img[data-cover-position="bottom-left"]{top:86%;left:14%;transform:translateY(-100%) scale(var(--cover-zoom,1))}
+.cat-tile.has-cover .cat-tile-product-img[data-cover-position="bottom-center"]{top:86%;left:50%;transform:translate(-50%,-100%) scale(var(--cover-zoom,1))}
+.cat-tile.has-cover .cat-tile-product-img[data-cover-position="bottom-right"]{top:86%;left:86%;transform:translate(-100%,-100%) scale(var(--cover-zoom,1))}
+.cat-tile-logo{position:absolute;z-index:3;top:0.6rem;right:0.6rem;max-width:15%;max-height:22%;object-fit:contain;pointer-events:none}
+.cat-tile.has-cover .cat-tile-label{position:relative;z-index:4}
+.cat-tile.has-cover.wide .cat-tile-label{z-index:4}
 /* Light-skinned tiles (for products that look better on a bright background) */
 .cat-tile.skin-light{background:radial-gradient(ellipse 90% 70% at 50% 20%,#fff 0%,transparent 60%),linear-gradient(160deg,#f2f1ee 0%,#d6d2c8 100%)}
 .cat-tile.skin-light .cat-tile-label{color:#111}
@@ -169,9 +216,21 @@ nav{position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop
 .products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:2.5rem 2rem}
 .product-card{background:transparent;cursor:pointer;display:flex;flex-direction:column;gap:0.55rem}
 .product-card.hidden{display:none}
-.prod-img-wrap{background:var(--bg-alt);width:100%;aspect-ratio:4/5;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:0.4rem}
-.prod-img-wrap img{width:100%;height:100%;object-fit:contain;padding:1.4rem;transition:transform 0.4s ease}
-.product-card:hover .prod-img-wrap img{transform:scale(1.05)}
+/* Image Container (Category Card) — Founder tự chỉnh qua admin/settings.html
+   "KHUNG ẢNH SẢN PHẨM" (CSS custom property trên :root, js/category.js áp
+   dụng lúc tải trang). MỌI giá trị có fallback ĐÚNG bằng hằng số cũ — Founder
+   chưa từng chỉnh = hiển thị y hệt trước (0 regression). */
+.prod-img-wrap{
+  background:var(--bg-alt);width:100%;aspect-ratio:var(--pci-ratio,4/5);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:0.4rem;
+  position:relative;top:var(--pci-top,0px);left:var(--pci-left,0px);right:var(--pci-right,auto);bottom:var(--pci-bottom,auto);
+  transform:scale(var(--pci-scale,1));border-radius:var(--pci-radius,0px)
+}
+.prod-img-wrap img{
+  width:100%;height:100%;object-fit:var(--pci-fit,contain);object-position:var(--pci-pos,50% 50%);
+  padding:var(--pci-padding,1.4rem);transition:transform 0.4s ease;transform:scale(var(--pci-zoom,1))
+}
+.product-card:hover .prod-img-wrap img{transform:scale(calc(var(--pci-zoom,1) * 1.05))}
 .prod-noimg-tile{background:var(--bg-alt);width:100%;aspect-ratio:4/5;display:flex;align-items:center;justify-content:center;margin-bottom:0.4rem;padding:1.8rem;text-align:center}
 .prod-noimg-tile .tile-name{font-size:1.05rem;font-weight:700;color:var(--ink);line-height:1.3;letter-spacing:-0.01em}
 .prod-name{font-size:0.95rem;font-weight:600;color:var(--black);line-height:1.35}
@@ -278,7 +337,13 @@ footer{background:#0a0a0a;padding:4rem 0 1.5rem;margin-top:2rem}
 .social-messenger{background:linear-gradient(135deg,#00b2ff,#006aff)}
 .social-zalo{background:#0068ff;font-size:1.05rem}
 .social-shopee{background:#ee4d2d}
-.footer-copy{font-size:0.76rem;color:#666;width:100%;padding-top:1.5rem;border-top:1px solid #1e1e1e}
+
+.messenger-chat-btn{position:fixed;right:1.5rem;bottom:1.5rem;z-index:150;display:flex;align-items:center;gap:0.6rem;background:linear-gradient(135deg,#00b2ff,#006aff);color:#fff;padding:0.75rem 1.1rem;border-radius:50px;box-shadow:0 4px 16px rgba(0,106,255,0.35);font-size:0.85rem;font-weight:600;transition:transform 0.2s,box-shadow 0.2s}
+.messenger-chat-btn:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,106,255,0.45)}
+.messenger-chat-btn svg{width:22px;height:22px;flex-shrink:0}
+@media(max-width:600px){.messenger-chat-btn span{display:none}.messenger-chat-btn{padding:0.85rem;right:1rem;bottom:1rem}}
+.footer-trust{font-size:0.8rem;color:#999;width:100%;padding-top:1.5rem;border-top:1px solid #1e1e1e}
+.footer-copy{font-size:0.76rem;color:#666;width:100%;padding-top:0.5rem}
 
 /* MODAL */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(20,18,15,0.7);z-index:500;align-items:center;justify-content:center;padding:1rem}
@@ -296,6 +361,15 @@ footer{background:#0a0a0a;padding:4rem 0 1.5rem;margin-top:2rem}
 .modal-gallery-dots button.active{background:var(--gold);border-color:var(--gold);width:18px;border-radius:4px}
 .modal-img-side img{width:100%;max-height:600px;object-fit:contain}
 .modal-img-side .no-img{color:var(--black);font-size:1.6rem;font-weight:700;text-align:center;letter-spacing:-0.01em;line-height:1.3}
+/* Ảnh nền sản phẩm (kiểu banner) — CHỈ áp dụng khi Founder đã đặt "ẢNH NỀN
+   SẢN PHẨM" (admin/products.html); sản phẩm chưa đặt gì vẫn hiện y hệt
+   trước giờ (nền trơn --bg-alt, không lớp phủ, không chữ) — 0 regression. */
+.modal-img-side.has-bg-banner{background-size:cover;background-position:center}
+.modal-img-side.has-bg-banner::before{content:'';position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0.15) 50%,rgba(0,0,0,0) 75%);pointer-events:none}
+.modal-img-side.has-bg-banner img{filter:drop-shadow(0 12px 28px rgba(0,0,0,0.4));position:relative;z-index:1}
+.modal-banner-caption{display:none;position:absolute;left:2rem;bottom:1.6rem;right:2rem;z-index:1;color:#fff;font-size:1.6rem;font-weight:800;letter-spacing:-0.01em;text-transform:uppercase;line-height:1.15;text-shadow:0 2px 10px rgba(0,0,0,0.5)}
+.modal-img-side.has-bg-banner .modal-banner-caption{display:block}
+@media(max-width:700px){.modal-banner-caption{font-size:1.15rem;left:1.25rem;bottom:1rem;right:1.25rem}}
 .modal-info-side{padding:3rem;display:flex;flex-direction:column;gap:1.1rem;border-left:1px solid var(--line);overflow-y:auto;max-height:92vh}
 .modal-cat{font-size:0.72rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--gold-ink);font-weight:700}
 .modal-name{font-family:'Be Vietnam Pro',sans-serif;font-size:1.75rem;font-weight:700;color:var(--black);line-height:1.2;letter-spacing:-0.01em}
@@ -329,13 +403,19 @@ footer{background:#0a0a0a;padding:4rem 0 1.5rem;margin-top:2rem}
 .modal-close{position:absolute;top:1rem;right:1rem;background:#fff;border:1px solid var(--line);color:var(--ink);font-size:1.2rem;cursor:pointer;z-index:10;width:36px;height:36px;display:flex;align-items:center;justify-content:center;transition:all 0.2s;border-radius:50%}
 .modal-close:hover{background:var(--black);color:#fff;border-color:var(--black)}
 
-@media(max-width:900px){.services-grid,.contact-grid{grid-template-columns:1fr;gap:3rem}.nav-links,.nav-cta{display:none}.nav-toggle{display:block}.footer-grid{grid-template-columns:repeat(2,1fr);gap:2rem 1.5rem}}
+.nav-search{min-width:0;max-width:230px;flex:0 0 auto;margin:0 1.2rem}
+.nav-search input,.nav-search-mobile input{padding:0.6rem 1rem 0.6rem 2.3rem;font-size:0.82rem;border:1.5px solid var(--gold);border-radius:24px;background:var(--gold-soft);font-weight:500}
+.nav-search input::placeholder,.nav-search-mobile input::placeholder{color:var(--gold-ink);opacity:0.8}
+.nav-search input:focus,.nav-search-mobile input:focus{border-color:var(--gold-ink);background:#fff}
+.nav-search .icon,.nav-search-mobile .icon{left:0.95rem;font-size:0.85rem;color:var(--gold-ink)}
+.nav-search-mobile{max-width:none;width:100%}
+@media(max-width:900px){.services-grid,.contact-grid{grid-template-columns:1fr;gap:3rem}.nav-links,.nav-cta,.nav-search{display:none}.nav-toggle{display:block}.footer-grid{grid-template-columns:repeat(2,1fr);gap:2rem 1.5rem}}
 @media(max-width:700px){
   .modal-box{grid-template-columns:1fr;max-height:85vh;overflow-y:auto}
   .modal-img-side{min-height:240px;padding:1.5rem}
   .modal-info-side{border-left:none;border-top:1px solid var(--line);padding:1.5rem;overflow-y:visible;max-height:none}
   .hero{min-height:58vh}
-  .hero .container{padding-top:5.5rem;padding-bottom:2.5rem}
+  .hero-subject-img{max-width:55%;max-height:38%;right:4%;top:8%;transform:none}
 }
 @media(max-width:600px){
   .form-row{grid-template-columns:1fr}

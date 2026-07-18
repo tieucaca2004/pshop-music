@@ -21,12 +21,21 @@
  * Cover HOẶC Banner sau khi xem Draft) — các hành động "Save to..." nằm ở
  * Experience Layer (js/admin-image-ai.js), gọi thẳng DB/BlogDB/BannerDB đã có
  * (tái sử dụng Product Management/Blog/Banner data layer, không viết lại).
+ *
+ * Refactored Sprint 15 Phase 2 (AI Architecture Consolidation, Option B —
+ * approved by Founder): `buildPrompt()`/`mapToDraftContent()` (+
+ * IMAGE_TYPE_DIRECTION/STYLE_DIRECTION) now live in
+ * `AiModulesCore.MODULES['image-generator']` (js/ai/modules-core.js) — the
+ * single source of truth also used verbatim by
+ * `functions/shared/aiModules.js` server-side. Prompt wording/direction
+ * tables did NOT change — only where the code physically lives.
+ * `loadContext`/`inputFields` stay here (client-specific, uses DataProvider).
  */
 AIModuleRegistry.register({
   id: 'image-generator',
   label: 'Image AI',
   description: 'Sinh ảnh marketing thật (Product Hero/Facebook/Banner/Blog Cover...) từ Sản phẩm, Khuyến mãi, Bài Blog, hoặc Prompt tự do — luôn dừng ở Draft để Founder chọn nơi dùng.',
-  targetCollection: null,
+  targetCollection: AiModulesCore.MODULES['image-generator'].targetCollection,
 
   inputFields: [
     { key: 'imageType', label: 'Loại ảnh', type: 'select', options: [
@@ -52,79 +61,11 @@ AIModuleRegistry.register({
     return Promise.resolve({});
   },
 
-  // Định hướng nhiếp ảnh/thiết kế riêng cho từng loại ảnh — KHÔNG do AI tự
-  // quyết định phong cách, tránh 7 loại ảnh trông giống hệt nhau.
-  // Sprint 13 (Product Image Presentation): + 2 loại "Background Image" —
-  // cố tình mô tả "negative space reserved for product overlay, no visible
-  // product in frame" vì 2 loại này dùng làm ẢNH NỀN cho Category Cover/
-  // Product background (Founder tự chồng ảnh sản phẩm thật lên sau, xem
-  // js/admin-categories.js) — không phải ảnh sản phẩm hoàn chỉnh.
-  IMAGE_TYPE_DIRECTION: {
-    'Product Hero Image': 'professional studio product photography, clean neutral background, soft even studio lighting, centered composition, high detail',
-    'Facebook Post Image': 'eye-catching square social media post image, vibrant colors, modern marketing style',
-    'Facebook Carousel Image': 'clean modern e-commerce carousel image, consistent studio lighting, product-focused composition',
-    'Banner Image': 'wide marketing banner background, bold and eye-catching, professional advertising style',
-    'Promotion Banner': 'promotional sale banner background, energetic composition, bold contrasting colors',
-    'Blog Cover Image': 'editorial blog cover image, professional magazine-style composition',
-    'Blog Inline Image': 'illustrative supporting image for a blog article, clean and contextually relevant',
-    'Category Background Image': 'wide professional retail category header background, subtle negative space reserved on one side for a product image overlay, no visible product in frame, no text',
-    'Product Background Image': 'clean professional background composition for product photography, subtle negative space reserved for a product overlay, no visible product in frame, no text'
-  },
-
-  // STYLE_DIRECTION (Sprint 13 V4, +'Technology' ở V5 "CATEGORY DESIGN": Dark/
-  // Minimal/Studio/Technology/Luxury) — chỉ áp dụng thêm khi Founder chọn,
-  // nối vào SAU direction gốc — không thay thế IMAGE_TYPE_DIRECTION, tránh
-  // các phong cách làm mất định hướng riêng đã có cho từng loại ảnh.
-  STYLE_DIRECTION: {
-    'Studio': 'studio background style, seamless clean backdrop, professional even lighting',
-    'Lifestyle': 'lifestyle setting background style, real-world environment, natural ambient lighting',
-    'Dark': 'dark theme background style, deep tones, moody dramatic lighting',
-    'Light': 'light theme background style, bright airy tones, soft even lighting',
-    'Luxury': 'luxury premium background style, elegant refined aesthetic, rich materials',
-    'Minimal': 'minimal background style, clean negative space, simple geometric composition',
-    'Technology': 'technology theme background style, sleek modern digital aesthetic, cool tones, subtle circuit/grid motif'
-  },
-
-  // buildPrompt() — chỉ dùng dữ liệu THẬT đọc được qua loadContext() (Product/
-  // Blog) hoặc văn bản Founder tự gõ (Promotion/Custom Prompt) — không bịa
-  // thêm chi tiết sản phẩm không có căn cứ. "Do not include any text..." vì
-  // model sinh ảnh thường vẽ chữ bị lỗi/méo, không phải chữ thật dùng được.
   buildPrompt(inputParams, context) {
-    let direction = this.IMAGE_TYPE_DIRECTION[inputParams.imageType] || 'professional marketing photography';
-    const styleDirection = this.STYLE_DIRECTION[inputParams.style];
-    if (styleDirection) direction += ', ' + styleDirection;
-    const p = context.product;
-    const post = context.post;
-    let grounding;
-    if (p && p.name) {
-      const details = [p.brand, p.categoryLabel].filter(Boolean).join(', ');
-      grounding = `featuring "${p.name}"${details ? ' (' + details + ')' : ''}${p.shortDescription ? '. ' + p.shortDescription : (p.specs ? '. ' + p.specs : '')}`;
-    } else if (post && post.title) {
-      grounding = `related to the article "${post.title}"`;
-    } else if (inputParams.promotion) {
-      grounding = `for the promotion: "${inputParams.promotion}"`;
-    } else if (inputParams.customPrompt) {
-      grounding = inputParams.customPrompt;
-    } else {
-      grounding = 'for Pshop Music, a professional DJ and audio equipment store in Nha Trang, Vietnam';
-    }
-    return `${direction}, ${grounding}. Do not include any text, caption, watermark, or logo in the image.`;
+    return AiModulesCore.MODULES['image-generator'].buildPrompt(inputParams, context);
   },
 
   mapToDraftContent(providerOutput, inputParams, context) {
-    const p = context.product;
-    const post = context.post;
-    return {
-      imageUrl: providerOutput.imageUrl || '',
-      prompt: this.buildPrompt(inputParams, context),
-      imageType: inputParams.imageType,
-      style: inputParams.style || null,
-      size: inputParams.size,
-      sourceProductId: inputParams.productId || null,
-      sourceProductName: (p && p.name) || null,
-      sourceBlogPostId: inputParams.blogPostId || null,
-      sourceBlogPostTitle: (post && post.title) || null,
-      usedIn: []
-    };
+    return AiModulesCore.MODULES['image-generator'].mapToDraftContent(providerOutput, inputParams, context);
   }
 });

@@ -25,6 +25,12 @@ const { onRequest } = require('firebase-functions/v2/https');
 const { defineSecret } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const facebookGraphApi = require('./facebook-graph-api');
+// validateImageUrlOrigin — SSRF fix (Sprint 15 Phase 1, Security Audit
+// Finding 5). Built Sprint 14 Phase 1 (shared/validation.js) but never wired
+// in until now. Used ONLY inside "remove_background" below, per Founder
+// scope — does not touch editImageWithOpenAI() or "edit_image" (Product
+// Banner), which stay exactly as they were.
+const { validateImageUrlOrigin } = require('./shared/validation');
 
 admin.initializeApp();
 
@@ -65,6 +71,49 @@ async function validateRequest(req) {
     return { ok: false, status: 403, error: 'Tài khoản chưa được cấp quyền CMS.' };
   }
   return { ok: true, uid: decoded.uid };
+}
+
+// editImageWithOpenAI — dùng CHUNG cho "remove_background" (xóa phông, giữ
+// nguyên sản phẩm) và "edit_image" (banner nền+chữ mới) — cả 2 đều cần CÙNG
+// 1 việc: gửi ẢNH THẬT lên OpenAI để CHỈNH SỬA trực tiếp (model gpt-image-1,
+// endpoint /v1/images/edits — KHÁC hẳn generate_image dùng dall-e-3 chỉ vẽ
+// ảnh MỚI từ mô tả chữ, không nhận ảnh đầu vào được). Trả về URL Storage vĩnh
+// viễn (ảnh OpenAI trả tạm thời sẽ hết hạn nếu không tải về lưu ngay).
+async function editImageWithOpenAI({ inputUrl, prompt, size, transparentBackground, storagePrefix }) {
+  const imgRes = await fetch(inputUrl);
+  if (!imgRes.ok) throw new Error('Không tải được ảnh từ URL cung cấp.');
+  const imgBuf = Buffer.from(await imgRes.arrayBuffer());
+  const mimeType = imgRes.headers.get('content-type') || 'image/png';
+
+  const SIZE_MAP = { '1:1': '1024x1024', '4:5': '1024x1536', '16:9': '1536x1024' };
+  const openAiSize = SIZE_MAP[size] || 'auto';
+
+  const form = new FormData();
+  form.append('model', 'gpt-image-1');
+  form.append('image', new Blob([imgBuf], { type: mimeType }), 'source.png');
+  form.append('prompt', prompt);
+  form.append('size', openAiSize);
+  form.append('n', '1');
+  if (transparentBackground) form.append('background', 'transparent');
+
+  const r = await fetch('https://api.openai.com/v1/images/edits', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + OPENAI_API_KEY.value() },
+    body: form
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error((data.error && data.error.message) || 'OpenAI Images Edit API lỗi.');
+  const item = data.data && data.data[0];
+  if (!item || !item.b64_json) throw new Error('OpenAI không trả về ảnh.');
+
+  const buffer = Buffer.from(item.b64_json, 'base64');
+  const path = `${storagePrefix}/${Date.now()}-${Math.random().toString(36).slice(2)}.png`;
+  const bucket = admin.storage().bucket();
+  const token = require('crypto').randomUUID();
+  await bucket.file(path).save(buffer, {
+    metadata: { contentType: 'image/png', metadata: { firebaseStorageDownloadTokens: token } }
+  });
+  return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
 }
 
 exports.openaiProxy = onRequest({ secrets: [OPENAI_API_KEY], cors: true }, async (req, res) => {
@@ -193,129 +242,65 @@ exports.openaiProxy = onRequest({ secrets: [OPENAI_API_KEY], cors: true }, async
     return;
   }
 
-  // remove_background — Req C (Xóa phông). Nhận imageUrl (URL công khai hoặc
-  // Firebase Storage URL) + background (hex màu nền hoặc URL ảnh nền — optional).
-  // Dùng GPT-4o Vision: gửi ảnh gốc kèm instruction cắt phông → nhận lại
-  // base64 PNG đã xóa phông (transparent bg) → lưu vào Firebase Storage →
-  // trả về imageUrl vĩnh viễn. Client tự composite với background nếu cần.
+  // remove_background — Req C (Xóa phông). TRƯỚC ĐÂY: GPT-4o Vision mô tả sản
+  // phẩm bằng chữ rồi DALL-E 3 VẼ LẠI TOÀN BỘ ảnh mới theo mô tả đó — không
+  // phải ảnh thật, dễ sai màu/chi tiết/logo so với ảnh gốc (Founder phát hiện
+  // khi yêu cầu tính năng banner nền+chữ mới — cùng gốc rễ). Giờ dùng ĐÚNG
+  // model gpt-image-1 qua /v1/images/edits — NHẬN ẢNH GỐC THẬT làm đầu vào,
+  // giữ nguyên sản phẩm, chỉ thay nền trong suốt — không còn "vẽ lại theo
+  // trí nhớ" nữa. Giữ NGUYÊN tên action + shape response {imageUrl} cho client
+  // cũ (js/admin-bg-remover.js) không cần sửa gì.
   if (action === 'remove_background') {
     const { imageUrl: inputUrl } = req.body || {};
     if (!inputUrl) {
       res.status(400).json({ error: 'Thiếu "imageUrl".' });
       return;
     }
+    // SSRF fix (Sprint 15 Phase 1, Security Audit Finding 5) — inputUrl đi
+    // thẳng vào fetch() phía server (qua editImageWithOpenAI() bên dưới);
+    // trước đây KHÔNG kiểm tra nguồn, 1 caller đã xác thực có thể ép Cloud
+    // Function fetch bất kỳ URL nào. Chặn ở ĐÚNG action này theo yêu cầu
+    // Founder — không sửa editImageWithOpenAI() (dùng chung với "edit_image",
+    // giữ nguyên hành vi Product Banner).
+    if (!validateImageUrlOrigin(inputUrl)) {
+      res.status(400).json({ error: 'imageUrl không hợp lệ — chỉ chấp nhận ảnh từ Firebase Storage của dự án.' });
+      return;
+    }
     try {
-      // Tải ảnh gốc về dạng base64 để gửi GPT-4o Vision
-      const imgRes = await fetch(inputUrl);
-      if (!imgRes.ok) {
-        res.status(400).json({ error: 'Không tải được ảnh từ URL cung cấp.' });
-        return;
-      }
-      const imgBuf = Buffer.from(await imgRes.arrayBuffer());
-      const mimeType = imgRes.headers.get('content-type') || 'image/jpeg';
-      const base64Input = imgBuf.toString('base64');
-
-      // GPT-4o Vision: yêu cầu mô tả vùng foreground để tạo mask — thực tế
-      // GPT không trả về ảnh đã xóa phông trực tiếp, chỉ trả text/instruction.
-      // Workaround thực tế: dùng dall-e-2 edit endpoint (hỗ trợ transparent mask)
-      // hoặc gọi remove.bg API. Ở đây dùng DALL-E 2 inpaint với mask trắng toàn
-      // ảnh để OpenAI tái tạo nền trong suốt — đây là cách duy nhất trong OpenAI
-      // API hiện tại (2024) hỗ trợ xóa phông có transparent output.
-      //
-      // Cụ thể: POST /v1/images/edits với image=PNG có alpha, mask=PNG trắng toàn
-      // phần → OpenAI giữ nguyên subject, xóa nền → trả PNG transparent.
-      // Nếu ảnh gốc không phải PNG-RGBA, convert trước bằng sharp (đã có trong
-      // Cloud Functions environment qua Node.js Buffer + jimp).
-      //
-      // Vì không có sharp/jimp built-in và Cloud Function bundle minimal,
-      // dùng giải pháp thực tế hơn: gọi GPT-4o Vision để lấy prompt mô tả
-      // foreground subject → rồi dùng DALL-E 3 generate lại subject đó trên
-      // nền transparent (prompt engineering). Kết quả lưu Storage → trả URL.
-
-      // Bước 1: GPT-4o Vision — phân tích ảnh, lấy mô tả chủ thể chính
-      const visionRes = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + OPENAI_API_KEY.value()
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [{
-            role: 'user',
-            content: [
-              {
-                type: 'image_url',
-                image_url: { url: `data:${mimeType};base64,${base64Input}`, detail: 'high' }
-              },
-              {
-                type: 'text',
-                text: 'Describe ONLY the main foreground subject/product in this image in 1-2 sentences. Be specific about shape, color, design. Do NOT mention the background. Output ONLY the description, nothing else.'
-              }
-            ]
-          }],
-          max_tokens: 200
-        })
+      const resultUrl = await editImageWithOpenAI({
+        inputUrl,
+        prompt: 'Remove the background completely, keep the main product exactly as it is (same colors, shape, logos, text, details) — do not redraw or alter the product itself in any way.',
+        transparentBackground: true,
+        storagePrefix: 'bg-removed'
       });
-      const visionData = await visionRes.json();
-      if (!visionRes.ok) {
-        res.status(visionRes.status).json({ error: (visionData.error && visionData.error.message) || 'GPT-4o Vision lỗi.' });
-        return;
-      }
-      const subjectDesc = (visionData.choices && visionData.choices[0] && visionData.choices[0].message && visionData.choices[0].message.content || '').trim();
-      if (!subjectDesc) {
-        res.status(502).json({ error: 'GPT-4o không mô tả được chủ thể ảnh.' });
-        return;
-      }
-
-      // Bước 2: DALL-E 3 — generate lại subject trên nền trắng thuần
-      // (transparent PNG không hỗ trợ qua generate endpoint — dùng nền trắng
-      // là chuẩn thực tế cho product photography, dễ composite phía client)
-      const genRes = await fetch('https://api.openai.com/v1/images/generations', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: 'Bearer ' + OPENAI_API_KEY.value()
-        },
-        body: JSON.stringify({
-          model: 'dall-e-3',
-          prompt: `Product photo of: ${subjectDesc}. Pure white background, no shadows, no gradients, studio lighting, isolated product shot, high quality.`,
-          size: '1024x1024',
-          n: 1,
-          response_format: 'b64_json'
-        })
-      });
-      const genData = await genRes.json();
-      if (!genRes.ok) {
-        res.status(genRes.status).json({ error: (genData.error && genData.error.message) || 'DALL-E 3 lỗi.' });
-        return;
-      }
-      const item = genData.data && genData.data[0];
-      if (!item || !item.b64_json) {
-        res.status(502).json({ error: 'OpenAI không trả về ảnh đã xóa phông.' });
-        return;
-      }
-
-      // Lưu vào Firebase Storage (cùng pattern generate_image)
-      const buffer = Buffer.from(item.b64_json, 'base64');
-      const path = `bg-removed/${Date.now()}-${Math.random().toString(36).slice(2)}.png`;
-      const bucket = admin.storage().bucket();
-      const token = require('crypto').randomUUID();
-      await bucket.file(path).save(buffer, {
-        metadata: {
-          contentType: 'image/png',
-          metadata: { firebaseStorageDownloadTokens: token }
-        }
-      });
-      const resultUrl = `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
-      res.json({ imageUrl: resultUrl, subjectDesc });
+      res.json({ imageUrl: resultUrl });
     } catch (err) {
       res.status(502).json({ error: 'Lỗi xóa phông: ' + err.message });
     }
     return;
   }
 
-  res.status(400).json({ error: 'action không hợp lệ (chỉ hỗ trợ "generate", "generate_image", "remove_background", hoặc "health").' });
+  // edit_image — Founder yêu cầu "đưa ảnh gốc lên AI xử lý nền rồi bỏ chữ vào
+  // ảnh" (banner sản phẩm kiểu AlphaTheta) — dùng CHUNG hàm editImageWithOpenAI
+  // ở trên với remove_background, chỉ khác prompt (đổi nền theo phong cách +
+  // in chữ tên sản phẩm vào ảnh) và KHÔNG xóa nền trong suốt (banner cần nền
+  // đầy đủ). Trả về 1 ảnh DUY NHẤT (nền mới + chữ đã có sẵn trong ảnh) —
+  // đúng yêu cầu "1 ảnh tải về là xong", không phải ghép 2 lớp CSS như
+  // generate_image (Product Background Image) đã làm trước đó.
+  if (action === 'edit_image') {
+    const { imageUrl: inputUrl, prompt: editPrompt, size } = req.body || {};
+    if (!inputUrl) { res.status(400).json({ error: 'Thiếu "imageUrl".' }); return; }
+    if (!editPrompt) { res.status(400).json({ error: 'Thiếu "prompt".' }); return; }
+    try {
+      const resultUrl = await editImageWithOpenAI({ inputUrl, prompt: editPrompt, size, storagePrefix: 'ai-generated' });
+      res.json({ imageUrl: resultUrl });
+    } catch (err) {
+      res.status(502).json({ error: 'Lỗi khi gọi OpenAI Images Edit API: ' + err.message });
+    }
+    return;
+  }
+
+  res.status(400).json({ error: 'action không hợp lệ (chỉ hỗ trợ "generate", "generate_image", "edit_image", "remove_background", hoặc "health").' });
 });
 
 /*
@@ -729,9 +714,12 @@ const { authenticate, isPublicPath } = require('./shared/auth');
 const { hasPermission } = require('./shared/permissions');
 const { validateSchema } = require('./shared/validation');
 const { checkAndIncrement } = require('./shared/rateLimit');
+const { ALLOWED_ORIGINS } = require('./shared/corsConfig');
 const auditLog = require('./shared/auditLog');
 const { sendWebhook, WEBHOOK_SIGNING_SECRET } = require('./shared/webhook');
 const { createJob, getJob, updateJobStatus } = require('./shared/asyncJob');
+const { onValueCreated } = require('firebase-functions/v2/database');
+const { runGeneration } = require('./shared/aiGenerate');
 const { withRetry } = require('./shared/retry');
 const { sendSuccess, sendError, makeRequestId } = require('./shared/response');
 const healthRoutes = require('./routes/health');
@@ -750,7 +738,10 @@ const selfHealingRoutes = require('./routes/selfHealing');
 const webhooksRoutes = require('./routes/webhooks');
 const openclawRoutes = require('./routes/openclaw');
 
-exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRET], cors: true, timeoutSeconds: 120 }, async (req, res) => {
+// cors: ALLOWED_ORIGINS (Sprint 15 Phase 1, Task 1.2) — trước đây cors:true
+// (bất kỳ origin nào). Không ảnh hưởng gọi không có Origin header (curl,
+// server gọi server) — CORS chỉ do trình duyệt thực thi.
+exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRET], cors: ALLOWED_ORIGINS, timeoutSeconds: 120 }, async (req, res) => {
   const requestId = makeRequestId();
   res.locals = { requestId };
   const path = (req.path || '/').replace(/\/+$/, '') || '/';
@@ -879,5 +870,37 @@ exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRE
     return sendError(res, 'NOT_FOUND', 'Không tìm thấy route.');
   } catch (err) {
     return sendError(res, 'UPSTREAM_ERROR', 'Lỗi hệ thống: ' + err.message);
+  }
+});
+
+/*
+ * aiGenerateWorker — Sprint 15 Phase 3 (Task 3.2). RTDB trigger
+ * (`onValueCreated`) trên `apiAsyncJobs/{jobId}` — worker nền THẬT cho
+ * đường `POST /v1/ai/{module}/generate?async=true` (routes/aiGenerate.js
+ * `queueGeneration()`). CHỈ xử lý Job có `payload.async === true` — Job do
+ * đường ĐỒNG BỘ tạo (`generateForModule()`, `payload.async === false`) đã
+ * tự chạy `runGeneration()` NGAY trong request, function này BỎ QUA để
+ * KHÔNG chạy generate 2 lần cho cùng 1 Job (double execution).
+ *
+ * Lỗi bên trong runGeneration() ĐÃ tự ghi 'failed' + emit
+ * 'ai.generate.failed' (xem shared/aiGenerate.js) — function này CHỈ nuốt
+ * lỗi ở ngoài cùng để KHÔNG khiến RTDB trigger tự retry vô hạn (hành vi mặc
+ * định của Cloud Functions khi handler throw) — Job đã ở trạng thái
+ * 'failed' đúng nghĩa, retry lại không có ý nghĩa (cùng input, cùng lỗi).
+ *
+ * LƯU Ý: function này CHƯA chạy thật cho tới khi được deploy (`firebase
+ * deploy --only functions:aiGenerateWorker`) — không nằm trong phạm vi
+ * phiên làm việc này ("No deploy" theo chỉ thị Founder).
+ */
+exports.aiGenerateWorker = onValueCreated({ ref: '/apiAsyncJobs/{jobId}', region: 'asia-southeast1', secrets: [OPENAI_API_KEY] }, async (event) => {
+  const job = event.data.val();
+  if (!job || job.status !== 'queued') return;
+  if (!job.type || job.type.indexOf('ai-generate:') !== 0) return;
+  if (!job.payload || job.payload.async !== true) return;
+  try {
+    await runGeneration(event.params.jobId, job.payload.moduleId, job.payload.inputParams, job.uid);
+  } catch (err) {
+    // runGeneration() đã tự ghi 'failed' + emit event bên trong — nuốt lỗi
+    // ở đây để tránh RTDB trigger tự retry (xem chú thích đầu function).
   }
 });

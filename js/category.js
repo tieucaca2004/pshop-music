@@ -284,6 +284,20 @@
     const noImg = document.getElementById('modalNoImg');
     imgSide.querySelectorAll('img, .modal-gallery-nav, .modal-gallery-dots').forEach(el => el.remove());
 
+    // Ảnh nền sản phẩm (kiểu banner, Sprint — "Product Background Image" AI
+    // vẽ + gắn vào bgImage, xem js/admin-agent.js) — CHỈ hiện khi sản phẩm
+    // ĐÃ đặt bgImage, sản phẩm chưa có vẫn y hệt trước giờ (0 regression).
+    const bannerCaption = document.getElementById('modalBannerCaption');
+    if (p.bgImage) {
+      imgSide.classList.add('has-bg-banner');
+      imgSide.style.backgroundImage = `url('${escapeHtml(p.bgImage)}')`;
+      if (bannerCaption) bannerCaption.textContent = p.name;
+    } else {
+      imgSide.classList.remove('has-bg-banner');
+      imgSide.style.backgroundImage = '';
+      if (bannerCaption) bannerCaption.textContent = '';
+    }
+
     const images = Array.isArray(p.images) && p.images.length ? p.images : (p.image ? [p.image] : []);
     noImg.textContent = p.name;
 
@@ -419,6 +433,14 @@
   })();
   state.category = initialCat;
 
+  // ?q=... — nhận từ khóa tìm kiếm gửi từ Ô tìm kiếm trang chủ (index.html),
+  // tái dùng ĐÚNG state.query/render() đã có, không xây hệ tìm kiếm riêng.
+  const initialQuery = (new URLSearchParams(location.search).get('q') || '').trim();
+  if (initialQuery) {
+    state.query = initialQuery;
+    if (searchInput) searchInput.value = initialQuery;
+  }
+
   const initialBtn = findFilterBtn(initialCat);
   if (initialBtn) initialBtn.classList.add('active');
   updateCategoryHeader(initialCat);
@@ -448,10 +470,30 @@
     resultCount.textContent = '';
   });
 
+  // Image Container (Category Card) — Founder chỉnh trong admin/settings.html
+  // "KHUNG ẢNH SẢN PHẨM". Set CSS custom property trên :root để css/style.css
+  // (.prod-img-wrap) đọc — thiếu field nào thì dùng fallback y hệt CSS gốc.
+  function applyProductCardImage(cfg) {
+    if (!cfg) return;
+    const root = document.documentElement.style;
+    if (cfg.ratio) root.setProperty('--pci-ratio', cfg.ratio);
+    if (typeof cfg.top === 'number') root.setProperty('--pci-top', cfg.top + 'px');
+    if (typeof cfg.left === 'number') root.setProperty('--pci-left', cfg.left + 'px');
+    if (typeof cfg.right === 'number') root.setProperty('--pci-right', cfg.right + 'px');
+    if (typeof cfg.bottom === 'number') root.setProperty('--pci-bottom', cfg.bottom + 'px');
+    if (typeof cfg.scale === 'number') root.setProperty('--pci-scale', cfg.scale / 100);
+    if (typeof cfg.zoom === 'number') root.setProperty('--pci-zoom', cfg.zoom / 100);
+    if (cfg.fit) root.setProperty('--pci-fit', cfg.fit);
+    if (cfg.position) root.setProperty('--pci-pos', cfg.position);
+    if (typeof cfg.padding === 'number') root.setProperty('--pci-padding', cfg.padding + 'rem');
+    if (typeof cfg.radius === 'number') root.setProperty('--pci-radius', cfg.radius + 'px');
+  }
+
   if (typeof SiteContentDB !== 'undefined') {
     withTimeout(SiteContentDB.get(), 10000).then(content => {
       categoryTiles = Array.isArray(content.categoryTiles) ? content.categoryTiles : [];
       updateCategoryHeader(state.category);
+      applyProductCardImage(content.productCardImage);
       if (typeof SiteChrome !== 'undefined') {
         SiteChrome.renderNav(content.menu, content.settings);
         SiteChrome.renderFooter(content.footer);
@@ -460,6 +502,7 @@
       if (typeof SEED_SITE_CONTENT !== 'undefined') {
         categoryTiles = SEED_SITE_CONTENT.categoryTiles || [];
         updateCategoryHeader(state.category);
+        applyProductCardImage(SEED_SITE_CONTENT.productCardImage);
       }
     });
   }

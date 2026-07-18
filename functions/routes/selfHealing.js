@@ -16,6 +16,7 @@
 const selfHealing = require('../shared/selfHealing');
 const listResource = require('../shared/listResource');
 const jobsLogs = require('./jobsLogs');
+const { checkAndIncrement } = require('../shared/rateLimit');
 const { defineSecret } = require('firebase-functions/params');
 
 const OPENAI_API_KEY = defineSecret('OPENAI_API_KEY');
@@ -93,6 +94,15 @@ async function handle(req, res, helpers) {
   if (action === 'status' && req.method !== 'GET') return sendError(res, 'METHOD_NOT_ALLOWED', 'status chỉ hỗ trợ GET.');
   if (action !== 'status' && req.method !== 'POST') return sendError(res, 'METHOD_NOT_ALLOWED', action + ' chỉ hỗ trợ POST.');
   if (!isAdmin(auth)) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin được dùng Self-Healing API.');
+
+  // Rate limit riêng cho "repair" (Sprint 15 Phase 1, objective 7) —
+  // LIMITS.repair đã định nghĩa sẵn ở shared/rateLimit.js từ Phase 1 gốc
+  // nhưng chưa gọi tới — repair là hành động vận hành, cần chặn gọi lặp lại
+  // dồn dập dù chỉ Admin mới gọi được. status/validate (chỉ đọc) không cần.
+  if (action === 'repair') {
+    const rl = await checkAndIncrement('uid:' + auth.uid, 'repair');
+    if (!rl.allowed) return sendError(res, 'RATE_LIMITED', 'Vượt giới hạn Repair (' + rl.max + '/giờ).');
+  }
 
   const result = await MODULE_FNS[moduleName][action]();
   return sendSuccess(res, result);
