@@ -1,0 +1,45 @@
+headersOrigin = "config"
+plugins = []
+redirects = []
+
+[functions]
+
+[functions."*"]
+
+[build]
+publish = "D:\\PshopMusicSite"
+publishOrigin = "config"
+
+[build.environment]
+
+[build.processing]
+
+[build.processing.css]
+
+[build.processing.html]
+pretty_urls = false
+
+[build.processing.images]
+
+[build.processing.js]
+
+[build.services]
+
+[[headers]]
+for = "/admin.html"
+
+[headers.values]
+X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+for = "/admin/*"
+
+[headers.values]
+X-Robots-Tag = "noindex, nofollow"
+
+[[headers]]
+for = "/*"
+
+[headers.values]
+X-Frame-Options = "SAMEORIGIN"
+X-Content-Type-Options = "nosniff"

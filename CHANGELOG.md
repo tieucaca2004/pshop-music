@@ -2,6 +2,23 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint 15 — Async AI Generation + Agent RBAC Foundation — ĐANG CHỜ FRONTEND DEPLOY
+
+- **Async AI Generation**: `queueGeneration()` tạo job trong `apiAsyncJobs`, `aiGenerateWorker` (RTDB trigger `onValueCreated`) xử lý bất đồng bộ, `runGeneration()` thực thi AI generation (loadContext → buildPrompt → OpenAI → mapToDraftContent → DraftDB.add). Job transition: `queued → running → completed`.
+- **Agent RBAC Foundation**: Permission-based access cho role `agent` (3 module: blog-writer, image-generator, image-prompt-generator).
+- **Cloud Functions deployed**: `apiGateway(us-central1)` + `aiGenerateWorker(asia-southeast1)` — `firebase deploy --only functions` thành công, verified qua health check HTTP 200.
+- **Frontend (Netlify)**: Code committed tại `1b2a59c`, chờ Founder login Netlify để deploy (`netlify login`).
+- **E2E Acceptance Test**: ✅ PASS — job `-OxnEGLh6QU4JVRUmk-c` queued → completed trong ~6s, draft `-OxnEHqjb2V6dCwF2k_k` created.
+- **`feature/cms-ai-sprint2`**: 63 files changed, commit `1b2a59c`, pushed to origin.
+
+## Sprint 14 — ✅ FOUNDER ACCEPTANCE TEST: PASS — SPRINT HOÀN TẤT
+
+Founder tự thực hiện Test #1 trong `SPRINT14_ACCEPTANCE_CHECKLIST.md` mục "Recommended Founder Tests": đăng nhập Admin thật (`admin/categories.html`), lấy ID token qua `firebase.auth().currentUser.getIdToken()`, gọi trực tiếp `GET /v1/system/diagnostics` qua Console trình duyệt (Claude hướng dẫn từng bước, kể cả xử lý cảnh báo "allow pasting" mặc định của Chrome DevTools) — nhận `{"success":true, "data":{...}}`. Đây là xác nhận đầu tiên trong toàn bộ Sprint 14 rằng API hoạt động đúng với 1 phiên đăng nhập ADMIN THẬT (khác mọi kiểm thử trước đó của Claude — toàn bộ `curl` không token, không thể xác nhận được đường đi qua `authenticate()` với token hợp lệ thật).
+
+**Sprint 14 CHÍNH THỨC PASS.** 6 Phase (Core API Foundation → Core CMS → Founder APIs → Agent APIs → Media AI APIs → Self-Healing + OpenClaw Integration) + 1 đợt Production Readiness (deploy 4 Cloud Function Facebook còn thiếu) — tất cả đã hoàn tất, kiểm thử (149 test local + audit 80 endpoint Production), commit, push, deploy. Xem `SPRINT14_FINAL_REPORT.md` (đã cập nhật trạng thái PASS), `SPRINT14_PRODUCTION_AUDIT.md`, `SPRINT14_ACCEPTANCE_CHECKLIST.md` cho hồ sơ đầy đủ.
+
+**Sprint 15 Planning bắt đầu ngay sau** (KHÔNG code, KHÔNG deploy, KHÔNG commit — chỉ tài liệu kế hoạch): `SPRINT15_MASTER_PLAN.md`, `SPRINT15_ROADMAP.md`, `SPRINT15_TASK_BREAKDOWN.md`.
+
 ## Sprint 14 — Production Readiness (sau Phase 6, trước Founder Acceptance Test)
 
 Founder giao 4 việc trước khi cho Founder Acceptance Test: điều tra dứt điểm phát hiện Facebook Cloud Function ở Final Report bản đầu, chạy Production Audit đầy đủ, viết Founder Acceptance Checklist, cập nhật lại toàn bộ tài liệu.

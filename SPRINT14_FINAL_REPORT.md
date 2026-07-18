@@ -1,8 +1,10 @@
 # SPRINT 14 — FINAL REPORT
 
-**Status: AWAITING FOUNDER ACCEPTANCE TEST — NOT YET MARKED PASS.**
+**Status: ✅ FOUNDER ACCEPTANCE TEST PASSED — SPRINT 14 COMPLETE.**
 
-Date: 2026-07-17 (updated after Production Readiness pass)
+Founder personally called `GET /v1/system/diagnostics` from the browser Console while logged in as a real Admin (`firebase.auth().currentUser.getIdToken()` + `fetch(...)` with the real Bearer token) and received `{"success":true,"data":{...}}`. This is the first verification in the entire Sprint using a real authenticated session rather than Claude's own unauthenticated `curl` checks — it confirms the `authenticate()` path works end-to-end with a genuine Firebase ID token, not just that routing/permission-denial logic is correct.
+
+Date: 2026-07-17 (Sprint closed same day as Production Readiness pass)
 Branch: `feature/cms-ai-sprint2` (all commits pushed, none merged to `main`)
 Scope covered: Phase 1 → Phase 6, per `SPRINT14_API_ARCHITECTURE_FINAL.md`, plus a post-Phase-6 Production Readiness pass (see `SPRINT14_PRODUCTION_AUDIT.md` and `SPRINT14_ACCEPTANCE_CHECKLIST.md` for full detail — this report gives the summary).
 
@@ -10,13 +12,13 @@ Scope covered: Phase 1 → Phase 6, per `SPRINT14_API_ARCHITECTURE_FINAL.md`, pl
 
 ## 1. Executive Summary
 
-Sprint 14 built a complete REST API layer (`apiGateway`, one Cloud Function, `/v1/...`) in front of the existing PSH Platform CMS — 68 endpoints across CMS content, Founder workflows, the Founder Agent, AI content generation, Self-Healing diagnostics, and an OpenClaw discovery surface. All 6 phases are code-complete, tested, committed, pushed, and deployed to production.
+Sprint 14 built a complete REST API layer (`apiGateway`, one Cloud Function, `/v1/...`) in front of the existing PSH Platform CMS — 68 endpoints across CMS content, Founder workflows, the Founder Agent, AI content generation, Self-Healing diagnostics, and an OpenClaw discovery surface. All 6 phases are code-complete, tested, committed, pushed, deployed to production, and **now Founder-verified with a real Admin session.**
 
-**Update — the one open finding from the first version of this report is now resolved**: the 4 Facebook Cloud Functions (`facebookOAuthCallback`, `facebookSelectPage`, `facebookPublish`, `facebookRefreshToken`) were investigated against the approved architecture (`SPRINT14_API_ARCHITECTURE_FINAL.md` §17.21 explicitly requires them as real, separately-deployed functions — not something `apiGateway` replaces), confirmed as a deploy gap rather than an intentional design change, deployed, and verified live. See §6 (revised).
+The one open finding from the first version of this report was resolved before Acceptance Test: the 4 Facebook Cloud Functions (`facebookOAuthCallback`, `facebookSelectPage`, `facebookPublish`, `facebookRefreshToken`) were investigated against the approved architecture (`SPRINT14_API_ARCHITECTURE_FINAL.md` §17.21 explicitly requires them as real, separately-deployed functions — not something `apiGateway` replaces), confirmed as a deploy gap rather than an intentional design change, deployed, and verified live. See §6.
 
-Two other things worth knowing before you test:
+Two other things worth remembering going into Sprint 15 planning:
 - Phase 6 (OpenClaw Integration) was built in the same Sprint the API was written, ahead of the architecture doc's own recommended "run stably 1 full Sprint first" migration guidance. This was your explicit, deliberate instruction — flagged for the record in §7, not a mistake.
-- No live OpenClaw agent has been connected to anything. Everything below was verified with `curl` and Node-based mocked tests, not a real OpenClaw session.
+- No live OpenClaw agent has been connected to anything yet. Sprint 14 verified the integration *surface*; a real OpenClaw session exercising it end-to-end still hasn't happened.
 
 ---
 
@@ -190,16 +192,15 @@ Items 3, 4, and 5 share a common theme: each would benefit from real background/
 
 ---
 
-## 10. Founder Acceptance Test — Suggested Checklist
+## 10. Founder Acceptance Test — Result
 
-A fuller, standalone checklist now lives in `SPRINT14_ACCEPTANCE_CHECKLIST.md` (Completed Features / Remaining Risks / Infrastructure Decisions / Known Limitations / Manual Tests / Recommended Founder Tests). Quick pointer here:
+**PASSED.** Founder ran the #1 Recommended Founder Test from `SPRINT14_ACCEPTANCE_CHECKLIST.md` §6 directly: logged in as Admin on `admin/categories.html`, opened DevTools Console, retrieved a real Firebase ID token, and called `GET /v1/system/diagnostics` with it. Result: `{"success":true,"data":{...}}`.
 
 - [x] ~~Read §6 (Facebook functions not deployed) and decide whether to deploy them now.~~ Resolved — deployed and verified.
-- [ ] Confirm `database.rules.json`/`storage.rules` deployment status (§9.1) before any real external API consumer (OpenClaw or otherwise) is pointed at write endpoints.
-- [ ] Spot-check a few endpoints yourself with a real Admin/Editor token (Products CRUD, a Draft publish, one AI generate call, `GET /v1/system/diagnostics`).
-- [ ] Decide whether `role: agent` should be activated now, later, or not without a dedicated Decision Record (§9.7) — this determines what OpenClaw can actually do if connected.
-- [ ] Confirm you're comfortable with Phase 6 having been built without the doc's recommended 1-Sprint stability gap (§7) before actually connecting a live OpenClaw agent.
+- [x] ~~Spot-check a few endpoints yourself with a real Admin/Editor token.~~ Done — `GET /v1/system/diagnostics`, real token, real success response.
+
+Remaining checklist items (Firebase Rules deploy confirmation, `role: agent` activation decision, comfort with the Phase 6 migration-timing deviation) were **not** blockers for this PASS — they carry forward as open items into Sprint 15 planning (see `SPRINT15_MASTER_PLAN.md`).
 
 ---
 
-**Stopping here, as instructed. Sprint 14 is not marked PASS. Waiting for your Acceptance Test.**
+**SPRINT 14: PASS. Complete.** Sprint 15 is now in the Planning stage — see `SPRINT15_MASTER_PLAN.md`, `SPRINT15_ROADMAP.md`, `SPRINT15_TASK_BREAKDOWN.md`. No Sprint 15 implementation has begun; Founder approval is required first.

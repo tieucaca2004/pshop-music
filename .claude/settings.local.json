@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add *)",
+      "Bash(git commit -m 'Sprint 13: Hero Slide Position — 9-point grid positioning *)"
+    ]
+  }
+}
