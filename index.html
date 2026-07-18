@@ -46,6 +46,7 @@
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="preload" as="image" href="https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg">
 <link rel="stylesheet" href="css/style.css">
 <script type="application/ld+json">
 {
@@ -62,21 +63,21 @@
 </head>
 <body>
 
-<nav>
+<nav role="navigation">
   <div class="container nav-inner">
     <div class="logo">P<span>·</span>SHOP MUSIC</div>
     <div class="nav-links">
       <a href="#categories">SẢN PHẨM</a>
       <a href="#services">DỊCH VỤ</a>
       <a href="#contact">LIÊN HỆ</a>
-      <a href="https://shopee.vn/music_store_79" target="_blank">Shopee</a>
+      <a href="https://shopee.vn/music_store_79" target="_blank" rel="noopener noreferrer">Shopee</a>
     </div>
     <form class="search-box nav-search" action="category.html" method="GET">
       <span class="icon">&#128269;</span>
       <input type="text" name="q" placeholder="Tìm sản phẩm...">
     </form>
-    <button class="nav-cta" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})">TƯ VẤN NGAY</button>
-    <button class="nav-toggle" onclick="document.getElementById('mobileNav').classList.toggle('open')" aria-label="Menu">&#9776;</button>
+    <button class="nav-cta" onclick="document.getElementById('contact').scrollIntoView({behavior:'smooth'})" aria-label="Chuyển đến phần">TƯ VẤN NGAY</button>
+    <button class="nav-toggle" onclick="document.getElementById('mobileNav').classList.toggle('open')" aria-label="Menu điều hướng">&#9776;</button>
   </div>
 </nav>
 
@@ -84,9 +85,9 @@
   <a href="#categories" onclick="this.closest('.mobile-nav').classList.remove('open')">SẢN PHẨM</a>
   <a href="#services" onclick="this.closest('.mobile-nav').classList.remove('open')">DỊCH VỤ</a>
   <a href="#contact" onclick="this.closest('.mobile-nav').classList.remove('open')">LIÊN HỆ</a>
-  <a href="https://shopee.vn/music_store_79" target="_blank">SHOPEE SHOP</a>
-  <a href="https://www.facebook.com/ChoThueThietBiDJ" target="_blank">Facebook</a>
-  <a href="tel:0901952999" style="color:var(--gold);font-size:1.1rem">0901 952 999</a>
+  <a href="https://shopee.vn/music_store_79" target="_blank" rel="noopener noreferrer">SHOPEE SHOP</a>
+  <a href="https://www.facebook.com/ChoThueThietBiDJ" target="_blank" rel="noopener noreferrer">Facebook</a>
+  <a href="tel:0901952999" aria-label="Gọi điện" style="color:var(--gold);font-size:1.1rem">0901 952 999</a>
 </div>
 
 <section class="hero" id="heroSection">
@@ -108,7 +109,7 @@
     <div class="hero-btns-block" id="heroBtnsBlock">
       <div class="hero-btns">
         <button class="btn-gold" id="heroCta" onclick="handleHeroCta()">XEM SẢN PHẨM</button>
-        <button class="btn-ghost" id="heroCta2" onclick="document.getElementById('services').scrollIntoView({behavior:'smooth'})">DỊCH VỤ CHO THUÊ</button>
+        <button class="btn-ghost" id="heroCta2" onclick="document.getElementById('services').scrollIntoView({behavior:'smooth'})" aria-label="Chuyển đến phần">DỊCH VỤ CHO THUÊ</button>
       </div>
     </div>
   </div>
@@ -152,7 +153,7 @@
           <div class="info-row"><span>Bảo hành SP mua tại shop</span><span>6 - 24 tháng</span></div>
           </div>
         </div>
-        <p class="info-note">Giá thuê phụ thuộc vào thời gian và địa điểm. Nhắn Zalo <a href="tel:0901952999" style="color:var(--gold)">0901 952 999</a> hoặc nhắn <a href="https://www.facebook.com/ChoThueThietBiDJ" target="_blank" style="color:var(--gold)">Facebook</a> để được báo giá nhanh nhất.</p>
+        <p class="info-note">Giá thuê phụ thuộc vào thời gian và địa điểm. Nhắn Zalo <a href="tel:0901952999" style="color:var(--gold)">0901 952 999</a> hoặc nhắn <a href="https://www.facebook.com/ChoThueThietBiDJ" target="_blank" rel="noopener noreferrer" style="color:var(--gold)">Facebook</a> để được báo giá nhanh nhất.</p>
       </div>
     </div>
   </div>
@@ -168,19 +169,19 @@
         <div class="contact-items">
           <div class="contact-item">
             <div class="c-icon">&#128222;</div>
-            <div><div class="c-label">ĐIỆN THOẠI / ZALO</div><div class="c-val"><a href="tel:0901952999" id="contactPhone">0901 952 999</a></div></div>
+            <div><div class="c-label">ĐIỆN THOẠI / ZALO</div><div class="c-val"><a href="tel:0901952999" aria-label="Gọi điện" id="contactPhone">0901 952 999</a></div></div>
           </div>
           <div class="contact-item">
             <div class="c-icon">&#128205;</div>
-            <div><div class="c-label">ĐỊA CHỈ</div><div class="c-val"><a href="https://maps.app.goo.gl/ihv9EZhZCNfwP9um6" target="_blank" id="contactAddress">86 Lạc Long Quân, Nha Trang, Khánh Hòa</a></div></div>
+            <div><div class="c-label">ĐỊA CHỈ</div><div class="c-val"><a href="https://maps.app.goo.gl/ihv9EZhZCNfwP9um6" target="_blank" rel="noopener noreferrer" aria-label="Địa chỉ" id="contactAddress">86 Lạc Long Quân, Nha Trang, Khánh Hòa</a></div></div>
           </div>
           <div class="contact-item">
             <div class="c-icon">&#128722;</div>
-            <div><div class="c-label">SHOPEE</div><div class="c-val"><a href="https://shopee.vn/music_store_79" target="_blank">shopee.vn/music_store_79</a></div></div>
+            <div><div class="c-label">SHOPEE</div><div class="c-val"><a href="https://shopee.vn/music_store_79" target="_blank" rel="noopener noreferrer">shopee.vn/music_store_79</a></div></div>
           </div>
           <div class="contact-item">
             <div class="c-icon">&#128077;</div>
-            <div><div class="c-label">FACEBOOK</div><div class="c-val"><a href="https://www.facebook.com/ChoThueThietBiDJ" target="_blank">Cho Thuê Thiết Bị DJ</a></div></div>
+            <div><div class="c-label">FACEBOOK</div><div class="c-val"><a href="https://www.facebook.com/ChoThueThietBiDJ" target="_blank" rel="noopener noreferrer">Cho Thuê Thiết Bị DJ</a></div></div>
           </div>
           <div class="contact-item">
             <div class="c-icon">&#128336;</div>
@@ -223,7 +224,7 @@
   </div>
 </section>
 
-<footer>
+<footer role="contentinfo">
   <div class="container">
     <div class="footer-grid">
       <div class="footer-col">
@@ -248,14 +249,14 @@
       <div class="footer-col footer-col-news">
         <h5>Kết Nối</h5>
         <div class="footer-social">
-          <a href="https://www.facebook.com/ChoThueThietBiDJ" target="_blank" aria-label="Facebook" class="social-btn social-fb">
+          <a href="https://www.facebook.com/ChoThueThietBiDJ" target="_blank" rel="noopener noreferrer" aria-label="Facebook" class="social-btn social-fb">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 9.9V8.6c0-.6.4-.8.9-.8H16V4.9h-2.3c-2.5 0-3.7 1.5-3.7 3.7v1.3H8.3V13H10v8h3.5v-8h2.4l.4-3.1h-2.8z"/></svg>
           </a>
-          <a href="https://m.me/ChoThueThietBiDJ" target="_blank" aria-label="Nhắn tin Messenger" class="social-btn social-messenger">
+          <a href="https://m.me/ChoThueThietBiDJ" target="_blank" rel="noopener noreferrer" aria-label="Nhắn tin Messenger" class="social-btn social-messenger">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.1 2 11.2c0 2.9 1.5 5.5 3.9 7.2V22l3.5-1.9c.9.3 1.9.4 2.9.4 5.5 0 10-4.1 10-9.3S17.5 2 12 2zm1 12.4l-2.5-2.7-5 2.7 5.5-5.8 2.6 2.7 4.9-2.7-5.5 5.8z"/></svg>
           </a>
-          <a href="https://zalo.me/0901952999" target="_blank" aria-label="Kết bạn Zalo" class="social-btn social-zalo">Z</a>
-          <a href="https://shopee.vn/music_store_79" target="_blank" aria-label="Shopee" class="social-btn social-shopee">
+          <a href="https://zalo.me/0901952999" target="_blank" rel="noopener noreferrer" aria-label="Kết bạn Zalo" class="social-btn social-zalo">Z</a>
+          <a href="https://shopee.vn/music_store_79" target="_blank" rel="noopener noreferrer" aria-label="Shopee" class="social-btn social-shopee">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.5 8h-2.3a4.2 4.2 0 00-8.4 0H5.5c-.6 0-1 .4-1.1 1L3 20c-.1.6.4 1.1 1 1.1h16c.6 0 1.1-.5 1-1.1l-1.4-11c-.1-.6-.5-1-1.1-1zM12 5.5c1.2 0 2.2.9 2.3 2.1H9.7c.1-1.2 1.1-2.1 2.3-2.1zM9.5 11a2.5 2.5 0 005 0v-1.4h1.4v1.4a3.9 3.9 0 01-7.8 0v-1.4h1.4V11z"/></svg>
           </a>
         </div>
@@ -269,18 +270,18 @@
   </div>
 </footer>
 
-<a class="messenger-chat-btn" id="messengerChatBtn" href="https://m.me/ChoThueThietBiDJ" target="_blank" rel="noopener" aria-label="Chat qua Messenger">
+<a class="messenger-chat-btn" id="messengerChatBtn" href="https://m.me/ChoThueThietBiDJ" target="_blank" rel="noopener noreferrer" aria-label="Chat qua Messenger">
   <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.1 2 11.2c0 2.9 1.5 5.5 3.9 7.2V22l3.5-1.9c.9.3 1.9.4 2.9.4 5.5 0 10-4.1 10-9.3S17.5 2 12 2zm1 12.4l-2.5-2.7-5 2.7 5.5-5.8 2.6 2.7 4.9-2.7-5.5 5.8z"/></svg>
   <span>Chat với chúng tôi</span>
 </a>
 
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="js/firebase-config.js"></script>
-<script src="js/site-content-seed.js"></script>
-<script src="js/db.js"></script>
-<script src="js/cms-db.js"></script>
-<script src="js/site-chrome.js"></script>
-<script src="js/home.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script defer src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script defer src="js/firebase-config.js"></script>
+<script defer src="js/site-content-seed.js"></script>
+<script defer src="js/db.js"></script>
+<script defer src="js/cms-db.js"></script>
+<script defer src="js/site-chrome.js"></script>
+<script defer src="js/home.js"></script>
 </body>
 </html>

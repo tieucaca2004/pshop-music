@@ -170,31 +170,6 @@ nav{position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop
 .category-header-logo{position:absolute;z-index:3;top:1rem;right:1rem;max-width:64px;max-height:64px;object-fit:contain;pointer-events:none}
 @media(max-width:640px){.category-header-product-img{max-width:34%;max-height:60%}.category-header-logo{max-width:44px;max-height:44px}}
 
-/* CATEGORY PAGE HEADER — banner using the tile's image, shown at top of category.html */
-.category-header{position:relative;height:260px;display:flex;align-items:flex-end;background:#111;overflow:hidden}
-.category-header-bg{position:absolute;inset:0;background:center/cover no-repeat;z-index:0;filter:blur(var(--cover-blur,0px));transform:scale(1.06)}
-.category-header::before{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(0deg,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0.3) 60%,rgba(0,0,0,0.15) 100%);opacity:var(--cover-overlay,1)}
-.category-header .container{position:relative;z-index:3;padding-bottom:2rem}
-.category-header .breadcrumb{font-size:0.78rem;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.75);margin-bottom:0.5rem}
-.category-header .breadcrumb a:hover{color:var(--gold)}
-/* Category Cover — Product Image overlay (Sprint 13, Product Image Presentation).
-   object-fit:contain + safe-area margin, cùng quy ước ".prod-img-wrap"/".bg-
-   remover-img-fit" đã dùng — không bao giờ méo/tràn khung. Vị trí 9 điểm dùng
-   data-attribute + CSS attribute selector, cùng cách "data-text-pos" của Hero
-   Slideshow đã làm — không thêm cơ chế định vị mới. */
-.category-header-product-img{position:absolute;z-index:2;max-width:42%;max-height:78%;object-fit:contain;opacity:var(--cover-opacity,1);transform:scale(var(--cover-zoom,1));pointer-events:none;filter:drop-shadow(0 12px 24px rgba(0,0,0,0.35))}
-.category-header-product-img[data-cover-position="top-left"]{top:1.5rem;left:1.5rem}
-.category-header-product-img[data-cover-position="top-center"]{top:1.5rem;left:50%;transform:translateX(-50%) scale(var(--cover-zoom,1))}
-.category-header-product-img[data-cover-position="top-right"]{top:1.5rem;right:1.5rem}
-.category-header-product-img[data-cover-position="center-left"]{top:50%;left:1.5rem;transform:translateY(-50%) scale(var(--cover-zoom,1))}
-.category-header-product-img[data-cover-position="center"]{top:50%;left:50%;transform:translate(-50%,-50%) scale(var(--cover-zoom,1))}
-.category-header-product-img[data-cover-position="center-right"],
-.category-header-product-img:not([data-cover-position]){top:50%;right:1.5rem;transform:translateY(-50%) scale(var(--cover-zoom,1))}
-.category-header-product-img[data-cover-position="bottom-left"]{bottom:1.5rem;left:1.5rem}
-.category-header-product-img[data-cover-position="bottom-center"]{bottom:1.5rem;left:50%;transform:translateX(-50%) scale(var(--cover-zoom,1))}
-.category-header-product-img[data-cover-position="bottom-right"]{bottom:1.5rem;right:1.5rem}
-.category-header-logo{position:absolute;z-index:3;top:1rem;right:1rem;max-width:64px;max-height:64px;object-fit:contain;pointer-events:none}
-@media(max-width:640px){.category-header-product-img{max-width:34%;max-height:60%}.category-header-logo{max-width:44px;max-height:44px}}
 .category-header h1{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;color:#fff;letter-spacing:-0.01em}
 
 .section{padding:5rem 0}
