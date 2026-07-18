@@ -23,7 +23,7 @@ const SEED_PRODUCTS = [
     "specs": "AlphaTheta · 2-deck + Mixer · Pin 5h · Bluetooth Audio Out",
     "description": "Hệ thống DJ all-in-one di động, chạy pin đến 5 giờ — biểu diễn ở bất cứ đâu không cần điện. Màn hình cảm ứng chế độ sáng/tối tự động. Kết nối Bluetooth audio ra loa không dây. Hỗ trợ USB và streaming trực tiếp Apple Music, Beatport. Thiết kế vừa ba lô, nhẹ gọn. Phù hợp outdoor party, beach, rooftop event.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Mở hộp · BH 12th",
     "createdAt": 1783005737682
@@ -37,7 +37,7 @@ const SEED_PRODUCTS = [
     "specs": "Decksaver · Polycarbonate cao cấp · Vừa đúng XDJ-RX2",
     "description": "Nắp bảo vệ chuyên dụng cho Pioneer XDJ-RX2, nhựa polycarbonate độ bền cao chống va đập và bụi bẩn. Thiết kế khớp hoàn toàn với đường viền máy, bảo vệ jog wheel, fader và màn hình khi không dùng hoặc vận chuyển. Được khuyên dùng tại studio, club và khi đi diễn.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Mới · Chính hãng",
     "createdAt": 1783005737682
@@ -93,7 +93,7 @@ const SEED_PRODUCTS = [
     "specs": "KRK · Kevlar 5\" · 45Hz–35kHz · 110dB · Class D",
     "description": "Loa kiểm âm dòng Classic thế hệ 3, driver Kevlar 5 inch huyền thoại của KRK, âm thanh phẳng và chính xác trong dải tần 45Hz–35kHz. Khuếch đại Class D, cổng bass phía trước, SPL tối đa 110dB. Vỏ MDF cứng giảm rung. Tin cậy cho phòng thu, broadcast và home studio.",
     "price": "",
-    "image": "",
+    "image": "https://www.krkmusic.com/cdn/shop/files/1-KRK-Classic-5-Front.jpg?v=1705698869",
     "status": "New",
     "badgeText": "Chính hãng · BH 12th",
     "createdAt": 1783005737683
@@ -107,7 +107,7 @@ const SEED_PRODUCTS = [
     "specs": "KRK · 73W · 6\" Kevlar · 38Hz–35kHz · 107dB",
     "description": "Loa kiểm âm nearfield 2 đường tiếng, driver Aramid glass 6 inch, tweeter vòm mềm 1 inch. Công suất 73W bi-amped, đáp ứng 38Hz–35kHz. Cổng bass phía trước, ngõ vào XLR/TRS/RCA. Điều chỉnh HF/LF độc lập. Hàng qua sử dụng tình trạng đẹp, còn bảo hành.",
     "price": "",
-    "image": "",
+    "image": "https://www.krkmusic.com/cdn/shop/files/1-KRK-Rokit-6-F.jpg?v=1705698820",
     "status": "Used",
     "badgeText": "Used 98–99% · Chính hãng",
     "createdAt": 1783005737683
@@ -121,7 +121,7 @@ const SEED_PRODUCTS = [
     "specs": "KRK · 5\" Kevlar · Used hàng Nhật · Điện 110V",
     "description": "Loa kiểm âm nearfield 5 inch thế hệ 3, hàng Nhật nội địa điện 110V — cần biến áp khi dùng tại Việt Nam. Driver Kevlar 5 inch chuẩn KRK, âm thanh cân bằng, bass rõ và chi tiết. Tình trạng sử dụng đẹp, phù hợp home studio và bàn làm việc.",
     "price": "",
-    "image": "",
+    "image": "https://www.krkmusic.com/cdn/shop/files/1-KRK-Rokit-5-F.jpg?v=1705698811",
     "status": "Used",
     "badgeText": "Hàng Nhật · Điện 110V",
     "createdAt": 1783005737683
@@ -135,7 +135,7 @@ const SEED_PRODUCTS = [
     "specs": "KRK · 30W · 4\" Kevlar · 51Hz–35kHz · Used",
     "description": "Loa kiểm âm nearfield nhỏ gọn 4 inch, phù hợp phòng nhỏ và bàn làm việc hạn chế diện tích. Driver Kevlar 4 inch, tweeter vòm mềm 1 inch, công suất 30W bi-amped, cổng bass phía trước. Dải tần 51Hz–35kHz, điều chỉnh âm lượng và cân bằng tích hợp.",
     "price": "",
-    "image": "",
+    "image": "https://www.krkmusic.com/cdn/shop/files/1-KRK-Rokit-4-F.jpg?v=1705698801",
     "status": "Used",
     "badgeText": "Used chính hãng",
     "createdAt": 1783005737683
@@ -149,7 +149,7 @@ const SEED_PRODUCTS = [
     "specs": "KRK V Series · 85W Class D · Kevlar 4\" · 58Hz–19kHz",
     "description": "Loa kiểm âm dòng V Series cao cấp của KRK. Driver Kevlar 4 inch, tweeter Kevlar 1 inch, khuếch đại Class D 85W với brickwall limiter tự động. Đèn LED chỉ báo tín hiệu, điều chỉnh HF/LF và volume. Vỏ MDF chắc chắn. Thiết kế chuyên nghiệp cho broadcast và post-production.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Chính hãng",
     "createdAt": 1783005737683
@@ -163,7 +163,7 @@ const SEED_PRODUCTS = [
     "specs": "KRK · 90W · 6.5\" Neodymium · 37Hz–22kHz · Điện 110V",
     "description": "Loa kiểm âm nearfield 6.5 inch dòng VXT cao cấp. Driver mid-woofer neodymium 6.5 inch, tweeter bán dẫn neodymium, tổng công suất 90W. Phân tần tự động tối ưu, giảm nhiễu và cân bằng tự động. Hàng Nhật nội địa 110V, tình trạng 99%. Cần biến áp khi dùng tại Việt Nam.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "Used",
     "badgeText": "Hàng 99% · Điện 110V",
     "createdAt": 1783005737683
@@ -191,7 +191,7 @@ const SEED_PRODUCTS = [
     "specs": "ADAM Audio · U-ART Ribbon · 8\" Woofer · Bass Reflex",
     "description": "Loa kiểm âm 8 inch với tweeter ribbon U-ART và woofer 8 inch cho bass sâu và mạnh. Hệ thống bass reflex phía sau, 2 khuếch đại Class D độc lập, DSP crossover tích hợp. Phù hợp phòng thu lớn cần nghe tần số thấp chính xác. Hàng qua sử dụng 99%, còn bảo hành 10 tháng.",
     "price": "",
-    "image": "",
+    "image": "https://www.adam-audio.com/content/uploads/2023/04/adam-audio-t8v-studio-monitor-featured-image.png",
     "status": "Used",
     "badgeText": "Used 99% · BH 10th",
     "createdAt": 1783005737683
@@ -205,7 +205,7 @@ const SEED_PRODUCTS = [
     "specs": "Monkey Banana (Đức) · 110W · 5.25\" · 55Hz–30kHz · SPDIF",
     "description": "Loa kiểm âm 5.25 inch của Monkey Banana Đức, thiết kế màu đỏ nổi bật. Công suất 110W (80W LF + 30W HF), dải tần 55Hz–30kHz, THD cực thấp 0.05%. Đặc biệt có ngõ vào Digital chuẩn SPDIF ngoài XLR, TRS, RCA. SNR HF>90dB. Thiết kế lý tưởng cho phòng thu chuyên nghiệp muốn kết nối kỹ thuật số.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Chính hãng · BH 12th",
     "createdAt": 1783005737683
@@ -219,7 +219,7 @@ const SEED_PRODUCTS = [
     "specs": "Monkey Banana (Đức) · 5.25\" · 48Hz–22kHz · EQ ±6dB",
     "description": "Loa kiểm âm 5.25 inch từ Đức, driver bass 5.25 inch và tweeter vòm lụa 1 inch. Dải tần 48Hz–22kHz, điều chỉnh HF và LF độc lập ±6dB tại 10kHz và 100Hz linh hoạt. Ngõ vào XLR và RCA. Chất lượng phòng thu thực sự ở mức giá hợp lý. Lý tưởng cho home studio và producer.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Chính hãng",
     "createdAt": 1783005737683
@@ -233,7 +233,7 @@ const SEED_PRODUCTS = [
     "specs": "Monkey Banana (Đức) · 120W · 8.25\" · 45Hz–30kHz",
     "description": "Loa kiểm âm 8.25 inch mạnh mẽ, công suất RMS 120W (80W LF + 30W HF), dải tần 45Hz–30kHz. SNR HF>94dB, LF>100dB, THD cực thấp. Kết nối XLR, TRS, RCA. Kích thước 320×274×399mm, 11kg/cái. Thiết kế màu đỏ đặc trưng Monkey Banana. Mạnh mẽ cho EDM, Hip-hop và nhạc nhiều bass.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Chính hãng · BH 12th",
     "createdAt": 1783005737683
@@ -247,7 +247,7 @@ const SEED_PRODUCTS = [
     "specs": "Monkey Banana (Đức) · 100W · 8\" · 45Hz–30kHz · 92dB",
     "description": "Loa kiểm âm 8 inch driver lớn, công suất 100W, độ nhạy 92dB SPL. Tweeter vòm lụa 1 inch chi tiết dải cao. Đáp ứng 45Hz–30kHz. Kết nối 3.5mm và RCA. Thiết kế đen sang trọng của Monkey Banana Đức. Lý tưởng cho DJ monitor, phòng thu nhỏ muốn bass nhiều và mạnh.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Chính hãng",
     "createdAt": 1783005737683
@@ -261,7 +261,7 @@ const SEED_PRODUCTS = [
     "specs": "Monkey Banana (Đức) · 100W · 6.5\" · 45Hz–30kHz · 8.9kg",
     "description": "Loa kiểm âm nearfield 6.5 inch được các chuyên gia âm thanh Đức đánh giá cao. Vỏ MDF sơn đen bóng, driver bass 6.5 inch và tweeter 1 inch. Công suất 100W, dải tần 45Hz–30kHz, độ nhạy 88dB. Điều chỉnh âm thanh qua nút bấm mặt trước. Kích thước 350×235×305mm, trọng lượng 8.9kg.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Chính hãng",
     "createdAt": 1783005737683
@@ -289,7 +289,7 @@ const SEED_PRODUCTS = [
     "specs": "Bose · 360° Toàn hướng · Nhôm cao cấp · Pin 16h · IPX4",
     "description": "Loa Bluetooth di động cao cấp âm thanh 360 độ toàn hướng, thiết kế nhôm bóng bền bỉ. Pin 16 giờ liên tục, kháng nước IPX4. Kết nối 2 loa Stereo Mode. Tay cầm vải linh hoạt và đầu vào AUX. Hàng lướt 95% như mới, còn bảo hành 6 tháng.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "Used",
     "badgeText": "Lướt 95% · BH 6th",
     "createdAt": 1783005737683
@@ -303,7 +303,7 @@ const SEED_PRODUCTS = [
     "specs": "Harman Kardon · 4 Driver toàn dải · Wireless Dual Sound · Pin 8h",
     "description": "Loa Bluetooth di động cao cấp 4 driver tái tạo âm thanh toàn dải phong phú. Pin 8 giờ, sạc qua USB, có thể sạc điện thoại. Kết nối 2 loa Wireless Dual Sound. Tay cầm thép không gỉ, lưới vải sang trọng. Thiết kế biểu tượng của Harman Kardon phù hợp nội thất cao cấp.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Chính hãng · BH 12th",
     "createdAt": 1783005737683
@@ -317,7 +317,7 @@ const SEED_PRODUCTS = [
     "specs": "JBL · 100W · IPX4 · LED Đồng Bộ Nhạc · BT 5.1 · Kèm Mic",
     "description": "Loa party 100W mạnh mẽ, đèn LED flash đồng bộ nhịp nhạc ấn tượng, kháng nước IPX4. Bluetooth 5.1, USB và AUX, ghép 2 loa TWS. Pin 6 giờ, điều khiển qua app JBL PartyBox. Kèm micro không dây karaoke pin AA. Nhỏ gọn có tay cầm cao su. Lý tưởng cho tiệc nhỏ trong nhà và ngoài trời.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Chính hãng",
     "createdAt": 1783005737683
@@ -345,7 +345,7 @@ const SEED_PRODUCTS = [
     "specs": "Sennheiser · 100 Ohm · 20Hz–18kHz · ActiveGard™ · SPL 115dB",
     "description": "Tai nghe on-ear chuyên nghiệp với ActiveGard™ bảo vệ thính lực khỏi đỉnh âm thanh quá lớn. Driver dynamic, trở kháng 100 Ohm, dải tần 20Hz–18kHz, SPL 115dB. Xoay 90 độ một bên tai để monitor khi mixing. Đệm tai da êm ái. Cáp tháo rời 1.5m.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Chính hãng",
     "createdAt": 1783005737683
@@ -359,7 +359,7 @@ const SEED_PRODUCTS = [
     "specs": "Sennheiser · 18 Ohm · Alcantara® Italy · On-ear · 7 màu",
     "description": "Phiên bản giới hạn Momentum On-Ear, khung thép không gỉ, đệm tai Alcantara® cao cấp của Ý — cùng vật liệu nội thất xe hơi luxury. Driver dynamic cao cấp, 18 Ohm, âm thanh chi tiết cân bằng. Microphone và nút điều khiển thông minh. 2 dây tháo rời. Hàng còn rất đẹp.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "Used",
     "badgeText": "Đẹp như mới · Hàng hiếm",
     "createdAt": 1783005737683
@@ -373,7 +373,7 @@ const SEED_PRODUCTS = [
     "specs": "Pioneer DJ · Over-ear · Driver từ HDJ-X5 · Xoay 90° · Foldable",
     "description": "Tai nghe DJ chính hãng Pioneer với DNA từ dòng pro, dùng cùng driver HDJ-X5 chuyên nghiệp, tinh chỉnh cho bass/kick chuẩn xác khi mixing. Tai xoay 90 độ để monitor một bên. Thiết kế gấp gọn nhẹ nhàng. Cáp tháo rời coiled 1.2m. Phụ kiện màu sắc thay thế bán riêng.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Mới · Chính hãng · BH 12th",
     "createdAt": 1783005737683
@@ -387,7 +387,7 @@ const SEED_PRODUCTS = [
     "specs": "Technics · Professional · Kim loại cao cấp · Chống rung",
     "description": "Tai nghe DJ chuyên nghiệp Technics EAH-1200K hoàn thiện toàn diện từ các đàn anh huyền thoại SL-1210. Móc tai kim loại xoay được, đệm tai da cao cấp, chống rung xuất sắc. Âm thanh chi tiết cân bằng toàn dải. Thiết kế vừa vặn lâu không mỏi tai khi diễn dài.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Chính hãng · BH 12th",
     "createdAt": 1783005737683
@@ -401,7 +401,7 @@ const SEED_PRODUCTS = [
     "specs": "AIAIAI · 168g · 32 Ohm · Modular · Bio-cellulose Driver 40mm",
     "description": "Tai nghe DJ modular cực nhẹ 168g, thiết kế thay thế từng linh kiện riêng lẻ kéo dài tuổi thọ. Driver 40mm màng Bio-cellulose, âm thanh cân bằng trong trẻo. Trở kháng 32 Ohm, magnet Neodymium cao cấp. Cách âm tốt, siêu nhẹ thoải mái nhiều giờ. Kèm cáp 1.5m và adapter 6.3mm.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Chính hãng · BH 1 năm",
     "createdAt": 1783005737683
@@ -429,7 +429,7 @@ const SEED_PRODUCTS = [
     "specs": "NI · 6in/6out · 24bit/192kHz · 2 Headphone Out · MIDI I/O",
     "description": "Audio interface USB 6 kênh thế hệ 2. 2 ngõ vào combo XLR/TRS với phantom 48V, 4 ngõ ra analog cân bằng, 2 ngõ ra tai nghe riêng. 24bit/192kHz đỉnh cao, MIDI I/O tích hợp, đèn LED theo dõi tín hiệu 4 kênh. Đi kèm Ableton Live Lite, Komplete Start, MASCHINE Essentials. Vỏ kim loại.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Chính hãng",
     "createdAt": 1783005737683
@@ -443,7 +443,7 @@ const SEED_PRODUCTS = [
     "specs": "NI · 6in/6out · 24bit/192kHz · MIDI I/O · Used chính hãng",
     "description": "Audio interface 6 kênh của Native Instruments qua sử dụng tình trạng tốt. 2 preamp XLR/TRS phantom 48V, 4 ngõ ra analog, MIDI I/O. 24bit/192kHz qua USB 2.0 ổn định. Đi kèm Ableton Live Lite và Komplete Start. Tối ưu chi phí cho producer cần nhiều ngõ vào/ra.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "Used",
     "badgeText": "Used chính hãng",
     "createdAt": 1783005737683
@@ -457,7 +457,7 @@ const SEED_PRODUCTS = [
     "specs": "NI · 2in/2out · USB-C · 24bit/192kHz · Compact Desktop",
     "description": "Audio interface compact 2-in/2-out chất lượng cao. 2 ngõ vào combo XLR/TRS phantom 48V riêng từng kênh, Hi-Z cho guitar/bass. USB-C, 24bit/192kHz, monitor trực tiếp không độ trễ. Nhỏ gọn thiết kế bàn desktop. Lý tưởng cho singer-songwriter và content creator.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Chính hãng",
     "createdAt": 1783005737683
@@ -471,7 +471,7 @@ const SEED_PRODUCTS = [
     "specs": "SanDisk · USB 3.2 · Tốc độ cao · Chuyên dụng CDJ/XDJ · Rekordbox",
     "description": "USB drive tốc độ cao chuyên dụng cho máy DJ Pioneer CDJ/XDJ. Tương thích hoàn toàn Rekordbox, Serato, Engine OS. 128GB chứa hàng nghìn bài nhạc lossless. USB 3.2 tốc độ đọc/ghi cao, vỏ kim loại chống va đập. Thiết kế nhỏ gọn có lỗ móc chìa khóa.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Chính hãng",
     "createdAt": 1783005737684
@@ -485,7 +485,7 @@ const SEED_PRODUCTS = [
     "specs": "Nhập khẩu · Đủ màu · 1 bộ = 2 đệm tai + 1 đệm gọng",
     "description": "Bộ đệm thay thế chất lượng cao cho Sennheiser HD25 và các biến thể. Chất liệu đạt chuẩn, cách âm tốt, êm ái thoáng khí khi đeo lâu. Fit chuẩn, gắn chặt và an toàn. 1 bộ = 2 miếng đệm tai + 1 đệm pad gọng. Nhiều màu sắc. Giao hàng 48h toàn quốc.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Hàng sẵn · Đủ màu",
     "createdAt": 1783005737684
@@ -499,7 +499,7 @@ const SEED_PRODUCTS = [
     "specs": "Sol Republic · Driver thay thế · Chính hãng used",
     "description": "Driver loa thay thế chính hãng cho tai nghe Sol Republic V8 và V10. Âm thanh rõ ràng chi tiết sau khi thay. Vật liệu cao cấp bền theo thời gian, fit chính xác với tai nghe Sol Republic. Tiết kiệm chi phí thay vì mua tai nghe mới.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "Used",
     "badgeText": "Used chính hãng",
     "createdAt": 1783005737684
@@ -513,7 +513,7 @@ const SEED_PRODUCTS = [
     "specs": "May nhà máy XNK · Vừa loa 4\"–10\" · Lót chống sốc · BH 6th",
     "description": "Túi bảo vệ loa kiểm âm chuyên dụng tiêu chuẩn xuất nhập khẩu. Lót trong chống sốc dày, ngoài chống nước, bảo vệ loa khỏi va đập và trầy xước. Vừa loa 4–10 inch. Quai đeo và xách, ngăn phụ đựng cáp. Bảo vệ góc loa. Bán theo cặp.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Hàng mới · BH 6th",
     "createdAt": 1783005737684
@@ -527,7 +527,7 @@ const SEED_PRODUCTS = [
     "specs": "Dày 5cm · Nhiều màu · Chuẩn chống cháy · Tự dính",
     "description": "Tấm mút cách âm 3D ô vuông 50×50cm, dày 5cm, đạt chuẩn chống cháy. Hấp thụ âm, giảm tiếng vang và phản xạ trong phòng thu, phòng karaoke. Lớp keo tự dính sẵn mặt sau, dán tường không cần keo thêm. Nhiều màu sắc đẹp, trang trí phòng thu chuyên nghiệp.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Hàng sẵn · Nhiều màu",
     "createdAt": 1783005737684
@@ -541,7 +541,7 @@ const SEED_PRODUCTS = [
     "specs": "Chuẩn Châu Âu · 3 lõi đồng nguyên chất · 250V/10A · 1000W",
     "description": "Dây nguồn 3 lõi đồng nguyên chất tiêu chuẩn Châu Âu, dài 1.5m. Đường kính lõi 0.75mm, 250V/10A, tối đa 1000W. Phù hợp loa kiểm âm, bàn DJ, máy tính, thiết bị gia dụng. Chuẩn kết nối C13 vạn năng. Vỏ PVC chắc chắn, màu đen gọn gàng.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Hàng sẵn",
     "createdAt": 1783005737684
@@ -555,7 +555,7 @@ const SEED_PRODUCTS = [
     "specs": "Soomfon · AUX + SPDIF · Màn hình LCD 1.8\" · Phạm vi 30m",
     "description": "Thiết bị thu phát Bluetooth 5.0 đa năng 2-in-1, biến loa có dây hoặc TV thành không dây. Hỗ trợ AUX và SPDIF quang vào/ra. Màn hình LCD 1.8 inch và núm xoay dễ dùng. Phát TX 12m, thu RX 30m trong nhà. Kết nối đôi 2 thiết bị cùng lúc. USB-C 5V. Phù hợp TV, loa passive, soundbar.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Hàng sẵn",
     "createdAt": 1783005737684
@@ -569,7 +569,7 @@ const SEED_PRODUCTS = [
     "specs": "Lexar · USB 3.2 Gen 1 · 450MB/s · Chuyên dụng CDJ/XDJ · Mã hóa file",
     "description": "USB drive cao cấp Lexar JumpDrive P30 128GB tốc độ đọc lên đến 450MB/s — nhanh vượt trội so với USB thông thường. Chuẩn USB 3.2 Gen 1, tương thích hoàn toàn Pioneer CDJ/XDJ, Rekordbox, Serato, Engine OS. Thiết kế vỏ kim loại chắc chắn, nắp trượt bảo vệ đầu kết nối. Hỗ trợ mã hóa file bảo mật. Dung lượng 128GB chứa hàng nghìn bài nhạc lossless FLAC/WAV. Chính hãng, bảo hành 12 tháng.",
     "price": "1.200.000 ₫",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Chính hãng · BH 12th",
     "createdAt": 1783005737684
@@ -583,7 +583,7 @@ const SEED_PRODUCTS = [
     "specs": "Sol Republic · On-ear · Driver bass mạnh · Thiết kế thể thao năng động",
     "description": "Tai nghe Sol Republic nổi bật với driver bass mạnh mẽ, âm thanh sôi động phù hợp nhạc điện tử, hip-hop, EDM. Thiết kế thể thao năng động, khung bền chắc linh hoạt, đệm tai êm ái đeo thoải mái trong thời gian dài. Dây tai nghe có thể tháo rời dễ dàng thay thế khi cần (dùng chung driver thay thế Sol Republic V8/V10 mà shop đang có sẵn). Phù hợp cho DJ, người yêu nhạc và sử dụng hàng ngày.",
     "price": "",
-    "image": "",
+    "image": "https://images.microcms-assets.io/assets/3b9e29ce734e49babfedb3f8d1e728e3/394307ff13c244f5acabbf85447c342d/59928375-9E8A-4F46-925D-2549A16AC37D.jpeg",
     "status": "New",
     "badgeText": "Chính hãng",
     "createdAt": 1783009706448
