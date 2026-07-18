@@ -42,3 +42,7 @@ họp đồng thuê xe.pdf
 
 # Firebase Functions dependencies
 functions/node_modules/
+
+# Facebook credentials
+.facebook-credentials.json
+workflows/facebook-auto-post/.facebook-credentials.json
