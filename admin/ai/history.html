@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Media History - Pshop Music AI</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="../../css/style.css">
+<link rel="stylesheet" href="../../css/admin.css">
+</head>
+<body>
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="adminSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-wrap">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>LỊCH SỬ MEDIA</h3>
+          <p>Theo dõi tất cả nội dung đã tạo bởi AI — hình ảnh, bài viết, mô tả sản phẩm, bài đăng Facebook.</p>
+        </div>
+        <div class="toolbar">
+          <select id="historyType" style="padding:0.6rem 1rem;border:1px solid var(--line2);border-radius:6px;background:var(--bg);font-family:'Be Vietnam Pro',sans-serif">
+            <option value="all">Tất cả</option>
+            <option value="image">Hình ảnh</option>
+            <option value="blog">Blog</option>
+            <option value="facebook">Facebook</option>
+            <option value="product">Sản phẩm</option>
+            <option value="seo">SEO</option>
+          </select>
+          <input type="text" id="historySearch" placeholder="Tìm kiếm..." style="flex:1;max-width:300px;padding:0.6rem 1rem;border:1px solid var(--line2);border-radius:6px;font-family:'Be Vietnam Pro',sans-serif">
+        </div>
+        <div id="historyList">
+          <p style="color:var(--ink-mute);text-align:center;padding:3rem 0">Lịch sử sẽ hiển thị ở đây sau khi có nội dung AI được tạo.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../../js/firebase-config.js"></script>
+<script src="../../js/admin-auth.js"></script>
+<script src="../../js/admin-chrome.js"></script>
+<script>
+// Load AI generation history from Firebase
+const DB = firebase.database();
+const list = document.getElementById('historyList');
+
+function loadHistory(type = 'all', search = '') {
+  list.innerHTML = '<p style="color:var(--ink-mute);text-align:center;padding:3rem 0">Đang tải...</p>';
+  DB.ref('aiHistory').orderByChild('createdAt').limitToLast(100).once('value').then(snap => {
+    const data = snap.val();
+    if (!data) {
+      list.innerHTML = '<p style="color:var(--ink-mute);text-align:center;padding:3rem 0">Chưa có lịch sử.</p>';
+      return;
+    }
+    let items = Object.values(data).reverse();
+    if (type !== 'all') items = items.filter(i => i.type === type);
+    if (search) items = items.filter(i => (i.title||'').toLowerCase().includes(search.toLowerCase()));
+    if (!items.length) {
+      list.innerHTML = '<p style="color:var(--ink-mute);text-align:center;padding:3rem 0">Không tìm thấy kết quả.</p>';
+      return;
+    }
+    list.innerHTML = '<div style="display:grid;gap:1rem">' + items.map(i => `
+      <div style="background:var(--bg-alt);border-radius:8px;padding:1.2rem 1.5rem;border:1px solid var(--line2);display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <strong>${i.title||'Không tiêu đề'}</strong>
+          <p style="font-size:0.85rem;color:var(--ink-mute);margin-top:0.3rem">${i.type} · ${new Date(i.createdAt).toLocaleString('vi-VN')}</p>
+        </div>
+        <span style="font-size:0.8rem;padding:0.3rem 0.8rem;border-radius:100px;background:${i.status==='completed'?'rgba(5,150,105,0.1)':'rgba(245,158,11,0.1)'};color:${i.status==='completed'?'#059669':'#f59e0b'}">${i.status}</span>
+      </div>
+    `).join('') + '</div>';
+  });
+}
+
+document.getElementById('historyType').addEventListener('change', e => loadHistory(e.target.value, document.getElementById('historySearch').value));
+document.getElementById('historySearch').addEventListener('input', e => loadHistory(document.getElementById('historyType').value, e.target.value));
+loadHistory();
+</script>
+</body>
+</html>
