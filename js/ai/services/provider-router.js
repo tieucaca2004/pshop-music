@@ -17,7 +17,7 @@ const ProviderRouter = (function () {
   // is delegated to AIProviderRegistry.resolveForPlugin().
   var CONTENT_TYPE_ROUTES = {
     'image':     { preferred: 'openai',   reason: 'DALL-E image generation' },
-    'video':     { preferred: null,       reason: 'Video generation not yet available' },
+    'video':     { preferred: 'seedance', reason: 'Seedance video generation' },
     'voice':     { preferred: null,       reason: 'Voice generation not yet available' },
     'text':      { preferred: null,       reason: 'Use active provider' },
     'facebook':  { preferred: null,       reason: 'Use active provider' },
@@ -38,7 +38,8 @@ const ProviderRouter = (function () {
     'facebook-post-generator':   'facebook',
     'product-description-writer':'product',
     'banner-generator':          'banner',
-    'slider-generator':          'slider'
+    'slider-generator':          'slider',
+    'video-generator':           'video'
   };
 
   /**

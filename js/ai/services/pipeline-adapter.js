@@ -180,7 +180,8 @@ const PipelineAdapter = (function () {
       'product-description-writer': 'document',
       'banner-generator': 'document',
       'slider-generator': 'document',
-      'image-prompt-generator': 'prompt'
+      'image-prompt-generator': 'prompt',
+      'video-generator': 'video'
     };
     return map[moduleId] || 'document';
   }
