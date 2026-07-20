@@ -1,0 +1,11 @@
+# Netlify redirects for clean URLs
+/about            /about.html          200
+/business-information  /business-information.html  200
+/contact          /contact.html        200
+/privacy-policy   /privacy-policy.html 200
+/terms-of-service /terms-of-service.html 200
+
+# Security headers
+/*  X-Frame-Options: SAMEORIGIN
+/*  X-Content-Type-Options: nosniff
+/*  Referrer-Policy: strict-origin-when-cross-origin
