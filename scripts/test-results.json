@@ -1,0 +1,115 @@
+{
+  "timestamp": "2026-07-20T10:45:08.125Z",
+  "passed": 27,
+  "failed": 0,
+  "results": [
+    {
+      "status": "PASS",
+      "message": "Policy: SAFE actions allowed"
+    },
+    {
+      "status": "PASS",
+      "message": "Policy: HIGH requires approval"
+    },
+    {
+      "status": "PASS",
+      "message": "Policy: CRITICAL denied"
+    },
+    {
+      "status": "PASS",
+      "message": "Policy: DEPLOY requires approval"
+    },
+    {
+      "status": "PASS",
+      "message": "Policy: Unknown defaults to MEDIUM"
+    },
+    {
+      "status": "PASS",
+      "message": "Watchdog: task starts as RUNNING"
+    },
+    {
+      "status": "PASS",
+      "message": "Watchdog: task shows RUNNING after heartbeat"
+    },
+    {
+      "status": "PASS",
+      "message": "Watchdog: task completes as SUCCESS"
+    },
+    {
+      "status": "PASS",
+      "message": "Watchdog: task fails correctly"
+    },
+    {
+      "status": "PASS",
+      "message": "AutonomousConfig: READ actions are autonomous"
+    },
+    {
+      "status": "PASS",
+      "message": "AutonomousConfig: DELETE is HIGH risk"
+    },
+    {
+      "status": "PASS",
+      "message": "AutonomousConfig: HIGH risk requires approval"
+    },
+    {
+      "status": "PASS",
+      "message": "TaskDecomposer: generates at least 4 tasks for deploy"
+    },
+    {
+      "status": "PASS",
+      "message": "TaskDecomposer: starts with analyzer"
+    },
+    {
+      "status": "PASS",
+      "message": "TaskDecomposer: ends with reviewer"
+    },
+    {
+      "status": "PASS",
+      "message": "Reporting: failed report includes FAILED header"
+    },
+    {
+      "status": "PASS",
+      "message": "Reporting: failed report includes root cause"
+    },
+    {
+      "status": "PASS",
+      "message": "Reporting: failed report includes recommended action"
+    },
+    {
+      "status": "PASS",
+      "message": "Reporting: stalled report includes STALLED header"
+    },
+    {
+      "status": "PASS",
+      "message": "Reporting: stalled report includes cause"
+    },
+    {
+      "status": "PASS",
+      "message": "Workflow: starts as CREATED"
+    },
+    {
+      "status": "PASS",
+      "message": "Workflow: transitions to RUNNING"
+    },
+    {
+      "status": "PASS",
+      "message": "Workflow: transitions to COMPLETED"
+    },
+    {
+      "status": "PASS",
+      "message": "Workflow: cannot go backwards"
+    },
+    {
+      "status": "PASS",
+      "message": "Runtime: version loaded"
+    },
+    {
+      "status": "PASS",
+      "message": "Runtime: execute function exists"
+    },
+    {
+      "status": "PASS",
+      "message": "Runtime: interval function exists"
+    }
+  ]
+}
