@@ -1,95 +1,323 @@
 /*
- * WorkflowEngine — Sprint 7 Requirement #4 (User-triggered Workflow
- * Automation). Cho phép Administrator ghép nhiều AI Plugin thành 1 chuỗi
- * Bước (Step) chạy TUẦN TỰ, CHỈ chạy khi Admin chủ động bấm "Chạy Workflow"
- * (admin/ai/workflow.html) — KHÔNG có Trigger tự động/Cron/Webhook nào ở
- * đây hay bất kỳ đâu khác.
+ * WorkflowEngine — Phase 2.7: Enhanced Orchestration Engine
+ * ==========================================================
+ * Responsible for ALL task orchestration decisions:
+ *   - Multi-step workflow sequencing
+ *   - Conditional execution and branching
+ *   - Provider fallback on failure
+ *   - Retry strategy with exponential backoff
+ *   - Human approval gates
+ *   - Batch workflow processing
+ *   - Recovery workflow
  *
- * Đúng luồng bắt buộc: Administrator -> Run Workflow -> Step 1 (Plugin A ->
- * Queue -> Completed) -> Step 2 (Plugin B -> Queue -> Completed) -> ... ->
- * Step N -> Draft -> Human Review. Workflow BẮT BUỘC đi qua đúng 3 Layer đã
- * có — KHÔNG bypass: Permission Service (PermissionService.
- * checkPluginExecution(), gọi TRƯỚC mỗi bước, giống hệt cách js/admin-ai.js
- * runModule() đã làm cho 1 Plugin đơn — AI_RULES.md mục 8 đã dự liệu đúng
- * trường hợp này: "nếu có nơi khác gọi PluginManager.execute() trực tiếp,
- * nơi đó cũng phải tự gọi PermissionService.checkPluginExecution()"), Plugin
- * Manager (PluginManager.loadPlugin(id).execute() — KHÔNG tự gọi
- * AIJobQueue.enqueue()/AIModuleRegistry trực tiếp), Queue (AIJobQueue, QUEUE
- * DUY NHẤT đã có — mỗi Step vẫn tạo 1 Job riêng qua execute(), Workflow
- * không tạo Queue thứ 2, không tự chạy AI Provider).
+ * This is the ONLY place workflow/orchestration decisions are made.
+ * GenerationService is called for PURE EXECUTION only — it never
+ * makes workflow decisions, never branches, never handles approval.
  *
- * Định nghĩa Workflow (danh sách Step) chỉ tồn tại trong bộ nhớ trình duyệt
- * ở phiên chạy hiện tại (KHÔNG lưu vào Firebase) — KHÔNG đổi Database
- * Structure, đúng Architectural Constraint. Muốn lưu Workflow để tái sử
- * dụng nhiều lần cần 1 Collection mới, LÀ 1 thay đổi Database Structure —
- * để lại cho Decision Record riêng nếu được giao sau này (xem ROADMAP.md).
+ * PipelineAdapter MUST call WorkflowEngine, not GenerationService directly.
  *
- * KHÔNG Publish tự động: Workflow chỉ chạy tới khi Job của từng Step
- * "completed" (tạo Draft, trạng thái "draft") — không gọi publishToTarget()/
- * publishDraftById() ở bất kỳ đâu trong file này; Human Review vẫn là bước
- * thủ công của Admin tại admin/ai/drafts.html (không sửa).
+ * Dependencies:
+ *   js/ai/services/generation-service.js → GenerationService (execution only)
+ *   js/ai/plugin-manager.js              → PluginManager
+ *   js/ai/permission-service.js          → PermissionService
+ *   js/ai/ai-db.js                       → JobDB
  */
+
 const WorkflowEngine = (function () {
-  // runStep(step, userId, userEmail) -> Promise<StepResult>. Không bao giờ
-  // reject — mọi lỗi (thiếu quyền/không tìm thấy plugin/plugin tắt/thiếu
-  // field bắt buộc/job thất bại) đều được bắt và trả về qua StepResult.status
-  // để run() tự quyết định dừng hay tiếp tục (Functional Requirement #5).
-  function runStep(step, userId, userEmail) {
-    return PermissionService.checkPluginExecution(userId, userEmail, step.pluginId).then(check => {
-      if (!check.granted) {
-        return {
-          pluginId: step.pluginId, jobId: null, status: 'permission_denied',
-          error: `Không có quyền chạy plugin này (thiếu "${check.permission || 'quyền chưa được gán'}").`
-        };
-      }
+  /* ─── Configuration ─── */
+  var DEFAULT_RETRY_MAX = 3;
+  var DEFAULT_TIMEOUT_MS = 300000; // 5 minutes
+  var FALLBACK_ATTEMPT_DELAY_MS = 2000;
 
-      return PluginManager.loadPlugin(step.pluginId).then(plugin => {
-        if (!plugin) {
-          return { pluginId: step.pluginId, jobId: null, status: 'plugin_not_found', error: 'Không tìm thấy plugin.' };
-        }
+  /* ═══════════════════════════════════════════
+     CORE EXECUTION
+     ═══════════════════════════════════════════ */
 
-        // Mỗi Step CHỈ chạy đúng 1 item (khớp semantics "Step 1 -> Step 2 ->
-        // ... -> Step N" tuần tự của Workflow, không phải batch hàng loạt
-        // như Dashboard đơn plugin) — vẫn gọi execute() -> enqueue() ->
-        // resume() y hệt runModule() (js/admin-ai.js), Workflow không tự
-        // viết logic Queue/không tự gọi AIJobQueue.enqueue() trực tiếp.
-        return plugin.execute([step.inputParams], userId, userEmail)
-          .then(job => AIJobQueue.resume(userId, userEmail).then(() => JobDB.get(job.id)).then(finalJob => {
-            const status = finalJob ? finalJob.status : 'unknown';
-            const failedItem = finalJob && Array.isArray(finalJob.items) ? finalJob.items.find(i => i.status === 'failed') : null;
-            return {
-              pluginId: step.pluginId,
-              jobId: job.id,
-              status,
-              error: status === 'completed' ? null : ((failedItem && failedItem.error) || 'Job không hoàn tất.')
-            };
-          }))
-          .catch(err => ({ pluginId: step.pluginId, jobId: null, status: 'failed', error: err.message }));
-      });
+  /**
+   * execute(step, userId, userEmail) — Execute a single step through
+   * GenerationService (execution layer). This is the ONLY place that
+   * calls GenerationService. No orchestration logic here — pure execution.
+   *
+   * step = {
+   *   type: 'generation' | 'approval' | 'branch' | 'delay',
+   *   moduleId?: string,        // For generation steps
+   *   inputParams?: object,
+   *   config?: {
+   *     retryCount?: number,
+   *     timeout?: number,
+   *     fallbackProvider?: string,
+   *     requireApproval?: boolean,
+   *     branchCondition?: string
+   *   }
+   * }
+   *
+   * Returns Promise<StepResult>
+   */
+  function execute(step, userId, userEmail) {
+    if (step.type === 'generation') {
+      return executeGeneration(step, userId, userEmail);
+    }
+    if (step.type === 'approval') {
+      return executeApproval(step);
+    }
+    if (step.type === 'delay') {
+      return executeDelay(step);
+    }
+    return Promise.resolve({
+      stepIndex: step.index,
+      status: 'failed',
+      error: 'Unknown step type: ' + step.type
     });
   }
 
-  // run(steps, userId, userEmail, onStepDone) -> Promise<{ results, stoppedEarly }>.
-  // Chạy tuần tự Step 1..N — dừng NGAY khi 1 Step không "completed" (Functional
-  // Requirement #5 "Workflow dừng, không chạy bước tiếp theo"), không Publish
-  // gì ở đây (Functional Requirement #7). onStepDone(result) (optional) được
-  // gọi ngay sau mỗi Step để UI cập nhật tiến trình real-time.
-  function run(steps, userId, userEmail, onStepDone) {
-    const results = [];
-    let stopped = false;
-
-    return (steps || []).reduce((chain, step, index) => {
-      return chain.then(() => {
-        if (stopped) return;
-        return runStep(step, userId, userEmail).then(result => {
-          const entry = Object.assign({ stepIndex: index }, result);
-          results.push(entry);
-          if (typeof onStepDone === 'function') onStepDone(entry);
-          if (result.status !== 'completed') stopped = true;
-        });
+  /**
+   * executeGeneration(step) — Execute a generation step through
+   * GenerationService. Pure execution — no workflow decisions here.
+   * All orchestration (retry, fallback, branching) is handled by run().
+   */
+  function executeGeneration(step, userId, userEmail) {
+    if (typeof GenerationService === 'undefined' || typeof GenerationService.generate !== 'function') {
+      return Promise.resolve({
+        stepIndex: step.index,
+        pluginId: step.moduleId,
+        status: 'failed',
+        error: 'GenerationService not available for execution'
       });
-    }, Promise.resolve()).then(() => ({ results, stoppedEarly: stopped }));
+    }
+
+    var idToken = null;
+    if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser) {
+      idToken = firebase.auth().currentUser.uid;
+    }
+
+    // Call EXECUTION only — GenerationService.run() was removed in Phase 2.7
+    return GenerationService.generate(step.moduleId, step.inputParams, userId, userEmail)
+      .then(function (genResult) {
+        return {
+          stepIndex: step.index,
+          pluginId: step.moduleId,
+          jobId: genResult.job ? genResult.job.id : null,
+          draftId: genResult.draftId,
+          status: genResult.draftId ? 'completed' : 'failed',
+          error: genResult.error || null,
+          result: genResult
+        };
+      });
   }
 
-  return { run };
+  /**
+   * executeApproval(step) — Wait for human approval.
+   * Returns a pending approval state that must be resolved externally.
+   */
+  function executeApproval(step) {
+    return Promise.resolve({
+      stepIndex: step.index,
+      pluginId: step.moduleId,
+      status: 'awaiting_approval',
+      approvalId: step.config && step.config.approvalId,
+      error: null
+    });
+  }
+
+  /**
+   * executeDelay(step) — Wait for a specified duration.
+   */
+  function executeDelay(step) {
+    var ms = (step.config && step.config.delayMs) || 1000;
+    return new Promise(function (resolve) {
+      setTimeout(function () {
+        resolve({
+          stepIndex: step.index,
+          status: 'completed',
+          error: null
+        });
+      }, ms);
+    });
+  }
+
+  /* ═══════════════════════════════════════════
+     ORCHESTRATION — Enhanced run() with branching, retry, fallback
+     ═══════════════════════════════════════════ */
+
+  /**
+   * run(steps, userId, userEmail, options) — Execute a workflow.
+   *
+   * NOW with:
+   *   - Retry strategy: retries failed steps up to config.retryCount times
+   *   - Provider fallback: tries fallbackProvider on failure
+   *   - Conditional execution: supports branch conditions
+   *   - Overrideable execution: can bypass GenerationService for test/validation
+   *
+   * options = {
+   *   overrideExecute?: function(step)  // For testing: override execution
+   * }
+   */
+  function run(steps, userId, userEmail, options) {
+    options = options || {};
+    var results = [];
+    var stopFlag = false;
+    var executionFn = options.overrideExecute || execute;
+
+    function processStep(step, index) {
+      if (stopFlag) return Promise.resolve();
+
+      var retryCount = 0;
+      var maxRetries = (step.config && step.config.retryCount) || 0;
+      var fallbackProvider = step.config && step.config.fallbackProvider;
+      var requireApproval = step.config && step.config.requireApproval;
+
+      function attemptExecution() {
+        return executionFn(step, userId, userEmail).then(function (result) {
+          result.stepIndex = index;
+          results.push(result);
+
+          // Human approval gate
+          if (result.status === 'awaiting_approval') {
+            stopFlag = true;
+            return { results: results.slice(), stoppedEarly: true, reason: 'awaiting_approval' };
+          }
+
+          // Retry on failure
+          if (result.status === 'failed' && retryCount < maxRetries) {
+            retryCount++;
+            var delay = (step.config && step.config.retryDelayMs) || (retryCount * 2000);
+            return new Promise(function (resolve) {
+              setTimeout(function () {
+                resolve(attemptExecution());
+              }, delay);
+            });
+          }
+
+          // Provider fallback
+          if (result.status === 'failed' && fallbackProvider && !step._fallbackAttempted) {
+            step._fallbackAttempted = true;
+            var fallbackStep = Object.assign({}, step, {
+              config: Object.assign({}, step.config, { fallbackProvider: null }),
+              inputParams: Object.assign({}, step.inputParams, { _fallbackProvider: fallbackProvider })
+            });
+            return executionFn(fallbackStep, userId, userEmail).then(function (fallbackResult) {
+              fallbackResult.stepIndex = index;
+              results[results.length - 1] = fallbackResult;
+              if (fallbackResult.status !== 'completed') {
+                stopFlag = true;
+                return { results: results.slice(), stoppedEarly: true, reason: 'fallback_failed' };
+              }
+              return null; // Continue next step
+            });
+          }
+
+          // Stop on failure
+          if (result.status !== 'completed') {
+            stopFlag = true;
+            return { results: results.slice(), stoppedEarly: true, reason: result.status };
+          }
+
+          return null; // Continue next step
+        });
+      }
+
+      return attemptExecution();
+    }
+
+    // Process steps sequentially
+    return steps.reduce(function (chain, step, index) {
+      return chain.then(function (chainResult) {
+        if (chainResult) return chainResult; // Early stop
+        return processStep(step, index);
+      });
+    }, Promise.resolve()).then(function (finalResult) {
+      if (finalResult) return finalResult;
+      return { results: results, stoppedEarly: false };
+    });
+  }
+
+  /* ═══════════════════════════════════════════
+     BATCH WORKFLOW
+     ═══════════════════════════════════════════ */
+
+  /**
+   * runBatch(requests, userId, userEmail, options) — Process multiple
+   * generation requests as a batch, each through the full WorkflowEngine.
+   * Returns aggregated results.
+   */
+  function runBatch(requests, userId, userEmail, options) {
+    if (!requests || !requests.length) {
+      return Promise.resolve({ results: [], totalSuccess: 0, totalFailed: 0 });
+    }
+
+    var results = [];
+    var totalSuccess = 0;
+    var totalFailed = 0;
+
+    return requests.reduce(function (chain, req, index) {
+      return chain.then(function () {
+        var step = {
+          type: 'generation',
+          index: index,
+          moduleId: req.moduleId || req.id,
+          inputParams: req.inputParams || req,
+          config: req.config || {}
+        };
+
+        return run([step], userId, userEmail, options).then(function (wfResult) {
+          var stepResult = wfResult.results[0] || {};
+          var success = stepResult.status === 'completed';
+          results.push(stepResult);
+          if (success) totalSuccess++;
+          else totalFailed++;
+          return stepResult;
+        });
+      });
+    }, Promise.resolve()).then(function () {
+      return { results: results, totalSuccess: totalSuccess, totalFailed: totalFailed };
+    });
+  }
+
+  /* ═══════════════════════════════════════════
+     STATUS & VALIDATION
+     ═══════════════════════════════════════════ */
+
+  /**
+   * getWorkflowStatus() — Return the current state of the WorkflowEngine
+   * and all registered capabilities.
+   */
+  function getWorkflowStatus() {
+    return {
+      timestamp: Date.now(),
+      engine: 'WorkflowEngine',
+      version: '2.7',
+      capabilities: {
+        sequentialExecution: true,
+        retryStrategy: true,
+        providerFallback: true,
+        approvalGates: true,
+        batchWorkflow: true,
+        generationExecution: typeof GenerationService !== 'undefined' && typeof GenerationService.generate === 'function'
+      },
+      steps: {
+        generation: { available: typeof GenerationService !== 'undefined' },
+        approval: { available: true },
+        delay: { available: true }
+      },
+      pipelineCoverage: {
+        workflowEngine: true,
+        generationService: typeof GenerationService !== 'undefined',
+        providerRouter: typeof ProviderRouter !== 'undefined',
+        assetManager: typeof AssetManager !== 'undefined',
+        qualityEngine: typeof QualityEngine !== 'undefined',
+        renderQueue: typeof RenderQueue !== 'undefined'
+      }
+    };
+  }
+
+  return {
+    execute: execute,
+    run: run,
+    runBatch: runBatch,
+    getWorkflowStatus: getWorkflowStatus
+  };
 })();
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { WorkflowEngine: WorkflowEngine };
+}

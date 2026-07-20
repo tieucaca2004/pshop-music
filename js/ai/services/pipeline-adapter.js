@@ -75,18 +75,34 @@ const PipelineAdapter = (function () {
 
   /**
    * generateThroughPipeline(moduleId, inputParams, userId, userEmail) —
-   * wrapper that replaces direct PluginManager.execute() + AIJobQueue calls
-   * with a pure GenerationService.run() call.
+   * wrapper that routes through WorkflowEngine (orchestration) →
+   * GenerationService (execution).
+   *
+   * Phase 2.7: Replaced direct GenerationService.run() call with
+   * WorkflowEngine.execute(). WorkflowEngine handles all orchestration
+   * (retry, fallback, branching, approval) — this function does NOT
+   * bypass the orchestration layer.
    */
   function generateThroughPipeline(moduleId, inputParams, userId, userEmail) {
-    if (typeof GenerationService === 'undefined') {
-      return Promise.reject(new Error('PipelineAdapter: GenerationService not available — load generation-service.js'));
+    if (typeof WorkflowEngine === 'undefined') {
+      return Promise.reject(new Error('PipelineAdapter: WorkflowEngine not available — load workflow-engine.js'));
     }
-    return GenerationService.run({
+    var step = {
+      type: 'generation',
+      index: 0,
       moduleId: moduleId,
       inputParams: inputParams,
-      userId: userId,
-      userEmail: userEmail
+      config: {}
+    };
+    return WorkflowEngine.execute(step, userId, userEmail).then(function (result) {
+      return {
+        success: result.status === 'completed',
+        job: result.job || null,
+        draftId: result.draftId || null,
+        quality: null,
+        assetId: null,
+        error: result.error || null
+      };
     });
   }
 
@@ -131,18 +147,22 @@ const PipelineAdapter = (function () {
 
   /**
    * dispatchAssistantRequest(text, candidates, userId, userEmail) —
-   * AI Assistant request routed through the Task Router + pipeline.
+   * AI Assistant request routed through the Task Router + WorkflowEngine.
    * Replaces direct AITaskRouter.dispatch() calls.
+   *
+   * Phase 2.7: Uses WorkflowEngine via generateThroughPipeline() — never
+   * calls GenerationService or PluginManager directly.
    */
   function dispatchAssistantRequest(text, candidates, userId, userEmail) {
-    if (typeof AITaskRouter === 'undefined' || typeof GenerationService === 'undefined') {
-      return Promise.reject(new Error('PipelineAdapter: AITaskRouter or GenerationService not available'));
+    if (typeof AITaskRouter === 'undefined') {
+      return Promise.reject(new Error('PipelineAdapter: AITaskRouter not available'));
     }
     var route = AITaskRouter.route(text, candidates);
     if (!route.pluginId || route.reason !== 'ok') {
       return Promise.resolve(route);
     }
-    // Use GenerationService instead of direct PluginManager.execute()
+    // Routes through WorkflowEngine (orchestration) which calls
+    // GenerationService (execution) — never bypasses orchestration.
     return generateThroughPipeline(route.pluginId, route.inputParams, userId, userEmail).then(function (result) {
       return { dispatched: true, result: result, originalRoute: route };
     });
@@ -170,7 +190,9 @@ const PipelineAdapter = (function () {
   function getStatus() {
     return {
       adapter: 'PipelineAdapter',
+      architecture: 'PipelineAdapter → WorkflowEngine → GenerationService (execution only)',
       servicesAvailable: {
+        WorkflowEngine: typeof WorkflowEngine !== 'undefined',
         GenerationService: typeof GenerationService !== 'undefined',
         AssetManager: typeof AssetManager !== 'undefined',
         QualityEngine: typeof QualityEngine !== 'undefined',
