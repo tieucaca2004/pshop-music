@@ -162,13 +162,26 @@ const AdminImageAI = (function () {
         showMessage(`Không có quyền tạo ảnh (thiếu "${check.permission || 'quyền chưa được gán'}").`);
         return;
       }
-      return PluginManager.loadPlugins().then(() => PluginManager.loadPlugin(MODULE_ID)).then(plugin => {
-        if (!plugin) { showMessage('Không tìm thấy Plugin "Image AI" — vào Plugin Manager để bật.'); return; }
-        return plugin.execute([inputParams], user.uid, user.email).then(job => {
-          activeJobId = job.id;
-          return AIJobQueue.resume(user.uid, user.email);
-        }).then(() => { pollJob(); startPolling(); });
-      });
+      // Route through PipelineAdapter when possible
+      if (typeof PipelineAdapter !== 'undefined' && typeof PipelineAdapter.generateThroughPipeline === 'function') {
+        PipelineAdapter.generateThroughPipeline(MODULE_ID, inputParams, user.uid, user.email).then(function(result) {
+          if (result.draftId) {
+            activeJobId = result.job && result.job.id;
+            showMessage('Đã tạo ảnh xong (qua pipeline).');
+            loadImageDrafts();
+          } else {
+            showMessage('Lỗi pipeline: ' + (result.error || 'không rõ'));
+          }
+        });
+      } else {
+        return PluginManager.loadPlugins().then(() => PluginManager.loadPlugin(MODULE_ID)).then(plugin => {
+          if (!plugin) { showMessage('Không tìm thấy Plugin "Image AI" — vào Plugin Manager để bật.'); return; }
+          return plugin.execute([inputParams], user.uid, user.email).then(job => {
+            activeJobId = job.id;
+            return AIJobQueue.resume(user.uid, user.email);
+          }).then(() => { pollJob(); startPolling(); });
+        });
+      }
     }).catch(err => showMessage('Lỗi: ' + err.message));
   }
 
@@ -190,7 +203,12 @@ const AdminImageAI = (function () {
       if (!d) return;
       const usedIn = Array.isArray(d.content.usedIn) ? d.content.usedIn.slice() : [];
       usedIn.push(label);
-      return DraftDB.update(draftId, { content: Object.assign({}, d.content, { usedIn }) });
+      return DraftDB.update(draftId, { content: Object.assign({}, d.content, { usedIn }) }).then(() => {
+        // Also route through PipelineAdapter for asset tracking
+        if (typeof PipelineAdapter !== 'undefined') {
+          PipelineAdapter.saveToAssetLibrary(draftId, MODULE_ID, d.content, [label], AdminAuth.getUser().uid);
+        }
+      });
     });
   }
 
@@ -205,6 +223,10 @@ const AdminImageAI = (function () {
         if (images.indexOf(d.content.imageUrl) === -1) images.push(d.content.imageUrl);
         return DB.update(productId, { images, image: p.image || images[0] || '' }).then(() => {
           return appendUsedIn(draftId, 'Product Gallery: ' + (p.name || productId)).then(() => {
+            // Route through PipelineAdapter for asset tracking
+            if (typeof PipelineAdapter !== 'undefined') {
+              PipelineAdapter.logGenerationEvent({ moduleId: MODULE_ID, type: 'image', title: 'Saved to Product Gallery: ' + (p.name || productId), inputParams: d.inputParams, draftId: draftId, status: 'completed', userId: AdminAuth.getUser().uid });
+            }
             showMessage(`Đã thêm ảnh vào Gallery của "${p.name}".`);
             return loadImageDrafts();
           });
@@ -213,9 +235,7 @@ const AdminImageAI = (function () {
     });
   }
 
-  // saveAsFeatured — đưa ảnh mới lên ĐẦU mảng images (đúng quy ước có sẵn
-  // "ảnh đầu = ảnh đại diện", data.image = images[0], xem js/admin-products.js)
-  // — KHÔNG xóa ảnh cũ, chỉ đổi thứ tự + set `image`.
+  // saveAsFeatured — đưa ảnh mới lên ĐẦU mảng images
   function saveAsFeatured(draftId, explicitProductId) {
     return DraftDB.get(draftId).then(d => {
       if (!d) return;
@@ -245,6 +265,10 @@ const AdminImageAI = (function () {
         if (!post) { showMessage('Không tìm thấy bài Blog.'); return; }
         return BlogDB.update(blogPostId, { coverImage: d.content.imageUrl }).then(() => {
           return appendUsedIn(draftId, 'Blog Cover: ' + (post.title || blogPostId)).then(() => {
+            // Route through PipelineAdapter
+            if (typeof PipelineAdapter !== 'undefined') {
+              PipelineAdapter.logGenerationEvent({ moduleId: MODULE_ID, type: 'image', title: 'Blog Cover: ' + (post.title || blogPostId), inputParams: d.inputParams, draftId: draftId, status: 'completed', userId: AdminAuth.getUser().uid });
+            }
             showMessage(`Đã đặt làm Cover cho bài "${post.title}".`);
             return loadImageDrafts();
           });
@@ -286,6 +310,10 @@ const AdminImageAI = (function () {
         zone: 'home-top', order: 0, active: true
       }).then(() => {
         return appendUsedIn(draftId, 'Banner mới').then(() => {
+          // Route through PipelineAdapter
+          if (typeof PipelineAdapter !== 'undefined') {
+            PipelineAdapter.logGenerationEvent({ moduleId: MODULE_ID, type: 'image', title: 'New Banner from ' + (c.sourceProductName || 'image'), inputParams: d.inputParams, draftId: draftId, status: 'completed', userId: AdminAuth.getUser().uid });
+          }
           showMessage('Đã tạo Banner mới — vào Banner Manager để hoàn thiện Tiêu đề/CTA/Link.');
           return loadImageDrafts();
         });

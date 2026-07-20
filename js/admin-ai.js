@@ -609,6 +609,13 @@ const AdminAI = (function () {
     if (!draft) return;
     publishToTarget(draft)
       .then(() => DraftDB.update(id, { status: 'published', publishedAt: Date.now() }))
+      .then(() => {
+        // Route through PipelineAdapter for asset tracking
+        if (typeof PipelineAdapter !== 'undefined') {
+          PipelineAdapter.saveToAssetLibrary(id, draft.moduleId, draft.content, ['published'], AdminAuth.getUser().uid);
+          PipelineAdapter.logGenerationEvent({ moduleId: draft.moduleId, type: draft.targetCollection || 'document', title: (draft.content && (draft.content.title || draft.content.name)) || 'Published', inputParams: draft.inputParams, draftId: id, status: 'published', userId: AdminAuth.getUser().uid });
+        }
+      })
       .then(loadDrafts)
       .catch(err => alert('Lỗi khi publish: ' + err.message));
   }
@@ -654,7 +661,12 @@ const AdminAI = (function () {
   function publishDraftById(id) {
     return DraftDB.get(id).then(draft => {
       if (!draft) return Promise.reject(new Error('Không tìm thấy nội dung nháp.'));
-      return publishToTarget(draft).then(() => DraftDB.update(id, { status: 'published', publishedAt: Date.now() }));
+      return publishToTarget(draft).then(() => DraftDB.update(id, { status: 'published', publishedAt: Date.now() })).then(() => {
+        // Route through PipelineAdapter
+        if (typeof PipelineAdapter !== 'undefined' && draft) {
+          PipelineAdapter.saveToAssetLibrary(id, draft.moduleId, draft.content, ['published'], 'system');
+        }
+      });
     });
   }
 
