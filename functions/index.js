@@ -774,6 +774,7 @@ const webhooksRoutes = require('./routes/webhooks');
 const categoriesRoutes = require('./routes/categories');
 const inventoryRoutes = require('./routes/inventory');
 const customersRoutes = require('./routes/customers');
+const ordersRoutes = require('./routes/orders');
 const openclawRoutes = require('./routes/openclaw');
 const businessesRoutes = require('./routes/businesses');
 const productsRoutes = require('./routes/products');
@@ -902,7 +903,7 @@ exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRE
     // route Self-Healing cá»§a module "drafts" khÃ´ng bao giá» cháº¡m tá»›i Ä‘Æ°á»£c.
     // PhÃ¡t hiá»‡n qua Production Verification (Phase 6) sau khi deploy láº§n 1.
     const routers = [
-      cmsListsRoutes, cmsSingletonRoutes, productsRoutes, productMediaRoutes, categoriesRoutes, inventoryRoutes, customersRoutes, mediaRoutes, usersRoutes,
+      cmsListsRoutes, cmsSingletonRoutes, productsRoutes, productMediaRoutes, categoriesRoutes, inventoryRoutes, customersRoutes, ordersRoutes, mediaRoutes, usersRoutes,
       businessesRoutes,
       selfHealingRoutes,
       draftsRoutes, jobsLogsRoutes, facebookRoutes, socialMediaCenterRoutes, founderRoutes,
