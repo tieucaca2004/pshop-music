@@ -139,6 +139,17 @@ async function handle(req, res, helpers) {
   }
 
   // All business operations require super_admin — use production middleware
+  // verifyAuth() must run first so req.user is populated for requireSuperAdmin()'s
+  // superAdmins/{uid} RTDB check (otherwise req.user is undefined and the check
+  // silently never runs, always falling through to the 403 branch below).
+  const authCheck = await verifyAuth(req);
+  if (!authCheck.ok) {
+    if (path.indexOf('/v1/businesses') === 0) {
+      return sendError(res, authCheck.code, authCheck.error);
+    }
+    return null;
+  }
+
   const superCheck = await requireSuperAdmin(req);
   if (!superCheck.ok) {
     if (path.indexOf('/v1/businesses') === 0) {
