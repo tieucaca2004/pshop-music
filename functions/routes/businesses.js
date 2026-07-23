@@ -11,6 +11,7 @@
  */
 const admin = require('firebase-admin');
 const { resolveBusinessId } = require('../shared/tenant');
+const { requireSuperAdmin } = require('../shared/auth');
 
 const VALID_PLANS = ['free', 'starter', 'pro', 'enterprise'];
 const DEFAULT_TZ = 'Asia/Bangkok';
@@ -77,20 +78,14 @@ function buildBusinessTree(input) {
 async function handle(req, res, helpers) {
   const { sendSuccess, sendError } = helpers;
   const path = req.__pshPath;
-  // All business operations require super_admin from custom claims
-  const auth = req.auth || {};
-  if (!auth.ok || auth.role !== 'admin') {
-    const tokenRole = (auth.businessId ? null : 'admin');
-    // Check custom claims for super_admin
-    if (!auth.claims || !auth.claims.roles || !auth.claims.roles.super_admin) {
-      // Also check local auth state
-    }
+  // All business operations require super_admin — use production middleware
+  const superCheck = await requireSuperAdmin(req);
+  if (!superCheck.ok) {
     if (path.indexOf('/v1/businesses') === 0) {
-      return sendError(res, 'PERMISSION_DENIED', 'Chỉ Super Admin được quản lý Businesses.');
+      return sendError(res, superCheck.code, superCheck.error);
     }
+    return null; // not a business path, let other routers handle it
   }
-  // Reject non-business paths
-  if (path.indexOf('/v1/businesses') !== 0) return null;
 
   const db = admin.database();
   const ref = db.ref('businesses');

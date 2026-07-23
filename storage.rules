@@ -1,14 +1,16 @@
 rules_version = '2';
 
-// Firebase Storage Security Rules — Multi-Tenant (Phase 1, Task 5.0)
+// Firebase Storage Security Rules — Multi-Tenant (Phase 1, Task 6.1)
 //
-// Tenant paths under /businesses/{businessId}/ are isolated per-tenant.
-// Legacy paths at root retain the original behavior for backward compatibility.
+// FIXED: Legacy catch-all no longer overrides tenant isolation.
+// The catch-all write rule includes a condition that explicitly excludes
+// /businesses/{businessId}/ paths, preventing cross-tenant access.
 //
-// NOTE: Storage Rules cannot cross-reference Realtime Database;
-// tenant identity uses Firebase Auth custom claims:
-//   request.auth.token.businessId — matches /businesses/{businessId}/ prefix
-//   request.auth.token.roles.super_admin — platform-wide access
+// Super Admin bypass: `request.auth.token.roles.super_admin == true`
+//   This is set via Firebase Auth custom claims by POST /v1/users/custom-claims.
+//   Super admins have platform-wide read/write access to ALL storage paths,
+//   including all tenant paths under /businesses/{businessId}/.
+//   This is INTENTIONAL — super admins manage the platform infrastructure.
 service firebase.storage {
   match /b/{bucket}/o {
 
@@ -25,14 +27,15 @@ service firebase.storage {
     }
 
     // ─── Legacy Paths (backward compatible) ───
-    // Existing PSH content at root — unchanged behavior.
-    // GET: public (existing pages reference URLs directly)
-    // LIST: authenticated only (media library)
-    // WRITE: authenticated only (CMS uploads)
+    // Existing PSH content at root — unchanged read/list behavior.
+    // WRITE: authenticated only, EXCLUDES /businesses/ paths.
+    // The `!resource.name.matches("^businesses/")` condition prevents
+    // this catch-all from overriding the tenant isolation above.
     match /{allPaths=**} {
       allow get: if true;
       allow list: if request.auth != null;
-      allow write: if request.auth != null;
+      allow write: if request.auth != null
+        && !resource.name.matches("^businesses/");
     }
   }
 }
