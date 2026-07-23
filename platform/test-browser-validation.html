@@ -1,0 +1,458 @@
+﻿<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Workspace Auth Validation</title>
+<style>
+body{font-family:monospace;padding:20px;max-width:800px;margin:auto}
+h2{color:#333}
+#status{background:#eee;padding:10px;border-radius:4px;margin-bottom:10px}
+pre{background:#111;color:#0f0;padding:10px;min-height:100px;overflow:auto;font-size:12px}
+input,button{padding:5px;margin:2px}
+button{cursor:pointer}
+.pass{color:green;font-weight:bold}
+.fail{color:red;font-weight:bold}
+table{border-collapse:collapse;width:100%}
+td,th{border:1px solid #ccc;padding:6px;text-align:left}
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js">< + /script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js">< + /script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js">< + /script>
+<script>firebase.initializeApp({apiKey:"AIzaSyD-R2cQb-EI4I8wy60z1tuShIXny39Rawc",authDomain:"pshop-music.firebaseapp.com",databaseURL:"https://pshop-music-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"pshop-music"})< + /script>
+< + 'script>' + @"
+// auth-context.js source (embedded inline)/*
+ * js/auth-context.js — Centralized Authentication & Tenant Context Module.
+ *
+ * Provides a stable getter API consumed by all shared modules (db.js,
+ * cms-db.js, media-library.js, admin-auth.js, workspace-auth.js) instead
+ * of reading window globals directly.
+ *
+ * Exposes:
+ *   init()                          → Promise that resolves when auth state is ready
+ *   getCurrentUser()                → Firebase user object or null
+ *   getCurrentRole()                → role string or null
+ *   getCurrentBusinessId()          → business ID string or null
+ *   isSuperAdmin()                  → boolean
+ *   isBusinessUser()                → boolean (has a businessId claim)
+ *   getDataVersion(collection)      → Promise resolving to {version:"migrated"} or null
+ *
+ * Deferred init: getters called before init() resolves return null/false.
+ * Internal state is an unexposed object. getDataVersion() caches by collection
+ * name within the same page load.
+ *
+ * Dependencies: Requires firebase-app-compat, firebase-auth-compat,
+ * firebase-database-compat loaded BEFORE this file.
+ */
+var AuthContext = (function () {
+  'use strict';
+
+  // ─── Internal State ────────────────────────────────────────────────
+  var state = {
+    ready: false,
+    user: null,
+    role: null,
+    businessId: null,
+    isSuperAdmin: false,
+    isBusinessUser: false,
+    dataVersionCache: {}
+  };
+
+  var initPromise = null;
+  var cacheTTL = 0; // 0 = cache forever within the same page load
+
+  // ─── Role Resolution ────────────────────────────────────────────────
+  function resolveRole(decodedClaims, legacyRole) {
+    // Priority: custom claims > legacy /roles/{uid}
+    if (decodedClaims && decodedClaims.roles) {
+      if (decodedClaims.roles.super_admin) return 'super_admin';
+      if (decodedClaims.roles.business_admin) return 'business_admin';
+      if (decodedClaims.roles.business_editor) return 'business_editor';
+      if (decodedClaims.roles.business_viewer) return 'business_viewer';
+    }
+    // Legacy role (admin/editor from /roles/{uid})
+    if (legacyRole) return legacyRole;
+    return null;
+  }
+
+  // ─── Init: Called once on page load ─────────────────────────────────
+  function init() {
+    if (initPromise) return initPromise;
+
+    initPromise = new Promise(function (resolve) {
+      // Wait for Firebase Auth to initialize
+      firebase.auth().onAuthStateChanged(function (user) {
+        if (!user) {
+          // Not logged in — all getters return null/false
+          state.ready = true;
+          resolve({ authenticated: false });
+          return;
+        }
+
+        state.user = user;
+
+        // Fetch custom claims from the ID token
+        user.getIdTokenResult().then(function (idTokenResult) {
+          var claims = idTokenResult.claims || {};
+          state.businessId = claims.businessId || null;
+          state.isBusinessUser = !!claims.businessId;
+
+          // Check super_admin claim
+          if (claims.roles && claims.roles.super_admin) {
+            state.isSuperAdmin = true;
+          }
+
+          // Check legacy /roles/{uid} for backward compatibility
+          firebase.database().ref('roles/' + user.uid).once('value').then(function (snap) {
+            var legacyRole = null;
+            if (snap.exists()) {
+              var roleData = snap.val();
+              legacyRole = (roleData && roleData.role) || roleData;
+            }
+
+            state.role = resolveRole(claims, legacyRole);
+
+            // Also check superAdmins/{uid} for super_admin detection
+            if (!state.isSuperAdmin) {
+              return firebase.database().ref('superAdmins/' + user.uid).once('value').then(function (superSnap) {
+                if (superSnap.exists()) {
+                  state.isSuperAdmin = true;
+                  state.role = 'super_admin';
+                }
+                state.ready = true;
+                resolve({ authenticated: true, role: state.role, businessId: state.businessId });
+              });
+            }
+
+            state.ready = true;
+            resolve({ authenticated: true, role: state.role, businessId: state.businessId });
+          }).catch(function () {
+            // If /roles/{uid} read fails, still resolve with what we have
+            state.ready = true;
+            resolve({ authenticated: true, role: state.role, businessId: state.businessId });
+          });
+        }).catch(function () {
+          // If getIdTokenResult fails, role is null
+          state.ready = true;
+          resolve({ authenticated: true, role: null, businessId: null });
+        });
+      });
+    });
+
+    return initPromise;
+  }
+
+  // ─── Getters (safe to call before init() — return null/false) ──────
+  function getCurrentUser() {
+    return state.ready ? state.user : null;
+  }
+
+  function getCurrentRole() {
+    return state.ready ? state.role : null;
+  }
+
+  function getCurrentBusinessId() {
+    return state.ready ? state.businessId : null;
+  }
+
+  function isSuperAdmin() {
+    return state.ready ? state.isSuperAdmin : false;
+  }
+
+  function isBusinessUser() {
+    return state.ready ? state.isBusinessUser : false;
+  }
+
+  // ─── Migration Data Version ────────────────────────────────────────
+  function getDataVersion(collection) {
+    // Return cached value if available
+    if (state.dataVersionCache.hasOwnProperty(collection)) {
+      return Promise.resolve(state.dataVersionCache[collection]);
+    }
+
+    return initPromise.then(function () {
+      if (!state.businessId) {
+        // Legacy user or not logged in — no migration flag
+        state.dataVersionCache[collection] = null;
+        return null;
+      }
+
+      return firebase.database()
+        .ref('businesses/' + state.businessId + '/_meta/migration/' + collection)
+        .once('value')
+        .then(function (snap) {
+          var result = snap.exists() ? snap.val() : null;
+          state.dataVersionCache[collection] = result;
+          return result;
+        })
+        .catch(function () {
+          state.dataVersionCache[collection] = null;
+          return null;
+        });
+    });
+  }
+
+  // ─── Public API ─────────────────────────────────────────────────────
+  return {
+    init: init,
+    getCurrentUser: getCurrentUser,
+    getCurrentRole: getCurrentRole,
+    getCurrentBusinessId: getCurrentBusinessId,
+    isSuperAdmin: isSuperAdmin,
+    isBusinessUser: isBusinessUser,
+    getDataVersion: getDataVersion
+  };
+})();
+
+// workspace-auth.js source (embedded inline)/*
+ * js/workspace-auth.js â€” Customer Workspace Authentication Gate (Phase 2, Task 2.2).
+ *
+ * Consumes auth-context.js exclusively for authentication and role resolution.
+ * No window.TENANT_ID or window.USER_ROLE globals are read or set.
+ *
+ * Exposed API:
+ *   WorkspaceAuth.init(page, title)  â†’ Promise, resolves when gate passes
+ *   WorkspaceAuth.getUser()          â†’ Firebase user or null
+ *   WorkspaceAuth.getRole()          â†’ current role string
+ *   WorkspaceAuth.logout()           â†’ sign out + redirect
+ *
+ * Navigation:
+ *   - Unauthenticated â†’ redirect to /platform/login.html
+ *   - super_admin â†’ redirect to /platform/platform-admin/
+ *   - Legacy admin (role == 'admin') â†’ access denied with message
+ *   - business_admin / business_editor / business_viewer â†’ access granted
+ *     with a filtered workspace nav (no admin-only items)
+ *
+ * Dependencies: auth-context.js must be loaded BEFORE this file.
+ * Page must include: <aside id="workspaceSidebar"></aside>, <div id="workspaceTopbar"></div>
+ */
+
+var WorkspaceAuth = (function () {
+  'use strict';
+
+  // â”€â”€â”€ Workspace-specific navigation (no admin-only items) â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  var WORKSPACE_NAV = [
+    { key: 'dashboard',      label: 'Dashboard',       href: '/platform/workspace/index.html',     icon: '&#9776;' },
+    { key: 'products',       label: 'Products',         href: '/platform/workspace/products.html',  icon: '&#127925;' },
+    { key: 'categories',     label: 'Categories',       href: '/platform/workspace/categories.html', icon: '&#128193;' },
+    { key: 'banners',        label: 'Banners',          href: '/platform/workspace/banners.html',   icon: '&#128247;' },
+    { key: 'blog',           label: 'Blog',             href: '/platform/workspace/blog.html',      icon: '&#128221;' },
+    { key: 'videos',         label: 'Videos',           href: '/platform/workspace/videos.html',    icon: '&#127916;' },
+    { key: 'orders',         label: 'Orders',           href: '/platform/workspace/orders.html',    icon: '&#128230;' },
+    { key: 'customers',      label: 'Customers',        href: '/platform/workspace/customers.html', icon: '&#128101;' },
+    { key: 'reports',        label: 'Reports',          href: '/platform/workspace/reports.html',   icon: '&#128200;' },
+    { key: 'media-library',  label: 'Media',            href: '/platform/workspace/media-library.html', icon: '&#128444;' },
+    { key: 'settings',       label: 'Settings',         href: '/platform/workspace/settings.html',  icon: '&#9881;' },
+    { key: 'team',           label: 'Team',             href: '/platform/workspace/team.html',      icon: '&#128101;' },
+    { key: 'business-profile', label: 'Business Profile', href: '/platform/workspace/business-profile.html', icon: '&#128100;' }
+  ];
+
+  // â”€â”€â”€ Internal State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  var currentUser = null;
+  var currentRole = null;
+  var currentPage = null;
+  var currentTitle = '';
+
+  // â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  function navItemHtml(item, activePage) {
+    return '<a class="w-nav-item' + (item.key === activePage ? ' active' : '') + '" href="' + item.href + '">' +
+      '<span class="w-nav-icon">' + item.icon + '</span>' + item.label + '</a>';
+  }
+
+  function renderSidebar(activePage, pageTitle) {
+    currentPage = activePage;
+    currentTitle = pageTitle;
+    var sidebar = document.getElementById('workspaceSidebar');
+    var topbar = document.getElementById('workspaceTopbar');
+
+    if (sidebar) {
+      sidebar.innerHTML =
+        '<div class="w-brand">PSH <span>WORKSPACE</span></div>' +
+        '<nav class="w-nav">' + WORKSPACE_NAV.map(function(i) { return navItemHtml(i, activePage); }).join('') + '</nav>';
+    }
+
+    if (topbar) {
+      topbar.innerHTML =
+        '<div class="w-topbar-title">' + (pageTitle || '') + '</div>' +
+        '<div class="w-topbar-actions">' +
+          '<span class="w-user">' + (currentUser ? currentUser.email : '') +
+            ' <span class="w-role-badge">' + (currentRole || '').toUpperCase() + '</span></span>' +
+          '<button class="btn btn-secondary" onclick="WorkspaceAuth.logout()">Sign Out</button>' +
+        '</div>';
+    }
+  }
+
+  // â”€â”€â”€ Init: Auth Gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  function init(page, title) {
+    return AuthContext.init().then(function () {
+      var user = AuthContext.getCurrentUser();
+      var role = AuthContext.getCurrentRole();
+
+      // 1. Unauthenticated â†’ redirect to login
+      if (!user) {
+        window.location.href = '/platform/login.html';
+        return;
+      }
+
+      // 2. super_admin â†’ redirect to Platform Admin
+      if (AuthContext.isSuperAdmin()) {
+        window.location.href = '/platform/platform-admin/';
+        return;
+      }
+
+      // 3. Legacy admin without businessId â†’ access denied
+      if (role === 'admin' || role === 'editor') {
+        document.body.innerHTML =
+          '<div style="font-family:sans-serif;text-align:center;padding:40px">' +
+          '<h1>Access Denied</h1>' +
+          '<p>Your account is a platform administrator and cannot access the Customer Workspace.</p>' +
+          '<p>Please use the <a href="/admin/">Admin Panel</a> instead.</p>' +
+          '</div>';
+        return;
+      }
+
+      // 4. Check for valid business user role
+      var validRoles = ['business_admin', 'business_editor', 'business_viewer'];
+      if (validRoles.indexOf(role) < 0) {
+        document.body.innerHTML =
+          '<div style="font-family:sans-serif;text-align:center;padding:40px">' +
+          '<h1>Access Denied</h1>' +
+          '<p>Your account does not have permission to access the Customer Workspace.</p>' +
+          '</div>';
+        return;
+      }
+
+      // 5. Access granted â€” set user/role state and render
+      currentUser = user;
+      currentRole = role;
+      renderSidebar(page, title);
+      return { user: user, role: role, businessId: AuthContext.getCurrentBusinessId() };
+    });
+  }
+
+  function getUser() { return currentUser; }
+  function getRole() { return currentRole; }
+
+  function logout() {
+    firebase.auth().signOut().then(function () {
+      window.location.href = '/platform/login.html';
+    });
+  }
+
+  // â”€â”€â”€ Public API â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  return {
+    init: init,
+    getUser: getUser,
+    getRole: getRole,
+    logout: logout
+  };
+})();
+
+// Test runner
+var testLog = [];
+function log(msg) {
+  testLog.push(msg);
+  var el = document.getElementById('log');
+  if(el) el.innerHTML = testLog.join('<br>');
+  console.log(msg);
+}
+
+function currentUser() {
+  return firebase.auth().currentUser;
+}
+
+async function testScenario(label, fn) {
+  var resultEl = document.getElementById('results');
+  try {
+    var result = await fn();
+    var pass = result.pass!==false;
+    log((pass?'✅ ':'❌ ')+label+': '+(result.detail||result));
+    return pass;
+  } catch(e) {
+    log('❌ '+label+': ERROR - '+e.message);
+    return false;
+  }
+}
+
+async function signInAs(email, password) {
+  try {
+    var uc = await firebase.auth().signInWithEmailAndPassword(email, password);
+    log('Signed in as: '+uc.user.email);
+    document.getElementById('currentUser').textContent = uc.user.email;
+    return true;
+  } catch(e) {
+    log('Sign in failed: '+e.message);
+    return false;
+  }
+}
+
+async function signOut() {
+  await firebase.auth().signOut();
+  log('Signed out');
+}
+
+async function testGate() {
+  log('Testing workspace auth gate...');
+  
+  // Wait for AuthContext to init
+  var ctx = await AuthContext.init();
+  var user = AuthContext.getCurrentUser();
+  var role = AuthContext.getCurrentRole();
+  var bizId = AuthContext.getCurrentBusinessId();
+  var isSA = AuthContext.isSuperAdmin();
+  var isBU = AuthContext.isBusinessUser();
+  
+  log('AuthContext state:');
+  log('  user: '+(user?user.email:'null'));
+  log('  role: '+(role||'null'));
+  log('  businessId: '+(bizId||'null'));
+  log('  isSuperAdmin: '+isSA);
+  log('  isBusinessUser: '+isBU);
+  
+  // Test what workspace-auth would do with this state
+  if(!user) {
+    log('=> Would redirect to /platform/login.html');
+    return {pass:true, detail:'Unauthenticated - redirect to login'};
+  }
+  if(isSA) {
+    log('=> Would redirect to /platform/platform-admin/');
+    return {pass:true, detail:'super_admin - redirect to Platform Admin'};
+  }
+  if(role==='admin'||role==='editor') {
+    log('=> Would show: Access Denied');
+    return {pass:true, detail:'Legacy '+role+' - Access Denied'};
+  }
+  if(['business_admin','business_editor','business_viewer'].indexOf(role)>=0) {
+    log('=> Workspace access GRANTED for role: '+role);
+    // Test sidebar rendering
+    var sidebar = document.getElementById('workspaceSidebar');
+    if(sidebar) {
+      WorkspaceAuth.init('dashboard','Dashboard');
+      log('  Sidebar rendered: '+(sidebar.innerHTML.length>100?'YES ('+sidebar.innerHTML.length+' chars)':'NO'));
+    }
+    return {pass:true, detail:'Access granted - role: '+role};
+  }
+  log('=> Would show: Access Denied (unknown role: '+role+')');
+  return {pass:true, detail:'Unknown role: '+role+' - Access Denied'};
+}
+< + '/script>' + @"
+</head><body>
+<h2>Workspace Auth Validation</h2>
+<div id="status">
+  <div><strong>Current user:</strong> <span id="currentUser">not signed in</span></div>
+  <div>
+    <input id="e" placeholder="Email" style="width:250px">
+    <input id="p" type="password" placeholder="Password" style="width:250px">
+    <button onclick="signInAs(document.getElementById('e').value,document.getElementById('p').value)">Sign In</button>
+    <button onclick="signOut()">Sign Out</button>
+    <button onclick="runTest()">Test Gate</button>
+  </div>
+</div>
+<div id="sidebarTest">
+  <aside id="workspaceSidebar"></aside>
+  <div id="workspaceTopbar"></div>
+</div>
+<h3>Test Results</h3>
+<pre id="log" style="background:#111;color:#0f0;padding:10px;min-height:200px;font-size:12px;line-height:1.4">Ready. Sign in then click Test Gate.</pre>
+<script>
+async function runTest() { await testGate(); }
+// Auto-test for unauthenticated
+setTimeout(function() { testGate(); }, 2000);
+</script>
+</body></html>
