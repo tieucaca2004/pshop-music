@@ -131,7 +131,7 @@ const AdminAuth = (function () {
       // 'admin') o CA HAI che do - Smart Mode chi doi DANH SACH nav hien
       // thi, KHONG bao gio bo qua RBAC da co (vd Editor van khong thay
       // "Cai dat" du o Smart hay Advanced Mode).
-      const items = navSource.filter(i => !i.role || currentRole === 'admin');
+      const items = navSource.filter(i => !i.role || currentRole === 'admin' || currentRole === 'super_admin');
       sidebar.innerHTML = `
         <div class="admin-brand">P<span>·</span>SHOP <span>ADMIN</span></div>
         <nav class="admin-nav">${items.map(i => navItemHtml(i, activePage)).join('')}</nav>
@@ -143,7 +143,7 @@ const AdminAuth = (function () {
         <div class="admin-topbar-actions">
           <button class="btn-secondary" onclick="AdminAuth.toggleUiMode()">${mode === 'advanced' ? 'CHUYỂN SANG SMART MODE' : 'CHUYỂN SANG ADVANCED MODE'}</button>
           <a href="/index.html" class="btn-secondary" target="_blank" style="text-decoration:none;display:inline-block">XEM WEBSITE</a>
-          <span class="admin-user">${currentName || (currentUser ? currentUser.email : '')} <span class="admin-role-badge admin-role-${currentRole}">${currentRole === 'admin' ? 'ADMIN' : 'EDITOR'}</span></span>
+          <span class="admin-user">${currentName || (currentUser ? currentUser.email : '')} <span class="admin-role-badge admin-role-${currentRole}">${currentRole === 'super_admin' ? 'SUPER ADMIN' : (currentRole === 'admin' ? 'ADMIN' : 'EDITOR')}</span></span>
           <button class="btn-secondary" onclick="AdminAuth.logout()">ĐĂNG XUẤT</button>
         </div>
       `;
@@ -183,7 +183,7 @@ const AdminAuth = (function () {
           currentName = user.displayName || '';
         }
 
-        if (options.requiredRole && options.requiredRole !== currentRole && currentRole !== 'admin') {
+        if (options.requiredRole && options.requiredRole !== currentRole && currentRole !== 'admin' && currentRole !== 'super_admin') {
           alert('B\u1EA1n kh\u00F4ng c\u00F3 quy\u1EC1n truy c\u1EADp trang n\u00E0y.');
           location.href = '/admin/index.html';
           return;
