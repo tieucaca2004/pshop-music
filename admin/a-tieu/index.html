@@ -1,0 +1,53 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>A Tiểu — Thực đơn | PSH</title>
+<link rel="stylesheet" href="../css/admin.css">
+<style>
+.at-wrap { max-width: 1000px; margin: 2rem auto; padding: 0 1rem; }
+.at-header { background: #c0392b; color: #fff; padding: 1.5rem; border-radius: 10px; margin-bottom: 2rem; }
+.at-header h1 { margin:0; }
+.at-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:1rem; }
+.at-card { background:#fff; border-radius:8px; padding:1rem; box-shadow:0 1px 4px rgba(0,0,0,.1); }
+.at-card h3 { margin:0 0 .5rem; }
+.price { color:#c0392b; font-weight:700; font-size:1.2rem; }
+body { background:#f8fafc; font-family: -apple-system,sans-serif; margin:0; }
+.sidebar { background:#1e293b; color:#fff; width:220px; padding:1rem; position:fixed; height:100vh; }
+.sidebar a { display:block; padding:.5rem; color:#94a3b8; text-decoration:none; border-radius:4px; margin-bottom:2px; }
+.sidebar a:hover,.sidebar a.active { background:#334155; color:#fff; }
+.main { margin-left:220px; }
+</style>
+</head>
+<body>
+<div class="sidebar">
+  <h3>PSH Admin</h3>
+  <a href="../admin/">Dashboard</a>
+  <a href="../admin/products.html">Sản phẩm</a>
+  <hr>
+  <a href="menu.html" class="active">🍜 A Tiểu</a>
+</div>
+<div class="main">
+  <div class="at-header"><h1>🍜 A Tiểu — Thực đơn</h1></div>
+  <div class="at-wrap">
+    <div id="menu-list" class="at-grid">Đang tải...</div>
+  </div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-database-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script>
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+var db = firebase.database().ref("a-tieu").child("menu");
+var el = document.getElementById("menu-list");
+db.once("value").then(function(snap) {
+  var data = snap.val(); var html = "";
+  if (!data) { el.innerHTML = "<p>Chưa có món</p>"; return; }
+  Object.keys(data).forEach(function(k) {
+    var m = data[k];
+    html += "<div class=at-card><h3>" + (m.name||"") + "</h3>" +
+      "<p class=price>" + (m.price ? m.price.toLocaleString()+"đ" : "-") + "</p></div>";
+  });
+  el.innerHTML = html || "<p>Trống</p>";
+}).catch(function(e) { el.innerHTML = "<p>Lỗi: " + e.message + "</p>"; });
+</script>
+</body></html>

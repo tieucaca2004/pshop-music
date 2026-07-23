@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Pshop Music — Mobile Preview</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  /* =========================================================
+     MOBILE PREVIEW — PSH Content Block Preview
+     Designed for phone screens. No zoom. No horizontal scroll.
+     Sticky image pattern: image stays top, text scrolls under.
+     ========================================================= */
+
+  /* ─── Reset & Base ─── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Be Vietnam Pro', sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    color: #1c1c1e;
+    background: #f5f5f7;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  /* ─── Preview Container ─── */
+  .preview-container {
+    max-width: 480px;
+    margin: 0 auto;
+    background: #fff;
+    min-height: 100vh;
+    position: relative;
+  }
+
+  /* ─── Loading / Empty ─── */
+  .preview-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80vh;
+    font-size: 1rem;
+    color: #888;
+  }
+  .preview-error {
+    padding: 2rem;
+    text-align: center;
+    color: #b3261e;
+  }
+
+  /* =========================================================
+     SECTION STYLES
+     ========================================================= */
+
+  /* ─── Hero Section ─── */
+  .section-hero {
+    position: relative;
+    width: 100%;
+    min-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+  }
+  .section-hero .hero-image-wrapper {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+  }
+  .section-hero .hero-image-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .section-hero .hero-overlay {
+    position: relative;
+    z-index: 1;
+    padding: 2rem 1.25rem 2.5rem;
+    background: linear-gradient(transparent 0%, rgba(0,0,0,0.7) 40%, rgba(0,0,0,0.85) 100%);
+    color: #fff;
+  }
+  .section-hero h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 0.5rem;
+  }
+  .section-hero .hero-subtitle {
+    font-size: 0.95rem;
+    line-height: 1.5;
+    opacity: 0.9;
+    margin-bottom: 1rem;
+  }
+  .section-hero .hero-points {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.25rem;
+  }
+  .section-hero .hero-points li {
+    font-size: 0.85rem;
+    line-height: 1.5;
+    padding: 0.3rem 0;
+    padding-left: 1.25rem;
+    position: relative;
+    opacity: 0.95;
+  }
+  .section-hero .hero-points li::before {
+    content: '✦';
+    position: absolute;
+    left: 0;
+    color: #f5c518;
+    font-size: 0.7rem;
+    top: 0.4rem;
+  }
+  .section-hero .hero-cta {
+    display: inline-block;
+    background: #f5c518;
+    color: #1c1c1e;
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 0.85rem 2rem;
+    border-radius: 8px;
+    text-align: center;
+    text-decoration: none;
+    width: 100%;
+  }
+
+  /* ─── Sticky Image Section Pattern ─── */
+  .section-sticky {
+    position: relative;
+  }
+  .section-sticky .sticky-image {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    width: 100%;
+    height: 45vh;
+    min-height: 280px;
+    overflow: hidden;
+    background: #e8e8ed;
+  }
+  .section-sticky .sticky-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .section-sticky .sticky-content {
+    position: relative;
+    z-index: 2;
+    padding: 1.5rem 1.25rem 2.5rem;
+    background: #fff;
+    margin-top: -1px;
+  }
+
+  /* ─── Contextual Backgrounds ─── */
+  .bg-dj-studio {
+    background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 40%, #16213e 100%);
+  }
+  .bg-dj-studio img { opacity: 0.85; mix-blend-mode: luminosity; }
+  .bg-recording-studio {
+    background: linear-gradient(135deg, #1c1c1e 0%, #2c2c2e 40%, #3a3a3c 100%);
+  }
+  .bg-premium-dark {
+    background: linear-gradient(135deg, #0d0d0d 0%, #1a1a1a 50%, #0d0d0d 100%);
+  }
+  .bg-showroom {
+    background: linear-gradient(180deg, #f8f8fa 0%, #e8e8ec 50%, #d8d8de 100%);
+  }
+  .bg-minimal {
+    background: linear-gradient(180deg, #f2f2f5 0%, #e5e5ea 100%);
+  }
+  .bg-gradient-warm {
+    background: linear-gradient(135deg, #2d1f0e 0%, #4a3728 50%, #2d1f0e 100%);
+  }
+
+  /* ─── Section Headings ─── */
+  .section-title {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 0.35rem;
+    color: #1c1c1e;
+  }
+  .section-subtitle {
+    font-size: 0.9rem;
+    color: #666;
+    line-height: 1.5;
+    margin-bottom: 1.25rem;
+  }
+  .section-body {
+    font-size: 0.95rem;
+    line-height: 1.8;
+    color: #333;
+  }
+  .section-body p {
+    margin-bottom: 1rem;
+  }
+  .section-body ul, .section-body ol {
+    margin: 0.5rem 0 1rem 1.25rem;
+  }
+  .section-body li {
+    margin-bottom: 0.4rem;
+  }
+  .section-body h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 1.25rem 0 0.5rem;
+  }
+
+  /* ─── Feature Cards ─── */
+  .feature-card {
+    margin-bottom: 1rem;
+  }
+  .feature-card:last-child { margin-bottom: 0; }
+
+  /* ─── Tables ─── */
+  .spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    margin: 1rem 0;
+  }
+  .spec-table th, .spec-table td {
+    padding: 0.6rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid #e8e8ec;
+  }
+  .spec-table th {
+    font-weight: 600;
+    color: #1c1c1e;
+    background: #f8f8fa;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .spec-table td:first-child { font-weight: 500; color: #555; width: 40%; }
+
+  /* ─── Gallery ─── */
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin: 1rem 0;
+  }
+  .gallery-grid img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    border-radius: 8px;
+  }
+  .gallery-grid .gallery-span { grid-column: 1 / -1; height: 220px; }
+
+  /* ─── Video ─── */
+  .video-wrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 56.25%;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #000;
+    margin: 1rem 0;
+  }
+  .video-wrapper iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+  }
+
+  /* ─── FAQ ─── */
+  .faq-item {
+    border-bottom: 1px solid #e8e8ec;
+    padding: 1rem 0;
+  }
+  .faq-item:first-child { padding-top: 0; }
+  .faq-q {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 0.4rem;
+    color: #1c1c1e;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  .faq-q::after {
+    content: '+';
+    font-size: 1.2rem;
+    color: #999;
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+  }
+  .faq-item.open .faq-q::after { content: '−'; }
+  .faq-a {
+    font-size: 0.9rem;
+    line-height: 1.7;
+    color: #555;
+    display: none;
+    padding-right: 1rem;
+  }
+  .faq-item.open .faq-a { display: block; }
+
+  /* ─── Comparison Table ─── */
+  .comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    margin: 1rem 0;
+  }
+  .comparison-table th, .comparison-table td {
+    padding: 0.5rem 0.6rem;
+    text-align: left;
+    border-bottom: 1px solid #e8e8ec;
+  }
+  .comparison-table th {
+    background: #1c1c1e;
+    color: #fff;
+    font-weight: 600;
+    font-size: 0.75rem;
+  }
+  .comparison-table tr:first-child th:first-child { border-radius: 8px 0 0 0; }
+  .comparison-table tr:first-child th:last-child { border-radius: 0 8px 0 0; }
+
+  /* ─── CTA / Conclusion ─── */
+  .section-cta {
+    padding: 2rem 1.25rem;
+    text-align: center;
+  }
+  .cta-button {
+    display: inline-block;
+    background: #f5c518;
+    color: #1c1c1e;
+    font-weight: 700;
+    font-size: 1rem;
+    padding: 1rem 2.5rem;
+    border-radius: 10px;
+    text-decoration: none;
+    width: 100%;
+    max-width: 320px;
+  }
+  .conclusion-text {
+    font-size: 0.95rem;
+    line-height: 1.8;
+    color: #333;
+    margin-bottom: 1.5rem;
+    text-align: left;
+  }
+
+  /* ─── Downloads ─── */
+  .download-list {
+    list-style: none;
+    padding: 0;
+  }
+  .download-list li {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e8e8ec;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .download-list li:last-child { border-bottom: none; }
+  .download-name { font-weight: 500; font-size: 0.9rem; }
+  .download-link { color: #f5c518; font-size: 0.85rem; text-decoration: none; font-weight: 500; }
+
+  /* ─── Image Caption ─── */
+  .image-caption {
+    font-size: 0.8rem;
+    color: #888;
+    text-align: center;
+    padding: 0.5rem 1.25rem;
+    font-style: italic;
+  }
+
+  /* ─── Spacers ─── */
+  .section-spacer { height: 1px; background: #e8e8ec; margin: 0 1.25rem; }
+
+  /* ─── Keyboard / safe area ─── */
+  @supports (padding: env(safe-area-inset-bottom)) {
+    .section-hero .hero-overlay { padding-bottom: calc(2.5rem + env(safe-area-inset-bottom)); }
+    .section-cta { padding-bottom: calc(2rem + env(safe-area-inset-bottom)); }
+  }
+
+  /* ─── Print ─── */
+  @media print {
+    body { background: #fff; }
+    .preview-container { max-width: 100%; }
+    .section-sticky .sticky-image { position: relative; height: auto; }
+  }
+</style>
+</head>
+<body>
+<div class="preview-container" id="previewContainer">
+  <div class="preview-loading" id="previewLoading">Đang tải nội dung xem trước...</div>
+</div>
+
+<script>
+  /* =========================================================
+     MOBILE PREVIEW RENDERER
+     Renders PSH Content Block JSON into mobile-optimized view
+     ========================================================= */
+
+  (function () {
+    'use strict';
+
+    var container = document.getElementById('previewContainer');
+
+    /* ─── Load data ─── */
+    function loadData() {
+      // Priority: 1) URL hash (JSON), 2) sessionStorage, 3) URL param
+      var data = null;
+
+      try {
+        var hash = window.location.hash;
+        if (hash && hash.length > 1) {
+          data = JSON.parse(decodeURIComponent(hash.substring(1)));
+        }
+      } catch (e) {}
+
+      if (!data) {
+        try {
+          var stored = sessionStorage.getItem('pshPreviewData');
+          if (stored) data = JSON.parse(stored);
+        } catch (e) {}
+      }
+
+      if (!data) {
+        try {
+          var params = new URLSearchParams(window.location.search);
+          var p = params.get('data');
+          if (p) data = JSON.parse(decodeURIComponent(p));
+        } catch (e) {}
+      }
+
+      if (!data) {
+        container.innerHTML = '<div class="preview-error">Không có dữ liệu xem trước. Hãy gửi dữ liệu CMS Block qua URL hash hoặc sessionStorage.</div>';
+        return;
+      }
+
+      renderPreview(data);
+    }
+
+    /* ─── Background Detection ─── */
+    function detectBackground(productMeta) {
+      var name = (productMeta && productMeta.product) || '';
+      var n = name.toLowerCase();
+      if (n.indexOf('dj') !== -1 || n.indexOf('mixer') !== -1 || n.indexOf('cdj') !== -1 ||
+          n.indexOf('controller') !== -1 || n.indexOf('turntable') !== -1) return 'bg-dj-studio';
+      if (n.indexOf('speaker') !== -1 || n.indexOf('monitor') !== -1 || n.indexOf('studio') !== -1 ||
+          n.indexOf('microphone') !== -1 || n.indexOf('headphone') !== -1) return 'bg-recording-studio';
+      if (n.indexOf('luxury') !== -1 || n.indexOf('premium') !== -1 || n.indexOf('high-end') !== -1) return 'bg-premium-dark';
+      if (n.indexOf('light') !== -1 || n.indexOf('showroom') !== -1) return 'bg-showroom';
+      return 'bg-premium-dark';  // Default: dark premium
+    }
+
+    /* ─── Render ─── */
+    function renderPreview(data) {
+      var sections = data.sections || [];
+      var images = data.images || [];
+      var seo = data.seo || {};
+      var pagePlan = data.pagePlan || {};
+      var meta = data.meta || {};
+
+      var html = '';
+      var bgClass = detectBackground(meta);
+      var imageMap = {};
+      images.forEach(function (img) { imageMap[img.imageId] = img; });
+
+      sections.forEach(function (section) {
+        var sectionHtml = '';
+
+        switch (section.sectionType) {
+          case 'hero':
+            sectionHtml = renderHero(section, imageMap, bgClass, meta);
+            break;
+          case 'quick_overview':
+            sectionHtml = renderStickySection(section, imageMap, 'Tổng Quan', bgClass);
+            break;
+          case 'product_introduction':
+            sectionHtml = renderStickySection(section, imageMap, 'Giới Thiệu', bgClass);
+            break;
+          case 'product_gallery':
+            sectionHtml = renderGallery(section, imageMap);
+            break;
+          case 'core_features':
+            sectionHtml = renderFeatures(section, imageMap, bgClass);
+            break;
+          case 'design_build_quality':
+            sectionHtml = renderStickySection(section, imageMap, 'Thiết Kế', bgClass);
+            break;
+          case 'connectivity':
+            sectionHtml = renderConnectivity(section, imageMap, bgClass);
+            break;
+          case 'real_world_workflow':
+            sectionHtml = renderWorkflow(section);
+            break;
+          case 'performance_analysis':
+            sectionHtml = renderPerformance(section);
+            break;
+          case 'comparison':
+            sectionHtml = renderComparison(section);
+            break;
+          case 'specifications':
+            sectionHtml = renderSpecs(section);
+            break;
+          case 'tutorials':
+            sectionHtml = renderTutorials(section);
+            break;
+          case 'faq':
+            sectionHtml = renderFAQ(section);
+            break;
+          case 'videos':
+            sectionHtml = renderVideos(section);
+            break;
+          case 'downloads':
+            sectionHtml = renderDownloads(section);
+            break;
+          case 'customer_reviews':
+            sectionHtml = renderReviews(section);
+            break;
+          case 'buying_advice':
+            sectionHtml = renderBuyingAdvice(section);
+            break;
+          case 'conclusion':
+            sectionHtml = renderConclusion(section);
+            break;
+          default:
+            // Generic section
+            sectionHtml = renderGenericSection(section, imageMap, bgClass);
+        }
+
+        html += sectionHtml;
+      });
+
+      // If no sections rendered, show placeholder
+      if (!html || html.trim() === '') {
+        html = '<div class="preview-error">Không có nội dung để hiển thị. Dữ liệu CMS Block không chứa sections hợp lệ.</div>';
+      }
+
+      container.innerHTML = html;
+
+      // Init FAQ toggle
+      document.querySelectorAll('.faq-item').forEach(function (item) {
+        item.addEventListener('click', function () {
+          this.classList.toggle('open');
+        });
+      });
+    }
+
+    /* ─── Hero ─── */
+    function renderHero(section, imageMap, bgClass, meta) {
+      var content = section.content || {};
+      var productName = (meta && meta.product) || content.introduction || 'Sản phẩm';
+      var points = content.keySellingPoints || [];
+      var firstImg = getFirstImage(section.imageSlots, imageMap);
+
+      return '<div class="section-hero">' +
+        '<div class="hero-image-wrapper ' + bgClass + '">' +
+          (firstImg ? '<img src="' + escapeHtml(firstImg.url || firstImg) + '" alt="' + escapeHtml(firstImg.altText || productName) + '" loading="lazy">' : '') +
+        '</div>' +
+        '<div class="hero-overlay">' +
+          '<h1>' + escapeHtml(productName) + '</h1>' +
+          (section.sectionSubtitle ? '<div class="hero-subtitle">' + escapeHtml(section.sectionSubtitle) + '</div>' : '') +
+          (points.length ? '<ul class="hero-points">' + points.map(function (p) { return '<li>' + escapeHtml(p) + '</li>'; }).join('') + '</ul>' : '') +
+          (content.cta ? '<a href="' + escapeHtml(content.cta.url || '#') + '" class="hero-cta">' + escapeHtml(content.cta.label || 'Liên hệ mua hàng') + '</a>' : '') +
+        '</div>' +
+      '</div>';
+    }
+
+    /* ─── Sticky Image Section ─── */
+    function renderStickySection(section, imageMap, defaultLabel, bgClass) {
+      var title = section.sectionTitle || defaultLabel || '';
+      var subtitle = section.sectionSubtitle || '';
+      var content = section.content || {};
+      var body = content.body || (content.paragraphs && content.paragraphs.length ? content.paragraphs.map(function (p) { return '<h3>' + escapeHtml(p.heading || '') + '</h3><p>' + escapeHtml(p.text || '') + '</p>'; }).join('') : '');
+      var firstImg = getFirstImage(section.imageSlots, imageMap);
+
+      return '<div class="section-sticky">' +
+        (firstImg ? '<div class="sticky-image ' + bgClass + '"><img src="' + escapeHtml(firstImg.url || firstImg) + '" alt="' + escapeHtml(firstImg.altText || title) + '" loading="lazy"></div>' : '') +
+        '<div class="sticky-content">' +
+          (title ? '<h2 class="section-title">' + escapeHtml(title) + '</h2>' : '') +
+          (subtitle ? '<div class="section-subtitle">' + escapeHtml(subtitle) + '</div>' : '') +
+          (body ? '<div class="section-body">' + parseContent(body) + '</div>' : '') +
+        '</div>' +
+      '</div>';
+    }
+
+    /* ─── Features ─── */
+    function renderFeatures(section, imageMap, bgClass) {
+      var features = section.features || [];
+      var title = section.sectionTitle || 'Tính Năng Cốt Lõi';
+      var subtitle = section.sectionSubtitle || '';
+      var html = '<div style="padding:0 1.25rem">' +
+        '<h2 class="section-title">' + escapeHtml(title) + '</h2>' +
+        (subtitle ? '<div class="section-subtitle">' + escapeHtml(subtitle) + '</div>' : '') +
+      '</div>';
+
+      features.forEach(function (f, i) {
+        var fContent = f.content || {};
+        var intro = fContent.intro || '';
+        var advantages = fContent.advantages || [];
+        var limitations = fContent.limitations || [];
+        var expertNote = fContent.expertNote || '';
+        var fImg = getFirstImage(f.imageSlots, imageMap);
+
+        html += '<div class="section-sticky">' +
+          (fImg ? '<div class="sticky-image ' + bgClass + '"><img src="' + escapeHtml(fImg.url || fImg) + '" alt="' + escapeHtml(fImg.altText || f.featureTitle) + '" loading="lazy"></div>' : '') +
+          '<div class="sticky-content feature-card">' +
+            '<h3 style="font-size:1.15rem;font-weight:700;margin-bottom:0.75rem">' + (i + 1) + '. ' + escapeHtml(f.featureTitle || 'Tính năng ' + (i + 1)) + '</h3>' +
+            (intro ? '<div class="section-body"><p>' + escapeHtml(intro) + '</p></div>' : '') +
+            (advantages.length ? '<div style="margin-top:0.75rem"><p style="font-weight:600;font-size:0.85rem;color:#2e7d32;margin-bottom:0.4rem">✓ Ưu điểm</p><ul style="font-size:0.9rem;color:#333;padding-left:1.25rem">' + advantages.map(function (a) { return '<li style="margin-bottom:0.3rem">' + escapeHtml(a) + '</li>'; }).join('') + '</ul></div>' : '') +
+            (limitations.length ? '<div style="margin-top:0.75rem"><p style="font-weight:600;font-size:0.85rem;color:#b3261e;margin-bottom:0.4rem">✗ Hạn chế</p><ul style="font-size:0.9rem;color:#333;padding-left:1.25rem">' + limitations.map(function (l) { return '<li style="margin-bottom:0.3rem">' + escapeHtml(l) + '</li>'; }).join('') + '</ul></div>' : '') +
+            (expertNote ? '<div style="margin-top:0.75rem;padding:0.75rem;background:#f8f8fa;border-radius:8px;font-size:0.85rem;font-style:italic;color:#555;border-left:3px solid #f5c518">' + escapeHtml(expertNote) + '</div>' : '') +
+          '</div>' +
+        '</div>';
+      });
+
+      return html;
+    }
+
+    /* ─── Gallery ─── */
+    function renderGallery(section, imageMap) {
+      var slots = section.imageSlots || [];
+      var title = section.sectionTitle || 'Thư Viện Hình Ảnh';
+      var html = '<div style="padding:1.5rem 1.25rem">' +
+        '<h2 class="section-title">' + escapeHtml(title) + '</h2>' +
+        (section.sectionSubtitle ? '<div class="section-subtitle">' + escapeHtml(section.sectionSubtitle) + '</div>' : '') +
+      '</div>';
+
+      var imgs = slots.slice(0, 6).map(function (slot) {
+        var img = imageMap[slot.imageId];
+        return img ? { url: img.url || img, alt: img.altText || '', caption: img.caption || '' } : null;
+      }).filter(Boolean);
+
+      if (imgs.length) {
+        html += '<div class="gallery-grid" style="padding:0 1.25rem 1.5rem">';
+        imgs.forEach(function (img, i) {
+          var spanClass = (i === 0 || i === imgs.length - 1) ? ' gallery-span' : '';
+          html += '<img src="' + escapeHtml(img.url) + '" alt="' + escapeHtml(img.alt) + '" class="' + spanClass + '" loading="lazy" style="border-radius:8px;width:100%;height:' + ((i === 0 || i === imgs.length - 1) ? '220px' : '160px') + ';object-fit:cover">';
+          if (img.caption) html += '<div class="image-caption" style="grid-column:1/-1;padding:0.25rem 0">' + escapeHtml(img.caption) + '</div>';
+        });
+        html += '</div>';
+      }
+
+      return html;
+    }
+
+    /* ─── Connectivity ─── */
+    function renderConnectivity(section, imageMap, bgClass) {
+      var content = section.content || {};
+      var connGroups = content.connectionGroups || [];
+      var tables = section.tables || [];
+      var firstImg = getFirstImage(section.imageSlots, imageMap);
+
+      var html = '<div class="section-sticky">' +
+        (firstImg ? '<div class="sticky-image ' + bgClass + '"><img src="' + escapeHtml(firstImg.url || firstImg) + '" alt="Kết nối" loading="lazy"></div>' : '') +
+        '<div class="sticky-content">' +
+          '<h2 class="section-title">' + escapeHtml(section.sectionTitle || 'Kết Nối') + '</h2>' +
+          (section.sectionSubtitle ? '<div class="section-subtitle">' + escapeHtml(section.sectionSubtitle) + '</div>' : '');
+
+      connGroups.forEach(function (g) {
+        html += '<h3 style="font-size:1rem;margin:1rem 0 0.5rem">' + escapeHtml(g.groupName) + '</h3>' +
+          '<ul style="padding-left:1.25rem;font-size:0.9rem">' +
+          (g.items || []).map(function (item) { return '<li style="margin-bottom:0.3rem">' + escapeHtml(item) + '</li>'; }).join('') +
+          '</ul>';
+      });
+
+      // Tables
+      tables.forEach(function (t) {
+        if (t.rows && t.rows.length) {
+          html += '<table class="spec-table"><thead><tr>' + (t.headers || []).map(function (h) { return '<th>' + escapeHtml(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+            t.rows.map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + escapeHtml(c) + '</td>'; }).join('') + '</tr>'; }).join('') +
+            '</tbody></table>';
+        }
+      });
+
+      html += '</div></div>';
+      return html;
+    }
+
+    /* ─── Specs ─── */
+    function renderSpecs(section) {
+      var tables = section.tables || [];
+      var specGroups = section.specGroups || [];
+      var html = '<div style="padding:1.5rem 1.25rem">' +
+        '<h2 class="section-title">' + escapeHtml(section.sectionTitle || 'Thông Số Kỹ Thuật') + '</h2>' +
+        (section.sectionSubtitle ? '<div class="section-subtitle">' + escapeHtml(section.sectionSubtitle) + '</div>' : '');
+
+      // Use tables first
+      if (tables.length) {
+        tables.forEach(function (t) {
+          if (t.rows && t.rows.length) {
+            html += (t.title ? '<h3 style="font-size:1rem;margin:1rem 0 0.5rem">' + escapeHtml(t.title) + '</h3>' : '') +
+              '<table class="spec-table"><tbody>' +
+              t.rows.map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + escapeHtml(c) + '</td>'; }).join('') + '</tr>'; }).join('') +
+              '</tbody></table>';
+          }
+        });
+      }
+
+      // Then specGroups
+      if (specGroups.length) {
+        specGroups.forEach(function (g) {
+          html += (g.groupName ? '<h3 style="font-size:1rem;margin:1rem 0 0.5rem">' + escapeHtml(g.groupName) + '</h3>' : '') +
+            '<table class="spec-table"><tbody>' +
+            (g.specs || []).map(function (s) { return '<tr><td>' + escapeHtml(s[0] || '') + '</td><td>' + escapeHtml(s[1] || '') + '</td></tr>'; }).join('') +
+            '</tbody></table>';
+        });
+      }
+
+      html += '</div>';
+      return html;
+    }
+
+    /* ─── Comparison ─── */
+    function renderComparison(section) {
+      var ct = section.comparisonTable || {};
+      var html = '<div style="padding:1.5rem 1.25rem">' +
+        '<h2 class="section-title">' + escapeHtml(section.sectionTitle || 'So Sánh') + '</h2>' +
+        (section.sectionSubtitle ? '<div class="section-subtitle">' + escapeHtml(section.sectionSubtitle) + '</div>' : '');
+
+      if (ct.rows && ct.rows.length && ct.headers && ct.headers.length) {
+        html += '<div style="overflow-x:auto;margin:1rem 0"><table class="comparison-table">' +
+          '<thead><tr>' + ct.headers.map(function (h) { return '<th>' + escapeHtml(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+          ct.rows.map(function (r) { return '<tr>' + r.map(function (c) { return '<td>' + escapeHtml(c) + '</td>'; }).join('') + '</tr>'; }).join('') +
+          '</tbody></table></div>';
+      }
+
+      var comparisonProducts = section.comparisonProducts || [];
+      comparisonProducts.forEach(function (p) {
+        html += '<div style="margin:1rem 0;padding:0.75rem;background:#f8f8fa;border-radius:8px">' +
+          '<h3 style="font-size:0.95rem;font-weight:600;margin-bottom:0.4rem">' + escapeHtml(p.productName || '') + '</h3>' +
+          (p.advantages && p.advantages.length ? '<p style="font-size:0.85rem;color:#2e7d32;margin-bottom:0.3rem">✓ ' + p.advantages.slice(0, 2).join(', ') + '</p>' : '') +
+          (p.disadvantages && p.disadvantages.length ? '<p style="font-size:0.85rem;color:#b3261e">✗ ' + p.disadvantages.slice(0, 2).join(', ') + '</p>' : '') +
+          (p.recommendation ? '<p style="font-size:0.85rem;color:#555;margin-top:0.3rem;font-style:italic">' + escapeHtml(p.recommendation) + '</p>' : '') +
+        '</div>';
+      });
+
+      html += '</div>';
+      return html;
+    }
+
+    /* ─── FAQ ─── */
+    function renderFAQ(section) {
+      var questions = section.questions || [];
+      var html = '<div style="padding:1.5rem 1.25rem">' +
+        '<h2 class="section-title">' + escapeHtml(section.sectionTitle || 'Câu Hỏi Thường Gặp') + '</h2>' +
+        (section.sectionSubtitle ? '<div class="section-subtitle">' + escapeHtml(section.sectionSubtitle) + '</div>' : '') +
+        '<div class="faq-list">';
+
+      questions.forEach(function (q) {
+        html += '<div class="faq-item">' +
+          '<div class="faq-q">' + escapeHtml(q.q || '') + '</div>' +
+          '<div class="faq-a">' + escapeHtml(q.a || '') + '</div>' +
+        '</div>';
+      });
+
+      html += '</div></div>';
+      return html;
+    }
+
+    /* ─── Videos ─── */
+    function renderVideos(section) {
+      var videos = section.videos || [];
+      var html = '<div style="padding:1.5rem 1.25rem">' +
+        '<h2 class="section-title">' + escapeHtml(section.sectionTitle || 'Video') + '</h2>' +
+        (section.sectionSubtitle ? '<div class="section-subtitle">' + escapeHtml(section.sectionSubtitle) + '</div>' : '');
+
+      videos.forEach(function (v) {
+        var embedUrl = v.embedId ? 'https://www.youtube.com/embed/' + encodeURIComponent(v.embedId) : '';
+        html += '<div style="margin-bottom:1rem">' +
+          (v.title ? '<h3 style="font-size:0.95rem;font-weight:600;margin-bottom:0.4rem">' + escapeHtml(v.title) + '</h3>' : '') +
+          (embedUrl ? '<div class="video-wrapper"><iframe src="' + embedUrl + '" allowfullscreen loading="lazy"></iframe></div>' : '<div style="background:#f0f0f0;border-radius:10px;padding:2rem;text-align:center;color:#999;font-size:0.85rem">📹 Video placeholder</div>') +
+          (v.description ? '<p style="font-size:0.85rem;color:#666;margin-top:0.4rem">' + escapeHtml(v.description) + '</p>' : '') +
+        '</div>';
+      });
+
+      html += '</div>';
+      return html;
+    }
+
+    /* ─── Remaining simple sections ─── */
+    function renderWorkflow(section) {
+      var workflows = section.workflows || [];
+      var html = '<div style="padding:1.5rem 1.25rem">' +
+        '<h2 class="section-title">' + escapeHtml(section.sectionTitle || 'Workflow') + '</h2>' +
+        (section.sectionSubtitle ? '<div class="section-subtitle">' + escapeHtml(section.sectionSubtitle) + '</div>' : '');
+
+      workflows.forEach(function (w) {
+        html += '<div style="margin-bottom:1rem;padding:0.75rem;background:#f8f8fa;border-radius:8px">' +
+          '<h3 style="font-size:0.95rem;font-weight:600;margin-bottom:0.5rem">' + escapeHtml(w.workflowName || '') + '</h3>' +
+          ((w.steps || []).length ? '<ol style="padding-left:1.25rem;font-size:0.85rem;line-height:1.6">' +
+            w.steps.map(function (s) { return '<li><strong>' + escapeHtml(s.action || '') + '</strong>: ' + escapeHtml(s.detail || '') + '</li>'; }).join('') +
+            '</ol>' : '') +
+          (w.proTip ? '<div style="margin-top:0.5rem;padding:0.5rem;background:#fff8e1;border-radius:6px;font-size:0.8rem;color:#8d6e00"><strong>💡 Pro Tip:</strong> ' + escapeHtml(w.proTip) + '</div>' : '') +
+        '</div>';
+      });
+
+      html += '</div>';
+      return html;
+    }
+
+    function renderPerformance(section) {
+      var content = section.content || {};
+      return '<div style="padding:1.5rem 1.25rem">' +
+        '<h2 class="section-title">' + escapeHtml(section.sectionTitle || 'Phân Tích') + '</h2>' +
+        (section.sectionSubtitle ? '<div class="section-subtitle">' + escapeHtml(section.sectionSubtitle) + '</div>' : '') +
+        ((content.pros || []).length ? '<div><p style="font-weight:600;color:#2e7d32;margin-bottom:0.4rem">✅ Ưu điểm</p><ul style="font-size:0.9rem;padding-left:1.25rem">' + content.pros.map(function (p) { return '<li style="margin-bottom:0.3rem">' + escapeHtml(p) + '</li>'; }).join('') + '</ul></div>' : '') +
+        ((content.cons || []).length ? '<div style="margin-top:0.75rem"><p style="font-weight:600;color:#b3261e;margin-bottom:0.4rem">❌ Nhược điểm</p><ul style="font-size:0.9rem;padding-left:1.25rem">' + content.cons.map(function (c) { return '<li style="margin-bottom:0.3rem">' + escapeHtml(c) + '</li>'; }).join('') + '</ul></div>' : '') +
+        (content.professionalOpinion ? '<div style="margin-top:0.75rem;padding:0.75rem;background:#f8f8fa;border-radius:8px;font-size:0.85rem;border-left:3px solid #f5c518"><p style="font-weight:600;margin-bottom:0.3rem">📊 Đánh giá chuyên môn</p>' + escapeHtml(content.professionalOpinion) + '</div>' : '') +
+      '</div>';
+    }
+
+    function renderTutorials(section) {
+      var tutorials = section.tutorials || [];
+      var html = '<div style="padding:1.5rem 1.25rem">' +
+        '<h2 class="section-title">' + escapeHtml(section.sectionTitle || 'Hướng Dẫn') + '</h2>' +
+        (section.sectionSubtitle ? '<div class="section-subtitle">' + escapeHtml(section.sectionSubtitle) + '</div>' : '');
+
+      tutorials.forEach(function (t) {
+        html += '<div style="margin-bottom:1rem;padding:0.75rem;background:#f8f8fa;border-radius:8px">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">' +
+            '<h3 style="font-size:0.95rem;font-weight:600">' + escapeHtml(t.tutorialName || '') + '</h3>' +
+            (t.level ? '<span style="font-size:0.75rem;padding:0.2rem 0.5rem;border-radius:4px;font-weight:500;background:' + (t.level === 'beginner' ? '#e3f2fd;color:#1565c0' : t.level === 'advanced' ? '#fce4ec;color:#c62828' : '#f3e5f5;color:#6a1b9a') + '">' + escapeHtml(t.level) + '</span>' : '') +
+          '</div>' +
+          ((t.steps || []).length ? '<ol style="padding-left:1.25rem;font-size:0.85rem">' +
+            t.steps.map(function (s) { return '<li style="margin-bottom:0.4rem"><strong>' + escapeHtml(s.action || '') + '</strong>: ' + escapeHtml(s.detail || '') + '</li>'; }).join('') +
+            '</ol>' : '') +
+          ((t.issues || []).length ? t.issues.map(function (iss) { return '<div style="margin-top:0.4rem;padding:0.4rem 0.6rem;background:#fff3e0;border-radius:4px;font-size:0.8rem"><strong>⚠ ' + escapeHtml(iss.problem || '') + '</strong>: ' + escapeHtml(iss.solution || '') + '</div>'; }).join('') : '') +
+        '</div>';
+      });
+
+      html += '</div>';
+      return html;
+    }
+
+    function renderDownloads(section) {
+      var downloads = section.downloads || [];
+      var html = '<div style="padding:1.5rem 1.25rem">' +
+        '<h2 class="section-title">' + escapeHtml(section.sectionTitle || 'Tải Về') + '</h2>' +
+        (section.sectionSubtitle ? '<div class="section-subtitle">' + escapeHtml(section.sectionSubtitle) + '</div>' : '') +
+        '<ul class="download-list">';
+
+      downloads.forEach(function (d) {
+        html += '<li>' +
+          '<div><div class="download-name">' + escapeHtml(d.name || '') + '</div>' + (d.description ? '<div style="font-size:0.75rem;color:#888">' + escapeHtml(d.description) + '</div>' : '') + '</div>' +
+          (d.url ? '<a href="' + escapeHtml(d.url) + '" class="download-link" target="_blank">Tải</a>' : '') +
+        '</li>';
+      });
+
+      html += '</ul></div>';
+      return html;
+    }
+
+    function renderReviews(section) {
+      var summary = section.reviewSummary || {};
+      var html = '<div style="padding:1.5rem 1.25rem">' +
+        '<h2 class="section-title">' + escapeHtml(section.sectionTitle || 'Đánh Giá') + '</h2>' +
+        (section.sectionSubtitle ? '<div class="section-subtitle">' + escapeHtml(section.sectionSubtitle) + '</div>' : '');
+
+      if (summary.aggregateRating && summary.aggregateRating.score) {
+        html += '<div style="text-align:center;margin-bottom:1rem;padding:1rem;background:#fffde7;border-radius:12px">' +
+          '<div style="font-size:2.5rem;font-weight:700;color:#f5c518">' + summary.aggregateRating.score + '<span style="font-size:1rem;color:#999">/' + summary.aggregateRating.maxScore + '</span></div>' +
+          (summary.aggregateRating.reviewCount ? '<div style="font-size:0.8rem;color:#888">' + summary.aggregateRating.reviewCount + ' đánh giá</div>' : '') +
+        '</div>';
+      }
+
+      if (summary.communityPros && summary.communityPros.length) {
+        html += '<div style="margin-bottom:0.75rem"><p style="font-weight:600;font-size:0.9rem;color:#2e7d32;margin-bottom:0.4rem">👍 Từ cộng đồng</p>' +
+          summary.communityPros.slice(0, 4).map(function (p) { return '<div style="font-size:0.85rem;padding:0.3rem 0">• ' + escapeHtml(p) + '</div>'; }).join('') +
+        '</div>';
+      }
+
+      if (summary.communityCons && summary.communityCons.length) {
+        html += '<div style="margin-bottom:0.75rem"><p style="font-weight:600;font-size:0.9rem;color:#b3261e;margin-bottom:0.4rem">👎 Từ cộng đồng</p>' +
+          summary.communityCons.slice(0, 3).map(function (p) { return '<div style="font-size:0.85rem;padding:0.3rem 0">• ' + escapeHtml(p) + '</div>'; }).join('') +
+        '</div>';
+      }
+
+      if (summary.professionalFeedback && summary.professionalFeedback.length) {
+        summary.professionalFeedback.forEach(function (f) {
+          html += '<div style="margin:0.5rem 0;padding:0.75rem;background:#f8f8fa;border-radius:8px;font-size:0.85rem;font-style:italic;border-left:3px solid #f5c518">' + escapeHtml(f) + '</div>';
+        });
+      }
+
+      html += '</div>';
+      return html;
+    }
+
+    function renderBuyingAdvice(section) {
+      var content = section.content || {};
+      var html = '<div style="padding:1.5rem 1.25rem">' +
+        '<h2 class="section-title">' + escapeHtml(section.sectionTitle || 'Lời Khuyên Mua Hàng') + '</h2>' +
+        (section.sectionSubtitle ? '<div class="section-subtitle">' + escapeHtml(section.sectionSubtitle) + '</div>' : '');
+
+      if (content.whoShouldBuy && content.whoShouldBuy.length) {
+        html += '<div style="margin-bottom:0.75rem;padding:0.75rem;background:#e8f5e9;border-radius:8px">' +
+          '<p style="font-weight:600;font-size:0.9rem;color:#2e7d32;margin-bottom:0.4rem">🎯 Nên mua nếu</p>' +
+          content.whoShouldBuy.map(function (p) { return '<div style="font-size:0.85rem;padding:0.2rem 0">✓ ' + escapeHtml(p) + '</div>'; }).join('') +
+        '</div>';
+      }
+
+      if (content.whoShouldNotBuy && content.whoShouldNotBuy.length) {
+        html += '<div style="margin-bottom:0.75rem;padding:0.75rem;background:#fce4ec;border-radius:8px">' +
+          '<p style="font-weight:600;font-size:0.9rem;color:#b3261e;margin-bottom:0.4rem">✗ Không nên mua nếu</p>' +
+          content.whoShouldNotBuy.map(function (p) { return '<div style="font-size:0.85rem;padding:0.2rem 0">✗ ' + escapeHtml(p) + '</div>'; }).join('') +
+        '</div>';
+      }
+
+      if (content.alternatives && content.alternatives.length) {
+        html += '<h3 style="font-size:0.95rem;font-weight:600;margin:1rem 0 0.5rem">Sản phẩm thay thế</h3>';
+        content.alternatives.forEach(function (a) {
+          html += '<div style="padding:0.5rem 0;border-bottom:1px solid #e8e8ec;display:flex;justify-content:space-between;align-items:center;font-size:0.85rem">' +
+            '<div><strong>' + escapeHtml(a.product || a.productName || '') + '</strong></div>' +
+            '<div style="color:#888">' + escapeHtml(a.priceRange || a.suitableFor || '') + '</div>' +
+          '</div>';
+        });
+      }
+
+      html += '</div>';
+      return html;
+    }
+
+    function renderConclusion(section) {
+      var content = section.content || {};
+      var body = content.body || content.recommendation || '';
+      var cta = content.cta || section.callToAction || {};
+
+      return '<div style="padding:1.5rem 1.25rem">' +
+        '<h2 class="section-title">' + escapeHtml(section.sectionTitle || 'Kết Luận') + '</h2>' +
+        (section.sectionSubtitle ? '<div class="section-subtitle">' + escapeHtml(section.sectionSubtitle) + '</div>' : '') +
+        (body ? '<div class="section-body conclusion-text">' + parseContent(body) + '</div>' : '') +
+        '<div class="section-cta">' +
+          (cta.label ? '<a href="' + escapeHtml(cta.url || '#') + '" class="cta-button">' + escapeHtml(cta.label) + '</a>' : '') +
+        '</div>' +
+      '</div>';
+    }
+
+    function renderGenericSection(section, imageMap, bgClass) {
+      return renderStickySection(section, imageMap, section.sectionTitle || 'Nội dung', bgClass);
+    }
+
+    /* ─── Helpers ─── */
+
+    function getFirstImage(slots, imageMap) {
+      if (!slots || !slots.length || !imageMap) return null;
+      for (var i = 0; i < slots.length; i++) {
+        var img = imageMap[slots[i].imageId];
+        if (img && img.url) return img;
+        if (img && typeof img === 'object' && img.src) return img;
+        if (img && typeof img === 'string') return { url: img, altText: '' };
+      }
+      return null;
+    }
+
+    function escapeHtml(str) {
+      if (typeof str !== 'string') return str || '';
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function parseContent(str) {
+      if (!str) return '';
+      // Basic HTML passthrough (the content should be safe since it's from CMS)
+      return str;
+    }
+
+    /* ─── Init ─── */
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadData);
+    } else {
+      loadData();
+    }
+
+  })();
+</script>
+</body>
+</html>
