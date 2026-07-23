@@ -50,6 +50,30 @@ async function handle(req, res, helpers) {
     return sendSuccess(res, Object.assign({ uid: userRecord.uid }, record), { status: 201 });
   }
 
+  if (path === '/v1/users/custom-claims' && req.method === 'POST') {
+    // Set Firebase Auth custom claims for multi-tenant business assignment
+    const { uid, businessId, role } = req.body || {};
+    if (!uid) return sendError(res, 'INVALID_REQUEST', 'Thiếu uid.');
+    const validRoles = ['super_admin', 'business_admin', 'business_editor', 'business_viewer'];
+    if (!role || validRoles.indexOf(role) < 0) {
+      return sendError(res, 'INVALID_REQUEST', 'role phải là: ' + validRoles.join(', ') + '.');
+    }
+    if (role !== 'super_admin' && (!businessId || typeof businessId !== 'string')) {
+      return sendError(res, 'INVALID_REQUEST', 'businessId là bắt buộc cho business roles.');
+    }
+    try {
+      const claims = { businessId: businessId || null };
+      if (role === 'super_admin') claims.roles = { super_admin: true };
+      else if (role === 'business_admin') claims.roles = { business_admin: true };
+      else if (role === 'business_editor') claims.roles = { business_editor: true };
+      else if (role === 'business_viewer') claims.roles = { business_viewer: true };
+      await admin.auth().setCustomUserClaims(uid, claims);
+    } catch (err) {
+      return sendError(res, 'INVALID_REQUEST', 'Gán custom claims thất bại: ' + err.message);
+    }
+    return sendSuccess(res, { uid, businessId: businessId || null, role, claimsSet: true });
+  }
+
   if (path.indexOf('/v1/users/') === 0 && req.method === 'DELETE') {
     const uid = path.slice('/v1/users/'.length);
     if (!uid) return sendError(res, 'INVALID_REQUEST', 'Thiếu uid.');
