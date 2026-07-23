@@ -1,5 +1,98 @@
 {
   "rules": {
+    ".write": "auth != null && root.child('superAdmins/' + auth.uid).exists()",
+    ".read": "auth != null && root.child('superAdmins/' + auth.uid).exists()",
+    "businesses": {
+      "$businessId": {
+        "info": {
+          ".read": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid).exists()",
+          ".write": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin'"
+        },
+        "settings": {
+          ".read": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid).exists()",
+          ".write": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin'"
+        },
+        "users": {
+          "$uid": {
+            ".read": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid).exists()",
+            ".write": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin'"
+          }
+        },
+        "subscription": {
+          ".read": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin'",
+          ".write": false
+        },
+        "products": {
+          ".read": true,
+          ".write": "auth != null && (root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin' || root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_editor')"
+        },
+        "orders": {
+          ".read": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid).exists()",
+          ".write": "auth != null && (root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin' || root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_editor')"
+        },
+        "customers": {
+          ".read": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid).exists()",
+          ".write": "auth != null && (root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin' || root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_editor')"
+        },
+        "inventory": {
+          ".read": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid).exists()",
+          ".write": "auth != null && (root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin' || root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_editor')"
+        },
+        "payments": {
+          ".read": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid).exists()",
+          ".write": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin'"
+        },
+        "cms": {
+          "$collection": {
+            ".read": true,
+            ".write": "auth != null && (root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin' || root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_editor')"
+          }
+        },
+        "media": {
+          "$mediaId": {
+            ".read": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid).exists()",
+            ".write": "auth != null && (root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin' || root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_editor')"
+          }
+        },
+        "ai": {
+          ".read": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid).exists()",
+          "providerConfig": {
+            ".write": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin'"
+          },
+          "$aiChild": {
+            ".write": "auth != null && (root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin' || root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_editor')"
+          }
+        },
+        "integrations": {
+          ".read": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid).exists()",
+          ".write": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin'"
+        },
+        "reports": {
+          ".read": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid).exists()",
+          ".write": false
+        },
+        "logs": {
+          ".read": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin'",
+          ".write": false
+        },
+        "$other": {
+          ".read": false,
+          ".write": false
+        }
+      }
+    },
+    "superAdmins": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": false
+      }
+    },
+    "registry": {
+      ".read": true,
+      "$businessId": {
+        ".write": false
+      }
+    },
     "products": {
       ".read": true,
       ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')"
@@ -20,25 +113,21 @@
       ".read": true,
       ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')"
     },
-
     "siteContent": {
       ".read": true,
       ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')"
     },
-
     "seoSettings": {
       ".read": true,
       ".write": "auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin'"
     },
-
     "roles": {
       ".read": "auth != null || !data.exists()",
       "$uid": {
         ".write": "(auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin') || (auth != null && auth.uid === $uid && !root.child('roles').exists())",
-        ".validate": "newData.hasChildren(['role']) && (newData.child('role').val() === 'admin' || newData.child('role').val() === 'editor')"
+        ".validate": "newData.hasChildren(['role']) && (newData.child('role').val() === 'admin' || newData.child('role').val() === 'editor' || newData.child('role').val() === 'agent')"
       }
     },
-
     "aiDrafts": {
       ".read": "auth != null && root.child('roles').child(auth.uid).exists()",
       ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')"
@@ -63,12 +152,10 @@
       ".read": "auth != null && root.child('roles').child(auth.uid).exists()",
       ".write": "auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin'"
     },
-
     "facebookConnection": {
       ".read": "auth != null && root.child('roles').child(auth.uid).exists()",
       ".write": "auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin'"
     },
-
     "facebookOAuthState": {
       "$state": {
         ".read": false,
@@ -98,7 +185,6 @@
       ".read": "auth != null && root.child('roles').child(auth.uid).exists()",
       ".write": "auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin'"
     },
-
     "$other": {
       ".read": false,
       ".write": false
