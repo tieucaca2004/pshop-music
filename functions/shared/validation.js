@@ -52,6 +52,9 @@ const PRIVATE_IP_PATTERNS = [
   /^https?:\/\/[\[::\]f{0,2}]/  // IPv6 loopback
 ];
 
+// Allowed Content-Type prefixes for image responses
+const ALLOWED_IMAGE_CONTENT_TYPES = ['image/', 'application/octet-stream'];
+
 function validateModel(model) {
   return ALLOWED_AI_MODELS.indexOf(model) !== -1;
 }
@@ -93,8 +96,70 @@ function validateImageUrlOrigin(url) {
   }
 }
 
+/**
+ * Validates the Content-Type of a fetched response.
+ * Accepts only image/* or application/octet-stream.
+ * Returns null if valid, or an error message string if rejected.
+ */
+function validateContentType(contentType) {
+  if (!contentType || typeof contentType !== 'string') return 'Missing Content-Type header';
+  const lower = contentType.toLowerCase();
+  for (const prefix of ALLOWED_IMAGE_CONTENT_TYPES) {
+    if (lower.startsWith(prefix)) return null;
+  }
+  return 'Response Content-Type "' + contentType + '" is not an accepted image type';
+}
+
+const dnsPromises = require('dns').promises;
+
+// Well-known private/reserved IPv4 prefixes for DNS-based validation
+function ipIsPrivate(ip) {
+  // IPv4 private ranges
+  if (/^127\./.test(ip)) return true;
+  if (/^10\./.test(ip)) return true;
+  if (/^0\.0\.0\.0$/.test(ip)) return true;
+  if (/^169\.254\./.test(ip)) return true;
+  if (/^192\.168\./.test(ip)) return true;
+  if (/^172\.(1[6-9]|2\d|3[01])\./.test(ip)) return true;
+  if (/^224\./.test(ip)) return true; // multicast
+  if (/^240\./.test(ip)) return true; // reserved
+  // IPv6 loopback
+  if (/^::1$/.test(ip)) return true;
+  if (/^fe80:/i.test(ip)) return true; // link-local
+  if (/^fc00:/i.test(ip)) return true; // unique local
+  if (/^fd00:/i.test(ip)) return true; // unique local
+  return false;
+}
+
+/**
+ * Resolves a hostname to IP addresses and validates none are private.
+ * Provides defense against DNS rebinding attacks.
+ * Returns null if all IPs are public, or an error message string if private IP found.
+ */
+async function resolveAndValidateIps(hostname) {
+  if (!hostname || typeof hostname !== 'string') return 'Invalid hostname for DNS validation';
+  let ips = [];
+  try {
+    const v4 = await dnsPromises.resolve4(hostname);
+    ips = ips.concat(v4);
+  } catch { /* no IPv4 records */ }
+  try {
+    const v6 = await dnsPromises.resolve6(hostname);
+    ips = ips.concat(v6);
+  } catch { /* no IPv6 records */ }
+  if (ips.length === 0) return 'Could not resolve hostname "' + hostname + '" to any IP address';
+  for (const ip of ips) {
+    if (ipIsPrivate(ip)) {
+      return 'Hostname "' + hostname + '" resolved to private IP: ' + ip;
+    }
+  }
+  return null;
+}
+
 module.exports = {
   validateSchema,
   validateModel, validateSize, validateImageUrlOrigin,
-  ALLOWED_AI_MODELS, ALLOWED_IMAGE_SIZES, ALLOWED_IMAGE_URL_PREFIX
+  validateContentType, resolveAndValidateIps,
+  ALLOWED_AI_MODELS, ALLOWED_IMAGE_SIZES, ALLOWED_IMAGE_URL_PREFIX,
+  ALLOWED_IMAGE_CONTENT_TYPES, PRIVATE_IP_PATTERNS
 };

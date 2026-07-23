@@ -83,11 +83,42 @@ async function editImageWithOpenAI({ inputUrl, prompt, size, transparentBackgrou
   // SSRF guard — validate URL before fetching
   const urlError = validateImageUrlOrigin(inputUrl);
   if (urlError) throw new Error('SSRF guard rejected image URL: ' + urlError);
-  const imgRes = await fetch(inputUrl);
-  if (!imgRes.ok) throw new Error('KhÃ´ng táº£i Ä‘Æ°á»£c áº£nh tá»« URL cung cáº¥p.');
-  const imgBuf = Buffer.from(await imgRes.arrayBuffer());
-  const mimeType = imgRes.headers.get('content-type') || 'image/png';
 
+  // Redirect chain validation — follow up to 5 hops, validate each one
+  let currentUrl = inputUrl;
+  let redirectCount = 0;
+  const MAX_REDIRECTS = 5;
+  let fetchRes;
+  while (true) {
+    fetchRes = await fetch(currentUrl, { redirect: 'manual' });
+    if (fetchRes.status < 300 || fetchRes.status >= 400) break;
+    if (++redirectCount > MAX_REDIRECTS) throw new Error('Too many redirects fetching image URL');
+    const location = fetchRes.headers.get('location');
+    if (!location) throw new Error('Redirect without Location header');
+    const resolved = new URL(location, currentUrl).href;
+    const redirectError = validateImageUrlOrigin(resolved);
+    if (redirectError) throw new Error('SSRF guard rejected redirect target: ' + redirectError);
+    currentUrl = resolved;
+  }
+
+  // DNS/IP validation — resolve hostname, block private IPs
+  const finalUrl = fetchRes.url || currentUrl;
+  try {
+    const parsedUrl = new URL(finalUrl);
+    const dnsError = await resolveAndValidateIps(parsedUrl.hostname);
+    if (dnsError) throw new Error(dnsError);
+  } catch (ipErr) {
+    throw new Error('DNS validation failed for "' + finalUrl + '": ' + ipErr.message);
+  }
+
+  if (!fetchRes.ok) throw new Error('Không tải được ảnh từ URL cung cấp.');
+
+  // Content-Type validation — accept only image/* or octet-stream
+  const mimeType = fetchRes.headers.get('content-type') || '';
+  const ctError = validateContentType(mimeType);
+  if (ctError) throw new Error(ctError);
+
+  const imgBuf = Buffer.from(await fetchRes.arrayBuffer());
   const SIZE_MAP = { '1:1': '1024x1024', '4:5': '1024x1536', '16:9': '1536x1024' };
   const openAiSize = SIZE_MAP[size] || 'auto';
 
