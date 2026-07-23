@@ -157,29 +157,39 @@ const AdminAuth = (function () {
 
   function init(options) {
     options = options || {};
-    return new Promise((resolve, reject) => {
-      firebase.auth().onAuthStateChanged(user => {
-        if (!user) {
-          location.href = '/admin/login.html';
+    return AuthContext.init().then(function() {
+      var user = AuthContext.getCurrentUser();
+      var role = AuthContext.getCurrentRole();
+
+      if (!user) {
+        location.href = '/admin/login.html';
+        return;
+      }
+
+      // AuthContext resolves role from custom claims, then legacy /roles/{uid}
+      if (!role) {
+        firebase.auth().signOut().then(function() { location.href = '/admin/login.html?denied=1'; });
+        return;
+      }
+
+      currentUser = user;
+      currentRole = role;
+
+      // Read name from legacy /roles/{uid} for backward compatibility
+      return firebase.database().ref('roles/' + user.uid).once('value').then(function(snap) {
+        if (snap.exists()) {
+          currentName = snap.val().name || '';
+        } else {
+          currentName = user.displayName || '';
+        }
+
+        if (options.requiredRole && options.requiredRole !== currentRole && currentRole !== 'admin') {
+          alert('B\u1EA1n kh\u00F4ng c\u00F3 quy\u1EC1n truy c\u1EADp trang n\u00E0y.');
+          location.href = '/admin/index.html';
           return;
         }
-        rolesRef(user.uid).once('value').then(snap => {
-          const roleData = snap.val();
-          if (!roleData) {
-            firebase.auth().signOut().then(() => { location.href = '/admin/login.html?denied=1'; });
-            return;
-          }
-          currentUser = user;
-          currentRole = roleData.role;
-          currentName = roleData.name || '';
-          if (options.requiredRole && options.requiredRole !== currentRole && currentRole !== 'admin') {
-            alert('Bạn không có quyền truy cập trang này.');
-            location.href = '/admin/index.html';
-            return;
-          }
-          renderShell(options.page, options.title);
-          resolve({ user, role: currentRole, name: currentName });
-        }).catch(reject);
+        renderShell(options.page, options.title);
+        return { user: user, role: currentRole, name: currentName };
       });
     });
   }
