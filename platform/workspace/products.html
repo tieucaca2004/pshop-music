@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Products - PSH Workspace</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="workspaceSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="workspaceTopbar"></div>
+    <div class="admin-wrap">
+
+      <div class="panel">
+        <h3 id="formTitle">ADD NEW PRODUCT</h3>
+        <div class="field-grid">
+          <div class="form-group full">
+            <label>PRODUCT NAME</label>
+            <input type="text" id="pName" placeholder="e.g. Wireless Headphones">
+          </div>
+          <div class="form-group">
+            <label>CATEGORY</label>
+            <select id="pCategory"></select>
+          </div>
+          <div class="form-group">
+            <label>PUBLISH STATUS</label>
+            <select id="pPubStatus">
+              <option value="draft">Draft (not visible)</option>
+              <option value="published">Published (visible)</option>
+              <option value="hidden">Hidden</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>PRICE (leave blank for "contact for quote")</label>
+            <input type="text" id="pPrice" placeholder="e.g. 250,000">
+          </div>
+          <div class="form-group full">
+            <label>PRODUCT IMAGE</label>
+            <input type="text" id="pImage" style="display:none">
+            <div id="pImageSlot"></div>
+          </div>
+        </div>
+        <div class="admin-actions">
+          <button class="submit-btn" id="saveBtn">SAVE PRODUCT</button>
+          <button class="btn-secondary" id="resetBtn">CANCEL / RESET FORM</button>
+        </div>
+        <p class="status-msg" id="formStatus"></p>
+      </div>
+
+      <div class="panel">
+        <div class="toolbar-row">
+          <h3 style="margin:0">PRODUCTS (<span id="productTotal">0</span>)</h3>
+        </div>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead>
+              <tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody id="productTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script src="/js/auth-context.js"></script>
+<script src="/js/workspace-auth.js"></script>
+<script src="/js/db.js"></script>
+<script src="/js/cms-db.js"></script>
+<script src="/js/storage-upload.js"></script>
+<script src="/js/media-library.js"></script>
+<script src="/js/media-library-picker.js"></script>
+<script src="/js/workspace-products.js"></script>
+</body>
+</html>

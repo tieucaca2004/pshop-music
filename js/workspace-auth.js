@@ -48,9 +48,25 @@ var WorkspaceAuth = (function () {
   var currentTitle = '';
 
   // ─── Helpers ─────────────────────────────────────────────────────
+  // Reuses the existing admin-*.css classes (admin-nav-item, admin-brand,
+  // admin-topbar-title, admin-user, admin-role-badge, ...) instead of
+  // inventing new unstyled ones — same visual layout as the Admin CMS,
+  // just a different brand string and container IDs.
   function navItemHtml(item, activePage) {
-    return '<a class="w-nav-item' + (item.key === activePage ? ' active' : '') + '" href="' + item.href + '">' +
-      '<span class="w-nav-icon">' + item.icon + '</span>' + item.label + '</a>';
+    return '<a class="admin-nav-item' + (item.key === activePage ? ' active' : '') + '" href="' + item.href + '">' +
+      '<span class="admin-nav-icon">' + item.icon + '</span>' + item.label + '</a>';
+  }
+
+  // Breadcrumb: "Workspace / {current page label}" — looked up from
+  // WORKSPACE_NAV so every page gets it for free just by passing its nav
+  // key to init(), no per-page breadcrumb markup to maintain. New to this
+  // codebase (Admin CMS has no breadcrumb) — one small CSS rule added
+  // alongside the existing admin-topbar-* rules in admin.css.
+  function breadcrumbHtml(activePage) {
+    var item = WORKSPACE_NAV.filter(function (i) { return i.key === activePage; })[0];
+    var label = item ? item.label : '';
+    return '<div class="admin-breadcrumb"><a href="/platform/workspace/index.html">Workspace</a>' +
+      (label ? ' <span>/</span> ' + label : '') + '</div>';
   }
 
   function renderSidebar(activePage, pageTitle) {
@@ -61,19 +77,38 @@ var WorkspaceAuth = (function () {
 
     if (sidebar) {
       sidebar.innerHTML =
-        '<div class="w-brand">PSH <span>WORKSPACE</span></div>' +
-        '<nav class="w-nav">' + WORKSPACE_NAV.map(function(i) { return navItemHtml(i, activePage); }).join('') + '</nav>';
+        '<div class="admin-brand">PSH <span>WORKSPACE</span></div>' +
+        '<nav class="admin-nav">' + WORKSPACE_NAV.map(function(i) { return navItemHtml(i, activePage); }).join('') + '</nav>';
     }
 
     if (topbar) {
       topbar.innerHTML =
-        '<div class="w-topbar-title">' + (pageTitle || '') + '</div>' +
-        '<div class="w-topbar-actions">' +
-          '<span class="w-user">' + (currentUser ? currentUser.email : '') +
-            ' <span class="w-role-badge">' + (currentRole || '').toUpperCase() + '</span></span>' +
-          '<button class="btn btn-secondary" onclick="WorkspaceAuth.logout()">Sign Out</button>' +
+        '<div>' + breadcrumbHtml(activePage) +
+          '<div class="admin-topbar-title">' + (pageTitle || '') + '</div>' +
+        '</div>' +
+        '<div class="admin-topbar-actions">' +
+          '<span class="admin-user">' + (currentUser ? currentUser.email : '') +
+            ' <span class="admin-role-badge admin-role-' + (currentRole || '') + '">' + (currentRole || '').toUpperCase() + '</span></span>' +
+          '<button class="btn-secondary" onclick="WorkspaceAuth.logout()">Sign Out</button>' +
         '</div>';
     }
+  }
+
+  // ─── Shared Page-Container Helpers ────────────────────────────────
+  // Every Workspace module page renders its content into one container
+  // element (conventionally id="workspaceContent") using these three
+  // states, so future modules (Orders/Customers/Media/...) plug into the
+  // exact same shell without re-inventing loading/empty/error markup.
+  function renderLoading(containerEl, msg) {
+    if (containerEl) containerEl.innerHTML = '<p class="small-muted">' + (msg || 'Đang tải...') + '</p>';
+  }
+
+  function renderEmpty(containerEl, msg) {
+    if (containerEl) containerEl.innerHTML = '<p class="small-muted">' + (msg || 'Chưa có dữ liệu.') + '</p>';
+  }
+
+  function renderErrorState(containerEl, msg) {
+    if (containerEl) containerEl.innerHTML = '<p style="color:#c0392b">' + (msg || 'Đã xảy ra lỗi.') + '</p>';
   }
 
   // ─── Init: Auth Gate ─────────────────────────────────────────────
@@ -138,6 +173,9 @@ var WorkspaceAuth = (function () {
     init: init,
     getUser: getUser,
     getRole: getRole,
-    logout: logout
+    logout: logout,
+    renderLoading: renderLoading,
+    renderEmpty: renderEmpty,
+    renderErrorState: renderErrorState
   };
 })();

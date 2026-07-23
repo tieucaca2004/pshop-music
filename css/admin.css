@@ -75,6 +75,11 @@ body{min-height:100vh;background:var(--bg-alt)}
 .admin-user{font-size:0.8rem;color:var(--ink-mute);display:flex;align-items:center;gap:0.5rem}
 .admin-role-badge{font-size:0.65rem;font-weight:700;letter-spacing:0.05em;padding:0.2rem 0.5rem;border-radius:3px;background:var(--gold-soft);color:var(--gold-ink)}
 .admin-role-badge.admin-role-admin{background:#1c1c1c;color:#fff}
+.admin-role-badge.admin-role-super_admin{background:#1c1c1c;color:#fff}
+.admin-breadcrumb{font-size:0.72rem;color:var(--ink-mute);margin-bottom:0.2rem}
+.admin-breadcrumb a{color:var(--ink-mute);text-decoration:none}
+.admin-breadcrumb a:hover{color:var(--black)}
+.admin-breadcrumb span{margin:0 0.3rem}
 @media(max-width:900px){.admin-shell{flex-direction:column}.admin-sidebar{width:100%;height:auto;position:relative;padding:0.75rem 0}.admin-nav{flex-direction:row;flex-wrap:wrap;padding:0 0.75rem}.admin-nav-item{padding:0.5rem 0.75rem;border-left:none;border-bottom:2px solid transparent}.admin-nav-item.active{border-left-color:transparent;border-bottom-color:var(--gold)}}
 
 /* ---- Dashboard stat cards ---- */

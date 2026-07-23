@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>Workspace - PSH Platform</title>
 <meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/admin.css">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -30,7 +31,7 @@ WorkspaceAuth.init('dashboard', 'Workspace Dashboard').then(function(ctx) {
   document.getElementById('workspaceContent').innerHTML =
     '<p>Business ID: <strong>' + ctx.businessId + '</strong></p>' +
     '<p>Role: <strong>' + ctx.role + '</strong></p>' +
-    '<p>Email: <strong>' + ctx.user + '</strong></p>' +
+    '<p>Email: <strong>' + ctx.user.email + '</strong></p>' +
     '<p>You are now logged into the Customer Workspace.</p>';
 }).catch(function(e) {
   document.getElementById('workspaceContent').innerHTML = '<p style="color:red">Error: ' + e.message + '</p>';
