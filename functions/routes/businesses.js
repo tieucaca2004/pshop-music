@@ -11,7 +11,7 @@
  */
 const admin = require('firebase-admin');
 const { resolveBusinessId } = require('../shared/tenant');
-const { requireSuperAdmin } = require('../shared/auth');
+const { verifyAuth, requireBusiness, requireRole, requireSuperAdmin } = require('../shared/auth');
 
 const VALID_PLANS = ['free', 'starter', 'pro', 'enterprise'];
 const DEFAULT_TZ = 'Asia/Bangkok';
@@ -78,6 +78,66 @@ function buildBusinessTree(input) {
 async function handle(req, res, helpers) {
   const { sendSuccess, sendError } = helpers;
   const path = req.__pshPath;
+
+  // ─── Self-service Business Profile (before super_admin guard) ────
+  // /v1/businesses/{id}/profile — owner can view/edit their own profile
+  const profileMatch = path.match(/^\/v1\/businesses\/([^/]+)\/profile$/);
+  if (profileMatch) {
+    // Authenticate and resolve tenant context
+    const authRes = await verifyAuth(req);
+    if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
+
+    const bizRes = await requireBusiness(req);
+    if (!bizRes.ok) return sendError(res, bizRes.code, bizRes.error);
+
+    // Business admin role required (owner/administrator)
+    const roleRes = await requireRole(req, ['super_admin', 'business_admin']);
+    if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
+
+    const businessId = req.tenant.businessId;
+    const db = admin.database();
+    const infoRef = 'businesses/' + businessId + '/info';
+
+    // GET /v1/businesses/{id}/profile — View own profile
+    if (req.method === 'GET') {
+      const snap = await db.ref(infoRef).once('value');
+      if (!snap.exists()) return sendError(res, 'NOT_FOUND', 'Business không tồn tại.');
+      return sendSuccess(res, Object.assign({ businessId: businessId }, snap.val()));
+    }
+
+    // PATCH /v1/businesses/{id}/profile — Edit own profile
+    if (req.method === 'PATCH') {
+      const body = req.body || {};
+      const changes = {};
+
+      // Editable fields — only accept known profile fields
+      const editable = ['displayName', 'description', 'logo', 'coverImage', 'email',
+        'phone', 'website', 'address', 'workingHours', 'timezone',
+        'brandInformation', 'socialLinks'];
+
+      editable.forEach(function(f) {
+        if (body[f] !== undefined) changes[f] = body[f];
+      });
+
+      if (Object.keys(changes).length === 0) {
+        return sendError(res, 'INVALID_REQUEST', 'Không có trường nào để cập nhật.');
+      }
+
+      // Reject changing ownerUid, businessId, slug (immutable fields)
+      if (changes.ownerUid !== undefined || changes.businessId !== undefined || changes.slug !== undefined) {
+        return sendError(res, 'INVALID_REQUEST', 'Không thể thay đổi ownerUid, businessId hoặc slug.');
+      }
+
+      changes.updatedAt = admin.database.ServerValue.TIMESTAMP;
+      await db.ref(infoRef).update(changes);
+
+      const updated = await db.ref(infoRef).once('value');
+      return sendSuccess(res, Object.assign({ businessId: businessId }, updated.val()));
+    }
+
+    return sendError(res, 'METHOD_NOT_ALLOWED', 'Chỉ hỗ trợ GET và PATCH cho profile.');
+  }
+
   // All business operations require super_admin — use production middleware
   const superCheck = await requireSuperAdmin(req);
   if (!superCheck.ok) {
