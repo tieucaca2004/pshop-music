@@ -66,6 +66,18 @@ const MediaLibrary = (function () {
     });
   }
 
+  // kindOf(item) -> 'image' | 'video' | 'document' — single shared
+  // classification (Task 2.7, Customer Workspace Files/Documents) so every
+  // caller that needs to tell media types apart (Media Library UI, Files UI,
+  // opts.kind filtering below) uses the exact same rule instead of each
+  // re-implementing it.
+  function kindOf(item) {
+    const ct = (item && item.contentType) || '';
+    if (ct.indexOf('image/') === 0) return 'image';
+    if (ct.indexOf('video/') === 0) return 'video';
+    return 'document';
+  }
+
   // list(searchTerm, opts) -> Promise<MediaItem[]>, mới nhất trước. Không bao
   // giờ reject — 1 item đọc lỗi (getDownloadURL/getMetadata) vẫn được giữ lại
   // với field null thay vì làm hỏng cả danh sách.
@@ -75,10 +87,19 @@ const MediaLibrary = (function () {
   // đúng cách MỌI caller hiện có gọi — media-library-picker.js/
   // admin-media-library.js) giữ NGUYÊN hành vi cũ (chỉ ảnh), 0 thay đổi cho
   // các nơi đang dùng làm "chọn ảnh sản phẩm/banner/...".
+  //
+  // opts.kind === 'documents' (Task 2.7, Customer Workspace Files/Documents)
+  // — filters to non-image/non-video files only (PDF/DOCX/XLSX/TXT/ZIP/...),
+  // using the same Storage tree/upload folder as Media Library (both are
+  // filtered views over the same tenant Storage data, not separate systems).
   function list(searchTerm, opts) {
     const allTypes = !!(opts && opts.allTypes);
+    const documentsOnly = !!(opts && opts.kind === 'documents');
     return listAllRecursive(storageRoot())
-      .then(items => allTypes ? items : items.filter(it => !it.contentType || it.contentType.indexOf('image/') === 0))
+      .then(items => {
+        if (documentsOnly) return items.filter(it => kindOf(it) === 'document');
+        return allTypes ? items : items.filter(it => !it.contentType || it.contentType.indexOf('image/') === 0);
+      })
       .then(items => {
         const term = (searchTerm || '').trim().toLowerCase();
         const filtered = term ? items.filter(it => it.name.toLowerCase().indexOf(term) !== -1) : items;
@@ -126,5 +147,5 @@ const MediaLibrary = (function () {
       .then(() => newPath);
   }
 
-  return { list, upload, remove, rename };
+  return { list, upload, remove, rename, kindOf };
 })();

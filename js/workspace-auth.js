@@ -36,6 +36,7 @@ var WorkspaceAuth = (function () {
     { key: 'customers',      label: 'Customers',        href: '/platform/workspace/customers.html', icon: '&#128101;' },
     { key: 'reports',        label: 'Reports',          href: '/platform/workspace/reports.html',   icon: '&#128200;' },
     { key: 'media-library',  label: 'Media',            href: '/platform/workspace/media-library.html', icon: '&#128444;' },
+    { key: 'files',          label: 'Files',            href: '/platform/workspace/files.html',     icon: '&#128194;' },
     { key: 'settings',       label: 'Settings',         href: '/platform/workspace/settings.html',  icon: '&#9881;' },
     { key: 'team',           label: 'Team',             href: '/platform/workspace/team.html',      icon: '&#128101;' },
     { key: 'business-profile', label: 'Business Profile', href: '/platform/workspace/business-profile.html', icon: '&#128100;' }

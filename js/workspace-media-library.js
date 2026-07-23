@@ -36,15 +36,8 @@ document.addEventListener('DOMContentLoaded', function () {
     return (n / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
-  function kindOf(item) {
-    var ct = item.contentType || '';
-    if (ct.indexOf('image/') === 0) return 'image';
-    if (ct.indexOf('video/') === 0) return 'video';
-    return 'document';
-  }
-
   function thumbHtml(item) {
-    var kind = kindOf(item);
+    var kind = MediaLibrary.kindOf(item);
     if (kind === 'image') {
       return '<img src="' + escapeHtml(item.url || '') + '" alt="' + escapeHtml(item.name) + '" style="width:100%;height:120px;object-fit:cover;border-radius:6px;background:var(--bg-alt)">';
     }
