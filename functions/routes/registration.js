@@ -177,7 +177,7 @@ async function handle(req, res, helpers) {
 
   // ─── Public Registration Endpoint (NO AUTH) ─────────────────────────
   // POST /api/v1/register — Complete self-service onboarding
-  if (path === '/api/v1/register' && req.method === 'POST') {
+  if (path === '/v1/register' && req.method === 'POST') {
     const body = req.body || {};
 
     // Validate required fields

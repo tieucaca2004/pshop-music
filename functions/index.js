@@ -32,8 +32,20 @@ const facebookGraphApi = require('./facebook-graph-api');
 // Banner), which stay exactly as they were.
 const { validateImageUrlOrigin } = require('./shared/validation');
 const { getApps } = require('firebase-admin/app');
+const { getDatabase, ServerValue } = require('firebase-admin/database');
+const { getAuth } = require('firebase-admin/auth');
+const { getStorage } = require('firebase-admin/storage');
 
 admin.initializeApp();
+
+// Compat shim: firebase-admin v14 uses modular API.
+// The legacy admin.database()/auth()/storage() no longer exist on the root.
+// This shim restores the old-call-syntax so all 30+ route files keep working
+// without rewriting every admin.database().ref() call site.
+admin.database = getDatabase;
+admin.database.ServerValue = ServerValue;
+admin.auth = getAuth;
+admin.storage = getStorage;
 
 const OPENAI_API_KEY = defineSecret('OPENAI_API_KEY');
 
@@ -81,11 +93,11 @@ async function validateRequest(req) {
 // ảnh MỚI từ mô tả chữ, không nhận ảnh đầu vào được). Trả về URL Storage vĩnh
 // viễn (ảnh OpenAI trả tạm thời sẽ hết hạn nếu không tải về lưu ngay).
 async function editImageWithOpenAI({ inputUrl, prompt, size, transparentBackground, storagePrefix }) {
-  // SSRF guard � validate URL before fetching
+  // SSRF guard � validate URL before fetching
   const urlError = validateImageUrlOrigin(inputUrl);
   if (urlError) throw new Error('SSRF guard rejected image URL: ' + urlError);
 
-  // Redirect chain validation � follow up to 5 hops, validate each one
+  // Redirect chain validation � follow up to 5 hops, validate each one
   let currentUrl = inputUrl;
   let redirectCount = 0;
   const MAX_REDIRECTS = 5;
@@ -102,7 +114,7 @@ async function editImageWithOpenAI({ inputUrl, prompt, size, transparentBackgrou
     currentUrl = resolved;
   }
 
-  // DNS/IP validation � resolve hostname, block private IPs
+  // DNS/IP validation � resolve hostname, block private IPs
   const finalUrl = fetchRes.url || currentUrl;
   try {
     const parsedUrl = new URL(finalUrl);
@@ -112,9 +124,9 @@ async function editImageWithOpenAI({ inputUrl, prompt, size, transparentBackgrou
     throw new Error('DNS validation failed for "' + finalUrl + '": ' + ipErr.message);
   }
 
-  if (!fetchRes.ok) throw new Error('Kh�ng t?i du?c ?nh t? URL cung c?p.');
+  if (!fetchRes.ok) throw new Error('Kh�ng t?i du?c ?nh t? URL cung c?p.');
 
-  // Content-Type validation � accept only image/* or octet-stream
+  // Content-Type validation � accept only image/* or octet-stream
   const mimeType = fetchRes.headers.get('content-type') || '';
   const ctError = validateContentType(mimeType);
   if (ctError) throw new Error(ctError);
