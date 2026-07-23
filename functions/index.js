@@ -31,6 +31,7 @@ const facebookGraphApi = require('./facebook-graph-api');
 // scope â€” does not touch editImageWithOpenAI() or "edit_image" (Product
 // Banner), which stay exactly as they were.
 const { validateImageUrlOrigin } = require('./shared/validation');
+const { getApps } = require('firebase-admin/app');
 
 admin.initializeApp();
 
@@ -777,7 +778,7 @@ const openclawRoutes = require('./routes/openclaw');
 // server gá»i server) â€” CORS chá»‰ do trÃ¬nh duyá»‡t thá»±c thi.
 
 // Initialize Firebase Admin if not already done
-if (!admin.apps.length) { admin.initializeApp(); }
+if (!getApps().length) { admin.initializeApp(); }
 
 exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRET], cors: ALLOWED_ORIGINS, timeoutSeconds: 120 }, async (req, res) => {
   const requestId = makeRequestId();

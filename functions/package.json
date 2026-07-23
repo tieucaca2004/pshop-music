@@ -2,12 +2,12 @@
   "name": "pshop-music-functions",
   "description": "Cloud Function proxy cho OpenAI (Sprint 3 Requirement #1) — chỉ nhận/validate/gọi/trả, không chứa business logic. Business logic vẫn nằm trong PSH Platform (site tĩnh).",
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "main": "index.js",
   "dependencies": {
-    "firebase-admin": "^12.6.0",
-    "firebase-functions": "^5.1.1"
+    "firebase-admin": "^14.2.0",
+    "firebase-functions": "^7.3.0"
   },
   "private": true
 }
