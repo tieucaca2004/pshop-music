@@ -26,7 +26,7 @@ var WorkspaceAuth = (function () {
 
   // ─── Workspace-specific navigation (no admin-only items) ─────────
   var WORKSPACE_NAV = [
-    { key: 'dashboard',      label: 'Dashboard',       href: '/platform/workspace/index.html',     icon: '&#9776;' },
+    { key: 'dashboard',      label: 'Dashboard',       href: '/platform/workspace/dashboard.html', icon: '&#9776;' },
     { key: 'products',       label: 'Products',         href: '/platform/workspace/products.html',  icon: '&#127925;' },
     { key: 'categories',     label: 'Categories',       href: '/platform/workspace/categories.html', icon: '&#128193;' },
     { key: 'banners',        label: 'Banners',          href: '/platform/workspace/banners.html',   icon: '&#128247;' },
@@ -66,7 +66,7 @@ var WorkspaceAuth = (function () {
   function breadcrumbHtml(activePage) {
     var item = WORKSPACE_NAV.filter(function (i) { return i.key === activePage; })[0];
     var label = item ? item.label : '';
-    return '<div class="admin-breadcrumb"><a href="/platform/workspace/index.html">Workspace</a>' +
+    return '<div class="admin-breadcrumb"><a href="/platform/workspace/dashboard.html">Workspace</a>' +
       (label ? ' <span>/</span> ' + label : '') + '</div>';
   }
 
@@ -110,6 +110,18 @@ var WorkspaceAuth = (function () {
 
   function renderErrorState(containerEl, msg) {
     if (containerEl) containerEl.innerHTML = '<p style="color:#c0392b">' + (msg || 'Đã xảy ra lỗi.') + '</p>';
+  }
+
+  // formatBytes(n) -> human-readable size string. Shared (Task 2.8) — was
+  // duplicated identically in workspace-media-library.js and
+  // workspace-files.js (Task 2.6/2.7); both now call this instead, and the
+  // Dashboard's "Storage Used" card reuses it too, so there is exactly one
+  // implementation of this formatting rule.
+  function formatBytes(n) {
+    if (!n) return '';
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
+    return (n / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
   // ─── Init: Auth Gate ─────────────────────────────────────────────
@@ -177,6 +189,7 @@ var WorkspaceAuth = (function () {
     logout: logout,
     renderLoading: renderLoading,
     renderEmpty: renderEmpty,
-    renderErrorState: renderErrorState
+    renderErrorState: renderErrorState,
+    formatBytes: formatBytes
   };
 })();

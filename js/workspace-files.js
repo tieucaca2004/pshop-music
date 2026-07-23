@@ -31,13 +31,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  function formatBytes(n) {
-    if (!n) return '';
-    if (n < 1024) return n + ' B';
-    if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
-    return (n / (1024 * 1024)).toFixed(1) + ' MB';
-  }
-
   function formatDate(ts) {
     if (!ts) return '';
     var d = new Date(ts);
@@ -62,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function () {
       body.innerHTML = items.map(function (item) {
         return '<tr data-path="' + escapeHtml(item.fullPath) + '">' +
           '<td>' + escapeHtml(item.name) + '</td>' +
-          '<td>' + formatBytes(item.size) + '</td>' +
+          '<td>' + WorkspaceAuth.formatBytes(item.size) + '</td>' +
           '<td>' + formatDate(item.timeCreated) + '</td>' +
           '<td class="admin-actions">' +
             '<a class="link-btn f-download-btn" href="' + escapeHtml(item.url || '#') + '" target="_blank" rel="noopener">Download</a>' +

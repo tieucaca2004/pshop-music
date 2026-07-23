@@ -1,41 +1,13 @@
-﻿<!DOCTYPE html>
-<html lang="vi">
+<!DOCTYPE html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>Workspace - PSH Platform</title>
 <meta name="robots" content="noindex, nofollow">
-<link rel="stylesheet" href="/css/style.css">
-<link rel="stylesheet" href="/css/admin.css">
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="/js/firebase-config.js"></script>
-<script src="/js/auth-context.js"></script>
-<script src="/js/workspace-auth.js"></script>
+<meta http-equiv="refresh" content="0; url=/platform/workspace/dashboard.html">
 </head>
 <body>
-<div class="admin-shell">
-  <aside class="admin-sidebar" id="workspaceSidebar"></aside>
-  <div class="admin-main">
-    <div class="admin-topbar" id="workspaceTopbar"></div>
-    <div class="admin-wrap" style="padding:20px">
-      <h1>Welcome to PSH Workspace</h1>
-      <div id="workspaceContent">
-        <p>Loading your workspace...</p>
-      </div>
-    </div>
-  </div>
-</div>
-<script>
-WorkspaceAuth.init('dashboard', 'Workspace Dashboard').then(function(ctx) {
-  document.getElementById('workspaceContent').innerHTML =
-    '<p>Business ID: <strong>' + ctx.businessId + '</strong></p>' +
-    '<p>Role: <strong>' + ctx.role + '</strong></p>' +
-    '<p>Email: <strong>' + ctx.user.email + '</strong></p>' +
-    '<p>You are now logged into the Customer Workspace.</p>';
-}).catch(function(e) {
-  document.getElementById('workspaceContent').innerHTML = '<p style="color:red">Error: ' + e.message + '</p>';
-});
-</script>
+<script>window.location.replace('/platform/workspace/dashboard.html');</script>
+<p>Redirecting to <a href="/platform/workspace/dashboard.html">Workspace Dashboard</a>...</p>
 </body>
 </html>

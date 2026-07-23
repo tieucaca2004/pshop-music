@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard - PSH Workspace</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="workspaceSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="workspaceTopbar"></div>
+    <div class="admin-wrap">
+      <div class="dash-stats" id="dashStats"></div>
+
+      <div class="panel">
+        <h3>QUICK ACTIONS</h3>
+        <div class="dash-quicklinks">
+          <a class="dash-quicklink" href="/platform/workspace/products.html">&#127925; Products</a>
+          <a class="dash-quicklink" href="/platform/workspace/categories.html">&#128193; Categories</a>
+          <a class="dash-quicklink" href="/platform/workspace/media-library.html">&#128444; Media Library</a>
+          <a class="dash-quicklink" href="/platform/workspace/files.html">&#128194; Files</a>
+          <a class="dash-quicklink" href="/platform/workspace/team.html">&#128101; Team</a>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:1.5rem">
+        <h3>RECENT ACTIVITY</h3>
+        <p class="small-muted">Coming soon.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script src="/js/auth-context.js"></script>
+<script src="/js/workspace-auth.js"></script>
+<script src="/js/db.js"></script>
+<script src="/js/cms-db.js"></script>
+<script src="/js/storage-upload.js"></script>
+<script src="/js/media-library.js"></script>
+<script src="/js/workspace-dashboard.js"></script>
+</body>
+</html>

@@ -29,13 +29,6 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  function formatBytes(n) {
-    if (!n) return '';
-    if (n < 1024) return n + ' B';
-    if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
-    return (n / (1024 * 1024)).toFixed(1) + ' MB';
-  }
-
   function thumbHtml(item) {
     var kind = MediaLibrary.kindOf(item);
     if (kind === 'image') {
@@ -57,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return '<div class="panel" style="padding:0.75rem" data-path="' + escapeHtml(item.fullPath) + '">' +
           thumbHtml(item) +
           '<p class="small-muted" style="margin:0.5rem 0 0;word-break:break-all">' + escapeHtml(item.name) + '</p>' +
-          '<p class="small-muted" style="margin:0.1rem 0 0">' + formatBytes(item.size) + '</p>' +
+          '<p class="small-muted" style="margin:0.1rem 0 0">' + WorkspaceAuth.formatBytes(item.size) + '</p>' +
           '<div class="admin-actions" style="margin-top:0.5rem">' +
             '<button class="link-btn ml-rename-btn">Rename</button>' +
             '<button class="btn-danger ml-remove-btn">Delete</button>' +
