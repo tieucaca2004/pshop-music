@@ -1,38 +1,34 @@
 rules_version = '2';
 
-// Firebase Storage Security Rules — Sprint 9 Requirement #3.
+// Firebase Storage Security Rules — Multi-Tenant (Phase 1, Task 5.0)
 //
-// Phản ánh đúng quyền hiện tại của CMS (không mở rộng, không giảm bảo mật
-// so với ruleset thủ công trước đây, xem README.md/ROADMAP.md):
-//   - Đọc 1 file cụ thể (get) — CÔNG KHAI, giữ nguyên như trước. Trang khách
-//     (index.html/category.html/blog.html/videos.html) hotlink trực tiếp URL
-//     ảnh sản phẩm/banner/slider/blog cover đã biết trước, không cần đăng
-//     nhập.
-//   - Liệt kê thư mục/bucket (list) — CHỈ người đã đăng nhập Firebase Auth.
-//     Trước đây "allow read: if true" ngầm cho phép CẢ list công khai —
-//     đây là 1 khoảng hở thông tin thật (bất kỳ ai cũng liệt kê được toàn bộ
-//     đường dẫn file trong Storage qua listAll(), không chỉ đọc file đã biết
-//     URL). Chỉ Media Library (js/media-library.js, luôn chạy trong phiên
-//     Admin/Editor đã đăng nhập qua AdminAuth.init()) mới cần list() — không
-//     có trang khách nào gọi listAll(). Đây là THẮT CHẶT, không phải "mở
-//     rộng quyền" hay "giảm bảo mật".
-//   - Ghi/xóa (write = create+update+delete) — người đã đăng nhập Firebase
-//     Auth, giữ nguyên hệt ruleset thủ công trước đây (không phân biệt
-//     Admin/Editor — đúng hành vi CMS thật hiện tại: media-library-picker.js
-//     cho phép cả Editor xóa ảnh khỏi Thư viện, không giới hạn Admin-only).
+// Tenant paths under /businesses/{businessId}/ are isolated per-tenant.
+// Legacy paths at root retain the original behavior for backward compatibility.
 //
-// GIỚI HẠN ĐÃ BIẾT (không tự sửa ở đây — xem ROADMAP.md):
-//   Không thể siết "write" theo đúng vai trò roles/{uid} (Admin/Editor) như
-//   database.rules.json đã làm cho Realtime Database, vì Storage Security
-//   Rules KHÔNG có cách nào cross-reference node Realtime Database (chỉ có
-//   firestore.get()/firestore.exists() cho Cloud Firestore — dự án này dùng
-//   Realtime Database, không dùng Firestore). Muốn Storage Rules biết
-//   "request.auth.uid này còn active trong roles hay đã bị thu hồi" cần
-//   Firebase Auth Custom Claims (đặt qua Admin SDK/Cloud Function khi
-//   tạo/thu hồi tài khoản ở admin/users.html) — đây là thay đổi Business
-//   Logic + Cloud Function mới, ngoài phạm vi Requirement này.
+// NOTE: Storage Rules cannot cross-reference Realtime Database;
+// tenant identity uses Firebase Auth custom claims:
+//   request.auth.token.businessId — matches /businesses/{businessId}/ prefix
+//   request.auth.token.roles.super_admin — platform-wide access
 service firebase.storage {
   match /b/{bucket}/o {
+
+    // ─── Tenant-Isolated Paths ───
+    // Each business stores assets under /businesses/{businessId}/
+    // Access: businessId-matched users + super admins
+    match /businesses/{businessId}/{allPaths=**} {
+      allow read: if request.auth != null
+        && (request.auth.token.businessId == businessId
+            || request.auth.token.roles.super_admin == true);
+      allow write: if request.auth != null
+        && (request.auth.token.businessId == businessId
+            || request.auth.token.roles.super_admin == true);
+    }
+
+    // ─── Legacy Paths (backward compatible) ───
+    // Existing PSH content at root — unchanged behavior.
+    // GET: public (existing pages reference URLs directly)
+    // LIST: authenticated only (media library)
+    // WRITE: authenticated only (CMS uploads)
     match /{allPaths=**} {
       allow get: if true;
       allow list: if request.auth != null;
