@@ -26,15 +26,6 @@ async function handle(req, res, helpers) {
   const bizRes = await requireBusiness(req);
   if (!bizRes.ok) return sendError(res, bizRes.code, bizRes.error);
 
-  // Team management requires business_admin or super_admin
-  const roleRes = await requireRole(req, ROLE_MANAGE);
-  if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
-
-  const businessId = req.tenant.businessId;
-  const callerUid = req.user.uid;
-  const db = admin.database();
-  const usersRef = 'businesses/' + businessId + '/users';
-
   // ─── Route patterns ──────────────────────────────────────────────
   const invitePattern = /^\/v1\/businesses\/([^/]+)\/team\/invite$/;
   const listPattern = /^\/v1\/businesses\/([^/]+)\/team$/;
@@ -44,7 +35,17 @@ async function handle(req, res, helpers) {
   const listMatch = path.match(listPattern);
   const memberMatch = path.match(memberPattern);
 
+  // Not a team route — pass through to the next handler
   if (!inviteMatch && !listMatch && !memberMatch) return null;
+
+  // Team management requires business_admin or super_admin
+  const roleRes = await requireRole(req, ROLE_MANAGE);
+  if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
+
+  const businessId = req.tenant.businessId;
+  const callerUid = req.user.uid;
+  const db = admin.database();
+  const usersRef = 'businesses/' + businessId + '/users';
 
   // ─── POST /.../team/invite — Invite team member ──────────────────
   if (inviteMatch && req.method === 'POST') {
