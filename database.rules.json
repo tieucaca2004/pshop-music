@@ -24,19 +24,46 @@
         },
         "products": {
           ".read": true,
-          ".write": "auth != null && (root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin' || root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_editor')"
+          ".write": "auth != null && (root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin' || root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_editor')",
+          ".indexOn": [
+            "slug",
+            "name",
+            "category",
+            "status",
+            "order"
+          ]
         },
         "orders": {
           ".read": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid).exists()",
-          ".write": "auth != null && (root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin' || root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_editor')"
+          ".write": "auth != null && (root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin' || root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_editor')",
+          ".indexOn": [
+            "orderNumber",
+            "customerId",
+            "orderStatus",
+            "paymentStatus",
+            "createdAt",
+            "customerPhone"
+          ]
         },
         "customers": {
           ".read": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid).exists()",
-          ".write": "auth != null && (root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin' || root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_editor')"
+          ".write": "auth != null && (root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin' || root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_editor')",
+          ".indexOn": [
+            "phone",
+            "email",
+            "fullName",
+            "status"
+          ]
         },
         "inventory": {
           ".read": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid).exists()",
-          ".write": "auth != null && (root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin' || root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_editor')"
+          ".write": "auth != null && (root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin' || root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_editor')",
+          ".indexOn": [
+            "sku",
+            "productId",
+            "productName",
+            "stock"
+          ]
         },
         "payments": {
           ".read": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid).exists()",
@@ -95,11 +122,20 @@
     },
     "products": {
       ".read": true,
-      ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')"
+      ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')",
+      ".indexOn": [
+        "slug",
+        "name",
+        "category"
+      ]
     },
     "categories": {
       ".read": true,
-      ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')"
+      ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')",
+      ".indexOn": [
+        "code",
+        "label"
+      ]
     },
     "banners": {
       ".read": true,
