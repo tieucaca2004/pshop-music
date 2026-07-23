@@ -28,6 +28,7 @@ const ADMIN_NAV = [
   { key: 'sliders', label: 'Slider', href: '/admin/sliders.html', icon: '&#127909;' },
   { key: 'blog', label: 'Blog', href: '/admin/blog.html', icon: '&#128221;' },
   { key: 'videos', label: 'Video', href: '/admin/videos.html', icon: '&#127916;' },
+  { key: 'atieu-menu', label: 'A Tiểu', href: '/admin/a-tieu/menu.html', icon: '&#127859;' },
   { key: 'media-library', label: 'Thư viện ảnh', href: '/admin/media-library.html', icon: '&#128444;' },
   { key: 'ai-assistant', label: 'Trợ lý AI', href: '/admin/ai/assistant.html', icon: '&#129302;' },
   { key: 'ai', label: 'Plugin AI (Thủ công)', href: '/admin/ai/index.html', icon: '&#129302;' },

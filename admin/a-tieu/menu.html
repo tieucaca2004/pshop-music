@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Thực đơn A Tiểu - PS
+
+H</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="adminSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-wrap">
+      <!-- Form -->
+      <div class="panel" id="formPanel">
+        <h3 id="formTitle">THÊM MÓN MỚI</h3>
+        <input type="hidden" id="itemId">
+        <div class="field-grid">
+          <div class="form-group full">
+            <label>TÊN MÓN *</label>
+            <input type="text" id="itemName" placeholder="VD: Hủ tiếu xào">
+          </div>
+          <div class="form-group">
+            <label>GIÁ (VNĐ) *</label>
+            <input type="number" id="itemPrice" placeholder="35000" min="1000">
+          </div>
+          <div class="form-group">
+            <label>DANH MỤC *</label>
+            <select id="itemCat">
+              <option value="">-- Chọn --</option>
+              <option value="mon-chinh">Món chính</option>
+              <option value="mon-phu">Món phụ</option>
+              <option value="do-uong">Đồ uống</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>THỨ TỰ</label>
+            <input type="number" id="itemOrder" value="1" min="1">
+          </div>
+          <div class="form-group">
+            <label>TRẠNG THÁI</label>
+            <select id="itemStatus">
+              <option value="active">Đang bán</option>
+              <option value="hidden">Tạm ẩn</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label>MÔ TẢ</label>
+            <textarea id="itemDesc" rows="2"></textarea>
+          </div>
+          <div class="form-group full">
+            <label>ẢNH MÓN</label>
+            <input type="file" id="itemImageInput" accept="image/jpeg,image/png,image/webp">
+            <div id="itemImagePreview" style="margin-top:0.5rem"></div>
+            <input type="hidden" id="itemImage">
+          </div>
+        </div>
+        <div class="admin-actions">
+          <button class="submit-btn" id="saveBtn">LƯU MÓN</button>
+          <button class="btn-secondary" id="cancelBtn" style="display:none">HỦY</button>
+        </div>
+        <p class="status-msg" id="formStatus"></p>
+      </div>
+      <!-- List -->
+      <div class="panel">
+        <div class="toolbar-row">
+          <h3 style="margin:0">THỰC ĐƠN (<span id="itemTotal">0</span>)</h3>
+          <div class="admin-actions" style="margin:0">
+            <input type="text" id="searchInput" placeholder="Tìm món..." style="padding:0.55rem 0.8rem;font-size:0.82rem">
+            <select id="catFilter" style="padding:0.55rem 0.8rem;font-size:0.82rem">
+              <option value="">Tất cả</option>
+              <option value="mon-chinh">Món chính</option>
+              <option value="mon-phu">Món phụ</option>
+              <option value="do-uong">Đồ uống</option>
+            </select>
+          </div>
+        </div>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead><tr><th>STT</th><th>Món</th><th>Giá</th><th>Danh mục</th><th>Trạng thái</th><th></th></tr></thead>
+            <tbody id="menuBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script>
+var ADMIN_PAGE = 'atieu-menu';
+
+AdminAuth.init({ page: ADMIN_PAGE, title: 'Thực đơn A Tiểu', requiredRole: 'admin' });
+
+var ref = firebase.database().ref('a-tieu').child('menu');
+var storageRef = firebase.storage().ref('a-tieu/menu');
+var allItems = [];
+var editingId = null;
+
+function loadMenu() {
+  ref.orderByChild('order').once('value', function(snap) {
+    allItems = [];
+    snap.forEach(function(child) {
+      var item = child.val(); item._key = child.key; allItems.push(item);
+    });
+    renderMenu();
+  });
+}
+
+function renderMenu() {
+  var q = document.getElementById('searchInput').value.toLowerCase().trim();
+  var cat = document.getElementById('catFilter').value;
+  var filtered = allItems.filter(function(i) {
+    if (q && (i.name||'').toLowerCase().indexOf(q) === -1) return false;
+    if (cat && i.cat !== cat) return false;
+    return true;
+  });
+  var tbody = document.getElementById('menuBody');
+  document.getElementById('itemTotal').textContent = allItems.length;
+  tbody.innerHTML = filtered.map(function(i) {
+    var price = i.price ? Number(i.price).toLocaleString()+'đ' : '-';
+    var active = i.status !== 'hidden';
+    var catLabel = {'mon-chinh':'Món chính','mon-phu':'Món phụ','do-uong':'Đồ uống'}[i.cat]||i.cat||'-';
+    return '<tr><td>'+(i.order||0)+'</td>'+
+      '<td>'+(i.image?'<img src="'+i.image+'" style="width:36px;height:36px;object-fit:cover;border-radius:4px;vertical-align:middle;margin-right:6px">':'')+(i.name||'')+'</td>'+
+      '<td>'+price+'</td>'+
+      '<td>'+catLabel+'</td>'+
+      '<td style="color:'+(active?'#16a34a':'#94a3b8')+'">'+(active?'Đang bán':'Tạm ẩn')+'</td>'+
+      '<td class="admin-actions" style="gap:0.3rem">'+
+        '<button class="btn-secondary" onclick="editItem(\''+i._key+'\')">Sửa</button>'+
+        '<button class="btn-secondary" onclick="toggleItem(\''+i._key+'\')">'+(active?'Ẩn':'Hiện')+'</button>'+
+        '<button class="btn-danger" onclick="deleteItem(\''+i._key+'\')">Xóa</button>'+
+      '</td></tr>';
+  }).join('');
+}
+
+document.getElementById('saveBtn').addEventListener('click', function() {
+  var name = document.getElementById('itemName').value.trim();
+  var price = parseInt(document.getElementById('itemPrice').value);
+  var cat = document.getElementById('itemCat').value;
+  if (!name) { alert('Nhập tên món'); return; }
+  if (!price||price<1000) { alert('Giá từ 1.000đ'); return; }
+  if (!cat) { alert('Chọn danh mục'); return; }
+  if (!editingId) {
+    var dup = allItems.some(function(i) { return i.name.toLowerCase()===name.toLowerCase(); });
+    if (dup && !confirm('"'+name+'" đã có, thêm tiếp?')) return;
+  }
+  var data = {name:name,price:price,cat:cat,order:parseInt(document.getElementById('itemOrder').value)||1,status:document.getElementById('itemStatus').value};
+  var d = document.getElementById('itemDesc').value.trim(); if(d) data.description=d;
+  var img = document.getElementById('itemImage').value; if(img) data.image=img;
+  (editingId?ref.child(editingId).update(data):ref.push(data)).then(function(){
+    document.getElementById('formStatus').textContent = editingId?'Đã cập nhật':'Đã thêm';
+    document.getElementById('formStatus').style.color='#16a34a';
+    resetForm(); loadMenu();
+  }).catch(function(e){
+    document.getElementById('formStatus').textContent = 'Lỗi: '+e.message;
+    document.getElementById('formStatus').style.color='#dc2626';
+  });
+});
+
+function editItem(key) {
+  var item = allItems.find(function(i){return i._key===key;}); if(!item) return;
+  editingId=key;
+  document.getElementById('formTitle').textContent='SỬA MÓN';
+  document.getElementById('itemName').value=item.name||'';
+  document.getElementById('itemPrice').value=item.price||'';
+  document.getElementById('itemCat').value=item.cat||'';
+  document.getElementById('itemOrder').value=item.order||1;
+  document.getElementById('itemStatus').value=item.status||'active';
+  document.getElementById('itemDesc').value=item.description||'';
+  document.getElementById('itemImage').value=item.image||'';
+  document.getElementById('cancelBtn').style.display='';
+  document.getElementById('itemImagePreview').innerHTML=item.image?'<img src="'+item.image+'" style="max-width:200px;border-radius:8px">':'';
+  window.scrollTo(0,0);
+}
+
+document.getElementById('itemImageInput').addEventListener('change',function(e){
+  var f=e.target.files[0]; if(!f) return;
+  if(['image/jpeg','image/png','image/webp'].indexOf(f.type)<0){alert('Chỉ JPG,PNG,WebP'); return;}
+  if(f.size>5*1024*1024){alert('Tối đa 5MB'); return;}
+  var reader=new FileReader();
+  reader.onload=function(ev){document.getElementById('itemImagePreview').innerHTML='<img src="'+ev.target.result+'" style="max-width:200px;border-radius:8px">';};
+  reader.readAsDataURL(f);
+  storageRef.child('menu-'+Date.now()+'.'+f.name.split('.').pop()).put(f).then(function(s){return s.ref.getDownloadURL();}).then(function(url){
+    document.getElementById('itemImage').value=url;
+  }).catch(function(e){alert('Upload lỗi: '+e.message);});
+});
+
+function toggleItem(key) {
+  ref.child(key).child('status').once('value').then(function(snap){
+    var n=snap.val()==='hidden'?'active':'hidden';
+    if(!confirm(n==='active'?'Hiện món này?':'Ẩn món này?')) return;
+    ref.child(key).child('status').set(n);
+  }).then(loadMenu).catch(function(e){alert('Lỗi: '+e.message);});
+}
+
+function deleteItem(key) { 
+  if(!confirm('Xóa?')) return;
+  ref.child(key).remove().then(function(){loadMenu();}).catch(function(e){alert('Lỗi: '+e.message);});
+}
+
+document.getElementById('cancelBtn').addEventListener('click', resetForm);
+function resetForm() {
+  editingId=null; document.getElementById('formTitle').textContent='THÊM MÓN MỚI';
+  ['itemId','itemName','itemPrice','itemImage','itemDesc'].forEach(function(id){document.getElementById(id).value='';});
+  document.getElementById('itemCat').value=''; document.getElementById('itemOrder').value='1';
+  document.getElementById('itemStatus').value='active';
+  document.getElementById('itemImagePreview').innerHTML='';
+  document.getElementById('itemImageInput').value='';
+  document.getElementById('cancelBtn').style.display='none';
+  document.getElementById('formStatus').textContent='';
+}
+
+document.getElementById('searchInput').addEventListener('input',renderMenu);
+document.getElementById('catFilter').addEventListener('change',renderMenu);
+AdminAuth.init({page:'atieu-menu',title:'Thực đơn A Tiểu'});
+loadMenu();
+</script>
+</body>
+</html>
