@@ -290,6 +290,7 @@ async function handle(req, res, helpers) {
     // secure link.
     try {
       const API_KEY = getWebApiKey();
+      if (API_KEY) {
         const signInRes = await fetch(
           'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + API_KEY,
           {
