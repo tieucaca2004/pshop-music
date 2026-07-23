@@ -66,12 +66,19 @@ const MediaLibrary = (function () {
     });
   }
 
-  // list(searchTerm) -> Promise<MediaItem[]>, mới nhất trước. Không bao giờ
-  // reject — 1 item đọc lỗi (getDownloadURL/getMetadata) vẫn được giữ lại
+  // list(searchTerm, opts) -> Promise<MediaItem[]>, mới nhất trước. Không bao
+  // giờ reject — 1 item đọc lỗi (getDownloadURL/getMetadata) vẫn được giữ lại
   // với field null thay vì làm hỏng cả danh sách.
-  function list(searchTerm) {
+  //
+  // opts.allTypes (Task 2.6, Customer Workspace Media Library) — khi true,
+  // BỎ bộ lọc "chỉ ảnh" để hiện cả video/tài liệu. Mặc định (opts bỏ trống,
+  // đúng cách MỌI caller hiện có gọi — media-library-picker.js/
+  // admin-media-library.js) giữ NGUYÊN hành vi cũ (chỉ ảnh), 0 thay đổi cho
+  // các nơi đang dùng làm "chọn ảnh sản phẩm/banner/...".
+  function list(searchTerm, opts) {
+    const allTypes = !!(opts && opts.allTypes);
     return listAllRecursive(storageRoot())
-      .then(items => items.filter(it => !it.contentType || it.contentType.indexOf('image/') === 0))
+      .then(items => allTypes ? items : items.filter(it => !it.contentType || it.contentType.indexOf('image/') === 0))
       .then(items => {
         const term = (searchTerm || '').trim().toLowerCase();
         const filtered = term ? items.filter(it => it.name.toLowerCase().indexOf(term) !== -1) : items;
@@ -96,5 +103,28 @@ const MediaLibrary = (function () {
     return firebase.storage().ref(fullPath).delete();
   }
 
-  return { list, upload, remove };
+  // rename(fullPath, newName) -> Promise<string (new fullPath)> — Task 2.6.
+  // Firebase Storage has no native rename/move; the standard approach is
+  // fetch the existing blob, upload it to a new path in the SAME folder
+  // (preserving contentType), then delete the original. New to this file
+  // (didn't exist before) but self-contained -- reuses the same Storage
+  // instance/patterns, not a new/parallel system.
+  function rename(fullPath, newName) {
+    const oldRef = firebase.storage().ref(fullPath);
+    const lastSlash = fullPath.lastIndexOf('/');
+    const dir = lastSlash >= 0 ? fullPath.substring(0, lastSlash) : '';
+    const safeName = String(newName || '').trim().replace(/[^a-zA-Z0-9._-]/g, '_');
+    if (!safeName) return Promise.reject(new Error('Invalid file name'));
+    const newPath = (dir ? dir + '/' : '') + safeName;
+    if (newPath === fullPath) return Promise.resolve(fullPath);
+    return Promise.all([oldRef.getDownloadURL(), oldRef.getMetadata()])
+      .then(([url, meta]) => fetch(url).then(r => r.blob()).then(blob => {
+        const newRef = firebase.storage().ref(newPath);
+        return newRef.put(blob, { contentType: meta.contentType || undefined });
+      }))
+      .then(() => oldRef.delete())
+      .then(() => newPath);
+  }
+
+  return { list, upload, remove, rename };
 })();

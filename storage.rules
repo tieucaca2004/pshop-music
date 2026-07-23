@@ -2,9 +2,16 @@ rules_version = '2';
 
 // Firebase Storage Security Rules — Multi-Tenant (Phase 1, Task 6.1)
 //
-// FIXED: Legacy catch-all no longer overrides tenant isolation.
-// The catch-all write rule includes a condition that explicitly excludes
-// /businesses/{businessId}/ paths, preventing cross-tenant access.
+// Legacy catch-all no longer overrides tenant isolation for EITHER read or
+// write. The write rule already excluded /businesses/{businessId}/ paths;
+// the read rule (`allow get: if true`) did NOT, so it independently and
+// unconditionally granted read access to every tenant's files to anyone,
+// including fully unauthenticated requests -- Security Rules OR multiple
+// matching blocks together, so an unrestricted catch-all always wins
+// regardless of a more specific rule elsewhere. Found live (Task 2.6,
+// Customer Workspace Media Library validation): confirmed cross-tenant AND
+// unauthenticated reads of tenant media both succeeded before this fix.
+// Now both get and list exclude /businesses/ paths, matching write exactly.
 //
 // Super Admin bypass: `request.auth.token.roles.super_admin == true`
 //   This is set via Firebase Auth custom claims by POST /v1/users/custom-claims.
@@ -28,14 +35,29 @@ service firebase.storage {
 
     // ─── Legacy Paths (backward compatible) ───
     // Existing PSH content at root — unchanged read/list behavior.
-    // WRITE: authenticated only, EXCLUDES /businesses/ paths.
-    // The `!resource.name.matches("^businesses/")` condition prevents
-    // this catch-all from overriding the tenant isolation above.
+    // GET/LIST/WRITE: all EXCLUDE /businesses/ paths, so this catch-all
+    // never overrides the tenant-isolated block above in either direction.
     match /{allPaths=**} {
-      allow get: if true;
-      allow list: if request.auth != null;
+      // list has no single existing "resource" (it enumerates a prefix), so
+      // it must check the requested path itself (allPaths, this match's own
+      // capture) rather than resource.name -- get/write operate on one real
+      // object each and can use resource.name directly, matching the
+      // tenant-isolated block's own convention.
+      //
+      // .matches() requires a FULL match of the entire string, not a prefix
+      // match -- "^businesses/" alone (no trailing .*) never actually
+      // matched a real object path like "businesses/x/media/f.txt", so this
+      // condition was always true and get/write silently stayed open to
+      // businesses/ paths. write happened to look correct anyway only
+      // because `resource` is null when creating a brand-new file (an
+      // unrelated reason for the same wrong expression to deny by accident);
+      // get has no such coincidence and was confirmed open to anyone,
+      // unauthenticated, until this fix. Verified live after this change.
+      allow get: if !resource.name.matches("^businesses/.*");
+      allow list: if request.auth != null
+        && !(allPaths.size() > 0 && allPaths[0] == 'businesses');
       allow write: if request.auth != null
-        && !resource.name.matches("^businesses/");
+        && !resource.name.matches("^businesses/.*");
     }
   }
 }
