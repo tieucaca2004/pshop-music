@@ -23,8 +23,8 @@ async function handle(req, res, helpers) {
   const path = req.__pshPath;
 
   // Only handle tenant-scoped product paths
-  // Legacy /api/v1/products handled by cmsLists.js
-  if (path.indexOf('/api/v1/businesses/') !== 0) return null;
+  // Legacy /v1/products (flat, non-tenant) handled by cmsLists.js
+  if (path.indexOf('/v1/businesses/') !== 0) return null;
 
   // ─── Authentication & Tenant Context ────────────────────────────────
   const authRes = await verifyAuth(req);
@@ -36,15 +36,15 @@ async function handle(req, res, helpers) {
   const businessId = req.tenant.businessId;
   const node = 'businesses/' + businessId + '/products';
 
-  // ─── Pattern: /api/v1/businesses/{businessId}/products ──────────────
+  // ─── Pattern: /v1/businesses/{businessId}/products ──────────────
   // List all products (GET) and create product (POST)
-  const listPattern = /^\/api\/v1\/businesses\/([^/]+)\/products$/;
-  const itemPattern = /^\/api\/v1\/businesses\/([^/]+)\/products\/([^/]+)$/;
+  const listPattern = /^\/v1\/businesses\/([^/]+)\/products$/;
+  const itemPattern = /^\/v1\/businesses\/([^/]+)\/products\/([^/]+)$/;
 
   const listMatch = path.match(listPattern);
   const itemMatch = path.match(itemPattern);
 
-  // ─── GET /api/v1/businesses/{bid}/products — List ──────────────────
+  // ─── GET /v1/businesses/{bid}/products — List ──────────────────
   if (listMatch && req.method === 'GET') {
     const roleRes = await requireRole(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
@@ -53,7 +53,7 @@ async function handle(req, res, helpers) {
     return sendSuccess(res, items);
   }
 
-  // ─── POST /api/v1/businesses/{bid}/products — Create ────────────────
+  // ─── POST /v1/businesses/{bid}/products — Create ────────────────
   if (listMatch && req.method === 'POST') {
     const roleRes = await requireRole(req, ROLE_WRITE);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
@@ -85,7 +85,7 @@ async function handle(req, res, helpers) {
     return sendSuccess(res, record, { status: 201 });
   }
 
-  // ─── GET /api/v1/businesses/{bid}/products/{id} — Read One ─────────
+  // ─── GET /v1/businesses/{bid}/products/{id} — Read One ─────────
   if (itemMatch && req.method === 'GET') {
     const roleRes = await requireRole(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
@@ -96,7 +96,7 @@ async function handle(req, res, helpers) {
     return sendSuccess(res, item);
   }
 
-  // ─── PATCH /api/v1/businesses/{bid}/products/{id} — Update ─────────
+  // ─── PATCH /v1/businesses/{bid}/products/{id} — Update ─────────
   if (itemMatch && req.method === 'PATCH') {
     const roleRes = await requireRole(req, ROLE_WRITE);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
@@ -121,7 +121,7 @@ async function handle(req, res, helpers) {
     return sendSuccess(res, result);
   }
 
-  // ─── DELETE /api/v1/businesses/{bid}/products/{id} — Delete ────────
+  // ─── DELETE /v1/businesses/{bid}/products/{id} — Delete ────────
   if (itemMatch && req.method === 'DELETE') {
     const roleRes = await requireRole(req, ROLE_ADMIN);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);

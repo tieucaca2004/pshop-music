@@ -5,7 +5,7 @@
  * Resolution priority:
  *   1. Firebase Auth custom claim (auth.token.businessId)
  *   2. X-Business-Id request header
- *   3. URL path pattern (/api/v1/businesses/{businessId}/...)
+ *   3. URL path pattern (/v1/businesses/{businessId}/...)
  *   4. Default: "pshop-music" (backward compatible with legacy single-tenant)
  *
  * After resolution, verifies the authenticated UID has access to the identified
@@ -33,9 +33,9 @@ function resolveBusinessId(req) {
   if (header && typeof header === 'string' && header.trim()) {
     return header.trim();
   }
-  // Priority 3: URL path pattern — /api/v1/businesses/{businessId}/
+  // Priority 3: URL path pattern — /v1/businesses/{businessId}/
   const path = req.path || req.url || '';
-  const match = path.match(/\/api\/v1\/businesses\/([^/]+)/);
+  const match = path.match(/\/v1\/businesses\/([^/]+)/);
   if (match) {
     return match[1];
   }

@@ -26,7 +26,7 @@ async function handle(req, res, helpers) {
   const { sendSuccess, sendError } = helpers;
   const path = req.__pshPath;
 
-  if (path.indexOf('/api/v1/businesses/') !== 0) return null;
+  if (path.indexOf('/v1/businesses/') !== 0) return null;
 
   const authRes = await verifyAuth(req);
   if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
@@ -39,10 +39,10 @@ async function handle(req, res, helpers) {
   const db = admin.database();
 
   // ─── Route patterns ──────────────────────────────────────────────
-  const txListP = /^\/api\/v1\/businesses\/([^/]+)\/transactions$/;
-  const txItemP = /^\/api\/v1\/businesses\/([^/]+)\/transactions\/([^/]+)$/;
-  const invListP = /^\/api\/v1\/businesses\/([^/]+)\/invoices$/;
-  const invItemP = /^\/api\/v1\/businesses\/([^/]+)\/invoices\/([^/]+)$/;
+  const txListP = /^\/v1\/businesses\/([^/]+)\/transactions$/;
+  const txItemP = /^\/v1\/businesses\/([^/]+)\/transactions\/([^/]+)$/;
+  const invListP = /^\/v1\/businesses\/([^/]+)\/invoices$/;
+  const invItemP = /^\/v1\/businesses\/([^/]+)\/invoices\/([^/]+)$/;
 
   const txList = path.match(txListP);
   const txItem = path.match(txItemP);

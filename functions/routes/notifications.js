@@ -46,7 +46,7 @@ async function handle(req, res, helpers) {
   const { sendSuccess, sendError } = helpers;
   const path = req.__pshPath;
 
-  if (path.indexOf('/api/v1/businesses/') !== 0) return null;
+  if (path.indexOf('/v1/businesses/') !== 0) return null;
 
   const authRes = await verifyAuth(req);
   if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
@@ -59,9 +59,9 @@ async function handle(req, res, helpers) {
   const db = admin.database();
   const notifPath = 'businesses/' + businessId + '/notifications';
 
-  const listPattern = /^\/api\/v1\/businesses\/([^/]+)\/notifications$/;
-  const itemPattern = /^\/api\/v1\/businesses\/([^/]+)\/notifications\/([^/]+)$/;
-  const readAllPattern = /^\/api\/v1\/businesses\/([^/]+)\/notifications\/read-all$/;
+  const listPattern = /^\/v1\/businesses\/([^/]+)\/notifications$/;
+  const itemPattern = /^\/v1\/businesses\/([^/]+)\/notifications\/([^/]+)$/;
+  const readAllPattern = /^\/v1\/businesses\/([^/]+)\/notifications\/read-all$/;
 
   const listMatch = path.match(listPattern);
   const itemMatch = path.match(itemPattern);

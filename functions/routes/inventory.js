@@ -18,7 +18,7 @@ async function handle(req, res, helpers) {
   const { sendSuccess, sendError } = helpers;
   const path = req.__pshPath;
 
-  if (path.indexOf('/api/v1/businesses/') !== 0) return null;
+  if (path.indexOf('/v1/businesses/') !== 0) return null;
 
   const authRes = await verifyAuth(req);
   if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
@@ -29,10 +29,10 @@ async function handle(req, res, helpers) {
   const businessId = req.tenant.businessId;
   const db = admin.database();
 
-  const listPattern = /^\/api\/v1\/businesses\/([^/]+)\/inventory$/;
-  const itemPattern = /^\/api\/v1\/businesses\/([^/]+)\/inventory\/([^/]+)$/;
-  const historyPattern = /^\/api\/v1\/businesses\/([^/]+)\/inventory\/([^/]+)\/history$/;
-  const adjustPattern = /^\/api\/v1\/businesses\/([^/]+)\/inventory\/([^/]+)\/adjust$/;
+  const listPattern = /^\/v1\/businesses\/([^/]+)\/inventory$/;
+  const itemPattern = /^\/v1\/businesses\/([^/]+)\/inventory\/([^/]+)$/;
+  const historyPattern = /^\/v1\/businesses\/([^/]+)\/inventory\/([^/]+)\/history$/;
+  const adjustPattern = /^\/v1\/businesses\/([^/]+)\/inventory\/([^/]+)\/adjust$/;
 
   const listMatch = path.match(listPattern);
   const itemMatch = path.match(itemPattern);

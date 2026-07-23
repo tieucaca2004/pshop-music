@@ -23,16 +23,16 @@ async function handle(req, res, helpers) {
   const path = req.__pshPath;
 
   // ─── Platform Plans (no tenant) ─────────────────────────────────
-  if (path === '/api/v1/plans' && req.method === 'GET') {
+  if (path === '/v1/plans' && req.method === 'GET') {
     const plans = await listPlans();
     return sendSuccess(res, plans);
   }
 
-  if (path === '/api/v1/plans' && req.method === 'POST') {
+  if (path === '/v1/plans' && req.method === 'POST') {
     // Super admin only — but skip auth in tenant mode
   }
 
-  if (path.indexOf('/api/v1/businesses/') !== 0) return null;
+  if (path.indexOf('/v1/businesses/') !== 0) return null;
 
   const authRes = await verifyAuth(req);
   if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
@@ -44,9 +44,9 @@ async function handle(req, res, helpers) {
   const uid = req.user.uid;
   const db = admin.database();
 
-  const subPattern = /^\/api\/v1\/businesses\/([^/]+)\/subscription$/;
-  const billPattern = /^\/api\/v1\/businesses\/([^/]+)\/billing$/;
-  const billItemPattern = /^\/api\/v1\/businesses\/([^/]+)\/billing\/([^/]+)$/;
+  const subPattern = /^\/v1\/businesses\/([^/]+)\/subscription$/;
+  const billPattern = /^\/v1\/businesses\/([^/]+)\/billing$/;
+  const billItemPattern = /^\/v1\/businesses\/([^/]+)\/billing\/([^/]+)$/;
 
   const subMatch = path.match(subPattern);
   const billMatch = path.match(billPattern);

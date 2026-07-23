@@ -343,7 +343,7 @@ async function handle(req, res, helpers) {
   const { sendSuccess, sendError } = helpers;
   const path = req.__pshPath;
 
-  if (path.indexOf('/api/v1/businesses/') !== 0) return null;
+  if (path.indexOf('/v1/businesses/') !== 0) return null;
 
   const authRes = await verifyAuth(req);
   if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
@@ -365,7 +365,7 @@ async function handle(req, res, helpers) {
   // GET /.../reports/inventory — Inventory report
   // GET /.../reports/payments — Payment report (?filter=...)
 
-  const reportPattern = /^\/api\/v1\/businesses\/([^/]+)\/reports\/([a-z]+)$/;
+  const reportPattern = /^\/v1\/businesses\/([^/]+)\/reports\/([a-z]+)$/;
   const match = path.match(reportPattern);
   if (!match) return null;
 

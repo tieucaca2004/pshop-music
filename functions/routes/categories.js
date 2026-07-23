@@ -20,7 +20,7 @@ async function handle(req, res, helpers) {
   const path = req.__pshPath;
 
   // Only handle tenant-scoped paths
-  if (path.indexOf('/api/v1/businesses/') !== 0) return null;
+  if (path.indexOf('/v1/businesses/') !== 0) return null;
 
   const authRes = await verifyAuth(req);
   if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
@@ -31,8 +31,8 @@ async function handle(req, res, helpers) {
   const businessId = req.tenant.businessId;
   const node = 'businesses/' + businessId + '/categories';
 
-  const listPattern = /^\/api\/v1\/businesses\/([^/]+)\/categories$/;
-  const itemPattern = /^\/api\/v1\/businesses\/([^/]+)\/categories\/([^/]+)$/;
+  const listPattern = /^\/v1\/businesses\/([^/]+)\/categories$/;
+  const itemPattern = /^\/v1\/businesses\/([^/]+)\/categories\/([^/]+)$/;
 
   const listMatch = path.match(listPattern);
   const itemMatch = path.match(itemPattern);

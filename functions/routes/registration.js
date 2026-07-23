@@ -176,7 +176,7 @@ async function handle(req, res, helpers) {
   const path = req.__pshPath;
 
   // ─── Public Registration Endpoint (NO AUTH) ─────────────────────────
-  // POST /api/v1/register — Complete self-service onboarding
+  // POST /v1/register — Complete self-service onboarding
   if (path === '/v1/register' && req.method === 'POST') {
     const body = req.body || {};
 
@@ -279,8 +279,8 @@ async function handle(req, res, helpers) {
   }
 
   // ─── Email Verification (mock) ─────────────────────────────────────
-  // POST /api/v1/register/verify-email
-  if (path === '/api/v1/register/verify-email' && req.method === 'POST') {
+  // POST /v1/register/verify-email
+  if (path === '/v1/register/verify-email' && req.method === 'POST') {
     const body = req.body || {};
     if (!body.uid) return sendError(res, 'INVALID_REQUEST', 'uid là bắt buộc.');
 

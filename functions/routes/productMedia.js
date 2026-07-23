@@ -39,9 +39,9 @@ async function handle(req, res, helpers) {
   const { sendSuccess, sendError } = helpers;
   const path = req.__pshPath;
 
-  // Pattern: /api/v1/businesses/{bid}/products/{pid}/media
-  const listPattern = /^\/api\/v1\/businesses\/([^/]+)\/products\/([^/]+)\/media$/;
-  const itemPattern = /^\/api\/v1\/businesses\/([^/]+)\/products\/([^/]+)\/media\/([^/]+)$/;
+  // Pattern: /v1/businesses/{bid}/products/{pid}/media
+  const listPattern = /^\/v1\/businesses\/([^/]+)\/products\/([^/]+)\/media$/;
+  const itemPattern = /^\/v1\/businesses\/([^/]+)\/products\/([^/]+)\/media\/([^/]+)$/;
 
   const listMatch = path.match(listPattern);
   const itemMatch = path.match(itemPattern);
