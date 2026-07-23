@@ -9,9 +9,25 @@
  *
  * Public registration endpoint requires NO authentication.
  * Management endpoints require super_admin role.
+ *
+ * Email verification:
+ *   After registration, sends a verification email via Firebase Auth's
+ *   built-in email system (accounts:sendOobCode REST API).
+ *   The Web API Key is read from firebase-functions config first,
+ *   then falls back to process.env, then to a hardcoded dev value.
  */
 const admin = require('firebase-admin');
 const { getPlan, DEFAULT_PLANS } = require('../shared/subscriptionValidator');
+
+// ─── Firebase Web API Key (for email verification / sendOobCode) ──────
+function getWebApiKey() {
+  try {
+    const functions = require('firebase-functions');
+    const key = functions.config().registration?.web_api_key;
+    if (key) return key;
+  } catch (_) { /* functions SDK not available */ }
+  return process.env.FIREBASE_WEB_API_KEY || 'AIzaSyD-R2cQb-EI4I8wy60z1tuShIXny39Rawc';
+}
 
 function makeSlug(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'business';
@@ -267,6 +283,54 @@ async function handle(req, res, helpers) {
       createdAt: admin.database.ServerValue.TIMESTAMP
     });
 
+    // ─── Send verification email ──────────────────────────────────────
+    // Uses Firebase Auth's built-in email system via the REST API.
+    // Signs the user in to obtain an idToken, then calls sendOobCode
+    // which triggers Firebase to send the verification email with a
+    // secure link.
+    try {
+      const API_KEY = getWebApiKey();
+        const signInRes = await fetch(
+          'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + API_KEY,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: body.email,
+              password: body.password,
+              returnSecureToken: true
+            })
+          }
+        );
+        const signInData = await signInRes.json();
+        if (signInData.idToken) {
+          const oobRes = await fetch(
+            'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=' + API_KEY,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                requestType: 'VERIFY_EMAIL',
+                idToken: signInData.idToken
+              })
+            }
+          );
+          if (oobRes.ok) {
+            console.log('Verification email sent to:', body.email);
+          } else {
+            const oobData = await oobRes.json();
+            console.warn('sendOobCode returned', oobRes.status, 'for', body.email, ':', JSON.stringify(oobData));
+          }
+        } else {
+          console.warn('Could not sign in to send verification email for', body.email, ':', signInData.error ? signInData.error.message : 'no idToken');
+        }
+      } else {
+        console.warn('Could not obtain Web API Key — skipping verification email');
+      }
+    } catch (emailErr) {
+      console.warn('Failed to send verification email:', emailErr.message);
+    }
+
     return sendSuccess(res, {
       businessId: businessId,
       uid: uid,
@@ -274,7 +338,8 @@ async function handle(req, res, helpers) {
       displayName: body.displayName,
       planId: body.planId || 'starter',
       trialDays: body.trialDays || 14,
-      message: 'Đăng ký thành công! Doanh nghiệp ' + body.displayName + ' đã sẵn sàng.'
+      message: 'Registration successful. Please check your email to verify your account.',
+      emailVerified: false
     }, { status: 201 });
   }
 
@@ -291,6 +356,74 @@ async function handle(req, res, helpers) {
     }
 
     return sendSuccess(res, { uid: body.uid, emailVerified: true });
+  }
+
+  // ─── Resend Verification Email ────────────────────────────────────
+  // POST /v1/register/resend-verification
+  if (path === '/v1/register/resend-verification' && req.method === 'POST') {
+    const body = req.body || {};
+    if (!body.email) return sendError(res, 'INVALID_REQUEST', 'Email là bắt buộc.');
+
+    try {
+      // Get user by email
+      const userRecord = await admin.auth().getUserByEmail(body.email);
+      if (userRecord.emailVerified) {
+        return sendSuccess(res, { email: body.email, emailVerified: true, message: 'Email đã được xác thực trước đó.' });
+      }
+
+      // Sign in to get idToken
+      const API_KEY = getWebApiKey();
+
+      // We need the password — require it in the request
+      if (!body.password) return sendError(res, 'INVALID_REQUEST', 'Cần mật khẩu để gửi lại email xác thực.');
+
+      const signInRes = await fetch(
+        'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=' + API_KEY,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: body.email,
+            password: body.password,
+            returnSecureToken: true
+          })
+        }
+      );
+      const signInData = await signInRes.json();
+      if (!signInData.idToken) {
+        return sendError(res, 'AUTH_FAILED', 'Đăng nhập thất bại: ' + ((signInData.error && signInData.error.message) || 'sai email hoặc mật khẩu'));
+      }
+
+      // Send verification email
+      const oobRes = await fetch(
+        'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key=' + API_KEY,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            requestType: 'VERIFY_EMAIL',
+            idToken: signInData.idToken
+          })
+        }
+      );
+
+      if (!oobRes.ok) {
+        const oobData = await oobRes.json();
+        return sendError(res, 'EMAIL_FAILED', 'Gửi email xác thực thất bại: ' + ((oobData.error && oobData.error.message) || 'lỗi không xác định'));
+      }
+
+      return sendSuccess(res, {
+        email: body.email,
+        emailVerified: false,
+        message: 'Email xác thực đã được gửi lại. Vui lòng kiểm tra hộp thư của bạn.'
+      });
+
+    } catch (err) {
+      if (err.code === 'auth/user-not-found') {
+        return sendError(res, 'NOT_FOUND', 'Không tìm thấy tài khoản với email: ' + body.email);
+      }
+      return sendError(res, 'PROVIDER_ERROR', 'Lỗi gửi email xác thực: ' + err.message);
+    }
   }
 
   return null;

@@ -132,6 +132,11 @@ async function requireBusiness(req) {
     }
   }
 
+  // Check email verification (skip for super admins — legacy users)
+  if (req.auth && !req.auth.email_verified && tenant.role !== 'super_admin') {
+    return { ok: false, status: 403, code: 'EMAIL_NOT_VERIFIED', error: 'Vui lòng xác thực email trước khi sử dụng hệ thống.' };
+  }
+
   // Validate business status
   if (businessStatus === 'suspended') {
     return { ok: false, status: 402, code: 'BUSINESS_SUSPENDED', error: 'Doanh nghiệp đã bị tạm ngưng. Vui lòng liên hệ quản trị viên.' };
@@ -271,6 +276,38 @@ async function fullAuthPipeline(req, options) {
   return { ok: true, uid: req.user.uid, businessId: req.tenant.businessId, role: req.tenant.role };
 }
 
+// ─── New: requireEmailVerified() — Email Verification Middleware ────────────
+
+/**
+ * Checks that the authenticated user has verified their email address.
+ * The `email_verified` field comes from the decoded Firebase ID token.
+ *
+ * Skips check for super admins (legacy users with full platform access).
+ *
+ * Returns { ok: true } on success.
+ * Returns { ok: false, status: 403, code, error } if email is not verified.
+ */
+async function requireEmailVerified(req) {
+  if (!req.auth || !req.auth.uid) {
+    return { ok: false, status: 401, code: 'UNAUTHENTICATED', error: 'Cần xác thực trước.' };
+  }
+
+  // Super admins bypass email verification (legacy)
+  if (req.auth.email_verified) {
+    return { ok: true };
+  }
+
+  // Check superAdmins node directly
+  const superSnap = await admin.database()
+    .ref('superAdmins/' + req.auth.uid)
+    .once('value');
+  if (superSnap.exists()) {
+    return { ok: true };
+  }
+
+  return { ok: false, status: 403, code: 'EMAIL_NOT_VERIFIED', error: 'Vui lòng xác thực email trước khi sử dụng hệ thống.' };
+}
+
 module.exports = {
   // Backward compatible (unchanged)
   authenticate,
@@ -282,5 +319,8 @@ module.exports = {
   requireBusiness,
   requireRole,
   requireSuperAdmin,
-  fullAuthPipeline
+  fullAuthPipeline,
+
+  // Email verification
+  requireEmailVerified
 };
