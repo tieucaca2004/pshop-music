@@ -799,6 +799,7 @@ const notificationsRoutes = require('./routes/notifications');
 const auditLogsRoutes = require('./routes/auditLogs');
 const apiKeysRoutes = require('./routes/apiKeys');
 const transactionsRoutes = require('./routes/transactions');
+const teamRoutes = require('./routes/team');
 
 // cors: ALLOWED_ORIGINS (Sprint 15 Phase 1, Task 1.2) — trước đây cors:true
 // (bất kỳ origin nào). Không ảnh hưởng gọi không có Origin header (curl,
@@ -923,7 +924,7 @@ exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRE
     // route Self-Healing của module "drafts" không bao giờ chạm tới được.
     // Phát hiện qua Production Verification (Phase 6) sau khi deploy lần 1.
     const routers = [
-      cmsListsRoutes, cmsSingletonRoutes, productsRoutes, productMediaRoutes, categoriesRoutes, inventoryRoutes, customersRoutes, ordersRoutes, paymentsRoutes, reportsRoutes, subscriptionsRoutes, registrationRoutes, notificationsRoutes, auditLogsRoutes, apiKeysRoutes, transactionsRoutes, mediaRoutes, usersRoutes,
+      cmsListsRoutes, cmsSingletonRoutes, productsRoutes, productMediaRoutes, categoriesRoutes, inventoryRoutes, customersRoutes, ordersRoutes, paymentsRoutes, reportsRoutes, subscriptionsRoutes, registrationRoutes, notificationsRoutes, auditLogsRoutes, apiKeysRoutes, transactionsRoutes, teamRoutes, mediaRoutes, usersRoutes,
       businessesRoutes,
       selfHealingRoutes,
       draftsRoutes, jobsLogsRoutes, facebookRoutes, socialMediaCenterRoutes, founderRoutes,
