@@ -743,6 +743,8 @@ const openclawRoutes = require('./routes/openclaw');
 // server gá»i server) â€” CORS chá»‰ do trÃ¬nh duyá»‡t thá»±c thi.
 
 const apiGateway = require('./api-gateway.js');
+const apiAuth = require('./api-auth.js');
+const apiAuth = require('./api-auth.js');
 
 // Initialize Firebase Admin if not already done
 if (!admin.apps.length) { admin.initializeApp(); }
@@ -912,4 +914,6 @@ exports.aiGenerateWorker = onValueCreated({ ref: '/apiAsyncJobs/{jobId}', region
     // á»Ÿ Ä‘Ã¢y Ä‘á»ƒ trÃ¡nh RTDB trigger tá»± retry (xem chÃº thÃ­ch Ä‘áº§u function).
   }
 });
+
+
 
