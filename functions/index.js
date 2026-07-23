@@ -785,6 +785,7 @@ const subscriptionsRoutes = require('./routes/subscriptions');
 const registrationRoutes = require('./routes/registration');
 const notificationsRoutes = require('./routes/notifications');
 const auditLogsRoutes = require('./routes/auditLogs');
+const apiKeysRoutes = require('./routes/apiKeys');
 
 // cors: ALLOWED_ORIGINS (Sprint 15 Phase 1, Task 1.2) â€” trÆ°á»›c Ä‘Ã¢y cors:true
 // (báº¥t ká»³ origin nÃ o). KhÃ´ng áº£nh hÆ°á»Ÿng gá»i khÃ´ng cÃ³ Origin header (curl,
@@ -909,7 +910,7 @@ exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRE
     // route Self-Healing cá»§a module "drafts" khÃ´ng bao giá» cháº¡m tá»›i Ä‘Æ°á»£c.
     // PhÃ¡t hiá»‡n qua Production Verification (Phase 6) sau khi deploy láº§n 1.
     const routers = [
-      cmsListsRoutes, cmsSingletonRoutes, productsRoutes, productMediaRoutes, categoriesRoutes, inventoryRoutes, customersRoutes, ordersRoutes, paymentsRoutes, reportsRoutes, subscriptionsRoutes, registrationRoutes, notificationsRoutes, auditLogsRoutes, mediaRoutes, usersRoutes,
+      cmsListsRoutes, cmsSingletonRoutes, productsRoutes, productMediaRoutes, categoriesRoutes, inventoryRoutes, customersRoutes, ordersRoutes, paymentsRoutes, reportsRoutes, subscriptionsRoutes, registrationRoutes, notificationsRoutes, auditLogsRoutes, apiKeysRoutes, mediaRoutes, usersRoutes,
       businessesRoutes,
       selfHealingRoutes,
       draftsRoutes, jobsLogsRoutes, facebookRoutes, socialMediaCenterRoutes, founderRoutes,
