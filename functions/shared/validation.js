@@ -40,14 +40,57 @@ const ALLOWED_IMAGE_SIZES = ['1:1', '4:5', '16:9'];
 // SSRF đã phát hiện ở edit_image/remove_background (audit Phần 4.4).
 const ALLOWED_IMAGE_URL_PREFIX = 'https://firebasestorage.googleapis.com/v0/b/pshop-music';
 
+// Private/internal IP ranges — blocks SSRF to internal networks
+const PRIVATE_IP_PATTERNS = [
+  /^https?:\/\/10\./,
+  /^https?:\/\/172\.(1[6-9]|2\d|3[01])\./,
+  /^https?:\/\/192\.168\./,
+  /^https?:\/\/127\.0\.0\./,
+  /^https?:\/\/0\.0\.0\.0/,
+  /^https?:\/\/169\.254\./,
+  /^https?:\/\/localhost/i,
+  /^https?:\/\/[\[::\]f{0,2}]/  // IPv6 loopback
+];
+
 function validateModel(model) {
   return ALLOWED_AI_MODELS.indexOf(model) !== -1;
 }
 function validateSize(size) {
   return ALLOWED_IMAGE_SIZES.indexOf(size) !== -1;
 }
+
+/**
+ * Validates an image URL for SSRF safety.
+ * Returns null if valid, or an error message string if rejected.
+ */
 function validateImageUrlOrigin(url) {
-  return typeof url === 'string' && url.indexOf(ALLOWED_IMAGE_URL_PREFIX) === 0;
+  if (typeof url !== 'string' || !url.trim()) return 'URL is empty';
+  const trimmed = url.trim();
+  // Scheme: https only
+  if (!trimmed.startsWith('https://')) return 'Only HTTPS URLs are allowed';
+  // Allowlisted prefix: project Storage bucket
+  if (trimmed.indexOf(ALLOWED_IMAGE_URL_PREFIX) === 0) return null;
+  // Block private/internal IP ranges
+  for (const pattern of PRIVATE_IP_PATTERNS) {
+    if (pattern.test(trimmed)) return 'URL points to a private/internal network address';
+  }
+  // Allow known external image hosts
+  const ALLOWED_HOSTS = [
+    'firebasestorage.googleapis.com',
+    'storage.googleapis.com',
+    'pshopmusic.com',
+    'atieu.com',
+    'www.pshopmusic.com',
+    'www.atieu.com'
+  ];
+  try {
+    const parsed = new URL(trimmed);
+    if (ALLOWED_HOSTS.indexOf(parsed.hostname) >= 0) return null;
+    // If not in allowlist, reject
+    return 'Image URL host is not in the approved allowlist';
+  } catch {
+    return 'Invalid URL format';
+  }
 }
 
 module.exports = {

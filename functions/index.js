@@ -80,6 +80,9 @@ async function validateRequest(req) {
 // áº£nh Má»šI tá»« mÃ´ táº£ chá»¯, khÃ´ng nháº­n áº£nh Ä‘áº§u vÃ o Ä‘Æ°á»£c). Tráº£ vá» URL Storage vÄ©nh
 // viá»…n (áº£nh OpenAI tráº£ táº¡m thá»i sáº½ háº¿t háº¡n náº¿u khÃ´ng táº£i vá» lÆ°u ngay).
 async function editImageWithOpenAI({ inputUrl, prompt, size, transparentBackground, storagePrefix }) {
+  // SSRF guard — validate URL before fetching
+  const urlError = validateImageUrlOrigin(inputUrl);
+  if (urlError) throw new Error('SSRF guard rejected image URL: ' + urlError);
   const imgRes = await fetch(inputUrl);
   if (!imgRes.ok) throw new Error('KhÃ´ng táº£i Ä‘Æ°á»£c áº£nh tá»« URL cung cáº¥p.');
   const imgBuf = Buffer.from(await imgRes.arrayBuffer());
@@ -746,8 +749,6 @@ const openclawRoutes = require('./routes/openclaw');
 if (!admin.apps.length) { admin.initializeApp(); }
 
 exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRET], cors: ALLOWED_ORIGINS, timeoutSeconds: 120 }, async (req, res) => {
-  await apiGateway.handleRequest(req, res);
-});, async (req, res) => {
   const requestId = makeRequestId();
   res.locals = { requestId };
   const path = (req.path || '/').replace(/\/+$/, '') || '/';
@@ -910,6 +911,7 @@ exports.aiGenerateWorker = onValueCreated({ ref: '/apiAsyncJobs/{jobId}', region
     // á»Ÿ Ä‘Ã¢y Ä‘á»ƒ trÃ¡nh RTDB trigger tá»± retry (xem chÃº thÃ­ch Ä‘áº§u function).
   }
 });
+
 
 
 
