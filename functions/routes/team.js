@@ -36,9 +36,9 @@ async function handle(req, res, helpers) {
   const usersRef = 'businesses/' + businessId + '/users';
 
   // ─── Route patterns ──────────────────────────────────────────────
-  const invitePattern = /^\/api\/v1\/businesses\/([^/]+)\/team\/invite$/;
-  const listPattern = /^\/api\/v1\/businesses\/([^/]+)\/team$/;
-  const memberPattern = /^\/api\/v1\/businesses\/([^/]+)\/team\/([^/]+)$/;
+  const invitePattern = /^\/v1\/businesses\/([^/]+)\/team\/invite$/;
+  const listPattern = /^\/v1\/businesses\/([^/]+)\/team$/;
+  const memberPattern = /^\/v1\/businesses\/([^/]+)\/team\/([^/]+)$/;
 
   const inviteMatch = path.match(invitePattern);
   const listMatch = path.match(listPattern);
