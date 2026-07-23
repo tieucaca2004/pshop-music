@@ -24,6 +24,13 @@
 var AuthContext = (function () {
   'use strict';
 
+  // pshop-music has a real businesses/{id} tenant shell (Phase 0, identity
+  // only) but its CONTENT data (products/categories/banners/blog/videos/seo)
+  // deliberately still lives on the legacy flat nodes pending the deferred
+  // migration. Any consumer branching on businessId must treat this one ID
+  // as "use the legacy flat path", not "use the tenant path".
+  var LEGACY_BUSINESS_ID = 'pshop-music';
+
   // ─── Internal State ────────────────────────────────────────────────
   var state = {
     ready: false,
@@ -140,6 +147,17 @@ var AuthContext = (function () {
     return state.ready ? state.isBusinessUser : false;
   }
 
+  // ─── Effective Business ID (tenant-branching helper) ────────────────
+  // Returns the businessId to use for tenant-scoped data paths, or null
+  // if the caller should use the legacy flat nodes instead — covers both
+  // "no businessId claim at all" (true legacy admin/editor) and "businessId
+  // is pshop-music" (real tenant shell, but content not yet migrated).
+  function getEffectiveBusinessId() {
+    if (!state.ready || !state.businessId) return null;
+    if (state.businessId === LEGACY_BUSINESS_ID) return null;
+    return state.businessId;
+  }
+
   // ─── Migration Data Version ────────────────────────────────────────
   function getDataVersion(collection) {
     // Return cached value if available
@@ -177,6 +195,8 @@ var AuthContext = (function () {
     getCurrentBusinessId: getCurrentBusinessId,
     isSuperAdmin: isSuperAdmin,
     isBusinessUser: isBusinessUser,
-    getDataVersion: getDataVersion
+    getEffectiveBusinessId: getEffectiveBusinessId,
+    getDataVersion: getDataVersion,
+    LEGACY_BUSINESS_ID: LEGACY_BUSINESS_ID
   };
 })();

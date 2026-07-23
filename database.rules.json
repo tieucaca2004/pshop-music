@@ -33,6 +33,14 @@
             "order"
           ]
         },
+        "categories": {
+          ".read": true,
+          ".write": "auth != null && (root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin' || root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_editor')",
+          ".indexOn": [
+            "code",
+            "label"
+          ]
+        },
         "orders": {
           ".read": "auth != null && root.child('businesses/' + $businessId + '/users/' + auth.uid).exists()",
           ".write": "auth != null && (root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_admin' || root.child('businesses/' + $businessId + '/users/' + auth.uid + '/role').val() === 'business_editor')",

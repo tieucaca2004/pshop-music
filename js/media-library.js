@@ -19,6 +19,26 @@
 const MediaLibrary = (function () {
   const SHARED_UPLOAD_FOLDER = 'media';
 
+  // Tenant-aware: a real (non-pshop-music) business user browses/uploads
+  // under businesses/{id}/media only (matches Storage rules' tenant-isolated
+  // path); legacy admin/editor/pshop-music keeps the full-bucket behavior
+  // unchanged (existing images predate per-tenant folders).
+  function effectiveBusinessId() {
+    return (typeof AuthContext !== 'undefined') ? AuthContext.getEffectiveBusinessId() : null;
+  }
+
+  function storageRoot() {
+    const businessId = effectiveBusinessId();
+    if (businessId) return firebase.storage().ref('businesses/' + businessId);
+    return firebase.storage().ref();
+  }
+
+  function uploadFolder() {
+    const businessId = effectiveBusinessId();
+    if (businessId) return 'businesses/' + businessId + '/' + SHARED_UPLOAD_FOLDER;
+    return SHARED_UPLOAD_FOLDER;
+  }
+
   function toMediaItem(itemRef) {
     return Promise.all([
       itemRef.getDownloadURL().catch(() => null),
@@ -50,7 +70,7 @@ const MediaLibrary = (function () {
   // reject — 1 item đọc lỗi (getDownloadURL/getMetadata) vẫn được giữ lại
   // với field null thay vì làm hỏng cả danh sách.
   function list(searchTerm) {
-    return listAllRecursive(firebase.storage().ref())
+    return listAllRecursive(storageRoot())
       .then(items => items.filter(it => !it.contentType || it.contentType.indexOf('image/') === 0))
       .then(items => {
         const term = (searchTerm || '').trim().toLowerCase();
@@ -65,7 +85,7 @@ const MediaLibrary = (function () {
   // đúng MediaItem đầy đủ (fullPath/size/...) từ chính Storage, tránh tự
   // suy luận fullPath từ URL (không đáng tin cậy bằng đọc thẳng từ Storage).
   function upload(file, onProgress) {
-    return StorageUpload.uploadImage(file, SHARED_UPLOAD_FOLDER, onProgress);
+    return StorageUpload.uploadImage(file, uploadFolder(), onProgress);
   }
 
   // remove(fullPath) -> Promise — xóa THẬT khỏi Storage. CHỈ được gọi sau
