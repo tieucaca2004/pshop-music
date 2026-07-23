@@ -1,0 +1,49 @@
+﻿<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>A Tiểu Firebase Seed</title></head>
+<body>
+<h1>Seeding A Tiểu production menu...</h1>
+<pre id="log"></pre>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script>
+var log = document.getElementById('log');
+function out(s) { log.textContent += s + '\n'; }
+
+var items = [
+  {name:"Hủ tiếu xào",price:35000,cat:"mon-chinh",order:1,status:"active"},
+  {name:"Hủ tiếu xào bò",price:40000,cat:"mon-chinh",order:2,status:"active"},
+  {name:"Hủ tiếu mì xào",price:35000,cat:"mon-chinh",order:3,status:"active"},
+  {name:"Hủ tiếu mì xào bò",price:40000,cat:"mon-chinh",order:4,status:"active"},
+  {name:"Cơm chiên",price:35000,cat:"mon-chinh",order:5,status:"active"},
+  {name:"Cơm chiên bò",price:40000,cat:"mon-chinh",order:6,status:"active"},
+  {name:"Mì xào",price:30000,cat:"mon-chinh",order:7,status:"active"},
+  {name:"Mì xào bò",price:35000,cat:"mon-chinh",order:8,status:"active"},
+  {name:"Bánh mì",price:15000,cat:"mon-phu",order:9,status:"active"},
+  {name:"Bánh mì ốp la",price:20000,cat:"mon-phu",order:10,status:"active"},
+  {name:"Trà đá",price:5000,cat:"do-uong",order:11,status:"active"},
+  {name:"Trà nóng",price:5000,cat:"do-uong",order:12,status:"active"},
+  {name:"Cà phê",price:15000,cat:"do-uong",order:13,status:"active"},
+  {name:"Cà phê sữa",price:20000,cat:"do-uong",order:14,status:"active"},
+  {name:"Nước ngọt",price:10000,cat:"do-uong",order:15,status:"active"},
+  {name:"Sting",price:10000,cat:"do-uong",order:16,status:"active"},
+  {name:"Nước suối",price:5000,cat:"do-uong",order:17,status:"active"}
+];
+
+var ref = firebase.database().ref('a-tieu').child('menu');
+var updates = {};
+items.forEach(function(item) {
+  var key = ref.push().key;
+  updates[key] = item;
+});
+ref.set(updates).then(function() {
+  out('✓ Lưu ' + items.length + ' món vào Firebase /a-tieu/menu/');
+  return ref.once('value');
+}).then(function(snap) {
+  out('✓ Firebase đọc lại: ' + Object.keys(snap.val()).length + ' món');
+  out('✓ DONE');
+}).catch(function(e) {
+  out('✗ Lỗi: ' + e.message);
+});
+</script>
+</body></html>

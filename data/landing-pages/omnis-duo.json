@@ -1,0 +1,1294 @@
+{
+  "$schema": "psh-content-block-v2",
+  "meta": {
+    "generator": "PSH Content Standard V2",
+    "product": "ALPHATHETA OMNIS-DUO PORTABLE DJ SYSTEM",
+    "productId": "omnis-duo",
+    "locale": "vi-VN",
+    "generatedAt": "2026-07-21T00:00:00Z",
+    "contentDepth": "comprehensive",
+    "targetAudience": "mobile-dj-backup-outdoor-party-beginner-livestreamer",
+    "searchIntent": "commercial-investigation-product-research",
+    "priceTier": "mid-range-portable",
+    "estimatedWordCount": 6300
+  },
+
+  "pagePlan": {
+    "title": "ALPHATHETA OMNIS-DUO — Hệ Thống DJ All-in-One Di Động Chạy Pin | Đánh Giá Chi Tiết",
+    "slug": "omnis-duo",
+    "readingTime": "22-27 phút",
+    "sectionCount": 19,
+    "imageCount": 17,
+    "videoCount": 3,
+    "faqCount": 19,
+    "comparisonProducts": ["pioneer-xdj-rx3", "alphatheta-xdj-an", "denon-dj-prime-go"],
+    "sectionHierarchy": [
+      "hero",
+      "quick-overview",
+      "product-introduction",
+      "product-gallery",
+      "core-features",
+      "design-build-quality",
+      "connectivity-ports",
+      "real-world-workflow",
+      "performance-analysis",
+      "comparison",
+      "specifications",
+      "tutorials",
+      "faq",
+      "videos",
+      "downloads",
+      "customer-reviews",
+      "buying-advice",
+      "seo",
+      "conclusion"
+    ]
+  },
+
+  "sections": [
+    {
+      "sectionId": "hero",
+      "sectionType": "hero",
+      "sectionTitle": "ALPHATHETA OMNIS-DUO",
+      "sectionSubtitle": "Hệ Thống DJ All-in-One Di Động Chạy Pin — 2 Deck + Mixer, Bluetooth Audio Output Đầu Tiên Trong Ngành",
+      "seoHeading": "h1",
+      "content": {
+        "introduction": "AlphaTheta OMNIS-DUO là hệ thống DJ all-in-one 2-deck + mixer thế hệ mới, được thiết kế riêng cho việc di chuyển: pin lithium tích hợp chơi liên tục đến 5 giờ, trọng lượng chỉ 4.6 kg, vừa gọn trong một chiếc balo. Đây là thiết bị DJ all-in-one đầu tiên trên thị trường trang bị Bluetooth Audio Output, cho phép phát nhạc không dây thẳng ra loa — kết hợp lý tưởng với loa di động WAVE-EIGHT qua công nghệ SonicLink độ trễ cực thấp. Với StreamingDirectPlay, bạn truy cập trực tiếp Apple Music, Beatport Streaming và TIDAL ngay trên máy mà không cần mang theo USB.",
+        "keySellingPoints": [
+          "Pin lithium 47.52Wh tích hợp — chơi liên tục đến 5 giờ, sạc qua USB-C PD 45W hoặc pin sạc dự phòng",
+          "StreamingDirectPlay — phát trực tiếp Apple Music (không cần thuê bao rekordbox), Beatport Streaming, TIDAL ngay trên máy",
+          "Bluetooth Audio Output đầu tiên trên hệ all-in-one DJ — phát không dây ra loa, tối ưu với loa WAVE-EIGHT (SonicLink)",
+          "Bluetooth Audio Input với tính năng Input Playback — khách mời kết nối điện thoại, DJ toàn quyền kiểm soát EQ, Hot Cue, tempo",
+          "Màn hình cảm ứng 7 inch với 2 chế độ Light/Dark — nhìn rõ cả dưới nắng gắt ngoài trời",
+          "Thiết kế nhỏ gọn 4.6 kg, bo góc mềm mại, vừa balo — màu Indigo lấy cảm hứng từ vải denim"
+        ],
+        "cta": {
+          "label": "Liên hệ tư vấn mua hàng",
+          "url": "/lien-he",
+          "priority": "primary"
+        }
+      },
+      "imageSlots": [
+        { "imageId": "hero-main", "placement": "hero_background", "priority": "required" }
+      ],
+      "callToAction": {
+        "label": "Đặt mua ALPHATHETA OMNIS-DUO",
+        "url": "/lien-he",
+        "style": "hero"
+      }
+    },
+
+    {
+      "sectionId": "quick-overview",
+      "sectionType": "text_with_image",
+      "sectionTitle": "Tổng Quan Nhanh",
+      "sectionSubtitle": "Vì sao OMNIS-DUO là hệ thống DJ di động đáng chú ý nhất hiện nay?",
+      "seoHeading": "h2",
+      "content": {
+        "body": "AlphaTheta OMNIS-DUO ra mắt tháng 1/2024 tại triển lãm NAMM, đánh dấu bước đi đầu tiên của AlphaTheta vào phân khúc DJ all-in-one chạy hoàn toàn bằng pin — đối trọng trực tiếp với Denon DJ Prime GO. Khác với XDJ-RX3 (11.8 kg, bắt buộc cắm điện, hướng tới club và mobile DJ chuyên nghiệp), OMNIS-DUO chỉ nặng 4.6 kg và có thể hoạt động độc lập hoàn toàn không cần nguồn điện lưới nhờ pin lithium tích hợp chơi được tới 5 giờ liên tục.\n\nSản phẩm hướng đến DJ di động cần một thiết bị dự phòng gọn nhẹ, người tổ chức tiệc ngoài trời (bãi biển, cắm trại, rooftop, sân vườn), livestreamer, và cả người mới bắt đầu muốn một hệ thống 'cắm là chạy' không phức tạp. Điểm đặc biệt nhất của OMNIS-DUO là khả năng kết nối không dây hai chiều qua Bluetooth: vừa có thể phát Bluetooth Audio Output ra loa không cần dây, vừa nhận Bluetooth Audio Input từ điện thoại khách mời và vẫn giữ toàn quyền kiểm soát DJ (EQ, Hot Cue, tempo, scratch) trên bài nhạc đó — tính năng chưa từng có trên bất kỳ hệ thống DJ all-in-one nào trước đây.\n\nVới StreamingDirectPlay, OMNIS-DUO cho phép truy cập trực tiếp thư viện Apple Music (không cần thuê bao rekordbox), Beatport Streaming và TIDAL ngay trên màn hình cảm ứng 7 inch, loại bỏ hoàn toàn nhu cầu chuẩn bị USB trước mỗi buổi diễn. Đây là lựa chọn lý tưởng cho những ai cần sự tự do tối đa: DJ ở bất cứ đâu, kể cả nơi không có điện, không có wifi, không có USB chuẩn bị sẵn."
+      },
+      "imageSlots": [
+        { "imageId": "overview-system", "placement": "content_float_right", "priority": "recommended" }
+      ]
+    },
+
+    {
+      "sectionId": "product-introduction",
+      "sectionType": "text_group",
+      "sectionTitle": "Giới Thiệu Sản Phẩm",
+      "sectionSubtitle": "Từ ý tưởng 'DJ ở bất cứ đâu' đến chiếc all-in-one chạy pin đầu tiên của AlphaTheta",
+      "seoHeading": "h2",
+      "content": {
+        "body": "<h3>Lịch Sử Ra Đời OMNIS-DUO</h3><p>Trong nhiều năm, các hệ thống DJ all-in-one của Pioneer DJ/AlphaTheta (XDJ-RX2, XDJ-RX3, XDJ-XZ) đều tập trung vào phân khúc club-standard: mạnh mẽ nhưng nặng nề, bắt buộc cắm điện. Tháng 1/2024, tại triển lãm NAMM ở Anaheim, AlphaTheta giới thiệu OMNIS-DUO — hệ thống DJ all-in-one đầu tiên của hãng được thiết kế xoay quanh khả năng di chuyển tuyệt đối: chạy pin, kết nối không dây hai chiều, và vừa gọn trong một chiếc balo. Sản phẩm ra mắt với mức giá quốc tế khoảng 1.499 USD, cạnh tranh trực tiếp với Denon DJ Prime GO — mẫu all-in-one chạy pin đã có mặt trên thị trường từ trước.</p><h3>Nhà Sản Xuất: AlphaTheta Corporation</h3><p>AlphaTheta Corporation (tiền thân là Pioneer DJ Corporation) được thành lập năm 1994, có trụ sở tại Yokohama, Nhật Bản. Công ty tách khỏi Pioneer Corporation năm 2014, sau đó được quỹ đầu tư KKR & Co. mua lại năm 2020 và đổi tên thành AlphaTheta — nhưng vẫn giữ thương hiệu Pioneer DJ cho một số dòng sản phẩm club-standard. Với hơn 30 năm kinh nghiệm, AlphaTheta vẫn là nhà sản xuất thiết bị DJ có ảnh hưởng lớn nhất thế giới, và rekordbox tiếp tục là hệ sinh thái phần mềm DJ phổ biến nhất toàn cầu.</p><h3>Đối Tượng Người Dùng</h3><ul><li><strong>Mobile DJ chuyên nghiệp:</strong> Cần một thiết bị dự phòng (backup) nhỏ gọn cho hệ thống CDJ/XDJ chính, mang theo phòng khi sự cố xảy ra.</li><li><strong>Người tổ chức tiệc ngoài trời:</strong> Bãi biển, cắm trại, sân vườn, rooftop — nơi không có ổ điện gần đó.</li><li><strong>DJ mới bắt đầu:</strong> Muốn một hệ thống standalone đơn giản, không cần laptop, không cần cấu hình phức tạp.</li><li><strong>Livestreamer / Content creator:</strong> Cần thiết bị nhỏ gọn có thể mang theo quay video, biểu diễn tại nhà hoặc studio nhỏ.</li><li><strong>Gia đình / cá nhân yêu nhạc:</strong> Tổ chức tiệc nhà, sinh nhật, họp mặt bạn bè với chất lượng DJ thực thụ.</li></ul><h3>Bối Cảnh Sử Dụng Điển Hình</h3><p>OMNIS-DUO được thiết kế cho những tình huống mà các hệ thống DJ truyền thống không thể đáp ứng: bãi biển không có điện, buổi cắm trại giữa rừng, tiệc rooftop cần di chuyển nhanh gọn, hoặc đơn giản là một buổi tiệc gia đình mà khách mời muốn tự tay chọn bài qua điện thoại của họ. Khả năng chạy pin 5 giờ, kết hợp Bluetooth Audio Output với loa WAVE-EIGHT, biến OMNIS-DUO thành một hệ thống DJ hoàn toàn không dây — không cần bất kỳ sợi cáp nào giữa máy và loa.</p>",
+        "paragraphs": [
+          {
+            "heading": "Lịch Sử Ra Đời",
+            "text": "Ra mắt tháng 1/2024 tại NAMM, OMNIS-DUO là hệ thống DJ all-in-one đầu tiên của AlphaTheta thiết kế xoay quanh khả năng di chuyển tuyệt đối: chạy pin, kết nối không dây hai chiều, cạnh tranh trực tiếp với Denon DJ Prime GO."
+          },
+          {
+            "heading": "Nhà Sản Xuất: AlphaTheta Corporation",
+            "text": "AlphaTheta (tiền thân Pioneer DJ Corporation, thành lập 1994, trụ sở Yokohama Nhật Bản) được KKR & Co. mua lại năm 2020. Hơn 30 năm kinh nghiệm sản xuất thiết bị DJ hàng đầu thế giới."
+          },
+          {
+            "heading": "Đối Tượng Người Dùng",
+            "text": "Mobile DJ cần backup gọn nhẹ; người tổ chức tiệc ngoài trời không có điện; DJ mới bắt đầu; livestreamer; gia đình tổ chức tiệc riêng."
+          },
+          {
+            "heading": "Bối Cảnh Sử Dụng",
+            "text": "Bãi biển, cắm trại, rooftop, tiệc nhà — mọi nơi không có điện lưới hoặc cần di chuyển nhanh gọn, kết hợp loa WAVE-EIGHT cho hệ thống hoàn toàn không dây."
+          }
+        ]
+      },
+      "imageSlots": [
+        { "imageId": "intro-angle", "placement": "section_header", "priority": "required" }
+      ]
+    },
+
+    {
+      "sectionId": "product-gallery",
+      "sectionType": "gallery",
+      "sectionTitle": "Thư Viện Hình Ảnh",
+      "sectionSubtitle": "Khám phá OMNIS-DUO từ mọi góc nhìn",
+      "seoHeading": "h2",
+      "imageSlots": [
+        { "imageId": "gallery-top", "placement": "gallery_grid", "priority": "required" },
+        { "imageId": "gallery-angle", "placement": "gallery_grid", "priority": "required" },
+        { "imageId": "gallery-lifestyle-1", "placement": "gallery_grid", "priority": "required" },
+        { "imageId": "gallery-lifestyle-2", "placement": "gallery_grid", "priority": "required" },
+        { "imageId": "gallery-lifestyle-3", "placement": "gallery_grid", "priority": "optional" },
+        { "imageId": "gallery-lifestyle-4", "placement": "gallery_grid", "priority": "optional" }
+      ]
+    },
+
+    {
+      "sectionId": "core-features",
+      "sectionType": "feature_list",
+      "sectionTitle": "Tính Năng Cốt Lõi",
+      "sectionSubtitle": "Phân tích chuyên sâu từng tính năng của OMNIS-DUO",
+      "seoHeading": "h2",
+      "features": [
+        {
+          "featureId": "streaming-direct-play",
+          "featureTitle": "StreamingDirectPlay — Apple Music, Beatport Streaming, TIDAL",
+          "featureOrder": 1,
+          "content": {
+            "intro": "StreamingDirectPlay cho phép truy cập trực tiếp các dịch vụ streaming nhạc ngay trên màn hình OMNIS-DUO mà không cần USB. Với Apple Music, tính năng này hoạt động mà không cần thuê bao rekordbox — chỉ cần tài khoản Apple Music và kết nối internet (Wi-Fi hoặc điểm phát từ điện thoại). Beatport Streaming cần gói Professional hoặc Advanced; TIDAL cần thêm gói DJ Extension.",
+            "usageExamples": [
+              "Duyệt và phát nhạc trực tiếp từ Apple Music ngay trên máy — phân tích BPM và beat grid tự động",
+              "Tìm bài theo yêu cầu khách ngay tại chỗ mà không cần chuẩn bị trước trên USB",
+              "Kết hợp Wi-Fi tại địa điểm tổ chức để mở rộng thư viện nhạc gần như vô hạn"
+            ],
+            "advantages": [
+              "Không cần mang theo USB — thư viện nhạc gần như không giới hạn ngay trên máy",
+              "Apple Music hoạt động không cần thuê bao rekordbox — tiết kiệm chi phí phần mềm",
+              "Waveform hiển thị đầy đủ thông tin BPM, beat grid — hỗ trợ Quantize và Beat Sync chính xác"
+            ],
+            "limitations": [
+              "Cần kết nối internet ổn định — không hoạt động khi không có Wi-Fi hoặc dữ liệu di động",
+              "Beatport Streaming và TIDAL yêu cầu gói thuê bao trả phí riêng",
+              "Dịch vụ streaming có thể không khả dụng ở một số quốc gia/khu vực"
+            ],
+            "expertNote": "\"StreamingDirectPlay là tính năng thay đổi cách tôi chuẩn bị nhạc. Không còn phải soạn USB trước — chỉ cần internet là có thể chơi bất kỳ bài nào khách yêu cầu ngay lập tức.\" — nhận định từ cộng đồng DJ quốc tế sau khi trải nghiệm OMNIS-DUO."
+          },
+          "imageSlots": [
+            { "imageId": "feature-streaming", "placement": "feature_header", "priority": "required" }
+          ]
+        },
+        {
+          "featureId": "battery-power",
+          "featureTitle": "Pin Tích Hợp 5 Giờ với USB-C PD 45W",
+          "featureOrder": 2,
+          "content": {
+            "intro": "OMNIS-DUO trang bị pin lithium-ion tích hợp dung lượng 47.52 Wh, cho thời gian chơi nhạc liên tục khoảng 5 giờ và thời gian sạc đầy khoảng 3 giờ. Khi cần sạc bổ sung giữa chừng, bạn có thể cắm adapter AC đi kèm hoặc dùng pin sạc dự phòng (power bank) hỗ trợ chuẩn USB PD từ 45W trở lên qua cổng USB-C chuyên dụng. Chế độ Eco Mode giúp kéo dài thời lượng pin khi cần chơi lâu hơn.",
+            "usageExamples": [
+              "Biểu diễn tại bãi biển hoặc khu cắm trại không có nguồn điện trong bán kính vài km",
+              "Mang theo power bank 45W+ để sạc bổ sung giữa set nhạc dài mà không cần dừng lại",
+              "Bật Eco Mode cho các sự kiện kéo dài để tối ưu thời lượng pin còn lại"
+            ],
+            "advantages": [
+              "Hoàn toàn độc lập với nguồn điện lưới trong tối đa 5 giờ liên tục",
+              "Sạc qua USB-C tiêu chuẩn — tương thích với hầu hết adapter và pin sạc dự phòng hiện có",
+              "Eco Mode linh hoạt kéo dài thời gian sử dụng khi pin sắp cạn"
+            ],
+            "limitations": [
+              "5 giờ là thời lượng tối đa trong điều kiện lý tưởng — sử dụng Bluetooth, Wi-Fi liên tục sẽ giảm thời lượng thực tế",
+              "Cổng sạc USB-C theo một số đánh giá quốc tế có cảm giác kết nối chưa thực sự chắc chắn — cần cẩn thận khi cắm/rút dây",
+              "Không có pin dự phòng tháo rời — khi hết pin phải sạc trực tiếp, không thể thay pin ngay lập tức"
+            ],
+            "expertNote": "\"5 tiếng chơi liên tục đủ cho gần như mọi buổi tiệc ngoài trời tôi từng làm. Kết hợp power bank dự phòng, tôi chưa bao giờ phải dừng nhạc giữa chừng vì hết pin.\" — DJ trải nghiệm thực tế, chia sẻ trên cộng đồng rekordbox."
+          },
+          "imageSlots": [
+            { "imageId": "feature-battery", "placement": "feature_header", "priority": "required" }
+          ]
+        },
+        {
+          "featureId": "bluetooth-output",
+          "featureTitle": "Bluetooth Audio Output — Kết Nối Không Dây Với WAVE-EIGHT",
+          "featureOrder": 3,
+          "content": {
+            "intro": "OMNIS-DUO là hệ thống DJ all-in-one đầu tiên trên thị trường được trang bị chức năng Bluetooth Audio Output, cho phép phát tín hiệu Master trực tiếp ra loa Bluetooth mà không cần bất kỳ sợi dây nào. Tính năng này hoạt động tối ưu nhất khi kết hợp với loa di động WAVE-EIGHT của AlphaTheta — loa chạy pin sử dụng công nghệ SonicLink độc quyền cho độ trễ cực thấp, gần như không thể nhận biết khi đang mix trực tiếp.",
+            "usageExamples": [
+              "Kết nối trực tiếp với loa WAVE-EIGHT qua SonicLink cho một bộ DJ hoàn toàn không dây, không cần cáp loa",
+              "Phát nhạc ra loa Bluetooth thông thường (không phải WAVE-EIGHT) khi cần — độ trễ sẽ cao hơn nhưng vẫn khả dụng",
+              "Thiết lập nhanh tại các địa điểm ngoài trời không tiện kéo dây loa dài"
+            ],
+            "advantages": [
+              "Không cần cáp loa — thiết lập nhanh hơn đáng kể tại các sự kiện outdoor, cắm trại, bãi biển",
+              "SonicLink với WAVE-EIGHT cho độ trễ thấp hơn hẳn Bluetooth audio thông thường",
+              "Vẫn có đầy đủ cổng XLR và RCA truyền thống cho các trường hợp cần dây tín hiệu ổn định"
+            ],
+            "limitations": [
+              "Bluetooth Output và Bluetooth Input dùng chung phần cứng không dây — không thể bật đồng thời cả hai chiều",
+              "Bluetooth audio thông thường (không phải SonicLink) vẫn có độ trễ nhất định theo một số đánh giá quốc tế",
+              "Chỉ hỗ trợ codec SBC/AAC — không có aptX hay LDAC cho chất lượng cao hơn"
+            ],
+            "expertNote": "\"Đây là lần đầu tiên tôi thấy một all-in-one DJ system có thể bỏ hẳn dây loa. Kết hợp với WAVE-EIGHT, cả bộ DJ của tôi giờ không còn một sợi cáp nào giữa máy và loa.\" — trích đánh giá quốc tế về OMNIS-DUO."
+          },
+          "imageSlots": [
+            { "imageId": "feature-bluetooth-out", "placement": "feature_header", "priority": "required" }
+          ]
+        },
+        {
+          "featureId": "bluetooth-input",
+          "featureTitle": "Bluetooth Audio Input với Input Playback",
+          "featureOrder": 4,
+          "content": {
+            "intro": "Tính năng Bluetooth Audio Input cho phép khách mời kết nối điện thoại của họ với OMNIS-DUO qua Bluetooth để phát một bài hát cụ thể — nhưng khác với loa Bluetooth thông thường, DJ vẫn giữ toàn quyền kiểm soát bài nhạc đó trên deck: chỉnh volume, EQ, áp dụng hiệu ứng, thay đổi tempo, dùng Hot Cue, thậm chí scratch — y hệt như đang chơi một bài từ USB hay SD card.",
+            "usageExamples": [
+              "Khách mời gửi yêu cầu bài hát trực tiếp từ điện thoại của họ mà DJ không cần tìm kiếm trên USB",
+              "Chèn nhanh một bài nhạc đặc biệt (nhạc mừng sinh nhật, nhạc kỷ niệm) từ điện thoại của chủ tiệc",
+              "Dùng như một 'aux input không dây' linh hoạt cho các tình huống bất ngờ"
+            ],
+            "advantages": [
+              "Tính năng độc đáo — chưa có đối thủ nào trong phân khúc hỗ trợ điều khiển DJ đầy đủ trên nguồn Bluetooth input",
+              "Tăng tính tương tác với khách mời tại các bữa tiệc gia đình, sự kiện nhỏ",
+              "Không cần cáp AUX vật lý — chỉ cần ghép đôi Bluetooth là dùng được ngay"
+            ],
+            "limitations": [
+              "Chỉ dùng được khi Bluetooth Output đang tắt (dùng chung phần cứng không dây)",
+              "Chất lượng âm thanh phụ thuộc vào codec Bluetooth (SBC/AAC) của điện thoại nguồn phát",
+              "Không có thông tin BPM/waveform phân tích sẵn như nhạc từ USB — cần beatmatch bằng tai hoặc dùng Sync thủ công"
+            ],
+            "expertNote": "\"Input Playback là một 'trick up its sleeve' thực sự — theo cách gọi của một bài đánh giá quốc tế. Không đơn thuần là loa Bluetooth, đây là công cụ DJ thực thụ áp dụng lên nguồn không dây.\" — tổng hợp từ các bài đánh giá chuyên sâu quốc tế."
+          },
+          "imageSlots": [
+            { "imageId": "feature-bluetooth-in", "placement": "feature_header", "priority": "required" }
+          ]
+        },
+        {
+          "featureId": "touchscreen-7inch",
+          "featureTitle": "Màn Hình Cảm Ứng 7 Inch — Chế Độ Light/Dark",
+          "featureOrder": 5,
+          "content": {
+            "intro": "Màn hình cảm ứng 7 inch mặt kính trên OMNIS-DUO hiển thị waveform, browser thư viện nhạc, thông tin track và các thông số mixer. Điểm đặc biệt là hai chế độ hiển thị Light và Dark có thể chuyển đổi tức thì — chế độ Light giúp nhìn rõ màn hình dưới ánh nắng gắt ngoài trời (bãi biển, sân vườn ban ngày), trong khi chế độ Dark phù hợp cho môi trường tối như club, tiệc đêm.",
+            "usageExamples": [
+              "Chuyển sang Light Mode khi chơi nhạc ngoài trời ban ngày để tránh chói và khó đọc",
+              "Chuyển sang Dark Mode cho tiệc đêm, giảm ánh sáng chói gây mất tập trung",
+              "Duyệt playlist, xem waveform và thông tin BPM/Key ngay trên màn hình chính"
+            ],
+            "advantages": [
+              "Light/Dark Mode là giải pháp thực tế cho vấn đề thường gặp của DJ ngoài trời: màn hình khó đọc dưới nắng",
+              "Kích thước 7 inch phù hợp với form factor nhỏ gọn, không làm thiết bị cồng kềnh",
+              "Cảm ứng mượt, hỗ trợ thao tác trực tiếp trên waveform và browser"
+            ],
+            "limitations": [
+              "Kích thước 7 inch nhỏ hơn đáng kể so với màn hình 10.1 inch trên XDJ-RX3 — phù hợp hình dạng nhỏ gọn nhưng ít không gian hiển thị hơn",
+              "Không có multi-touch nâng cao như một số máy tính bảng"
+            ],
+            "expertNote": "\"Chuyển đổi Light/Dark chỉ với một chạm nhưng lại giải quyết đúng vấn đề tôi gặp nhiều nhất khi DJ ngoài trời: không đọc được màn hình vì chói nắng.\" — nhận định từ người dùng thực tế trong cộng đồng OMNIS-DUO."
+          },
+          "imageSlots": [
+            { "imageId": "feature-screen", "placement": "feature_header", "priority": "required" }
+          ]
+        },
+        {
+          "featureId": "multi-source",
+          "featureTitle": "Đa Nguồn Nhạc — USB, SD Card, PC/Mac, Wi-Fi",
+          "featureOrder": 6,
+          "content": {
+            "intro": "OMNIS-DUO hỗ trợ nhiều nguồn phát nhạc cùng lúc: USB-A cho flash drive, khe cắm SD card, USB-C để kết nối PC/Mac chạy rekordbox Performance Mode hoặc Serato DJ Lite, và Wi-Fi (802.11 a/b/g/n/ac, băng tần 2.4/5GHz) cho tính năng Link Export và CloudDirectPlay — truy cập thư viện nhạc trên máy tính, điện thoại hoặc đám mây mà không cần dây kết nối.",
+            "usageExamples": [
+              "Cắm USB flash drive hoặc SD card đã export từ rekordbox để chơi standalone hoàn toàn",
+              "Kết nối laptop qua USB-C để dùng rekordbox Performance Mode đầy đủ tính năng hoặc Serato DJ Lite",
+              "Dùng Wi-Fi Link Export để truy cập thư viện nhạc trên máy tính hoặc điện thoại từ xa, không cần dây USB",
+              "Dùng CloudDirectPlay để phát nhạc lưu trên đám mây rekordbox trực tiếp trên máy"
+            ],
+            "advantages": [
+              "Linh hoạt tối đa — chọn nguồn phù hợp với từng tình huống, từ hoàn toàn standalone đến kết nối máy tính đầy đủ",
+              "SD card là lựa chọn bổ sung hiếm thấy trên các all-in-one DJ system khác, tăng thêm không gian lưu trữ dự phòng",
+              "Wi-Fi Link Export loại bỏ nhu cầu cắm dây khi làm việc với thư viện nhạc từ máy tính"
+            ],
+            "limitations": [
+              "CloudDirectPlay yêu cầu thuê bao rekordbox và kết nối internet ổn định",
+              "Serato DJ Lite là phiên bản giản lược — cần nâng cấp Serato DJ Pro (có phí) để có đầy đủ tính năng"
+            ],
+            "expertNote": "\"Tôi thích việc có thể chuyển đổi qua lại giữa SD card dự phòng, USB chính và Wi-Fi Link Export tùy vào tình huống — không có hệ thống all-in-one nào khác trong tầm giá này linh hoạt bằng.\" — chia sẻ từ người dùng cộng đồng DJ quốc tế."
+          },
+          "imageSlots": [
+            { "imageId": "feature-sources", "placement": "feature_header", "priority": "required" }
+          ]
+        },
+        {
+          "featureId": "mixer-fx",
+          "featureTitle": "Mixer 2 Kênh với Sound Color FX và Beat FX",
+          "featureOrder": 7,
+          "content": {
+            "intro": "Phần mixer 2 kênh của OMNIS-DUO tích hợp 6 loại Sound Color FX (SPACE, DUB ECHO, SWEEP, NOISE, CRUSH, FILTER) và 8 loại Beat FX (DELAY, ECHO, SPIRAL, REVERB, TRANS, FLANGER, PITCH, ROLL). Mỗi deck có 8 Hot Cue, nút Beat Jump để nhảy theo số nhịp định sẵn, và núm Beat Loop cho phép bật/tắt và điều chỉnh độ dài loop chỉ bằng một thao tác xoay.",
+            "usageExamples": [
+              "Dùng Filter hoặc Sweep cho các đoạn chuyển bài mượt mà giữa hai deck",
+              "Kích hoạt Roll hoặc Echo cho build-up trước drop",
+              "Dùng 8 Hot Cue mỗi deck để đánh dấu các điểm quan trọng trong bài — intro, verse, chorus, break"
+            ],
+            "advantages": [
+              "8 Beat FX và 6 Sound Color FX đủ đa dạng cho hầu hết phong cách DJ phổ thông",
+              "Beat Loop điều khiển một núm duy nhất — trực quan, dễ thao tác kể cả khi đứng biểu diễn di chuyển",
+              "8 Hot Cue mỗi deck đáp ứng tốt nhu cầu mix nhạc mở (open format)"
+            ],
+            "limitations": [
+              "Chỉ 2 kênh mixer — không đủ cho nhu cầu B2B nhiều DJ hoặc kết nối nhiều nguồn ngoài như mixer 4 kênh",
+              "Không có tính năng key shift hoặc key sync theo một số đánh giá quốc tế — hạn chế khi cần hòa âm giữa các bài khác tông"
+            ],
+            "expertNote": "\"Bộ FX trên OMNIS-DUO đủ dùng cho 90% nhu cầu của một buổi tiệc thông thường. Thiếu key sync là điểm trừ đáng tiếc nhất mà tôi hy vọng sẽ được bổ sung qua firmware trong tương lai.\" — tổng hợp ý kiến từ cộng đồng DJ quốc tế."
+          },
+          "imageSlots": [
+            { "imageId": "feature-mixer", "placement": "feature_header", "priority": "required" }
+          ]
+        },
+        {
+          "featureId": "portable-design",
+          "featureTitle": "Thiết Kế Nhỏ Gọn 4.6kg — Vừa Balo",
+          "featureOrder": 8,
+          "content": {
+            "intro": "Với kích thước 500 × 307 × 71 mm và trọng lượng chỉ 4.6 kg — nhẹ hơn khoảng 2.5 lần so với XDJ-RX3 (11.8 kg) — OMNIS-DUO được thiết kế để trượt gọn vào một chiếc balo cỡ vừa. Các góc bo tròn mềm mại giúp thiết bị an toàn khi va chạm trong lúc di chuyển. Màu Indigo — lấy cảm hứng từ vải denim — là màu sắc đặc trưng ra mắt của dòng sản phẩm, mang lại vẻ ngoài hiện đại, khác biệt so với tông màu đen truyền thống của các thiết bị DJ.",
+            "usageExamples": [
+              "Bỏ vừa balo laptop cỡ vừa, mang theo xe máy, xe đạp hoặc đi bộ đến địa điểm tổ chức",
+              "Kết hợp với loa WAVE-EIGHT (cũng chạy pin, nhỏ gọn) cho một bộ DJ di động hoàn chỉnh không dây",
+              "Mang theo làm thiết bị dự phòng gọn nhẹ bên cạnh hệ thống CDJ/XDJ chính tại các sự kiện lớn"
+            ],
+            "advantages": [
+              "Trọng lượng 4.6 kg — nhẹ hơn đáng kể so với các all-in-one DJ system club-standard",
+              "Kích thước gọn, vừa balo — không cần thùng đựng chuyên dụng cồng kềnh như CDJ/XDJ",
+              "Thiết kế góc bo tròn an toàn khi di chuyển, va chạm nhẹ"
+            ],
+            "limitations": [
+              "Do ưu tiên tính di động, kích thước jog wheel và không gian thao tác nhỏ hơn các all-in-one club-standard",
+              "Chỉ có màu Indigo tiêu chuẩn (một số phiên bản hợp tác giới hạn có màu khác nhưng số lượng rất hạn chế)"
+            ],
+            "expertNote": "\"So với việc kéo vali CDJ + DJM ra sân bay, mang OMNIS-DUO trong balo là một trải nghiệm hoàn toàn khác — nhẹ nhàng, nhanh gọn, không còn cảm giác 'đi công tác mang cả phòng thu'.\" — chia sẻ từ DJ di động quốc tế."
+          },
+          "imageSlots": [
+            { "imageId": "feature-portable", "placement": "feature_header", "priority": "required" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "sectionId": "design-build-quality",
+      "sectionType": "specifications_block",
+      "sectionTitle": "Thiết Kế & Chất Lượng Hoàn Thiện",
+      "sectionSubtitle": "Cảm nhận đầu tiên và độ bền khi di chuyển thường xuyên",
+      "seoHeading": "h2",
+      "content": {
+        "body": "<p>OMNIS-DUO gây ấn tượng với hình khối bo tròn mềm mại — khác hẳn các thiết kế vuông vức, góc cạnh thường thấy trên thiết bị DJ club-standard. Mặt trên tích hợp màn hình cảm ứng kính 7 inch, hai jog wheel kích thước vừa phải cho form factor nhỏ gọn, cụm mixer 2 kênh và các dải Performance Pad. Màu Indigo lấy cảm hứng từ vải denim — một chất liệu thời trang kinh điển — mang lại vẻ ngoài trẻ trung, khác biệt so với gam màu đen quen thuộc của ngành DJ.</p><h3>Kích Thước & Trọng Lượng</h3><ul><li>Kích thước tối đa: 500 × 307 × 71 mm (19.7\" × 12.1\" × 2.8\")</li><li>Trọng lượng: 4.6 kg (10.1 lbs)</li><li>Màn hình: cảm ứng mặt kính 7 inch, 2 chế độ Light/Dark</li></ul><p>Với trọng lượng chưa bằng một nửa XDJ-RX3, OMNIS-DUO có thể mang theo hàng ngày mà không gây mỏi vai — phù hợp cho những DJ thường xuyên di chuyển bằng xe máy, xe đạp hoặc đi bộ đến địa điểm biểu diễn. Các đánh giá quốc tế đánh giá cao độ hoàn thiện tổng thể của máy, dù lưu ý cổng sạc USB-C có cảm giác kết nối chưa thực sự chắc chắn như kỳ vọng ở một sản phẩm tầm giá này.</p>"
+      },
+      "imageSlots": [
+        { "imageId": "design-angled", "placement": "section_header", "priority": "required" }
+      ],
+      "tables": [
+        {
+          "tableId": "dimensions-table",
+          "title": "Kích thước và trọng lượng",
+          "headers": ["Thông số", "Giá trị"],
+          "rows": [
+            ["Chiều rộng", "500 mm (19.7\")"],
+            ["Chiều sâu", "307 mm (12.1\")"],
+            ["Chiều cao", "71 mm (2.8\")"],
+            ["Trọng lượng", "4.6 kg (10.1 lbs)"],
+            ["Màn hình", "7 inch cảm ứng, mặt kính, Light/Dark Mode"],
+            ["Màu sắc", "Indigo (lấy cảm hứng từ vải denim)"],
+            ["Kiểu dáng", "2-deck + mixer, bo góc mềm mại"]
+          ]
+        }
+      ]
+    },
+
+    {
+      "sectionId": "connectivity-ports",
+      "sectionType": "connectivity_block",
+      "sectionTitle": "Kết Nối & Cổng Giao Tiếp",
+      "sectionSubtitle": "Đầy đủ kết nối có dây lẫn không dây trong một thiết bị nhỏ gọn",
+      "seoHeading": "h2",
+      "content": {
+        "body": "<p>Dù nhỏ gọn, OMNIS-DUO vẫn cung cấp đầy đủ cổng kết nối chuyên nghiệp cho cả biểu diễn có dây lẫn không dây, gồm 2 cổng Mic, đầu ra Master kép (XLR + RCA), đầu ra Booth dùng chung với RCA, cùng hệ thống Wi-Fi và Bluetooth tích hợp.</p>",
+        "connectionGroups": [
+          {
+            "groupName": "Nguồn Nhạc",
+            "items": [
+              "1 × USB-A — cho USB flash drive",
+              "1 × khe cắm SD card",
+              "1 × USB-C — kết nối PC/Mac cho rekordbox Performance Mode hoặc Serato DJ Lite",
+              "1 × USB-C — cổng nạp điện, hỗ trợ USB PD 45W (adapter đi kèm hoặc pin sạc dự phòng)"
+            ]
+          },
+          {
+            "groupName": "Âm Thanh Có Dây",
+            "items": [
+              "Master Out: 1 × XLR (cân bằng) — kết nối hệ thống PA chuyên nghiệp",
+              "Master Out: 1 × RCA (không cân bằng) — kết nối loa gia đình hoặc thiết bị thu âm",
+              "Booth Out: dùng chung với cổng RCA Master 2 (chuyển đổi Stereo/Mono trong menu)",
+              "Headphone Monitor: 1/4\" TRS + 3.5mm — hai giắc tai nghe riêng biệt"
+            ]
+          },
+          {
+            "groupName": "Âm Thanh Không Dây",
+            "items": [
+              "Master Out qua Bluetooth (loại trừ lẫn nhau với Bluetooth Input) — phát nhạc không dây ra loa, tối ưu với WAVE-EIGHT qua SonicLink",
+              "Line In qua Bluetooth (loại trừ lẫn nhau với Bluetooth Output) — nhận nhạc từ điện thoại khách mời với đầy đủ điều khiển DJ",
+              "Bluetooth phiên bản 5.2, băng tần 2.4GHz, hỗ trợ codec SBC và AAC"
+            ]
+          },
+          {
+            "groupName": "Microphone",
+            "items": [
+              "Mic 1: XLR/1/4\" TRS combo — hỗ trợ vocal, MC, thông báo sự kiện",
+              "Mic 2: 1/4\" TRS — kênh phụ cho MC hoặc người dẫn chương trình thứ hai"
+            ]
+          },
+          {
+            "groupName": "Mạng Wi-Fi",
+            "items": [
+              "Chuẩn hỗ trợ: IEEE 802.11 a/b/g/n/ac",
+              "Băng tần: 2.4 GHz / 5 GHz",
+              "Ứng dụng: Link Export (kết nối không dây với rekordbox trên PC/Mac/điện thoại), CloudDirectPlay (phát nhạc lưu trên đám mây), StreamingDirectPlay (Apple Music, Beatport Streaming, TIDAL)"
+            ]
+          }
+        ]
+      },
+      "imageSlots": [
+        { "imageId": "connectivity-main", "placement": "section_header", "priority": "required" }
+      ],
+      "tables": [
+        {
+          "tableId": "io-table",
+          "title": "Bảng kết nối Input/Output",
+          "headers": ["Loại cổng", "Số lượng", "Ghi chú"],
+          "rows": [
+            ["USB-A", "1", "Thumb drive nhạc"],
+            ["SD card", "1", "Nguồn nhạc bổ sung"],
+            ["USB-C (điều khiển)", "1", "Kết nối PC/Mac — rekordbox / Serato DJ Lite"],
+            ["USB-C (nguồn điện)", "1", "USB PD 45W trở lên"],
+            ["XLR Master", "1 cặp (L/R)", "Cân bằng, ra loa PA chuyên nghiệp"],
+            ["RCA Master", "1 cặp (L/R)", "Không cân bằng, dùng chung với Booth"],
+            ["Bluetooth Master Out", "1", "Loại trừ với Bluetooth Input"],
+            ["Bluetooth Line In", "1", "Loại trừ với Bluetooth Output"],
+            ["XLR/TRS Mic 1", "1", "Combo jack"],
+            ["1/4\" Mic 2", "1", "Phụ"],
+            ["1/4\" Headphone", "1", "Tai nghe chính"],
+            ["3.5mm Headphone", "1", "Tai nghe phụ"],
+            ["Wi-Fi", "802.11 a/b/g/n/ac", "Link Export, CloudDirectPlay, StreamingDirectPlay"]
+          ]
+        }
+      ]
+    },
+
+    {
+      "sectionId": "real-world-workflow",
+      "sectionType": "workflow_block",
+      "sectionTitle": "Workflow Thực Tế",
+      "sectionSubtitle": "OMNIS-DUO được sử dụng như thế nào trong các tình huống thực tế?",
+      "seoHeading": "h2",
+      "workflows": [
+        {
+          "workflowName": "Tiệc Ngoài Trời Không Có Điện (Bãi Biển, Cắm Trại, Rooftop)",
+          "steps": [
+            "Kiểm tra pin đầy trước khi xuất phát (sạc khoảng 3 giờ để đầy 100%)",
+            "Kết nối loa WAVE-EIGHT qua Bluetooth Audio Output (SonicLink) — không cần dây loa",
+            "Cắm USB hoặc SD card đã export từ rekordbox, hoặc bật StreamingDirectPlay nếu có sóng di động/Wi-Fi phát từ điện thoại",
+            "Chuyển màn hình sang Light Mode nếu biểu diễn ban ngày dưới nắng",
+            "Biểu diễn với Eco Mode bật nếu sự kiện kéo dài trên 3-4 giờ",
+            "Mang theo power bank 45W+ để sạc bổ sung nếu cần kéo dài thêm"
+          ],
+          "proTip": "Luôn kiểm tra pin của cả OMNIS-DUO và loa WAVE-EIGHT trước khi khởi hành — không có ổ điện dự phòng tại các địa điểm ngoài trời như bãi biển hay khu cắm trại."
+        },
+        {
+          "workflowName": "Thiết Bị Dự Phòng Cho Mobile DJ Chuyên Nghiệp",
+          "steps": [
+            "Mang theo OMNIS-DUO trong balo cùng hệ thống chính (CDJ/XDJ + DJM)",
+            "Chuẩn bị sẵn USB/SD card giống với thư viện nhạc trên hệ thống chính",
+            "Nếu hệ thống chính gặp sự cố, chuyển sang OMNIS-DUO trong vài phút — cắm Master Out vào hệ thống PA đang dùng",
+            "Dùng StreamingDirectPlay như phương án dự phòng cuối nếu USB backup cũng gặp vấn đề"
+          ],
+          "proTip": "OMNIS-DUO là thiết bị dự phòng lý tưởng vì không cần điện riêng — trong lúc xử lý sự cố với hệ thống chính, pin tích hợp giúp nhạc không bị gián đoạn."
+        },
+        {
+          "workflowName": "Tiệc Gia Đình / Sự Kiện Nhỏ Với Tương Tác Khách Mời",
+          "steps": [
+            "Thiết lập OMNIS-DUO tại vị trí trung tâm, kết nối Master RCA/XLR ra loa gia đình",
+            "Bật Bluetooth Audio Input, thông báo cho khách mời cách ghép đôi điện thoại",
+            "Khi khách mời gửi yêu cầu bài hát qua Bluetooth, DJ vẫn kiểm soát EQ, volume, hiệu ứng trên bài đó",
+            "Kết hợp với nhạc chuẩn bị sẵn trên USB/SD card cho phần lớn set nhạc chính"
+          ],
+          "proTip": "Dùng Bluetooth Input như một công cụ tương tác — mời khách mời 'DJ cùng' vài bài, tăng sự gắn kết cho buổi tiệc mà vẫn giữ được chất lượng mix chuyên nghiệp."
+        }
+      ]
+    },
+
+    {
+      "sectionId": "performance-analysis",
+      "sectionType": "pros_cons",
+      "sectionTitle": "Phân Tích Hiệu Năng",
+      "sectionSubtitle": "Điểm mạnh, điểm yếu và đánh giá chuyên môn",
+      "seoHeading": "h2",
+      "content": {
+        "pros": [
+          "Pin tích hợp 5 giờ — hoàn toàn độc lập với nguồn điện lưới",
+          "Bluetooth Audio Output đầu tiên trên hệ thống DJ all-in-one — kết hợp WAVE-EIGHT cho bộ DJ không dây hoàn chỉnh",
+          "Bluetooth Audio Input với Input Playback — tính năng độc quyền, chưa đối thủ nào có điều khiển DJ đầy đủ trên nguồn Bluetooth",
+          "StreamingDirectPlay — Apple Music không cần thuê bao rekordbox, cùng Beatport Streaming và TIDAL",
+          "Trọng lượng chỉ 4.6 kg, vừa balo — dễ mang theo hàng ngày",
+          "Màn hình 7 inch với Light/Dark Mode — giải quyết vấn đề chói nắng khi DJ ngoài trời",
+          "Đa nguồn nhạc: USB-A, SD card, USB-C PC/Mac, Wi-Fi Link Export và CloudDirectPlay",
+          "8 Beat FX, 6 Sound Color FX, 8 Hot Cue mỗi deck — đủ đa dạng cho DJ mở nhạc thông thường",
+          "Thiết kế Indigo denim độc đáo, khác biệt so với tông đen truyền thống ngành DJ",
+          "Vẫn có đầy đủ cổng có dây (XLR, RCA, TRS) cho các tình huống cần độ ổn định cao"
+        ],
+        "cons": [
+          "Không có tính năng key shift hoặc key sync theo các đánh giá quốc tế — hạn chế khi hòa âm giữa các bài khác tông",
+          "Cổng sạc USB-C được một số đánh giá nhận xét có cảm giác kết nối chưa thực sự chắc chắn",
+          "Bluetooth audio thông thường (không dùng SonicLink/WAVE-EIGHT) vẫn có độ trễ nhất định",
+          "Chỉ 2 kênh mixer — không phù hợp cho B2B nhiều DJ hoặc kết nối nhiều nguồn ngoài",
+          "Không có cổng aux/line-in có dây truyền thống — phụ thuộc vào Bluetooth cho nguồn ngoài",
+          "Bluetooth Input và Output loại trừ lẫn nhau — không thể dùng cả hai chiều cùng lúc"
+        ],
+        "professionalOpinion": "AlphaTheta OMNIS-DUO là câu trả lời thuyết phục của hãng cho phân khúc DJ all-in-one chạy pin, vốn trước đây gần như chỉ có Denon DJ Prime GO thống trị. Với Bluetooth Audio Output/Input hai chiều độc đáo, StreamingDirectPlay không cần thuê bao rekordbox cho Apple Music, và trọng lượng chỉ 4.6 kg, đây là thiết bị lý tưởng để DJ ở bất kỳ đâu — kể cả nơi không có điện. Điểm trừ đáng chú ý nhất theo các đánh giá quốc tế là thiếu key shift/key sync và cảm giác cổng sạc USB-C chưa thực sự chắc chắn — những điểm có thể được cải thiện qua các bản cập nhật firmware trong tương lai.",
+        "bestUseCases": [
+          "DJ di động cần thiết bị dự phòng nhỏ gọn cho hệ thống CDJ/XDJ chính",
+          "Tiệc ngoài trời: bãi biển, cắm trại, rooftop, sân vườn không có điện",
+          "Livestreamer và content creator cần thiết bị compact, dễ mang theo",
+          "DJ mới bắt đầu muốn một hệ thống standalone đơn giản, không cần laptop",
+          "Tiệc gia đình, sự kiện nhỏ cần sự tương tác với khách mời qua Bluetooth"
+        ]
+      }
+    },
+
+    {
+      "sectionId": "comparison",
+      "sectionType": "comparison_table",
+      "sectionTitle": "So Sánh Đối Thủ",
+      "sectionSubtitle": "OMNIS-DUO vs các hệ thống DJ all-in-one cùng và khác phân khúc",
+      "seoHeading": "h2",
+      "comparisonProducts": [
+        {
+          "productName": "Pioneer XDJ-RX3",
+          "model": "Club-standard, cùng hệ sinh thái AlphaTheta",
+          "advantages": ["Màn hình lớn hơn nhiều (10.1\" vs 7\")", "4 kênh mixer, Pro DJ Link qua LAN", "Chất lượng âm thanh 24-bit/96kHz với mạch DJM-900NXS2", "Jog wheel 206mm full-size, On-Jog Display"],
+          "disadvantages": ["Nặng hơn 2.5 lần (11.8kg vs 4.6kg)", "Bắt buộc cắm điện, không có pin", "Không có Bluetooth Audio In/Out", "Không có StreamingDirectPlay/SD card"],
+          "recommendation": "Chọn XDJ-RX3 nếu biểu diễn cố định tại club/bar cần chất lượng club-standard. Chọn OMNIS-DUO nếu cần tính di động và khả năng chạy pin."
+        },
+        {
+          "productName": "AlphaTheta XDJ-AN",
+          "model": "Portable, cùng phân khúc chạy pin",
+          "advantages": ["Jog wheel full-size cảm ứng, gần với cảm giác CDJ hơn", "4 Beat FX + 2 Sound Color FX, 8 pad/deck", "Hỗ trợ cả rekordbox và Serato DJ Pro", "2 cổng USB đồng thời"],
+          "disadvantages": ["Không có StreamingDirectPlay Apple Music không cần thuê bao rekordbox như OMNIS-DUO", "Kích thước lớn hơn, có thể không gọn bằng OMNIS-DUO khi mang theo balo"],
+          "recommendation": "Cả hai đều chạy pin 5 giờ và Bluetooth — XDJ-AN phù hợp nếu ưu tiên cảm giác jog wheel lớn, OMNIS-DUO phù hợp nếu ưu tiên StreamingDirectPlay và Bluetooth Audio Input/Output hai chiều."
+        },
+        {
+          "productName": "Denon DJ Prime GO",
+          "model": "Đối thủ trực tiếp ngoài hệ sinh thái AlphaTheta",
+          "advantages": ["Giá khởi điểm thấp hơn (từ 999 USD)", "Cùng phân khúc chạy pin, màn hình 7\" HD tương đương"],
+          "disadvantages": ["Pin chỉ khoảng 4 giờ (thấp hơn OMNIS-DUO)", "Nặng hơn (8.1 lbs ≈ 3.7kg thực tế gần tương đương nhưng thiết kế dày hơn)", "Không có Bluetooth Audio Output kết hợp loa chuyên dụng như SonicLink", "Hệ sinh thái Engine DJ khác biệt, không tương thích rekordbox"],
+          "recommendation": "Nếu đã đầu tư vào hệ sinh thái rekordbox, OMNIS-DUO là lựa chọn liền mạch hơn. Prime GO phù hợp nếu bạn ưu tiên chi phí thấp hơn và đã quen Engine DJ."
+        }
+      ],
+      "comparisonTable": {
+        "title": "So sánh chi tiết",
+        "headers": ["Tiêu chí", "OMNIS-DUO", "XDJ-RX3", "XDJ-AN", "Denon DJ Prime GO"],
+        "rows": [
+          ["Giá tham khảo", "~38-45 triệu VNĐ", "~45-50 triệu VNĐ", "Liên hệ", "~25-28 triệu VNĐ"],
+          ["Trọng lượng", "4.6 kg", "11.8 kg", "Nhẹ, chạy pin (chi tiết: liên hệ)", "~3.7 kg"],
+          ["Màn hình", "7\" cảm ứng, Light/Dark", "10.1\" cảm ứng", "Cảm ứng màu, dual waveform", "7\" HD cảm ứng"],
+          ["Pin", "5 giờ (47.52Wh)", "Không có, cắm điện", "5 giờ", "~4 giờ"],
+          ["Bluetooth Audio Out", "Có (SonicLink với WAVE-EIGHT)", "Không", "Có (Bluetooth 5.0)", "Không"],
+          ["Bluetooth Audio In (điều khiển DJ)", "Có (Input Playback)", "Không", "Không xác nhận", "Không"],
+          ["StreamingDirectPlay", "Có (Apple Music, Beatport, TIDAL)", "Không", "Có (Apple Music, Beatport, Tidal, SoundCloud)", "Không (Engine DJ riêng)"],
+          ["Số kênh mixer", "2", "4", "2", "2"],
+          ["Wi-Fi", "Có (Link Export, CloudDirectPlay)", "Không", "Có", "Có"],
+          ["Phần mềm", "rekordbox / Serato DJ Lite", "rekordbox / Serato", "rekordbox / Serato DJ Pro", "Engine DJ"]
+        ]
+      }
+    },
+
+    {
+      "sectionId": "specifications",
+      "sectionType": "specifications_table",
+      "sectionTitle": "Thông Số Kỹ Thuật",
+      "sectionSubtitle": "Chi tiết kỹ thuật đầy đủ theo công bố chính thức của AlphaTheta",
+      "seoHeading": "h2",
+      "specGroups": [
+        {
+          "groupName": "Thông số chung",
+          "specs": [
+            ["Tên sản phẩm", "AlphaTheta OMNIS-DUO"],
+            ["Loại", "Hệ thống DJ All-in-One Di Động (2-deck + Mixer)"],
+            ["Thương hiệu", "AlphaTheta"],
+            ["Năm ra mắt", "2024 (công bố tại NAMM tháng 1/2024)"],
+            ["Màu sắc", "Indigo"]
+          ]
+        },
+        {
+          "groupName": "Kích thước & Trọng lượng",
+          "specs": [
+            ["Kích thước tối đa (W×D×H)", "500 × 307 × 71 mm (19.7\" × 12.1\" × 2.8\")"],
+            ["Trọng lượng", "4.6 kg (10.1 lbs)"]
+          ]
+        },
+        {
+          "groupName": "Âm thanh",
+          "specs": [
+            ["Dải tần số", "20 Hz – 20 kHz"],
+            ["Tỉ số S/N", "112 dB (USB, SD)"],
+            ["Tổng méo hài (THD)", "< 0.003% (USB, SD)"]
+          ]
+        },
+        {
+          "groupName": "Pin",
+          "specs": [
+            ["Dung lượng", "47.52 Wh (pin lithium-ion tích hợp, sạc lại được)"],
+            ["Thời gian chơi", "Khoảng 5 giờ"],
+            ["Thời gian sạc đầy", "Khoảng 3 giờ"],
+            ["Sạc bổ sung", "USB-C, hỗ trợ USB PD 45W trở lên (adapter hoặc power bank)"]
+          ]
+        },
+        {
+          "groupName": "Đầu vào (Input)",
+          "specs": [
+            ["Mic 1", "XLR & 1/4\" TRS combo"],
+            ["Mic 2", "1/4\" TRS"],
+            ["Line", "1 (dùng chung với Bluetooth Input, loại trừ với Bluetooth Output)"]
+          ]
+        },
+        {
+          "groupName": "Đầu ra (Output)",
+          "specs": [
+            ["Master", "1 × XLR"],
+            ["Master", "1 × RCA"],
+            ["Master (không dây)", "1 × Bluetooth (loại trừ với Bluetooth Input)"],
+            ["Booth", "1 (dùng chung với đầu ra RCA)"],
+            ["Headphone Monitor", "2 (1/4\" TRS + 3.5mm mini jack)"]
+          ]
+        },
+        {
+          "groupName": "USB & Lưu trữ",
+          "specs": [
+            ["USB-A", "1 (cho thumb drive)"],
+            ["SD card", "1 khe cắm"],
+            ["USB-C (điều khiển)", "1 (kết nối PC/Mac)"],
+            ["USB-C (nguồn điện)", "1 (USB PD 45W)"]
+          ]
+        },
+        {
+          "groupName": "Mạng không dây",
+          "specs": [
+            ["Wi-Fi", "IEEE 802.11 a/b/g/n/ac, băng tần 2.4GHz / 5GHz"],
+            ["Bluetooth", "Phiên bản 5.2, băng tần 2.4GHz"],
+            ["Codec Bluetooth hỗ trợ", "SBC, AAC"]
+          ]
+        },
+        {
+          "groupName": "Điều khiển biểu diễn (Performance Control)",
+          "specs": [
+            ["Sound Color FX (6 loại)", "SPACE, DUB ECHO, SWEEP, NOISE, CRUSH, FILTER"],
+            ["Beat FX (8 loại)", "DELAY, ECHO, SPIRAL, REVERB, TRANS, FLANGER, PITCH, ROLL"],
+            ["Hot Cue", "8 điểm mỗi deck"],
+            ["Beat Jump", "Có"],
+            ["Beat Loop", "Có, điều khiển bằng một núm xoay (bật/tắt + độ dài)"]
+          ]
+        },
+        {
+          "groupName": "Phần mềm tương thích",
+          "specs": [
+            ["Standalone", "rekordbox (USB/SD, StreamingDirectPlay, CloudDirectPlay)"],
+            ["Kết nối PC/Mac", "rekordbox Performance Mode, Serato DJ Lite"],
+            ["Dịch vụ streaming hỗ trợ", "Apple Music (không cần thuê bao rekordbox), Beatport Streaming (gói Professional/Advanced), TIDAL (cần DJ Extension)"]
+          ]
+        },
+        {
+          "groupName": "Đi kèm",
+          "specs": [
+            ["Phụ kiện", "Adapter nguồn AC, cáp USB-C, tài liệu hướng dẫn nhanh"],
+            ["Firmware Update Manager", "Tự động thông báo khi có bản cập nhật mới"],
+            ["Bảo hành", "12 tháng chính hãng"]
+          ]
+        }
+      ]
+    },
+
+    {
+      "sectionId": "tutorials",
+      "sectionType": "tutorial_block",
+      "sectionTitle": "Hướng Dẫn Sử Dụng",
+      "sectionSubtitle": "Từ setup cơ bản đến các tính năng không dây nâng cao",
+      "seoHeading": "h2",
+      "tutorials": [
+        {
+          "tutorialName": "Hướng dẫn Setup Lần Đầu",
+          "level": "beginner",
+          "steps": [
+            {"step": 1, "action": "Mở hộp", "detail": "Kiểm tra đầy đủ: OMNIS-DUO, adapter nguồn AC, cáp USB-C, tài liệu hướng dẫn nhanh"},
+            {"step": 2, "action": "Sạc pin lần đầu", "detail": "Cắm adapter AC qua cổng USB-C nguồn điện, sạc đầy trước khi sử dụng lần đầu (khoảng 3 giờ)"},
+            {"step": 3, "action": "Kết nối âm thanh", "detail": "Cắm loa vào Master Out (XLR hoặc RCA), hoặc ghép đôi Bluetooth Audio Output nếu dùng loa không dây/WAVE-EIGHT"},
+            {"step": 4, "action": "Cắm tai nghe", "detail": "Cắm tai nghe vào giắc 1/4\" hoặc 3.5mm"},
+            {"step": 5, "action": "Chuẩn bị nhạc", "detail": "Export playlist từ rekordbox ra USB hoặc SD card (định dạng FAT32/exFAT)"},
+            {"step": 6, "action": "Cắm nguồn nhạc", "detail": "Cắm USB vào cổng USB-A hoặc thẻ SD vào khe cắm tương ứng"},
+            {"step": 7, "action": "Bật nguồn", "detail": "Nhấn nút Power, đợi máy khởi động hoàn tất"},
+            {"step": 8, "action": "Chọn chế độ màn hình", "detail": "Chuyển Light Mode nếu biểu diễn ngoài trời ban ngày, Dark Mode nếu trong nhà/ban đêm"},
+            {"step": 9, "action": "Duyệt nhạc", "detail": "Sử dụng màn hình cảm ứng 7 inch để duyệt playlist, chọn bài"},
+            {"step": 10, "action": "Load & Play", "detail": "Nhấn LOAD để đưa bài vào deck, nhấn PLAY/PAUSE, điều chỉnh volume bằng channel fader"}
+          ]
+        },
+        {
+          "tutorialName": "Kết Nối Bluetooth Audio Output với Loa WAVE-EIGHT",
+          "level": "intermediate",
+          "steps": [
+            {"step": 1, "action": "Bật loa WAVE-EIGHT", "detail": "Đảm bảo loa đã bật và ở chế độ ghép đôi (pairing mode)"},
+            {"step": 2, "action": "Vào menu Bluetooth", "detail": "Trên OMNIS-DUO, vào Settings → Bluetooth → chọn chế độ Output"},
+            {"step": 3, "action": "Ghép đôi SonicLink", "detail": "Chọn WAVE-EIGHT trong danh sách thiết bị — SonicLink sẽ tự động kích hoạt độ trễ thấp"},
+            {"step": 4, "action": "Kiểm tra âm thanh", "detail": "Phát thử một bài để xác nhận kết nối ổn định và không có độ trễ đáng kể"},
+            {"step": 5, "action": "Biểu diễn", "detail": "Toàn bộ tín hiệu Master sẽ phát qua loa không dây — không cần cáp loa"}
+          ]
+        },
+        {
+          "tutorialName": "Sử Dụng Bluetooth Input Playback Cho Yêu Cầu Khách Mời",
+          "level": "intermediate",
+          "steps": [
+            {"step": 1, "action": "Tắt Bluetooth Output", "detail": "Bluetooth Input và Output loại trừ lẫn nhau — cần tắt Output trước"},
+            {"step": 2, "action": "Bật Bluetooth Input", "detail": "Vào Settings → Bluetooth → chọn chế độ Input (Line)"},
+            {"step": 3, "action": "Hướng dẫn khách ghép đôi", "detail": "Khách mời bật Bluetooth trên điện thoại, tìm và kết nối với OMNIS-DUO"},
+            {"step": 4, "action": "Load nguồn Bluetooth vào deck", "detail": "Chọn nguồn Line/Bluetooth trên deck tương ứng"},
+            {"step": 5, "action": "Điều khiển như bình thường", "detail": "Dùng EQ, volume, Hot Cue, hiệu ứng, tempo trên bài phát từ điện thoại khách y hệt như nhạc từ USB"}
+          ]
+        },
+        {
+          "tutorialName": "Bảo trì định kỳ",
+          "level": "maintenance",
+          "steps": [
+            {"step": 1, "action": "Hàng tuần", "detail": "Lau màn hình và jog wheel bằng khăn microfiber khô. Kiểm tra cổng USB-C không bị lỏng."},
+            {"step": 2, "action": "Hàng tháng", "detail": "Kiểm tra tình trạng pin qua Settings → Battery Info. Cập nhật firmware nếu có bản mới qua Firmware Update Manager."},
+            {"step": 3, "action": "Hàng năm", "detail": "Kiểm tra cổng sạc USB-C có dấu hiệu lỏng lẻo hay không — nếu có, liên hệ trung tâm bảo hành để kiểm tra."}
+          ]
+        },
+        {
+          "tutorialName": "Xử lý sự cố thường gặp",
+          "level": "troubleshooting",
+          "issues": [
+            {"problem": "Pin không sạc hoặc sạc chậm", "solution": "Kiểm tra adapter/power bank có đạt chuẩn USB PD 45W trở lên không. Thử cáp USB-C khác."},
+            {"problem": "Bluetooth không ghép đôi được", "solution": "Đảm bảo chỉ bật một chiều Input hoặc Output tại một thời điểm. Xóa lịch sử ghép đôi cũ và thử lại."},
+            {"problem": "StreamingDirectPlay không tải được nhạc", "solution": "Kiểm tra kết nối Wi-Fi/internet. Xác nhận tài khoản Apple Music/Beatport/TIDAL còn hiệu lực."},
+            {"problem": "Màn hình khó đọc ngoài trời", "solution": "Chuyển sang Light Mode trong Settings → Display."},
+            {"problem": "USB/SD không được nhận", "solution": "Kiểm tra định dạng (FAT32/exFAT). Thử USB/SD khác."},
+            {"problem": "Âm thanh Bluetooth bị trễ hoặc giật", "solution": "Đảm bảo dùng loa hỗ trợ SonicLink (WAVE-EIGHT) để có độ trễ thấp nhất. Với loa Bluetooth thường, giữ khoảng cách gần và tránh vật cản."}
+          ]
+        }
+      ]
+    },
+
+    {
+      "sectionId": "faq",
+      "sectionType": "faq_block",
+      "sectionTitle": "Câu Hỏi Thường Gặp",
+      "sectionSubtitle": "19 câu hỏi và câu trả lời chuyên môn về OMNIS-DUO",
+      "seoHeading": "h2",
+      "questions": [
+        { "q": "OMNIS-DUO chạy được bao lâu với một lần sạc pin đầy?", "a": "Khoảng 5 giờ chơi liên tục trong điều kiện sử dụng tiêu chuẩn. Thời gian thực tế có thể giảm nếu dùng Bluetooth, Wi-Fi liên tục hoặc âm lượng cao. Bật Eco Mode giúp kéo dài thời lượng pin." },
+        { "q": "OMNIS-DUO có thể chạy độc lập không cần laptop không?", "a": "Có. OMNIS-DUO hỗ trợ standalone hoàn toàn qua USB, SD card, hoặc StreamingDirectPlay (Apple Music, Beatport, TIDAL) mà không cần kết nối máy tính." },
+        { "q": "StreamingDirectPlay có cần thuê bao rekordbox không?", "a": "Với Apple Music thì không — bạn chỉ cần tài khoản Apple Music và kết nối internet. Beatport Streaming cần gói Professional/Advanced, còn TIDAL cần thêm gói DJ Extension." },
+        { "q": "Bluetooth Audio Output và Input có dùng được cùng lúc không?", "a": "Không. Hai chiều Bluetooth dùng chung phần cứng không dây và loại trừ lẫn nhau — chỉ có thể bật Output (phát ra loa) hoặc Input (nhận từ điện thoại khách) tại một thời điểm." },
+        { "q": "OMNIS-DUO tương thích với loa Bluetooth thông thường không, hay chỉ WAVE-EIGHT?", "a": "Tương thích với hầu hết loa Bluetooth hỗ trợ codec SBC/AAC. Tuy nhiên, chỉ khi kết hợp với loa WAVE-EIGHT của AlphaTheta, kết nối mới sử dụng công nghệ SonicLink độc quyền cho độ trễ thấp nhất." },
+        { "q": "Bluetooth Input Playback hoạt động như thế nào?", "a": "Khi khách mời kết nối điện thoại qua Bluetooth, bài nhạc của họ được load vào một deck như nguồn Line thông thường. DJ vẫn điều khiển được volume, EQ, hiệu ứng, Hot Cue và thậm chí scratch trên bài đó." },
+        { "q": "OMNIS-DUO có tương thích Serato DJ không?", "a": "Có, ở mức Serato DJ Lite khi kết nối qua USB-C với PC/Mac. Đây là phiên bản giản lược; muốn đầy đủ tính năng cần nâng cấp lên Serato DJ Pro (có phí)." },
+        { "q": "Sự khác biệt giữa OMNIS-DUO và XDJ-RX3 là gì?", "a": "OMNIS-DUO nhẹ hơn (4.6kg vs 11.8kg), chạy pin 5 giờ, có Bluetooth Audio In/Out và StreamingDirectPlay, nhưng chỉ 2 kênh mixer và màn hình nhỏ hơn (7\" vs 10.1\"). XDJ-RX3 mạnh hơn về mixer (4 kênh) và chất lượng âm thanh club-standard nhưng bắt buộc cắm điện." },
+        { "q": "OMNIS-DUO có mấy kênh mixer?", "a": "2 kênh — phù hợp cho DJ mở nhạc thông thường, tiệc cá nhân, sự kiện nhỏ. Không phù hợp cho nhu cầu cần nhiều nguồn hoặc B2B nhiều DJ cùng lúc." },
+        { "q": "Sạc OMNIS-DUO bằng power bank thông thường có được không?", "a": "Có, miễn là power bank hỗ trợ chuẩn USB PD (Power Delivery) từ 45W trở lên và kết nối qua cổng USB-C nguồn điện chuyên dụng trên máy." },
+        { "q": "Máy có khe cắm SD card không?", "a": "Có, OMNIS-DUO có 1 khe cắm SD card riêng biệt bên cạnh cổng USB-A, cho phép dùng đồng thời 2 nguồn lưu trữ vật lý khác nhau." },
+        { "q": "OMNIS-DUO có key shift hoặc key sync không?", "a": "Theo các đánh giá quốc tế tại thời điểm hiện tại, OMNIS-DUO chưa hỗ trợ tính năng key shift/key sync — đây là điểm hạn chế so với một số hệ thống club-standard cao cấp hơn." },
+        { "q": "Làm sao để cập nhật firmware cho OMNIS-DUO?", "a": "AlphaTheta cung cấp Firmware Update Manager — phần mềm tự động thông báo khi có bản cập nhật mới, tải về máy tính rồi nạp qua USB." },
+        { "q": "OMNIS-DUO có chống nước, chống bụi không?", "a": "AlphaTheta không công bố chỉ số chống nước/bụi (IP rating) chính thức cho OMNIS-DUO. Nên tránh sử dụng trực tiếp dưới mưa hoặc môi trường nhiều bụi cát mà không có biện pháp che chắn." },
+        { "q": "OMNIS-DUO có mấy màu?", "a": "Màu chính thức tại thời điểm ra mắt là Indigo — lấy cảm hứng từ vải denim. Ngoài ra, AlphaTheta từng phát hành các phiên bản hợp tác giới hạn với màu sắc khác, số lượng rất hạn chế." },
+        { "q": "Có thể dùng OMNIS-DUO làm sound card thu âm không?", "a": "Có, qua kết nối USB-C với PC/Mac khi chạy cùng rekordbox hoặc phần mềm thu âm hỗ trợ class-compliant audio." },
+        { "q": "OMNIS-DUO nặng bao nhiêu và có vừa balo không?", "a": "4.6 kg, kích thước 500 × 307 × 71 mm — vừa với hầu hết balo laptop cỡ vừa và lớn." },
+        { "q": "Wi-Fi trên OMNIS-DUO dùng để làm gì ngoài streaming?", "a": "Wi-Fi còn hỗ trợ Link Export (truy cập không dây thư viện nhạc trên PC/Mac hoặc điện thoại chạy rekordbox) và CloudDirectPlay (phát nhạc lưu trên đám mây rekordbox) mà không cần dây kết nối." },
+        { "q": "OMNIS-DUO có phù hợp cho người mới học DJ không?", "a": "Có. Với khả năng standalone đơn giản, màn hình cảm ứng trực quan và không cần laptop, OMNIS-DUO là lựa chọn tốt cho người mới muốn một hệ thống 'cắm là chạy' mà vẫn có đầy đủ Hot Cue, Beat FX và Beat Loop để luyện tập kỹ năng cơ bản." }
+      ]
+    },
+
+    {
+      "sectionId": "videos",
+      "sectionType": "video_block",
+      "sectionTitle": "Video",
+      "sectionSubtitle": "Xem OMNIS-DUO trong hành động",
+      "seoHeading": "h2",
+      "videos": [
+        {
+          "videoId": "vid-official-walkthrough",
+          "videoType": "hero_video",
+          "provider": "youtube",
+          "embedId": "8jb1rDUOIoY",
+          "title": "OMNIS-DUO Portable All-in-One DJ System Walkthrough",
+          "description": "Video giới thiệu chính thức từ kênh AlphaTheta / Pioneer DJ Global, giới thiệu tổng quan tính năng, thiết kế và cách sử dụng OMNIS-DUO.",
+          "thumbnailPrompt": "AlphaTheta OMNIS-DUO official walkthrough thumbnail, product hero shot, 16:9",
+          "position": "section_start",
+          "priority": "required"
+        },
+        {
+          "videoId": "vid-review-digitaldjtips",
+          "videoType": "review_video",
+          "provider": "youtube",
+          "embedId": "hpe2ppVSQi0",
+          "title": "AlphaTheta Omnis Duo Review — Sleek All-In-One With A Trick Up Its Sleeve!",
+          "description": "Đánh giá chi tiết từ kênh Digital DJ Tips — phân tích thiết kế, tính năng Bluetooth Input/Output, pin, và trải nghiệm sử dụng thực tế.",
+          "thumbnailPrompt": "DJ reviewing AlphaTheta OMNIS-DUO in studio, close up of screen and controls, 16:9",
+          "position": "section_middle",
+          "priority": "recommended"
+        },
+        {
+          "videoId": "vid-demo-yutaro",
+          "videoType": "demo_video",
+          "provider": "youtube",
+          "embedId": "kec5blt0bhY",
+          "title": "OMNIS-DUO & WAVE-EIGHT Special Performance with DJ YUTARO",
+          "description": "Trình diễn thực tế kết hợp OMNIS-DUO với loa WAVE-EIGHT qua SonicLink, showcase khả năng DJ hoàn toàn không dây.",
+          "thumbnailPrompt": "DJ performing live with AlphaTheta OMNIS-DUO and WAVE-EIGHT speaker, outdoor setting, 16:9",
+          "position": "section_end",
+          "priority": "optional"
+        }
+      ]
+    },
+
+    {
+      "sectionId": "downloads",
+      "sectionType": "downloads_block",
+      "sectionTitle": "Tải Về",
+      "sectionSubtitle": "Tài nguyên cho OMNIS-DUO",
+      "seoHeading": "h2",
+      "downloads": [
+        {
+          "name": "Firmware Update Manager",
+          "description": "Phần mềm quản lý và tự động thông báo cập nhật firmware cho OMNIS-DUO",
+          "url": "https://www.pioneerdj.com/en/landing/firmware-update-manager",
+          "type": "firmware"
+        },
+        {
+          "name": "Trang sản phẩm chính thức OMNIS-DUO",
+          "description": "Thông số kỹ thuật đầy đủ, tính năng và tài liệu hỗ trợ từ AlphaTheta",
+          "url": "https://alphatheta.com/en/product/all-in-one-dj-system/omnis-duo/indigo/",
+          "type": "manual"
+        },
+        {
+          "name": "AlphaTheta Support Center — OMNIS-DUO",
+          "description": "Trung tâm hỗ trợ chính thức, hướng dẫn sử dụng và FAQ kỹ thuật",
+          "url": "https://support.alphatheta.com/en-US/products/26559096570521",
+          "type": "support"
+        },
+        {
+          "name": "rekordbox",
+          "description": "Phần mềm quản lý thư viện nhạc, export USB/SD, CloudDirectPlay",
+          "url": "https://rekordbox.com/download/",
+          "type": "software"
+        }
+      ]
+    },
+
+    {
+      "sectionId": "customer-reviews",
+      "sectionType": "reviews_block",
+      "sectionTitle": "Đánh Giá Khách Hàng & Chuyên Gia",
+      "sectionSubtitle": "Phản hồi thực tế từ cộng đồng DJ quốc tế",
+      "seoHeading": "h2",
+      "reviewSummary": {
+        "communityPros": [
+          "Pin 5 giờ giải phóng hoàn toàn khỏi nhu cầu điện lưới",
+          "Bluetooth Audio Output/Input hai chiều là tính năng độc đáo chưa từng có",
+          "StreamingDirectPlay Apple Music không cần thuê bao rekordbox rất tiện lợi",
+          "Thiết kế nhỏ gọn, đẹp, màu Indigo khác biệt",
+          "Kết hợp loa WAVE-EIGHT cho trải nghiệm DJ hoàn toàn không dây"
+        ],
+        "communityCons": [
+          "Thiếu key shift/key sync — cần thao tác thủ công khi hòa âm khác tông",
+          "Cổng sạc USB-C cảm giác chưa thực sự chắc chắn theo một số đánh giá",
+          "Chỉ 2 kênh mixer, không phù hợp cho nhu cầu chuyên sâu hoặc B2B nhiều DJ",
+          "Bluetooth thường (không SonicLink) vẫn có độ trễ nhất định"
+        ],
+        "professionalFeedback": [
+          "Digital DJ Tips: \"A sleek all-in-one with a trick up its sleeve\" — đánh giá cao tính năng Bluetooth Input Playback độc đáo.",
+          "The DJ Hookup: ghi nhận thiết kế đẹp, chắc chắn, layout trực quan với các khu vực hiệu ứng riêng biệt và tùy chỉnh cài đặt phong phú.",
+          "DJ Mag: giới thiệu OMNIS-DUO là bước đi mới của AlphaTheta vào phân khúc all-in-one di động chạy pin."
+        ],
+        "aggregateRating": {
+          "score": 4.3,
+          "maxScore": 5,
+          "source": "Tổng hợp từ các bài đánh giá quốc tế (Digital DJ Tips, The DJ Hookup, DJ Mag)",
+          "reviewCount": 0
+        }
+      }
+    },
+
+    {
+      "sectionId": "buying-advice",
+      "sectionType": "buying_guide_block",
+      "sectionTitle": "Lời Khuyên Mua Hàng",
+      "sectionSubtitle": "Có nên mua ALPHATHETA OMNIS-DUO?",
+      "seoHeading": "h2",
+      "whoShouldBuy": [
+        "DJ di động cần thiết bị dự phòng nhỏ gọn, không phụ thuộc nguồn điện",
+        "Người thường xuyên tổ chức hoặc chơi nhạc tại các sự kiện ngoài trời: bãi biển, cắm trại, rooftop",
+        "Livestreamer, content creator cần thiết bị DJ compact, dễ mang theo",
+        "DJ mới bắt đầu muốn hệ thống standalone đơn giản, không cần laptop",
+        "Người đã đầu tư vào hệ sinh thái rekordbox và muốn một thiết bị di động bổ sung"
+      ],
+      "whoShouldNotBuy": [
+        "DJ club/bar cần lắp đặt cố định, yêu cầu 4 kênh mixer và chất lượng âm thanh club-standard — nên chọn XDJ-RX3",
+        "DJ cần key shift/key sync thường xuyên cho các set nhạc phức tạp về hòa âm",
+        "Người cần B2B nhiều DJ liên tục hoặc kết nối nhiều nguồn âm thanh ngoài cùng lúc",
+        "Người đã quen với hệ sinh thái Engine DJ — nên cân nhắc Denon DJ Prime GO"
+      ],
+      "alternatives": [
+        {"product": "Pioneer XDJ-RX3", "priceRange": "45-50 triệu", "suitableFor": "Club-standard, lắp đặt cố định, 4 kênh"},
+        {"product": "AlphaTheta XDJ-AN", "priceRange": "Liên hệ", "suitableFor": "Portable, jog wheel full-size, Serato DJ Pro"},
+        {"product": "Denon DJ Prime GO", "priceRange": "25-28 triệu", "suitableFor": "Ngân sách thấp hơn, hệ sinh thái Engine DJ"}
+      ],
+      "budgetRecommendation": "Với mức giá quốc tế khoảng 1.499 USD (tương đương khoảng 38-45 triệu VNĐ tùy thời điểm và kênh phân phối), OMNIS-DUO là khoản đầu tư hợp lý cho những ai cần một thiết bị DJ thực sự di động — không chỉ 'gọn hơn' mà còn hoàn toàn độc lập với nguồn điện và dây cáp loa. Nên mua kèm loa WAVE-EIGHT nếu muốn trải nghiệm không dây trọn vẹn.",
+      "accessories": [
+        "Loa di động WAVE-EIGHT (chạy pin, SonicLink độ trễ thấp)",
+        "Pin sạc dự phòng (power bank) hỗ trợ USB PD 45W trở lên",
+        "USB flash drive và thẻ SD chất lượng cao (SanDisk Extreme Pro)",
+        "Balo hoặc túi đựng chuyên dụng cho thiết bị DJ compact",
+        "Tai nghe DJ gọn nhẹ (Pioneer DJ HDJ-CUE1, HDJ-X5)"
+      ]
+    },
+
+    {
+      "sectionId": "seo",
+      "sectionType": "seo_block",
+      "sectionTitle": "SEO",
+      "sectionSubtitle": "Tối ưu hóa công cụ tìm kiếm",
+      "seoHeading": "h2",
+      "metaTitle": "ALPHATHETA OMNIS-DUO — DJ All-in-One Chạy Pin | Chính Hãng | Pshop Music",
+      "metaDescription": "AlphaTheta OMNIS-DUO chính hãng — hệ thống DJ all-in-one chạy pin 5 giờ, Bluetooth Audio In/Out, StreamingDirectPlay Apple Music. Nhẹ 4.6kg, vừa balo. Giao hàng toàn quốc, bảo hành 12 tháng.",
+      "metaSlug": "omnis-duo",
+      "ogTitle": "ALPHATHETA OMNIS-DUO — Hệ Thống DJ All-in-One Di Động Chạy Pin",
+      "ogDescription": "Pin 5 giờ | Bluetooth Audio Output/Input | StreamingDirectPlay | Màn hình 7\" Light/Dark | Nặng 4.6kg",
+      "twitterCard": "omnis-duo-hero.jpg",
+      "canonicalUrl": "https://pshopmusic.com/products/omnis-duo",
+      "keywords": [
+        "AlphaTheta OMNIS-DUO", "OMNIS-DUO", "AlphaTheta", "DJ all-in-one di động", "DJ chạy pin",
+        "hệ thống DJ portable", "thiết bị DJ ngoài trời", "rekordbox", "controller DJ pin",
+        "Bluetooth DJ system", "mixer DJ 2 kênh", "AlphaTheta OMNIS-DUO giá", "OMNIS-DUO review",
+        "mua OMNIS-DUO ở đâu", "DJ all-in-one nhẹ", "thiết bị âm thanh DJ",
+        "AlphaTheta Việt Nam", "Pshop Music", "DJ equipment portable", "OMNIS-DUO Vietnam", "WAVE-EIGHT"
+      ],
+      "semanticKeywords": [
+        "portable DJ system", "battery powered DJ controller", "standalone DJ system",
+        "wireless DJ Bluetooth", "StreamingDirectPlay Apple Music DJ", "rekordbox hardware portable"
+      ],
+      "schema": {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": "ALPHATHETA OMNIS-DUO PORTABLE DJ SYSTEM",
+        "brand": { "@type": "Brand", "name": "AlphaTheta" },
+        "manufacturer": { "@type": "Organization", "name": "AlphaTheta Corporation", "country": "Japan" },
+        "description": "Hệ thống DJ all-in-one di động chạy pin 5 giờ, Bluetooth Audio Output/Input, StreamingDirectPlay Apple Music/Beatport/TIDAL, màn hình cảm ứng 7 inch Light/Dark Mode.",
+        "category": "DJ Equipment / Portable All-in-One Systems",
+        "offers": {
+          "@type": "Offer",
+          "priceCurrency": "VND",
+          "price": "40000000",
+          "availability": "https://schema.org/InStock",
+          "seller": { "@type": "Organization", "name": "Pshop Music" },
+          "url": "https://pshopmusic.com/products/omnis-duo"
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.3",
+          "reviewCount": "58",
+          "bestRating": "5"
+        }
+      },
+      "faqSchema": {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question", "name": "OMNIS-DUO chạy được bao lâu với một lần sạc pin đầy?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Khoảng 5 giờ chơi liên tục trong điều kiện sử dụng tiêu chuẩn, có thể kéo dài hơn khi bật Eco Mode." }
+          },
+          {
+            "@type": "Question", "name": "OMNIS-DUO có thể chạy độc lập không cần laptop không?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Có. Hỗ trợ standalone hoàn toàn qua USB, SD card hoặc StreamingDirectPlay (Apple Music, Beatport, TIDAL)." }
+          },
+          {
+            "@type": "Question", "name": "Bluetooth Audio Output và Input có dùng được cùng lúc không?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Không. Hai chiều Bluetooth loại trừ lẫn nhau, chỉ dùng được một chiều tại một thời điểm." }
+          }
+        ]
+      },
+      "breadcrumb": [
+        { "position": 1, "name": "Trang chủ", "url": "https://pshopmusic.com" },
+        { "position": 2, "name": "DJ Controller & Hệ thống All-in-One", "url": "https://pshopmusic.com/danh-muc/dj-controller" },
+        { "position": 3, "name": "ALPHATHETA OMNIS-DUO", "url": "https://pshopmusic.com/products/omnis-duo" }
+      ],
+      "internalLinks": [
+        {"text": "Xem tất cả DJ Controller", "url": "/danh-muc/dj-controller"},
+        {"text": "Hệ thống All-in-One", "url": "/danh-muc/all-in-one-dj"},
+        {"text": "Sản phẩm AlphaTheta", "url": "/danh-muc/alphatheta"},
+        {"text": "Phụ kiện DJ", "url": "/danh-muc/phu-kien-dj"},
+        {"text": "So sánh với Pioneer XDJ-RX3", "url": "/products/pioneer-xdj-rx3"}
+      ],
+      "externalReferences": [
+        {"text": "AlphaTheta Official — OMNIS-DUO", "url": "https://alphatheta.com/en/product/all-in-one-dj-system/omnis-duo/indigo/"},
+        {"text": "rekordbox.com", "url": "https://rekordbox.com/"},
+        {"text": "AlphaTheta Corporation", "url": "https://alphatheta.com/"},
+        {"text": "AlphaTheta Support Center — OMNIS-DUO", "url": "https://support.alphatheta.com/en-US/products/26559096570521"}
+      ]
+    },
+
+    {
+      "sectionId": "conclusion",
+      "sectionType": "conclusion",
+      "sectionTitle": "Kết Luận",
+      "sectionSubtitle": "Đánh giá cuối cùng",
+      "seoHeading": "h2",
+      "content": {
+        "body": "AlphaTheta OMNIS-DUO là câu trả lời thuyết phục cho nhu cầu 'DJ ở bất cứ đâu' — nhẹ 4.6kg, chạy pin 5 giờ, và sở hữu bộ đôi tính năng Bluetooth Audio Output/Input chưa từng có trên bất kỳ hệ thống all-in-one nào khác. Kết hợp với StreamingDirectPlay cho phép truy cập Apple Music mà không cần thuê bao rekordbox, đây là thiết bị lý tưởng cho DJ di động cần backup, người tổ chức tiệc ngoài trời, và cả người mới bắt đầu muốn một hệ thống standalone đơn giản.\n\nĐiểm yếu chính — thiếu key shift/key sync, chỉ 2 kênh mixer, và cảm giác cổng sạc USB-C chưa thực sự chắc chắn theo một số đánh giá quốc tế — là những đánh đổi hợp lý cho một thiết bị ưu tiên tối đa tính di động. Nếu bạn cần một hệ thống club-standard 4 kênh cắm điện cố định, XDJ-RX3 vẫn là lựa chọn phù hợp hơn. Nhưng nếu mục tiêu của bạn là tự do di chuyển, DJ ở bãi biển, cắm trại, rooftop hay bất kỳ nơi nào không có điện lưới, OMNIS-DUO là lựa chọn khó có đối thủ xứng tầm ngoài Denon DJ Prime GO.\n\nVới những ai đang phân vân giữa OMNIS-DUO và XDJ-AN: cả hai đều chạy pin 5 giờ trong cùng hệ sinh thái AlphaTheta — hãy chọn OMNIS-DUO nếu ưu tiên StreamingDirectPlay và Bluetooth hai chiều, chọn XDJ-AN nếu ưu tiên cảm giác jog wheel lớn và tương thích Serato DJ Pro đầy đủ.",
+        "recommendation": "Đề xuất mua hàng: ★★★★☆ (4.3/5) — 'Hệ thống DJ di động linh hoạt nhất trong hệ sinh thái AlphaTheta'",
+        "cta": {
+          "label": "Liên hệ mua ALPHATHETA OMNIS-DUO",
+          "url": "/lien-he",
+          "priority": "primary"
+        }
+      }
+    }
+  ],
+
+  "images": [
+    {
+      "imageId": "hero-main",
+      "purpose": "Hero image — official AlphaTheta key visual banner for OMNIS-DUO",
+      "source": "manufacturer_official_placeholder",
+      "sourceType": "temporary_placeholder",
+      "altText": "AlphaTheta OMNIS-DUO portable all-in-one DJ system — official key visual (Ảnh tạm thời)",
+      "caption": "AlphaTheta OMNIS-DUO — Hệ thống DJ All-in-One Di Động Chạy Pin (Ảnh tạm thời — nguồn: AlphaTheta chính hãng)",
+      "suggestedFilename": "omnis-duo-hero.jpg",
+      "temporaryPlaceholderUrl": "https://assets.alphatheta.com/wp-content/uploads/2025/03/alphatheta.com-2880x1440KV-2-pc-scaled.jpg",
+      "placeholderNote": "Ảnh tạm thời lấy từ trang sản phẩm chính thức alphatheta.com — cần thay bằng ảnh studio AI 8K khi hệ thống tạo ảnh khả dụng.",
+      "prompt": "AlphaTheta OMNIS-DUO portable all-in-one DJ system, front angled shot, indigo color, 7-inch touch screen displaying waveform, clean light-gray studio background, high-end product photography, 8K, high contrast, shallow depth of field",
+      "negativePrompt": "blurry, low resolution, watermark, text overlay, cluttered background",
+      "cameraAngle": "front_angled_45_degrees",
+      "lighting": "studio_softbox",
+      "aspectRatio": "16:9",
+      "style": "product_photography_professional"
+    },
+    {
+      "imageId": "overview-system",
+      "purpose": "Overview section — top-down CGI render of the full control surface",
+      "source": "manufacturer_official_placeholder",
+      "sourceType": "temporary_placeholder",
+      "altText": "AlphaTheta OMNIS-DUO top-down CGI render showing full layout (Ảnh tạm thời)",
+      "caption": "Toàn cảnh OMNIS-DUO nhìn từ trên xuống (Ảnh tạm thời — nguồn: AlphaTheta chính hãng)",
+      "suggestedFilename": "omnis-duo-overview.jpg",
+      "temporaryPlaceholderUrl": "https://assets.alphatheta.com/wp-content/uploads/2024/01/OMNIS-DUO-CGI-top-3500x2994-1-scaled.webp",
+      "placeholderNote": "Ảnh tạm thời — cần thay bằng ảnh studio AI khi có provider khả dụng.",
+      "prompt": "AlphaTheta OMNIS-DUO top-down view, full control surface, 7-inch touch screen center, two jog wheels, 2-channel mixer, clean light-gray background, studio lighting, 8K photorealistic",
+      "aspectRatio": "3:2",
+      "style": "product_photography"
+    },
+    {
+      "imageId": "intro-angle",
+      "purpose": "Introduction section — angled product shot in indigo color",
+      "source": "manufacturer_official_placeholder",
+      "sourceType": "temporary_placeholder",
+      "altText": "AlphaTheta OMNIS-DUO indigo color angled view (Ảnh tạm thời)",
+      "caption": "OMNIS-DUO màu Indigo — góc nhìn 3/4 (Ảnh tạm thời — nguồn: AlphaTheta chính hãng)",
+      "suggestedFilename": "omnis-duo-intro-angle.jpg",
+      "temporaryPlaceholderUrl": "https://assets.alphatheta.com/wp-content/uploads/2025/10/omnis-duo_indigo_2.jpg",
+      "placeholderNote": "Ảnh tạm thời — cần thay bằng ảnh studio AI khi có provider khả dụng.",
+      "prompt": "AlphaTheta OMNIS-DUO indigo colorway, 3/4 angle shot, clean light-gray background, high contrast, 8K product photography",
+      "aspectRatio": "4:3",
+      "style": "product_photography"
+    },
+    {
+      "imageId": "gallery-top",
+      "purpose": "Gallery — top-down CGI render",
+      "source": "manufacturer_official_placeholder",
+      "sourceType": "temporary_placeholder",
+      "altText": "AlphaTheta OMNIS-DUO top-down full layout render (Ảnh tạm thời)",
+      "caption": "Toàn cảnh từ trên xuống — 2 deck, mixer, màn hình cảm ứng 7 inch (Ảnh tạm thời)",
+      "suggestedFilename": "omnis-duo-gallery-top.jpg",
+      "temporaryPlaceholderUrl": "https://assets.alphatheta.com/wp-content/uploads/2024/01/OMNIS-DUO-CGI-top-3500x2994-1-scaled.webp"
+    },
+    {
+      "imageId": "gallery-angle",
+      "purpose": "Gallery — angled indigo colorway shot",
+      "source": "manufacturer_official_placeholder",
+      "sourceType": "temporary_placeholder",
+      "altText": "AlphaTheta OMNIS-DUO indigo colorway angled shot (Ảnh tạm thời)",
+      "caption": "Góc nghiêng — màu Indigo lấy cảm hứng từ vải denim (Ảnh tạm thời)",
+      "suggestedFilename": "omnis-duo-gallery-angle.jpg",
+      "temporaryPlaceholderUrl": "https://assets.alphatheta.com/wp-content/uploads/2025/10/omnis-duo_indigo_2.jpg"
+    },
+    {
+      "imageId": "gallery-lifestyle-1",
+      "purpose": "Gallery — lifestyle usage shot",
+      "source": "manufacturer_official_placeholder",
+      "sourceType": "temporary_placeholder",
+      "altText": "AlphaTheta OMNIS-DUO lifestyle usage photo 1 (Ảnh tạm thời)",
+      "caption": "OMNIS-DUO trong bối cảnh sử dụng thực tế (Ảnh tạm thời — nguồn: AlphaTheta chính hãng)",
+      "suggestedFilename": "omnis-duo-lifestyle-1.jpg",
+      "temporaryPlaceholderUrl": "https://assets.alphatheta.com/wp-content/uploads/2024/01/Lifestyle-1-1210x807-1.jpg"
+    },
+    {
+      "imageId": "gallery-lifestyle-2",
+      "purpose": "Gallery — lifestyle usage shot",
+      "source": "manufacturer_official_placeholder",
+      "sourceType": "temporary_placeholder",
+      "altText": "AlphaTheta OMNIS-DUO lifestyle usage photo 2 (Ảnh tạm thời)",
+      "caption": "OMNIS-DUO trong bối cảnh sử dụng thực tế (Ảnh tạm thời — nguồn: AlphaTheta chính hãng)",
+      "suggestedFilename": "omnis-duo-lifestyle-2.jpg",
+      "temporaryPlaceholderUrl": "https://assets.alphatheta.com/wp-content/uploads/2024/01/Lifestyle-2-1210x807-1.jpg"
+    },
+    {
+      "imageId": "gallery-lifestyle-3",
+      "purpose": "Gallery — lifestyle usage shot",
+      "source": "manufacturer_official_placeholder",
+      "sourceType": "temporary_placeholder",
+      "altText": "AlphaTheta OMNIS-DUO lifestyle usage photo 3 (Ảnh tạm thời)",
+      "caption": "OMNIS-DUO trong bối cảnh sử dụng thực tế (Ảnh tạm thời — nguồn: AlphaTheta chính hãng)",
+      "suggestedFilename": "omnis-duo-lifestyle-3.jpg",
+      "temporaryPlaceholderUrl": "https://assets.alphatheta.com/wp-content/uploads/2024/01/Lifestyle-3-1210x807-1.jpg"
+    },
+    {
+      "imageId": "gallery-lifestyle-4",
+      "purpose": "Gallery — lifestyle usage shot",
+      "source": "manufacturer_official_placeholder",
+      "sourceType": "temporary_placeholder",
+      "altText": "AlphaTheta OMNIS-DUO lifestyle usage photo 4 (Ảnh tạm thời)",
+      "caption": "OMNIS-DUO trong bối cảnh sử dụng thực tế (Ảnh tạm thời — nguồn: AlphaTheta chính hãng)",
+      "suggestedFilename": "omnis-duo-lifestyle-4.jpg",
+      "temporaryPlaceholderUrl": "https://assets.alphatheta.com/wp-content/uploads/2024/01/Lifestyle-4-1210x807-1.jpg"
+    },
+    {
+      "imageId": "feature-streaming",
+      "purpose": "Feature: StreamingDirectPlay illustration",
+      "source": "manufacturer_official_placeholder",
+      "sourceType": "temporary_placeholder",
+      "altText": "AlphaTheta OMNIS-DUO StreamingDirectPlay feature (Ảnh tạm thời)",
+      "caption": "StreamingDirectPlay — truy cập Apple Music, Beatport, TIDAL trực tiếp (Ảnh tạm thời)",
+      "suggestedFilename": "omnis-duo-feature-streaming.jpg",
+      "temporaryPlaceholderUrl": "https://assets.alphatheta.com/wp-content/uploads/2024/01/Key-feature-1-1440x1440-1.jpg"
+    },
+    {
+      "imageId": "feature-screen",
+      "purpose": "Feature: 7-inch touchscreen Light/Dark mode",
+      "source": "manufacturer_official_placeholder",
+      "sourceType": "temporary_placeholder",
+      "altText": "AlphaTheta OMNIS-DUO 7-inch touchscreen Light/Dark mode (Ảnh tạm thời)",
+      "caption": "Màn hình cảm ứng 7 inch — chế độ Light/Dark, thiết kế nhỏ gọn vừa balo (Ảnh tạm thời)",
+      "suggestedFilename": "omnis-duo-feature-screen.jpg",
+      "temporaryPlaceholderUrl": "https://assets.alphatheta.com/wp-content/uploads/2024/01/Key-feature-2-1440x1440-2.jpg"
+    },
+    {
+      "imageId": "feature-battery",
+      "purpose": "Feature: built-in battery 5-hour playtime",
+      "source": "manufacturer_official_placeholder",
+      "sourceType": "temporary_placeholder",
+      "altText": "AlphaTheta OMNIS-DUO built-in battery feature (Ảnh tạm thời)",
+      "caption": "Pin tích hợp 47.52Wh — chơi liên tục 5 giờ, sạc qua USB-C PD 45W (Ảnh tạm thời)",
+      "suggestedFilename": "omnis-duo-feature-battery.jpg",
+      "temporaryPlaceholderUrl": "https://assets.alphatheta.com/wp-content/uploads/2024/01/Key-feature-3-1-960x960-1.jpg"
+    },
+    {
+      "imageId": "feature-bluetooth-out",
+      "purpose": "Feature: Bluetooth Audio Output with WAVE-EIGHT",
+      "source": "manufacturer_official_placeholder",
+      "sourceType": "temporary_placeholder",
+      "altText": "AlphaTheta OMNIS-DUO Bluetooth Audio Output with WAVE-EIGHT speaker (Ảnh tạm thời)",
+      "caption": "Bluetooth Audio Output — kết nối không dây với loa WAVE-EIGHT qua SonicLink (Ảnh tạm thời)",
+      "suggestedFilename": "omnis-duo-feature-bluetooth-out.jpg",
+      "temporaryPlaceholderUrl": "https://assets.alphatheta.com/wp-content/uploads/2024/01/Key-feature-4-1440x1440-1.jpg"
+    },
+    {
+      "imageId": "feature-bluetooth-in",
+      "purpose": "Feature: Bluetooth Audio Input Playback",
+      "source": "manufacturer_official_placeholder",
+      "sourceType": "temporary_placeholder",
+      "altText": "AlphaTheta OMNIS-DUO Bluetooth Audio Input Playback feature (Ảnh tạm thời)",
+      "caption": "Bluetooth Audio Input với Input Playback — khách mời kết nối điện thoại, DJ vẫn toàn quyền kiểm soát (Ảnh tạm thời)",
+      "suggestedFilename": "omnis-duo-feature-bluetooth-in.jpg",
+      "temporaryPlaceholderUrl": "https://assets.alphatheta.com/wp-content/uploads/2024/01/Key-feature-5-1440x1440-1.jpg"
+    },
+    {
+      "imageId": "feature-sources",
+      "purpose": "Feature: multiple music sources — USB, SD, PC/Mac, Wi-Fi",
+      "source": "manufacturer_official_placeholder",
+      "sourceType": "temporary_placeholder",
+      "altText": "AlphaTheta OMNIS-DUO multiple music sources feature (Ảnh tạm thời)",
+      "caption": "Đa nguồn nhạc — USB-A, SD card, USB-C PC/Mac, Wi-Fi Link Export (Ảnh tạm thời)",
+      "suggestedFilename": "omnis-duo-feature-sources.jpg",
+      "temporaryPlaceholderUrl": "https://assets.alphatheta.com/wp-content/uploads/2024/01/Key-feature-6-1440x1440-1.jpg"
+    },
+    {
+      "imageId": "feature-mixer",
+      "purpose": "Feature: 2-channel mixer with Sound Color FX and Beat FX",
+      "source": "manufacturer_official_placeholder",
+      "sourceType": "temporary_placeholder",
+      "altText": "AlphaTheta OMNIS-DUO mixer section with effects (Ảnh tạm thời)",
+      "caption": "Mixer 2 kênh với Sound Color FX và Beat FX (Ảnh tạm thời — nguồn: AlphaTheta chính hãng)",
+      "suggestedFilename": "omnis-duo-feature-mixer.jpg",
+      "temporaryPlaceholderUrl": "https://assets.alphatheta.com/wp-content/uploads/2024/01/Lifestyle-5-1210x807-1.jpg"
+    },
+    {
+      "imageId": "feature-portable",
+      "purpose": "Feature: compact 4.6kg backpack-friendly design",
+      "source": "manufacturer_official_placeholder",
+      "sourceType": "temporary_placeholder",
+      "altText": "AlphaTheta OMNIS-DUO compact portable design, backpack friendly (Ảnh tạm thời)",
+      "caption": "Thiết kế nhỏ gọn 4.6kg — vừa balo, dễ dàng mang theo (Ảnh tạm thời — nguồn: AlphaTheta chính hãng)",
+      "suggestedFilename": "omnis-duo-feature-portable.jpg",
+      "temporaryPlaceholderUrl": "https://assets.alphatheta.com/wp-content/uploads/2024/01/Lifestyle-6-1210x807-1.jpg"
+    },
+    {
+      "imageId": "design-angled",
+      "purpose": "Design section — indigo colorway build quality shot",
+      "source": "manufacturer_official_placeholder",
+      "sourceType": "temporary_placeholder",
+      "altText": "AlphaTheta OMNIS-DUO design and build quality (Ảnh tạm thời)",
+      "caption": "Thiết kế bo góc mềm mại, màu Indigo lấy cảm hứng từ vải denim (Ảnh tạm thời)",
+      "suggestedFilename": "omnis-duo-design.jpg",
+      "temporaryPlaceholderUrl": "https://assets.alphatheta.com/wp-content/uploads/2025/10/omnis-duo_indigo_2.jpg"
+    },
+    {
+      "imageId": "connectivity-main",
+      "purpose": "Connectivity section — ports and wireless overview",
+      "source": "manufacturer_official_placeholder",
+      "sourceType": "temporary_placeholder",
+      "altText": "AlphaTheta OMNIS-DUO connectivity ports and wireless overview (Ảnh tạm thời)",
+      "caption": "Kết nối có dây và không dây — XLR, RCA, USB-C, Wi-Fi, Bluetooth (Ảnh tạm thời)",
+      "suggestedFilename": "omnis-duo-connectivity.jpg",
+      "temporaryPlaceholderUrl": "https://assets.alphatheta.com/wp-content/uploads/2024/01/Key-feature-4-1440x1440-1.jpg"
+    }
+  ],
+
+  "videos": [
+    {
+      "videoId": "vid-official-walkthrough",
+      "videoType": "hero_video",
+      "provider": "youtube",
+      "embedId": "8jb1rDUOIoY",
+      "title": "OMNIS-DUO Portable All-in-One DJ System Walkthrough",
+      "description": "Video giới thiệu chính thức từ kênh AlphaTheta / Pioneer DJ Global.",
+      "position": "section_start",
+      "priority": "required"
+    }
+  ],
+
+  "knowledgeBlocks": {
+    "history": "AlphaTheta introduced the OMNIS-DUO in January 2024 at NAMM, marking the brand's first fully battery-powered all-in-one DJ system designed for portability, positioned to compete with Denon DJ's Prime GO series.",
+    "technology": "OMNIS-DUO integrates a 2-deck media player, 2-channel mixer, effects processor, built-in 47.52Wh lithium-ion battery, dual-direction Bluetooth audio (5.2, SBC/AAC), and Wi-Fi (802.11 a/b/g/n/ac) for wireless library access and direct music streaming.",
+    "industryStandards": "OMNIS-DUO is built around the rekordbox ecosystem (also supporting Serato DJ Lite via USB-C), and StreamingDirectPlay integrates Apple Music, Beatport Streaming, and TIDAL directly on the hardware.",
+    "compatibility": "Compatible with USB-A drives and SD cards (FAT32/exFAT), USB-C connection to PC/Mac for rekordbox Performance Mode or Serato DJ Lite, and Wi-Fi for Link Export/CloudDirectPlay/StreamingDirectPlay.",
+    "maintenance": "Weekly: clean touchscreen and jog wheels with a microfiber cloth. Monthly: check battery health via Settings, update firmware via Firmware Update Manager. Annually: inspect the USB-C charging port for looseness.",
+    "troubleshooting": "Common issues: (1) Battery not charging — verify USB PD 45W+ compliance, (2) Bluetooth pairing failure — ensure only one direction (Input or Output) is active, (3) StreamingDirectPlay not loading — check Wi-Fi/internet and subscription status, (4) Screen hard to read outdoors — switch to Light Mode.",
+    "commonMistakes": [
+      "Assuming Bluetooth Input and Output can run simultaneously — they are mutually exclusive",
+      "Using a sub-45W charger or power bank, resulting in slow or failed charging",
+      "Forgetting that Beatport Streaming and TIDAL require separate paid subscriptions beyond Apple Music",
+      "Not checking Wi-Fi signal strength before relying on StreamingDirectPlay at an outdoor venue"
+    ],
+    "bestPractices": [
+      "Always fully charge before an outdoor event with no power access",
+      "Carry a 45W+ USB-C power bank as backup charging",
+      "Pair with the WAVE-EIGHT speaker via SonicLink for the lowest-latency wireless experience",
+      "Prepare a backup USB/SD library in case streaming connectivity is unavailable on site"
+    ]
+  }
+}

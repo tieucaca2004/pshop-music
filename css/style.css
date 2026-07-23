@@ -156,7 +156,7 @@ nav{position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop
    remover-img-fit" đã dùng — không bao giờ méo/tràn khung. Vị trí 9 điểm dùng
    data-attribute + CSS attribute selector, cùng cách "data-text-pos" của Hero
    Slideshow đã làm — không thêm cơ chế định vị mới. */
-.category-header-product-img{position:absolute;z-index:2;max-width:42%;max-height:78%;object-fit:contain;opacity:var(--cover-opacity,1);transform:scale(var(--cover-zoom,1));pointer-events:none;filter:drop-shadow(0 12px 24px rgba(0,0,0,0.35))}
+.category-header-product-img{loading:lazy;position:absolute;z-index:2;max-width:42%;max-height:78%;object-fit:contain;opacity:var(--cover-opacity,1);transform:scale(var(--cover-zoom,1));pointer-events:none;filter:drop-shadow(0 12px 24px rgba(0,0,0,0.35))}
 .category-header-product-img[data-cover-position="top-left"]{top:1.5rem;left:1.5rem}
 .category-header-product-img[data-cover-position="top-center"]{top:1.5rem;left:50%;transform:translateX(-50%) scale(var(--cover-zoom,1))}
 .category-header-product-img[data-cover-position="top-right"]{top:1.5rem;right:1.5rem}
@@ -168,7 +168,7 @@ nav{position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop
 .category-header-product-img[data-cover-position="bottom-center"]{bottom:1.5rem;left:50%;transform:translateX(-50%) scale(var(--cover-zoom,1))}
 .category-header-product-img[data-cover-position="bottom-right"]{bottom:1.5rem;right:1.5rem}
 .category-header-logo{position:absolute;z-index:3;top:1rem;right:1rem;max-width:64px;max-height:64px;object-fit:contain;pointer-events:none}
-@media(max-width:640px){.category-header-product-img{max-width:34%;max-height:60%}.category-header-logo{max-width:44px;max-height:44px}}
+@media(max-width:640px){.category-header-product-img{loading:lazy;max-width:34%;max-height:60%}.category-header-logo{max-width:44px;max-height:44px}}
 
 .category-header h1{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;color:#fff;letter-spacing:-0.01em}
 
@@ -201,11 +201,11 @@ nav{position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop
   position:relative;top:var(--pci-top,0px);left:var(--pci-left,0px);right:var(--pci-right,auto);bottom:var(--pci-bottom,auto);
   transform:scale(var(--pci-scale,1));border-radius:var(--pci-radius,0px)
 }
-.prod-img-wrap img{
+.prod-img-wrap img{loading:lazy;
   width:100%;height:100%;object-fit:var(--pci-fit,contain);object-position:var(--pci-pos,50% 50%);
   padding:var(--pci-padding,1.4rem);transition:transform 0.4s ease;transform:scale(var(--pci-zoom,1))
 }
-.product-card:hover .prod-img-wrap img{transform:scale(calc(var(--pci-zoom,1) * 1.05))}
+.product-card:hover .prod-img-wrap img{loading:lazy;transform:scale(calc(var(--pci-zoom,1) * 1.05))}
 .prod-noimg-tile{background:var(--bg-alt);width:100%;aspect-ratio:4/5;display:flex;align-items:center;justify-content:center;margin-bottom:0.4rem;padding:1.8rem;text-align:center}
 .prod-noimg-tile .tile-name{font-size:1.05rem;font-weight:700;color:var(--ink);line-height:1.3;letter-spacing:-0.01em}
 .prod-name{font-size:0.95rem;font-weight:600;color:var(--black);line-height:1.35}
@@ -215,7 +215,7 @@ nav{position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop
 .prod-price{font-size:1rem;font-weight:700;color:var(--black);margin-top:0.1rem}
 .prod-price-old{font-size:0.85rem;font-weight:500;color:var(--ink-mute);text-decoration:line-through}
 .prod-oos-badge{display:inline-block;font-size:0.68rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:700;color:#fff;background:#8a1f1f;padding:0.2rem 0.55rem;width:fit-content}
-.product-card.out-of-stock .prod-img-wrap img{opacity:0.5;filter:grayscale(0.4)}
+.product-card.out-of-stock .prod-img-wrap img{loading:lazy;opacity:0.5;filter:grayscale(0.4)}
 .modal-price .prod-price-old{font-size:1rem}
 .prod-contact{margin-top:0.3rem;font-size:0.78rem;color:var(--ink-mute)}
 
@@ -385,6 +385,31 @@ footer{background:#0a0a0a;padding:4rem 0 1.5rem;margin-top:2rem}
 .nav-search .icon,.nav-search-mobile .icon{left:0.95rem;font-size:0.85rem;color:var(--gold-ink)}
 .nav-search-mobile{max-width:none;width:100%}
 @media(max-width:900px){.services-grid,.contact-grid{grid-template-columns:1fr;gap:3rem}.nav-links,.nav-cta,.nav-search{display:none}.nav-toggle{display:block}.footer-grid{grid-template-columns:repeat(2,1fr);gap:2rem 1.5rem}}
+
+/* ─── Product Modal: Mobile Optimized (không zoom, không scroll ngang) ─── */
+@media(max-width:700px){
+.modal-overlay{padding:0;align-items:flex-end}
+.modal-overlay.open{display:flex}
+.modal-box{grid-template-columns:1fr;max-width:100%;max-height:100vh;height:100dvh;border-radius:16px 16px 0 0;overflow:hidden;display:flex;flex-direction:column}
+.modal-img-side{min-height:35vh;max-height:45vh;padding:0;flex-shrink:0;position:relative}
+.modal-img-side img{max-height:100%;width:100%;height:100%;object-fit:contain;padding:1rem}
+.modal-gallery-prev{left:0.5rem}
+.modal-gallery-next{right:0.5rem}
+.modal-gallery-dots{bottom:0.5rem}
+.modal-img-side .no-img{font-size:1.1rem;padding:0 1rem}
+.modal-video{margin-top:1rem}
+}
+
+@media(max-width:600px){
+.modal-box{border-radius:12px 12px 0 0}
+.modal-img-side{min-height:30vh;max-height:40vh}
+}
+
+@media(max-width:480px){
+.modal-img-side{min-height:28vh;max-height:35vh}
+.modal-img-side img{padding:0.75rem}
+.modal-gallery-nav{width:30px;height:30px;font-size:1rem}
+}
 @media(max-width:700px){
   .modal-box{grid-template-columns:1fr;max-height:85vh;overflow-y:auto}
   .modal-img-side{min-height:240px;padding:1.5rem}
@@ -416,3 +441,4 @@ footer{background:#0a0a0a;padding:4rem 0 1.5rem;margin-top:2rem}
   .filter-btn:hover,.filter-btn.active{background:var(--gold);border-color:var(--gold);color:#000}
 }
 @media(max-width:400px){.container{padding:0 1.2rem}}
+

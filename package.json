@@ -1,0 +1,27 @@
+{
+  "name": "pshopmusicsite",
+  "version": "1.0.0",
+  "description": "Static, light/editorial e-commerce site for Pshop Music (DJ & audio equipment, Nha Trang). Vanilla HTML/CSS/JS — no build step, deploy as-is. Backed by Firebase (Realtime Database + Authentication + Storage) so every visitor shares the same live data and the whole site is manageable from a real admin CMS.",
+  "main": "enrich-products.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tieucaca2004/pshop-music.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/tieucaca2004/pshop-music/issues"
+  },
+  "homepage": "https://github.com/tieucaca2004/pshop-music#readme",
+  "dependencies": {
+    "playwright": "^1.61.1"
+  }
+}

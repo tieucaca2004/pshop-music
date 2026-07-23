@@ -1,0 +1,128 @@
+﻿{
+    "ai":  {
+               "firebase":  "down"
+           },
+    "security":  {
+                     "stoppedServices":  [
+                                             "Cốc Cốc Update Service (coccoc) (coccoc)",
+                                             "Cốc Cốc Updater Internal Service (CocCocUpdaterInternalService148.0.7778.254) (CocCocUpdaterInternalService148.0.7778.254)",
+                                             "Cốc Cốc Updater Service (CocCocUpdaterService148.0.7778.254) (CocCocUpdaterService148.0.7778.254)",
+                                             "Comet Updater Internal Service (CometUpdaterInternalService148.0.7778.1745) (CometUpdaterInternalService148.0.7778.1745)",
+                                             "Comet Updater Service (CometUpdaterService148.0.7778.1745) (CometUpdaterService148.0.7778.1745)",
+                                             "Microsoft Edge Update Service (edgeupdate) (edgeupdate)",
+                                             "Google Updater Internal Service (GoogleUpdaterInternalService152.0.7933.0) (GoogleUpdaterInternalService152.0.7933.0)",
+                                             "Google Updater Service (GoogleUpdaterService152.0.7933.0) (GoogleUpdaterService152.0.7933.0)",
+                                             "Intel(R) TPM Provisioning Service (Intel(R) TPM Provisioning Service)",
+                                             "Downloaded Maps Manager (MapsBroker)",
+                                             "Software Protection (sppsvc)",
+                                             "Windows Subsystem for Linux (WslInstaller)"
+                                         ],
+                     "defender":  "Active",
+                     "logonSuccess24h":  0,
+                     "scheduledTasks":  "3 running / 176 total",
+                     "loginFailures24h":  0,
+                     "unknownProcesses":  [
+                                              "MoUsoCoreWorker",
+                                              "Docker Desktop",
+                                              "com.docker.backend",
+                                              "com.docker.build",
+                                              "vmwp",
+                                              "vmmem",
+                                              "wslrelay",
+                                              "msrdc"
+                                          ],
+                     "criticalErrors24h":  14,
+                     "administrators":  "Administrator, NucPC",
+                     "firewall":  "3/3 enabled",
+                     "issues":  [
+                                    "12 auto-start service(s) stopped: Cốc Cốc Update Service (coccoc) (coccoc), Cốc Cốc Updater Internal Service (CocCocUpdaterInternalService148.0.7778.254) (CocCocUpdaterInternalService148.0.7778.254), Cốc Cốc Updater Service (CocCocUpdaterService148.0.7778.254) (CocCocUpdaterService148.0.7778.254), Comet Updater Internal Service (CometUpdaterInternalService148.0.7778.1745) (CometUpdaterInternalService148.0.7778.1745), Comet Updater Service (CometUpdaterService148.0.7778.1745) (CometUpdaterService148.0.7778.1745), Microsoft Edge Update Service (edgeupdate) (edgeupdate), Google Updater Internal Service (GoogleUpdaterInternalService152.0.7933.0) (GoogleUpdaterInternalService152.0.7933.0), Google Updater Service (GoogleUpdaterService152.0.7933.0) (GoogleUpdaterService152.0.7933.0), Intel(R) TPM Provisioning Service (Intel(R) TPM Provisioning Service), Downloaded Maps Manager (MapsBroker), Software Protection (sppsvc), Windows Subsystem for Linux (WslInstaller)",
+                                    "14 critical system/app errors in 24h"
+                                ]
+                 },
+    "hostname":  "DESKTOP-TRUUF31",
+    "alerts":  [
+                   {
+                       "message":  "12 auto-start service(s) stopped",
+                       "timestamp":  "2026-07-22 14:22:33",
+                       "severity":  "warning"
+                   }
+               ],
+    "os":  "Windows 10 Pro",
+    "timestamp":  "2026-07-22 14:22:33",
+    "system":  {
+                   "cpuPct":  16,
+                   "ramTotalGB":  19.9,
+                   "processes":  {
+                                     "topMem":  [
+                                                    "Memory Compression (919.8MB)",
+                                                    "vmmem (867.2MB)",
+                                                    "node (667.4MB)",
+                                                    "chrome (586.6MB)",
+                                                    "SearchApp (448.5MB)"
+                                                ],
+                                     "topCPU":  [
+                                                    "chrome (2458.5s)",
+                                                    "chrome (734.4s)",
+                                                    "node (608.8s)",
+                                                    "Docker Desktop (398.5s)",
+                                                    "chrome (364.4s)"
+                                                ],
+                                     "total":  251
+                                 },
+                   "disks":  [
+                                 {
+                                     "freeGB":  65.2,
+                                     "drive":  "C:",
+                                     "usedPct":  72.6,
+                                     "totalGB":  238.4
+                                 },
+                                 {
+                                     "freeGB":  150.4,
+                                     "drive":  "D:",
+                                     "usedPct":  36.9,
+                                     "totalGB":  238.5
+                                 }
+                             ],
+                   "uptime":  "0d 3h 44m",
+                   "ramPct":  58.3,
+                   "ramFreeGB":  8.3
+               },
+    "website":  {
+                    "pages":  [
+                                  {
+                                      "url":  "https://pshopmusic.com/",
+                                      "name":  "Homepage",
+                                      "ms":  1029,
+                                      "code":  200,
+                                      "status":  "up"
+                                  },
+                                  {
+                                      "url":  "https://pshopmusic.com/category.html",
+                                      "name":  "Category",
+                                      "ms":  41,
+                                      "code":  200,
+                                      "status":  "up"
+                                  },
+                                  {
+                                      "url":  "https://pshopmusic.com/product-lexar-p30-128gb.html",
+                                      "name":  "Lexar P30",
+                                      "ms":  41,
+                                      "code":  200,
+                                      "status":  "up"
+                                  }
+                              ],
+                    "ssl":  {
+                                "daysLeft":  48,
+                                "expiry":  "2026-09-08"
+                            }
+                },
+    "scores":  {
+                   "website":  100,
+                   "security":  65,
+                   "disk":  27,
+                   "overall":  64.7,
+                   "ram":  42,
+                   "ai":  70,
+                   "cpu":  84
+               }
+}

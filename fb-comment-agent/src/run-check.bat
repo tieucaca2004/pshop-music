@@ -1,0 +1,4 @@
+@echo off
+set "FB_PAGE_ACCESS_TOKEN=EAAdf6Le4TlABSCdIbDWEkJn1y5cvTPZAWWrDss7OF1J1g5Gcu6dJZAgXVQw3u0AtrpTRlvZBbobGwlLZCeQ4WwSRgZAkwlZA7thQLTddoAXNNZBlXAzBJnfKjZC1Lp5JsEcoag5PqyVdhF0tJcvPO0bPVT69sS7QhFpNK9nkXXAsbHk3AmL43GH2lRyQLHtu7ojVJmDOiinkbwZCRx1u3phBzDWueuvEvHEe7tMHqHcFhZBZBNawPqihYbZCQSUZD"
+cd /d D:\PshopMusicSite\fb-comment-agent
+node src/index.js check >> logs\agent-cron.log 2>&1

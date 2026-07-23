@@ -477,55 +477,75 @@
             sectionHtml = renderHero(section, imageMap, bgClass, meta);
             break;
           case 'quick_overview':
+          case 'text_with_image':
             sectionHtml = renderStickySection(section, imageMap, 'Tổng Quan', bgClass);
             break;
           case 'product_introduction':
+          case 'text_group':
             sectionHtml = renderStickySection(section, imageMap, 'Giới Thiệu', bgClass);
             break;
           case 'product_gallery':
+          case 'gallery':
             sectionHtml = renderGallery(section, imageMap);
             break;
           case 'core_features':
+          case 'feature_list':
             sectionHtml = renderFeatures(section, imageMap, bgClass);
             break;
           case 'design_build_quality':
+          case 'specifications_block':
             sectionHtml = renderStickySection(section, imageMap, 'Thiết Kế', bgClass);
             break;
           case 'connectivity':
+          case 'connectivity_block':
             sectionHtml = renderConnectivity(section, imageMap, bgClass);
             break;
           case 'real_world_workflow':
+          case 'workflow_block':
             sectionHtml = renderWorkflow(section);
             break;
           case 'performance_analysis':
+          case 'pros_cons':
             sectionHtml = renderPerformance(section);
             break;
           case 'comparison':
+          case 'comparison_table':
             sectionHtml = renderComparison(section);
             break;
           case 'specifications':
+          case 'specifications_table':
             sectionHtml = renderSpecs(section);
             break;
           case 'tutorials':
+          case 'tutorial_block':
             sectionHtml = renderTutorials(section);
             break;
           case 'faq':
+          case 'faq_block':
             sectionHtml = renderFAQ(section);
             break;
           case 'videos':
+          case 'video_block':
             sectionHtml = renderVideos(section);
             break;
           case 'downloads':
+          case 'downloads_block':
             sectionHtml = renderDownloads(section);
             break;
           case 'customer_reviews':
+          case 'reviews_block':
             sectionHtml = renderReviews(section);
             break;
           case 'buying_advice':
+          case 'buying_guide_block':
             sectionHtml = renderBuyingAdvice(section);
             break;
           case 'conclusion':
             sectionHtml = renderConclusion(section);
+            break;
+          case 'seo_block':
+            // Meta-only data (title/description/OG tags) — not visible page content.
+            sectionHtml = '';
             break;
           default:
             // Generic section
@@ -601,6 +621,7 @@
       features.forEach(function (f, i) {
         var fContent = f.content || {};
         var intro = fContent.intro || '';
+        var usageExamples = fContent.usageExamples || [];
         var advantages = fContent.advantages || [];
         var limitations = fContent.limitations || [];
         var expertNote = fContent.expertNote || '';
@@ -611,6 +632,7 @@
           '<div class="sticky-content feature-card">' +
             '<h3 style="font-size:1.15rem;font-weight:700;margin-bottom:0.75rem">' + (i + 1) + '. ' + escapeHtml(f.featureTitle || 'Tính năng ' + (i + 1)) + '</h3>' +
             (intro ? '<div class="section-body"><p>' + escapeHtml(intro) + '</p></div>' : '') +
+            (usageExamples.length ? '<div style="margin-top:0.5rem"><p style="font-weight:600;font-size:0.85rem;color:#555;margin-bottom:0.3rem">💡 Ví dụ sử dụng</p><ul style="font-size:0.85rem;color:#555;padding-left:1.25rem">' + usageExamples.map(function (u) { return '<li style="margin-bottom:0.25rem">' + escapeHtml(u) + '</li>'; }).join('') + '</ul></div>' : '') +
             (advantages.length ? '<div style="margin-top:0.75rem"><p style="font-weight:600;font-size:0.85rem;color:#2e7d32;margin-bottom:0.4rem">✓ Ưu điểm</p><ul style="font-size:0.9rem;color:#333;padding-left:1.25rem">' + advantages.map(function (a) { return '<li style="margin-bottom:0.3rem">' + escapeHtml(a) + '</li>'; }).join('') + '</ul></div>' : '') +
             (limitations.length ? '<div style="margin-top:0.75rem"><p style="font-weight:600;font-size:0.85rem;color:#b3261e;margin-bottom:0.4rem">✗ Hạn chế</p><ul style="font-size:0.9rem;color:#333;padding-left:1.25rem">' + limitations.map(function (l) { return '<li style="margin-bottom:0.3rem">' + escapeHtml(l) + '</li>'; }).join('') + '</ul></div>' : '') +
             (expertNote ? '<div style="margin-top:0.75rem;padding:0.75rem;background:#f8f8fa;border-radius:8px;font-size:0.85rem;font-style:italic;color:#555;border-left:3px solid #f5c518">' + escapeHtml(expertNote) + '</div>' : '') +
@@ -632,7 +654,9 @@
 
       var imgs = slots.slice(0, 6).map(function (slot) {
         var img = imageMap[slot.imageId];
-        return img ? { url: img.url || img, alt: img.altText || '', caption: img.caption || '' } : null;
+        if (!img) return null;
+        var url = resolveImageUrl(img);
+        return url ? { url: url, alt: img.altText || '', caption: img.caption || '' } : null;
       }).filter(Boolean);
 
       if (imgs.length) {
@@ -793,7 +817,10 @@
         html += '<div style="margin-bottom:1rem;padding:0.75rem;background:#f8f8fa;border-radius:8px">' +
           '<h3 style="font-size:0.95rem;font-weight:600;margin-bottom:0.5rem">' + escapeHtml(w.workflowName || '') + '</h3>' +
           ((w.steps || []).length ? '<ol style="padding-left:1.25rem;font-size:0.85rem;line-height:1.6">' +
-            w.steps.map(function (s) { return '<li><strong>' + escapeHtml(s.action || '') + '</strong>: ' + escapeHtml(s.detail || '') + '</li>'; }).join('') +
+            w.steps.map(function (s) {
+              if (typeof s === 'string') return '<li>' + escapeHtml(s) + '</li>';
+              return '<li><strong>' + escapeHtml(s.action || '') + '</strong>: ' + escapeHtml(s.detail || '') + '</li>';
+            }).join('') +
             '</ol>' : '') +
           (w.proTip ? '<div style="margin-top:0.5rem;padding:0.5rem;background:#fff8e1;border-radius:6px;font-size:0.8rem;color:#8d6e00"><strong>💡 Pro Tip:</strong> ' + escapeHtml(w.proTip) + '</div>' : '') +
         '</div>';
@@ -810,6 +837,7 @@
         (section.sectionSubtitle ? '<div class="section-subtitle">' + escapeHtml(section.sectionSubtitle) + '</div>' : '') +
         ((content.pros || []).length ? '<div><p style="font-weight:600;color:#2e7d32;margin-bottom:0.4rem">✅ Ưu điểm</p><ul style="font-size:0.9rem;padding-left:1.25rem">' + content.pros.map(function (p) { return '<li style="margin-bottom:0.3rem">' + escapeHtml(p) + '</li>'; }).join('') + '</ul></div>' : '') +
         ((content.cons || []).length ? '<div style="margin-top:0.75rem"><p style="font-weight:600;color:#b3261e;margin-bottom:0.4rem">❌ Nhược điểm</p><ul style="font-size:0.9rem;padding-left:1.25rem">' + content.cons.map(function (c) { return '<li style="margin-bottom:0.3rem">' + escapeHtml(c) + '</li>'; }).join('') + '</ul></div>' : '') +
+        ((content.bestUseCases || []).length ? '<div style="margin-top:0.75rem"><p style="font-weight:600;color:#1c1c1e;margin-bottom:0.4rem">🎯 Phù hợp nhất cho</p><ul style="font-size:0.9rem;padding-left:1.25rem">' + content.bestUseCases.map(function (u) { return '<li style="margin-bottom:0.3rem">' + escapeHtml(u) + '</li>'; }).join('') + '</ul></div>' : '') +
         (content.professionalOpinion ? '<div style="margin-top:0.75rem;padding:0.75rem;background:#f8f8fa;border-radius:8px;font-size:0.85rem;border-left:3px solid #f5c518"><p style="font-weight:600;margin-bottom:0.3rem">📊 Đánh giá chuyên môn</p>' + escapeHtml(content.professionalOpinion) + '</div>' : '') +
       '</div>';
     }
@@ -892,27 +920,43 @@
 
     function renderBuyingAdvice(section) {
       var content = section.content || {};
+      // PSH Content Standard V2 (landing-page generator) puts these fields
+      // directly on the section rather than nested under content.
+      var whoShouldBuy = content.whoShouldBuy || section.whoShouldBuy || [];
+      var whoShouldNotBuy = content.whoShouldNotBuy || section.whoShouldNotBuy || [];
+      var alternatives = content.alternatives || section.alternatives || [];
+      var budgetRecommendation = content.budgetRecommendation || section.budgetRecommendation || '';
+      var accessories = content.accessories || section.accessories || [];
       var html = '<div style="padding:1.5rem 1.25rem">' +
         '<h2 class="section-title">' + escapeHtml(section.sectionTitle || 'Lời Khuyên Mua Hàng') + '</h2>' +
         (section.sectionSubtitle ? '<div class="section-subtitle">' + escapeHtml(section.sectionSubtitle) + '</div>' : '');
 
-      if (content.whoShouldBuy && content.whoShouldBuy.length) {
+      if (whoShouldBuy.length) {
         html += '<div style="margin-bottom:0.75rem;padding:0.75rem;background:#e8f5e9;border-radius:8px">' +
           '<p style="font-weight:600;font-size:0.9rem;color:#2e7d32;margin-bottom:0.4rem">🎯 Nên mua nếu</p>' +
-          content.whoShouldBuy.map(function (p) { return '<div style="font-size:0.85rem;padding:0.2rem 0">✓ ' + escapeHtml(p) + '</div>'; }).join('') +
+          whoShouldBuy.map(function (p) { return '<div style="font-size:0.85rem;padding:0.2rem 0">✓ ' + escapeHtml(p) + '</div>'; }).join('') +
         '</div>';
       }
 
-      if (content.whoShouldNotBuy && content.whoShouldNotBuy.length) {
+      if (whoShouldNotBuy.length) {
         html += '<div style="margin-bottom:0.75rem;padding:0.75rem;background:#fce4ec;border-radius:8px">' +
           '<p style="font-weight:600;font-size:0.9rem;color:#b3261e;margin-bottom:0.4rem">✗ Không nên mua nếu</p>' +
-          content.whoShouldNotBuy.map(function (p) { return '<div style="font-size:0.85rem;padding:0.2rem 0">✗ ' + escapeHtml(p) + '</div>'; }).join('') +
+          whoShouldNotBuy.map(function (p) { return '<div style="font-size:0.85rem;padding:0.2rem 0">✗ ' + escapeHtml(p) + '</div>'; }).join('') +
         '</div>';
       }
 
-      if (content.alternatives && content.alternatives.length) {
+      if (budgetRecommendation) {
+        html += '<div style="margin:0.75rem 0;padding:0.75rem;background:#f8f8fa;border-radius:8px;font-size:0.85rem;color:#555;border-left:3px solid #f5c518">💰 ' + escapeHtml(budgetRecommendation) + '</div>';
+      }
+
+      if (accessories.length) {
+        html += '<h3 style="font-size:0.95rem;font-weight:600;margin:1rem 0 0.5rem">Phụ Kiện Đề Xuất</h3><ul style="padding-left:1.25rem;font-size:0.85rem">' +
+          accessories.map(function (a) { return '<li style="margin-bottom:0.3rem">' + escapeHtml(a) + '</li>'; }).join('') + '</ul>';
+      }
+
+      if (alternatives.length) {
         html += '<h3 style="font-size:0.95rem;font-weight:600;margin:1rem 0 0.5rem">Sản phẩm thay thế</h3>';
-        content.alternatives.forEach(function (a) {
+        alternatives.forEach(function (a) {
           html += '<div style="padding:0.5rem 0;border-bottom:1px solid #e8e8ec;display:flex;justify-content:space-between;align-items:center;font-size:0.85rem">' +
             '<div><strong>' + escapeHtml(a.product || a.productName || '') + '</strong></div>' +
             '<div style="color:#888">' + escapeHtml(a.priceRange || a.suitableFor || '') + '</div>' +
@@ -945,13 +989,20 @@
 
     /* ─── Helpers ─── */
 
+    function resolveImageUrl(img) {
+      // Production field order: final generated/uploaded url first, then the
+      // temporary manufacturer/stock placeholder used until AI images are ready.
+      if (!img || typeof img !== 'object') return img || '';
+      return img.url || img.src || img.finalUrl || img.temporaryPlaceholderUrl || '';
+    }
+
     function getFirstImage(slots, imageMap) {
       if (!slots || !slots.length || !imageMap) return null;
       for (var i = 0; i < slots.length; i++) {
         var img = imageMap[slots[i].imageId];
-        if (img && img.url) return img;
-        if (img && typeof img === 'object' && img.src) return img;
-        if (img && typeof img === 'string') return { url: img, altText: '' };
+        if (typeof img === 'string' && img) return { url: img, altText: '' };
+        var url = resolveImageUrl(img);
+        if (url) return { url: url, altText: img.altText || '', caption: img.caption || '' };
       }
       return null;
     }

@@ -533,6 +533,163 @@ const AdminAI = (function () {
     return `<pre style="white-space:pre-wrap;background:var(--bg-alt);padding:1rem;font-size:0.82rem;max-height:260px;overflow:auto">${escapeHtml(JSON.stringify(d.content, null, 2))}</pre>`;
   }
 
+  function openMobilePreview(draftId) {
+    DraftDB.get(draftId).then(function (draft) {
+      if (!draft) { alert('Không tìm thấy draft.'); return; }
+      // Build CMS Block structure from draft content
+      var cmsBlocks = buildPreviewBlocks(draft);
+      sessionStorage.setItem('pshPreviewData', JSON.stringify(cmsBlocks));
+      window.open('/admin/ai/mobile-preview.html', '_blank');
+    }).catch(function (err) {
+      alert('Lỗi khi tải draft: ' + err.message);
+    });
+  }
+
+  function buildPreviewBlocks(draft) {
+    var c = draft.content || {};
+    var moduleId = draft.moduleId || '';
+    var productName = c.title || c.name || c.productName || 'Sản phẩm';
+    var sections = [];
+    var images = [];
+
+    // Hero section
+    sections.push({
+      sectionId: 'hero',
+      sectionType: 'hero',
+      sectionTitle: productName,
+      sectionSubtitle: '',
+      seoHeading: 'h1',
+      content: {
+        introduction: productName,
+        keySellingPoints: Array.isArray(c.productHighlights) ? c.productHighlights :
+                          Array.isArray(c.features) ? c.features.slice(0, 6) :
+                          Array.isArray(c.highlights) ? c.highlights : [],
+        cta: { label: 'Liên hệ mua hàng', url: '/lien-he', priority: 'primary' }
+      },
+      imageSlots: c.featuredImage ? [{ imageId: 'hero-main', placement: 'hero_background', priority: 'required' }] : [],
+      callToAction: { label: 'Liên hệ mua hàng', url: '/lien-he', style: 'hero' }
+    });
+    if (c.featuredImage) {
+      images.push({ imageId: 'hero-main', url: c.featuredImage, altText: productName, purpose: 'product_hero' });
+    }
+
+    // Overview section
+    if (c.description || c.mainContent || c.hook) {
+      sections.push({
+        sectionId: 'quick-overview',
+        sectionType: 'quick_overview',
+        sectionTitle: 'Tổng Quan',
+        seoHeading: 'h2',
+        content: { body: c.description || c.mainContent || c.hook || '' },
+        imageSlots: []
+      });
+    }
+
+    // Gallery section
+    var galleryImages = [];
+    if (Array.isArray(c.galleryImages)) {
+      galleryImages = c.galleryImages;
+    } else if (Array.isArray(c.images)) {
+      galleryImages = c.images;
+    }
+    if (galleryImages.length) {
+      sections.push({
+        sectionId: 'gallery',
+        sectionType: 'product_gallery',
+        sectionTitle: 'Thư Viện Hình Ảnh',
+        seoHeading: 'h2',
+        imageSlots: galleryImages.map(function (url, i) {
+          var id = 'gallery-' + i;
+          images.push({ imageId: id, url: url, altText: 'Gallery ' + (i + 1), purpose: 'gallery' });
+          return { imageId: id, placement: 'gallery_grid', priority: 'required' };
+        })
+      });
+    }
+
+    // Specs section
+    if (c.specifications || c.specs) {
+      sections.push({
+        sectionId: 'specs',
+        sectionType: 'specifications',
+        sectionTitle: 'Thông Số Kỹ Thuật',
+        seoHeading: 'h2',
+        content: { body: c.specifications || c.specs || '' }
+      });
+    }
+
+    // Video section
+    if (c.youtubeEmbedUrl || c.videoUrl) {
+      sections.push({
+        sectionId: 'videos',
+        sectionType: 'videos',
+        sectionTitle: 'Video',
+        seoHeading: 'h2',
+        videos: [{
+          videoId: 'vid-main',
+          videoType: 'hero_video',
+          provider: 'youtube',
+          embedId: extractYoutubeId(c.youtubeEmbedUrl || c.videoUrl),
+          title: 'Video sản phẩm',
+          description: '',
+          position: 'section_start',
+          priority: 'required'
+        }]
+      });
+    }
+
+    // FAQ section
+    if (Array.isArray(c.faq) && c.faq.length) {
+      sections.push({
+        sectionId: 'faq',
+        sectionType: 'faq',
+        sectionTitle: 'Câu Hỏi Thường Gặp',
+        seoHeading: 'h2',
+        questions: c.faq
+      });
+    }
+
+    // Conclusion
+    sections.push({
+      sectionId: 'conclusion',
+      sectionType: 'conclusion',
+      sectionTitle: 'Kết Luận',
+      seoHeading: 'h2',
+      content: { body: '', recommendation: 'Để lại thông tin để được tư vấn chi tiết về sản phẩm này.' },
+      callToAction: { label: 'Liên hệ mua hàng', url: '/lien-he', style: 'primary' }
+    });
+
+    return {
+      $schema: 'psh-content-block-v2',
+      meta: {
+        product: productName,
+        moduleId: moduleId,
+        generatedAt: Date.now(),
+        locale: 'vi-VN'
+      },
+      pagePlan: {
+        title: productName,
+        slug: 'preview',
+        readingTime: '2 phút',
+        sectionCount: sections.length,
+        imageCount: images.length,
+        sectionHierarchy: sections.map(function (s) { return s.sectionId; })
+      },
+      sections: sections,
+      images: images,
+      seo: {
+        metaTitle: productName + ' | Pshop Music',
+        metaDescription: productName + ' — xem trước nội dung',
+        metaSlug: 'preview'
+      }
+    };
+  }
+
+  function extractYoutubeId(url) {
+    if (!url) return '';
+    var match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+    return match ? match[1] : '';
+  }
+
   function renderDrafts() {
     const wrap = document.getElementById('draftsList');
     if (!wrap) return;
@@ -548,6 +705,7 @@ const AdminAI = (function () {
         <p class="small-muted">Tạo lúc ${formatDate(d.createdAt)} · Provider: ${escapeHtml(d.providerUsed || '—')} · Đích: ${escapeHtml(d.targetCollection || '(chỉ xem/copy)')}</p>
         ${draftBodyHtml(d)}
         <div class="admin-actions">
+          <button class="btn-secondary" onclick="AdminAI.openMobilePreview('${d.id}')">📱 Xem Mobile</button>
           <button class="submit-btn" onclick="AdminAI.publishDraft('${d.id}')">DUYỆT &amp; PUBLISH</button>
           <button class="btn-danger" onclick="AdminAI.rejectDraft('${d.id}')">TỪ CHỐI</button>
           <button class="btn-danger" onclick="AdminAI.deleteDraft('${d.id}')">XOÁ</button>
@@ -788,5 +946,5 @@ const AdminAI = (function () {
   // hiển thị Preview đã có (Facebook/Banner/JSON thô) thay vì viết lại HTML
   // template — đúng RULES "Do NOT duplicate Draft logic". Hàm không đổi hành
   // vi gì, chỉ thêm vào danh sách export.
-  return { initDashboard, runModule, initDrafts, publishDraft, rejectDraft, deleteDraft, publishDraftById, rejectDraftById, initJobs, cancelJob, retryJob, initLogs, copyDraftText, publishVersionToFacebook, draftBodyHtml };
+  return { initDashboard, runModule, initDrafts, publishDraft, rejectDraft, deleteDraft, publishDraftById, rejectDraftById, initJobs, cancelJob, retryJob, initLogs, copyDraftText, publishVersionToFacebook, draftBodyHtml, openMobilePreview };
 })();

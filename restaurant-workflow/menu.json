@@ -1,0 +1,47 @@
+{
+  "restaurant": {
+    "name": "Hủ Tiếu Xào A. Tiểu",
+    "shortName": "A. Tiểu",
+    "tagline": "Hủ tiếu xào chuẩn vị — ngon từng sợi, bổ từng miếng",
+    "address": "",
+    "phone": "",
+    "facebookPage": "https://www.facebook.com/109215528208008"
+  },
+  "ingredients": {
+    "proteins": ["Bò", "Gà", "Heo (xá xíu, cật)", "Tôm", "Mực", "Cua", "Cá mặn", "Trứng", "Bò viên"],
+    "vegetables": ["Cải thìa", "Nấm đông cô", "Rau củ thập cẩm"],
+    "carbs": ["Hủ tiếu", "Mì (xào giòn, xào mềm)", "Phở chiên", "Cơm (xào, chiên, cháy)", "Miến"],
+    "seafood": ["Tôm", "Mực", "Cua", "Cá mặn"],
+    "nutritionalHighlights": {
+      "iron": "Thịt bò — giàu sắt hồng cầu",
+      "omega3": "Hải sản (tôm, mực, cua) — giàu omega-3",
+      "calcium": "Tôm, cua — canxi tự nhiên",
+      "iodine": "Hải sản — i-ốt cho tuyến giáp",
+      "vitaminB12": "Thịt bò, gà — vitamin B12",
+      "vitaminD": "Nấm đông cô — vitamin D",
+      "vitaminAC": "Cải thìa — vitamin A, C, K",
+      "protein": "Bò, gà, tôm, mực, cua, trứng — đạm chất lượng cao",
+      "fiber": "Rau củ, nấm — chất xơ tiêu hóa"
+    }
+  },
+  "menu": {
+    "categories": {
+      "HuTieuXao": {"name": "Hủ Tiếu Xào", "base": "hủ tiếu", "priceRange": "65.000đ - 85.000đ", "items": [
+        {"id":"htx_hs", "name":"Hủ Tiếu Xào Hải Sản", "price":75000, "protein":"tôm, mực"},
+        {"id":"htx_bo", "name":"Hủ Tiếu Xào Bò", "price":65000, "protein":"thịt bò"},
+        {"id":"htx_tc", "name":"Hủ Tiếu Xào Thập Cẩm", "price":60000, "protein":"tôm, thịt, mực"},
+        {"id":"htx_hsdb", "name":"Hủ Tiếu Xào Hải Sản Đặc Biệt", "price":85000, "protein":"tôm, mực, cua"},
+        {"id":"htx_tcdb", "name":"Hủ Tiếu Xào Thập Cẩm Đặc Biệt", "price":70000, "protein":"tôm, thịt, mực, trứng"}
+      ]},
+      "MiXaoGion": {"name": "Mì Xào Giòn", "base": "mì giòn", "priceRange": "60.000đ - 85.000đ"},
+      "PhoChienGion": {"name": "Phở Chiên Giòn", "base": "phở chiên", "priceRange": "60.000đ - 85.000đ"},
+      "ComCanhGa": {"name": "Cơm Cánh Gà", "base": "cơm + cánh gà", "priceRange": "75.000đ", "items": [
+        {"id":"ccg_roti", "name":"Cơm Cánh Gà Roti HK", "price":75000, "protein":"cánh gà"},
+        {"id":"ccg_chien", "name":"Cơm Cánh Gà Chiên Mắm", "price":75000, "protein":"cánh gà"},
+        {"id":"ccg_sate", "name":"Cơm Cánh Gà Sốt Sate", "price":75000, "protein":"cánh gà"},
+        {"id":"ccg_mixao", "name":"Mì Xào Cánh Gà Roti HK", "price":75000, "protein":"cánh gà"}
+      ]},
+      "MiXaoMem": {"name": "Mì Xào Mềm", "base": "mì mềm", "priceRange": "60.000đ - 85.000đ"}
+    }
+  }
+}

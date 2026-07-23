@@ -1,0 +1,122 @@
+{
+  "schedule": {
+    "cycleDays": 3,
+    "cyclePattern": [
+      "rau",
+      "thit",
+      "mon_an"
+    ],
+    "currentCycleIndex": 0,
+    "currentItemIndex": 1,
+    "lastPostDate": "2026-07-19T05:00:46.419Z"
+  },
+  "rau_items": [
+    {
+      "id": "rau_1",
+      "name": "Nấm đông cô",
+      "dishes": "Nấm đông cô xào cải thìa (60k)"
+    },
+    {
+      "id": "rau_2",
+      "name": "Cải thìa",
+      "dishes": "Nấm đông cô xào cải thìa, rau trong thập cẩm"
+    },
+    {
+      "id": "rau_3",
+      "name": "Rau củ thập cẩm",
+      "dishes": "Tất cả món xào, phở chiên, cơm xào"
+    }
+  ],
+  "thit_items": [
+    {
+      "id": "thit_1",
+      "name": "Thịt bò",
+      "dishes": "Hủ tiếu xào bò, phở chiên bò, cơm xào bò, cơm chiên bò, bò viên"
+    },
+    {
+      "id": "thit_2",
+      "name": "Tôm",
+      "dishes": "Hải sản các loại, sủi cảo tôm"
+    },
+    {
+      "id": "thit_3",
+      "name": "Mực",
+      "dishes": "Hải sản các loại, cơm xào mực"
+    },
+    {
+      "id": "thit_4",
+      "name": "Cánh gà",
+      "dishes": "Cơm cánh gà Roti HK, chiên mắm, sốt sate"
+    },
+    {
+      "id": "thit_5",
+      "name": "Thịt heo (xá xíu)",
+      "dishes": "Món nước xá xíu, hoành thánh, thập cẩm"
+    },
+    {
+      "id": "thit_6",
+      "name": "Cua",
+      "dishes": "Miến cua, cơm chiên cua, hải sản đặc biệt"
+    },
+    {
+      "id": "thit_7",
+      "name": "Trứng",
+      "dishes": "Cơm chiên trứng, trứng ốp la, thập cẩm đặc biệt"
+    },
+    {
+      "id": "thit_8",
+      "name": "Cật heo",
+      "dishes": "Cật xào tỏi"
+    }
+  ],
+  "mon_an_items": [
+    {
+      "id": "mon_1",
+      "name": "Hủ Tiếu Xào Hải Sản",
+      "price": "75k",
+      "needIngredients": true
+    },
+    {
+      "id": "mon_2",
+      "name": "Hủ Tiếu Xào Bò",
+      "price": "65k",
+      "needIngredients": true
+    },
+    {
+      "id": "mon_3",
+      "name": "Cơm Cánh Gà Roti HK",
+      "price": "75k",
+      "needIngredients": true
+    },
+    {
+      "id": "mon_4",
+      "name": "Miến Cua",
+      "price": "90k",
+      "needIngredients": true
+    },
+    {
+      "id": "mon_5",
+      "name": "Sủi Cảo Tôm",
+      "price": "110k",
+      "needIngredients": true
+    },
+    {
+      "id": "mon_6",
+      "name": "Phở Chiên Hải Sản",
+      "price": "75k",
+      "needIngredients": true
+    },
+    {
+      "id": "mon_7",
+      "name": "Nấm Đông Cô Xào Cải Thìa",
+      "price": "60k",
+      "needIngredients": true
+    },
+    {
+      "id": "mon_8",
+      "name": "Súp Cua Gà Xé",
+      "price": "50k",
+      "needIngredients": true
+    }
+  ]
+}

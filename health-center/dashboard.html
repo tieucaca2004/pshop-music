@@ -1,0 +1,246 @@
+# PSH Platform — Security & System Health Dashboard
+# + Telegram Bot Command Handling (via heartbeat/webhook)
+# Host: DESKTOP-TRUUF31 | Win 10 Pro
+# Purpose: Central monitoring dashboard for health data visualization
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PSH Security & System Health Center</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+* { margin:0; padding:0; box-sizing:border-box }
+body { background:#0a0e17; color:#c8d6e5; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; padding:20px; min-height:100vh }
+.header { display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; padding-bottom:20px; border-bottom:1px solid #1a2235 }
+.header h1 { font-size:1.5rem; color:#e8e8e8 }
+.header h1 span { color:#f0b429 }
+.header .time { color:#6b7280; font-size:0.85rem }
+.grid { display:grid; gap:16px; margin-bottom:24px }
+.grid-scores { grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)) }
+.grid-2 { grid-template-columns:repeat(auto-fit, minmax(400px, 1fr)) }
+.card { background:#111827; border:1px solid #1e293b; border-radius:12px; padding:20px; transition:border-color .2s }
+.card:hover { border-color:#334155 }
+.score-card { text-align:center; padding:16px }
+.score-card .value { font-size:2.2rem; font-weight:700; line-height:1.2 }
+.score-card .label { font-size:0.8rem; color:#6b7280; margin-top:4px }
+.score-card .sub { font-size:0.65rem; color:#4b5563; margin-top:2px }
+.score-excellent { color:#22c55e }
+.score-good { color:#eab308 }
+.score-warning { color:#f97316 }
+.score-critical { color:#ef4444 }
+.alert-list { list-style:none }
+.alert-list li { padding:8px 12px; margin-bottom:6px; border-radius:6px; font-size:0.85rem; display:flex; align-items:flex-start; gap:8px }
+.alert-critical { background:rgba(239,68,68,0.15); border-left:3px solid #ef4444 }
+.alert-warning { background:rgba(234,179,8,0.15); border-left:3px solid #eab308 }
+.alert-info { background:rgba(34,197,94,0.15); border-left:3px solid #22c55e }
+.metrics-grid { display:grid; gap:8px }
+.metric-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #1e293b; font-size:0.85rem }
+.metric-row .val { font-weight:600 }
+.status-dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px }
+.status-up { background:#22c55e }
+.status-down { background:#ef4444 }
+.status-warn { background:#eab308 }
+table { width:100%; border-collapse:collapse; font-size:0.8rem }
+th, td { padding:8px 10px; text-align:left; border-bottom:1px solid #1e293b }
+th { color:#6b7280; font-weight:500; text-transform:uppercase; font-size:0.7rem }
+.progress-bar { height:6px; background:#1e293b; border-radius:3px; overflow:hidden; margin-top:4px; width:100% }
+.progress-fill { height:100%; border-radius:3px; transition:width .5s }
+h2.section-title { font-size:1rem; color:#9ca3af; margin-bottom:16px; text-transform:uppercase; letter-spacing:1px }
+.empty-state { color:#4b5563; text-align:center; padding:40px; font-size:0.9rem }
+@media(max-width:600px) {
+  .grid-2 { grid-template-columns:1fr }
+  .header { flex-direction:column; align-items:flex-start; gap:8px }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>🔐 PSH <span>Health Center</span></h1>
+    <div class="time">DESKTOP-TRUUF31 · Windows 10 Pro</div>
+  </div>
+  <div id="lastUpdated" class="time">Loading...</div>
+</div>
+
+<div class="grid grid-scores" id="scoreGrid"></div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h2 class="section-title">⚠️ Active Alerts</h2>
+    <ul class="alert-list" id="alertList">
+      <li class="empty-state">No data yet. Run monitor.ps1 first.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2 class="section-title">📊 System Health</h2>
+    <div class="metrics-grid" id="systemMetrics"></div>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h2 class="section-title">🛡️ Security</h2>
+    <div class="metrics-grid" id="securityMetrics"></div>
+  </div>
+  <div class="card">
+    <h2 class="section-title">🌐 Website Status</h2>
+    <div class="metrics-grid" id="websiteMetrics"></div>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h2 class="section-title">💾 Disk Usage</h2>
+    <div id="diskMetrics"></div>
+  </div>
+  <div class="card">
+    <h2 class="section-title">🤖 AI Infrastructure</h2>
+    <div class="metrics-grid" id="aiMetrics"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2 class="section-title">📈 History (last 30 data points)</h2>
+  <canvas id="historyChart" height="200"></canvas>
+</div>
+
+<script>
+let chart = null;
+
+function getScoreClass(score) {
+  if (score >= 80) return 'score-excellent';
+  if (score >= 60) return 'score-good';
+  if (score >= 40) return 'score-warning';
+  return 'score-critical';
+}
+
+function getStatusDot(status) {
+  if (status === 'up') return '<span class="status-dot status-up"></span>';
+  if (status === 'down') return '<span class="status-dot status-down"></span>';
+  return '<span class="status-dot status-warn"></span>';
+}
+
+function getProgressColor(pct) {
+  if (pct > 90) return '#ef4444';
+  if (pct > 75) return '#eab308';
+  return '#22c55e';
+}
+
+async function loadData() {
+  try {
+    const resp = await fetch('data/latest.json?_=' + Date.now());
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    renderDashboard(data);
+    document.getElementById('lastUpdated').textContent = 'Last updated: ' + (data.timestamp || 'N/A');
+  } catch (e) {
+    document.getElementById('lastUpdated').textContent = 'Error loading data: ' + e.message;
+    const isFile = location.protocol === 'file:';
+    document.getElementById('scoreGrid').innerHTML = `<div class="card" style="grid-column:1/-1">
+      <p style="color:#f97316">Could not load data/latest.json (${e.message}).</p>
+      ${isFile ? `<p style="color:#6b7280;margin-top:8px">Chrome/Edge block <code>fetch()</code> of local files from a <code>file://</code> page. Serve this folder instead:</p>
+      <pre style="background:#0a0e17;padding:10px;border-radius:6px;margin-top:6px;overflow:auto">cd D:\\PshopMusicSite\\health-center
+python -m http.server 8080</pre>
+      <p style="color:#6b7280;margin-top:6px">then open http://localhost:8080/dashboard.html (Firefox allows file:// fetch directly, no server needed).</p>` : '<p style="color:#6b7280;margin-top:8px">Run monitor.ps1 first to generate data/latest.json.</p>'}
+    </div>`;
+  }
+}
+
+function renderDashboard(data) {
+  const scores = data.scores || {};
+  const system = data.system || {};
+  const security = data.security || {};
+  const website = data.website || {};
+  const ai = data.ai || {};
+  const alerts = data.alerts || [];
+
+  // Score cards
+  const scoreItems = [
+    {key:'overall', label:'Overall Health', sub:`CPU ${scores.cpu} | RAM ${scores.ram} | Disk ${scores.disk}`},
+    {key:'cpu', label:'CPU', sub:`${system.cpuPct || 'N/A'}% usage`},
+    {key:'ram', label:'RAM', sub:`${system.ramPct || 'N/A'}% used`},
+    {key:'disk', label:'Disk', sub:`${scores.disk}/100`},
+    {key:'security', label:'Security', sub:`${security.defender || 'N/A'}`},
+    {key:'website', label:'Website', sub:`${website.pages ? website.pages.filter(p=>p.code===200).length+'/OK' : 'N/A'}`},
+    {key:'ai', label:'AI Infrastructure', sub:`FB: ${ai.firebase || 'N/A'}`}
+  ];
+
+  document.getElementById('scoreGrid').innerHTML = scoreItems.map(s => {
+    const val = scores[s.key] || 0;
+    return `<div class="card score-card">
+      <div class="value ${getScoreClass(val)}">${val}</div>
+      <div class="label">${s.label}</div>
+      <div class="sub">${s.sub}</div>
+    </div>`;
+  }).join('');
+
+  // Alerts
+  const alertEl = document.getElementById('alertList');
+  if (alerts.length === 0) {
+    alertEl.innerHTML = '<li class="empty-state">✅ No active alerts. System healthy.</li>';
+  } else {
+    alertEl.innerHTML = alerts.map(a => {
+      const cls = a.severity === 'critical' ? 'alert-critical' : a.severity === 'warning' ? 'alert-warning' : 'alert-info';
+      return `<li class="${cls}"><span>${a.severity === 'critical' ? '🔴' : a.severity === 'warning' ? '🟡' : '🟢'}</span><span>${a.message} <small style="color:#6b7280">${a.timestamp||''}</small></span></li>`;
+    }).join('');
+  }
+
+  // System metrics
+  document.getElementById('systemMetrics').innerHTML = [
+    ['CPU Usage', system.cpuPct + '%', system.cpuPct],
+    ['RAM Usage', system.ramPct + '%', system.ramPct],
+    ['RAM Free', system.ramFreeGB + ' GB', null],
+    ['Processes', system.processes?.total || 'N/A', null],
+    ['Uptime', system.uptime || 'N/A', null]
+  ].map(r => {
+    const pct = r[2];
+    const bar = pct !== null && pct !== 'N/A' ? `<div class="progress-bar"><div class="progress-fill" style="width:${Math.min(pct,100)}%;background:${getProgressColor(pct)}"></div></div>` : '';
+    return `<div class="metric-row"><span>${r[0]}</span><span class="val">${r[1]}${bar}</span></div>`;
+  }).join('');
+
+  // Security metrics
+  const secIssues = security.issues || [];
+  document.getElementById('securityMetrics').innerHTML = [
+    ['Windows Defender', security.defender || 'N/A', security.defender === 'Active'],
+    ['Firewall', security.firewall || 'N/A', (security.firewall||'').includes('3/3')],
+    ['Critical Errors (24h)', security.criticalErrors24h || 0, (security.criticalErrors24h||0) < 10],
+    ['Login Failures (24h)', security.loginFailures24h || 0, (security.loginFailures24h||0) < 5],
+    ['Admins', security.administrators || 'N/A', null],
+    ['Issues', secIssues.length > 0 ? secIssues.join('; ') : 'None', secIssues.length === 0]
+  ].map(r => {
+    const ok = r[2];
+    const dot = ok === null ? '' : ok ? '<span class="status-dot status-up"></span>' : '<span class="status-dot status-down"></span>';
+    return `<div class="metric-row"><span>${r[0]}</span><span class="val">${dot}${r[1]}</span></div>`;
+  }).join('');
+
+  // Website metrics
+  const pages = website.pages || [];
+  document.getElementById('websiteMetrics').innerHTML = [
+    ...pages.map(p => [`${p.name}`, `${getStatusDot(p.status)} HTTP ${p.code} (${p.ms}ms)`]),
+    ['SSL Expires', `${website.ssl?.daysLeft || 'N/A'} days (${website.ssl?.expiry || 'N/A'})`]
+  ].map(r => `<div class="metric-row"><span>${r[0]}</span><span class="val">${r[1]}</span></div>`).join('');
+
+  // AI metrics
+  document.getElementById('aiMetrics').innerHTML = [
+    ['Firebase Realtime DB', `${getStatusDot(ai.firebase)} ${ai.firebase}`]
+  ].map(r => `<div class="metric-row"><span>${r[0]}</span><span class="val">${r[1]}</span></div>`).join('');
+
+  // Disk metrics
+  const disks = system.disks || [];
+  document.getElementById('diskMetrics').innerHTML = disks.length > 0
+    ? disks.map(d => {
+        const pct = d.usedPct || 0;
+        return `<div class="metric-row"><span>${d.drive} (${d.totalGB}GB)</span><span class="val">${pct}% used (${d.freeGB}GB free)<div class="progress-bar"><div class="progress-fill" style="width:${Math.min(pct,100)}%;background:${getProgressColor(pct)}"></div></div></span></div>`;
+      }).join('')
+    : '<div class="empty-state">No disk data</div>';
+}
+
+// Auto-refresh every 60 seconds
+loadData();
+setInterval(loadData, 60000);
+</script>
+</body>
+</html>

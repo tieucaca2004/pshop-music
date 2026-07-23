@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Loading test data...</title></head>
+<body>
+<script>
+fetch('/data/landing-pages/omnis-duo.json')
+  .then(function (r) { return r.text(); })
+  .then(function (text) {
+    sessionStorage.setItem('pshPreviewData', text);
+    location.href = '/admin/ai/mobile-preview.html';
+  })
+  .catch(function (e) {
+    document.body.textContent = 'Failed to load test data: ' + e.message;
+  });
+</script>
+Loading real OMNIS-DUO landing page data...
+</body></html>

@@ -1,0 +1,27 @@
+{
+  "restaurant": {
+    "name": "Hủ Tiếu Xào A Tiểu",
+    "address": "86 Lạc Long Quân, Nha Trang",
+    "googleMaps": "https://maps.app.goo.gl/ihv9EZhZCNfwP9um6",
+    "hours": "17:00 - 22:00",
+    "phone": "0905 321 039",
+    "website": "www.atieu.com",
+    "delivery": "Giao hàng tận nơi - Gọi 0905 321 039"
+  },
+  "menu": {
+    "description": "Hủ tiếu xào hải sản 75K, hủ tiếu xào thập cẩm, miến xào thập cẩm",
+    "note": "Quét mã QR tại bàn để xem thực đơn đầy đủ",
+    "qrOrder": "Quét mã QR trên bàn để đặt món"
+  },
+  "intents": [
+    {"trigger": ["menu", "ăn gì", "món", "thực đơn"], "reply": "Quán có hủ tiếu xào hải sản 75K, hủ tiếu xào thập cẩm, miến xào thập cẩm ạ. Quét mã QR trên bàn để xem thực đơn đầy đủ và đặt món nhanh."},
+    {"trigger": ["địa chỉ", "ở đâu", "đường"], "reply": "Quán ở 86 Lạc Long Quân, Nha Trang ạ. Google Maps: https://maps.app.goo.gl/ihv9EZhZCNfwP9um6"},
+    {"trigger": ["giờ", "mấy giờ", "mở cửa"], "reply": "Quán mở cửa 17:00 - 22:00 mỗi ngày ạ."},
+    {"trigger": ["điện thoại", "gọi", "hotline", "số"], "reply": "Hotline: 0905 321 039 ạ."},
+    {"trigger": ["grab", "grabfood", "giao hàng", "ship"], "reply": "Quán có giao hàng tận nơi. Gọi 0905 321 039 để đặt ạ."},
+    {"trigger": ["giá", "bao nhiêu", "tiền"], "reply": "Hủ tiếu xào hải sản 75K ạ. Quét mã QR trên bàn xem menu đầy đủ."},
+    {"trigger": ["đặt bàn", "đặt món", "reserve"], "reply": "Gọi 0905 321 039 để đặt bàn hoặc đặt món mang về ạ."},
+    {"trigger": ["gửi xe", "đậu xe", "xe máy", "ô tô"], "reply": "Có chỗ gửi xe máy tại quán ạ."},
+    {"trigger": ["thanh toán"], "reply": "Chấp nhận tiền mặt và chuyển khoản ạ."}
+  ]
+}

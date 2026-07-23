@@ -166,8 +166,8 @@ const GenerationService = (function () {
     var map = {
       'image-generator': 'image',
       'image-prompt-generator': 'prompt',
-      'video-generator': 'video'
-    };
+      'video-generator': 'video',
+      'blog-writer': 'blog',
       'faq-generator': 'blog',
       'seo-generator': 'seo',
       'facebook-post-generator': 'facebook',

@@ -1,0 +1,28 @@
+{
+  "restaurant": {
+    "name": "Hủ Tiếu Xào Á Tiểu Nhị",
+    "shortName": "Á Tiểu Nhị",
+    "address": "123 Đường Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh",
+    "googleMaps": "https://maps.google.com/?q=123+Nguyen+Hue+District+1+HCMC",
+    "phone": "0909 123 456",
+    "openingHours": {
+          "weekdays": "09:00 - 22:00",
+      "weekends": "08:00 - 23:00"
+    },
+    "facebookPage": "https://www.facebook.com/hutieuxaoatieunhi",
+    "delivery": {
+      "grabFood": "https://food.grab.com/vn/restaurant/atieu-nhi",
+      "shopeeFood": "https://shopeefood.vn/atieu-nhi",
+      "baemin": "https://baemin.vn/atieu-nhi"
+    }
+  },
+  "menuLink": "https://www.facebook.com/hutieuxaoatieunhi/menu",
+  "featuredDishes": [
+    "Hủ Tiếu Xào Bò Lúc Lắc",
+    "Hủ Tiếu Xào Tôm Thịt",
+    "Hủ Tiếu Xào Hải Sản",
+    "Hủ Tiếu Xào Gà Nấm",
+    "Hủ Tiếu Xào Thập Cẩm",
+    "Hủ Tiếu Xào Xá Xíu"
+  ]
+}

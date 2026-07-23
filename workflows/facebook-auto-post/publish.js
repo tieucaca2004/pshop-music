@@ -60,12 +60,6 @@ function graph(method, endpoint, params) {
   });
 }
 
-async function validate(creds) {
-  // Validate by checking /me (doesn't require page permissions)
-  var result = await graph('GET', '/me', { fields: 'id', access_token: creds.pageAccessToken });
-  return { valid: true, userId: result.id };
-}
-
 async function publish(creds, msg) {
   var result = await graph('POST', '/' + PAGE_ID + '/feed', { message: msg, access_token: creds.pageAccessToken });
   return { postId: result.id };
@@ -85,15 +79,6 @@ async function main() {
   try {
     console.log('[Facebook Auto Post] Loading credentials...');
     var creds = loadCreds();
-
-    console.log('[Facebook Auto Post] Validating...');
-    var info = await validate(creds);
-    console.log('[Facebook Auto Post] Page: ' + info.pageName);
-
-    if (validateOnly) {
-      console.log('[Facebook Auto Post] Validation PASSED. No post was made.');
-      process.exit(0);
-    }
 
     console.log('[Facebook Auto Post] Publishing...');
     var result = await publish(creds, msg);

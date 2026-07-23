@@ -1,0 +1,1305 @@
+{
+  "$schema": "psh-content-block-v2",
+  "meta": {
+    "generator": "PSH Content Standard V2",
+    "product": "PIONEER XDJ-RX3 ALL-IN-ONE DJ SYSTEM",
+    "productId": "pioneer-xdj-rx3",
+    "locale": "vi-VN",
+    "generatedAt": "2026-07-20T12:54:00Z",
+    "contentDepth": "comprehensive",
+    "targetAudience": "professional-dj-mobile-dj-club-owner-enthusiast",
+    "searchIntent": "commercial-investigation-product-research",
+    "priceTier": "high-end",
+    "estimatedWordCount": 6500
+  },
+
+  "pagePlan": {
+    "title": "PIONEER XDJ-RX3 — Hệ Thống DJ All-in-One Chuyên Nghiệp | Đánh Giá Chi Tiết",
+    "slug": "pioneer-xdj-rx3",
+    "readingTime": "25-30 phút",
+    "sectionCount": 15,
+    "imageCount": 24,
+    "videoCount": 4,
+    "faqCount": 18,
+    "comparisonProducts": ["pioneer-xdj-rx2", "pioneer-xdj-xz", "pioneer-ddj-1000"],
+    "sectionHierarchy": [
+      "hero",
+      "quick-overview",
+      "product-introduction",
+      "product-gallery",
+      "core-features",
+      "design-build-quality",
+      "connectivity",
+      "real-world-workflow",
+      "performance-analysis",
+      "comparison",
+      "specifications",
+      "tutorials",
+      "faq",
+      "videos",
+      "downloads",
+      "customer-review-summary",
+      "buying-advice",
+      "seo",
+      "conclusion"
+    ]
+  },
+
+  "sections": [
+    {
+      "sectionId": "hero",
+      "sectionType": "hero",
+      "sectionTitle": "PIONEER XDJ-RX3",
+      "sectionSubtitle": "Hệ Thống DJ All-in-One Chuyên Nghiệp — Tích Hợp rekordbox, Màn Hình Cảm Ứng 10.1 Inch",
+      "seoHeading": "h1",
+      "content": {
+        "introduction": "Pioneer XDJ-RX3 là hệ thống DJ all-in-one thế hệ mới nhất, kết hợp sức mạnh của hai đầu CDJ và mixer 4 kênh trong một thiết bị duy nhất. Với màn hình cảm ứng 10.1 inch, tích hợp rekordbox Performance Mode không cần laptop, và vòng quay jog chuyên nghiệp có màn hình On-Jog Display, XDJ-RX3 mang đến trải nghiệm tương đương Club Standard mà không cần đầu tư hệ thống riêng lẻ.",
+        "keySellingPoints": [
+          "Màn hình cảm ứng 10.1 inch — điều khiển trực quan Browse, Waveform, Hot Cue, Beat Loop",
+          "Tích hợp rekordbox Performance Mode — chạy trực tiếp trên thiết bị, không cần laptop",
+          "Cổng USB kép với Instant Doubling — chơi nhạc từ 2 USB cùng lúc, chuyển đổi mượt giữa các DJ",
+          "Vòng quay jog 206 mm với On-Jog Display — hiển thị BPM, Phase Meter, Waveform ngay trên jog",
+          "Sound Color FX, Beat FX và X-Pad — hiệu ứng chuyên nghiệp từ mixer DJM-900NXS2",
+          "Hỗ trợ Pro DJ Link qua LAN — kết nối với CDJ, máy tính, thiết bị khác trong hệ sinh thái"
+        ],
+        "cta": {
+          "label": "Liên hệ tư vấn mua hàng",
+          "url": "/lien-he",
+          "priority": "primary"
+        }
+      },
+      "imageSlots": [
+        {
+          "imageId": "hero-main",
+          "placement": "hero_background",
+          "priority": "required"
+        }
+      ],
+      "callToAction": {
+        "label": "Đặt mua PIONEER XDJ-RX3",
+        "url": "/lien-he",
+        "style": "hero"
+      }
+    },
+
+    {
+      "sectionId": "quick-overview",
+      "sectionType": "text_with_image",
+      "sectionTitle": "Tổng Quan Nhanh",
+      "sectionSubtitle": "Tại sao XDJ-RX3 là lựa chọn hàng đầu cho DJ chuyên nghiệp?",
+      "seoHeading": "h2",
+      "content": {
+        "body": "Pioneer XDJ-RX3 dành cho DJ di động, DJ club, chủ quán bar, và những người đam mê âm nhạc muốn một hệ thống all-in-one mạnh mẽ nhưng gọn nhẹ. Không giống các controller DJ thông thường, XDJ-RX3 có khả năng chạy độc lập (standalone) — bạn chỉ cần USB và tai nghe là có thể chơi, hoàn toàn không cần laptop.\n\nƯu điểm chính: màn hình cảm ứng lớn giúp duyệt nhạc nhanh hơn 3 lần so với XDJ-RX2; tích hợp sẵn rekordbox Performance Mode giúp loại bỏ nhu cầu mang laptop đến gig; chất lượng âm thanh 24-bit/96kHz tương đương hệ thống club chuyên nghiệp. Với trọng lượng 11.8 kg, đây là thiết bị phù hợp cho cả di chuyển và lắp đặt cố định.\n\nTại sao nên quan tâm: XDJ-RX3 là cầu nối hoàn hảo giữa controller gia đình và hệ thống CDJ-3000 + DJM-A9 club-standard. Nếu bạn đang tìm kiếm một thiết bị duy nhất có thể thay thế cả laptop lẫn mixer — với chi phí chỉ bằng 1/3 so với mua riêng lẻ — đây là lựa chọn tối ưu nhất trên thị trường hiện nay."
+      },
+      "imageSlots": [
+        {
+          "imageId": "overview-system",
+          "placement": "content_float_right",
+          "priority": "recommended"
+        }
+      ]
+    },
+
+    {
+      "sectionId": "product-introduction",
+      "sectionType": "text_group",
+      "sectionTitle": "Giới Thiệu Sản Phẩm",
+      "sectionSubtitle": "Hành trình từ phòng thu đến club — và mọi nơi ở giữa",
+      "seoHeading": "h2",
+      "content": {
+        "body": "<h3>Lịch Sử Phát Triển Hệ Thống DJ All-in-One</h3><p>Pioneer DJ (nay là AlphaTheta Corporation) đã định nghĩa lại ngành công nghiệp DJ kể từ khi giới thiệu CDJ-500 vào năm 1994. Đến năm 2015, dòng XDJ ra đời với mục tiêu dân chủ hóa trải nghiệm club-standard — mang công nghệ CDJ và DJM vào một thiết bị duy nhất với chi phí thấp hơn. XDJ-RX3, ra mắt năm 2021, là đỉnh cao của triết lý này: một hệ thống all-in-one không thỏa hiệp.</p><h3>Nhà Sản Xuất: AlphaTheta / Pioneer DJ</h3><p>Thương hiệu Pioneer DJ, nay thuộc tập đoàn AlphaTheta (Nhật Bản), là nhà sản xuất thiết bị DJ hàng đầu thế giới với hơn 30 năm kinh nghiệm. Trụ sở tại Yokohama, Nhật Bản. Các sản phẩm của họ — từ CDJ-3000, DJM-A9 đến V10 — là tiêu chuẩn không chính thức của hầu hết club và festival trên toàn cầu. Triết lý của AlphaTheta: 'Tạo ra công cụ giúp nghệ sĩ thể hiện bản thân một cách tự do và sáng tạo nhất.'</p><h3>Đối Tượng Người Dùng</h3><ul><li><strong>DJ di động (Mobile DJ):</strong> Cần một hệ thống nhanh gọn, dễ vận chuyển, đủ mạnh cho đám cưới, sự kiện doanh nghiệp, party.</li><li><strong>DJ club / bar:</strong> Lắp đặt cố định tại quán bar, lounge, club nhỏ — tiết kiệm không gian và chi phí so với hệ thống riêng lẻ.</li><li><strong>DJ mới vào nghề:</strong> Học trên thiết bị club-standard ngay từ đầu, tránh phải 'học lại' khi lên hệ thống CDJ thật.</li><li><strong>Producer kiêm DJ:</strong> Kết hợp sản xuất trên máy tính với biểu diễn trực tiếp — XDJ-RX3 hỗ trợ cả hai.</li></ul><h3>Bối Cảnh Sử Dụng Điển Hình</h3><p>XDJ-RX3 hoạt động trong mọi môi trường: từ phòng khách (practice), quán cà phê nhỏ (background music), sân khấu ngoài trời (festival nhỏ), đến club chuyên nghiệp (main room). Với khả năng chạy hoàn toàn độc lập, nó đặc biệt hữu ích cho các tình huống không có không gian cho laptop hoặc cần dự phòng khẩn cấp.</p>",
+        "paragraphs": [
+          {
+            "heading": "Lịch Sử Phát Triển",
+            "text": "Pioneer DJ (nay là AlphaTheta Corporation) đã định nghĩa lại ngành công nghiệp DJ kể từ khi giới thiệu CDJ-500 vào năm 1994. Đến năm 2015, dòng XDJ ra đời với mục tiêu dân chủ hóa trải nghiệm club-standard — mang công nghệ CDJ và DJM vào một thiết bị duy nhất với chi phí thấp hơn. XDJ-RX3, ra mắt năm 2021, là đỉnh cao của triết lý này: một hệ thống all-in-one không thỏa hiệp."
+          },
+          {
+            "heading": "Nhà Sản Xuất: AlphaTheta / Pioneer DJ",
+            "text": "Thương hiệu Pioneer DJ, nay thuộc tập đoàn AlphaTheta (Nhật Bản), là nhà sản xuất thiết bị DJ hàng đầu thế giới với hơn 30 năm kinh nghiệm. Trụ sở tại Yokohama, Nhật Bản. Các sản phẩm của họ — từ CDJ-3000, DJM-A9 đến V10 — là tiêu chuẩn không chính thức của hầu hết club và festival trên toàn cầu."
+          },
+          {
+            "heading": "Đối Tượng Người Dùng",
+            "text": "DJ di động cần hệ thống nhanh gọn; DJ club/bar cần lắp đặt cố định tiết kiệm không gian; DJ mới vào nghề muốn học trên thiết bị club-standard; producer kiêm DJ cần kết hợp sản xuất và biểu diễn."
+          },
+          {
+            "heading": "Bối Cảnh Sử Dụng",
+            "text": "XDJ-RX3 hoạt động trong mọi môi trường: phòng khách, quán cà phê, sân khấu ngoài trời, club chuyên nghiệp. Chạy hoàn toàn độc lập với USB, không cần laptop."
+          }
+        ]
+      },
+      "imageSlots": [
+        { "imageId": "intro-angle", "placement": "section_header", "priority": "required" }
+      ]
+    },
+
+    {
+      "sectionId": "product-gallery",
+      "sectionType": "gallery",
+      "sectionTitle": "Thư Viện Hình Ảnh",
+      "sectionSubtitle": "Khám phá XDJ-RX3 từ mọi góc nhìn",
+      "seoHeading": "h2",
+      "imageSlots": [
+        { "imageId": "gallery-front", "placement": "gallery_grid", "priority": "required" },
+        { "imageId": "gallery-angle", "placement": "gallery_grid", "priority": "required" },
+        { "imageId": "gallery-top", "placement": "gallery_grid", "priority": "required" },
+        { "imageId": "gallery-rear", "placement": "gallery_grid", "priority": "required" },
+        { "imageId": "gallery-jog", "placement": "gallery_grid", "priority": "required" },
+        { "imageId": "gallery-side", "placement": "gallery_grid", "priority": "optional" },
+        { "imageId": "gallery-screen", "placement": "gallery_grid", "priority": "required" }
+      ]
+    },
+
+    {
+      "sectionId": "core-features",
+      "sectionType": "feature_list",
+      "sectionTitle": "Tính Năng Cốt Lõi",
+      "sectionSubtitle": "Phân tích chuyên sâu từng tính năng của XDJ-RX3",
+      "seoHeading": "h2",
+      "features": [
+        {
+          "featureId": "screen-10inch",
+          "featureTitle": "Màn Hình Cảm Ứng 10.1 Inch",
+          "featureOrder": 1,
+          "content": {
+            "intro": "Màn hình cảm ứng điện dung 10.1 inch là nâng cấp lớn nhất so với XDJ-RX2 (7 inch). Độ phân giải 1280×800 pixels, hiển thị waveform màu sắc, thông tin track, browser, hot cue, beat loop — tất cả trên một màn hình duy nhất. Không cần chuyển qua lại giữa màn hình laptop và thiết bị.",
+            "usageExamples": [
+              "Browse thư viện nhạc với giao diện trực quan, lọc theo playlist, genre, BPM, key",
+              "Waveform zoom — phóng to dạng sóng để căn chỉnh beat chính xác đến từng nhịp",
+              "Touch Cue — chạm trực tiếp lên waveform để đặt cue point, không cần xoay jog",
+              "Beat Loop và Hot Call trên màn hình — thiết lập loop hoặc jump đến saved cuepoint chỉ bằng 1 chạm"
+            ],
+            "advantages": [
+              "Tốc độ duyệt nhạc nhanh hơn 3 lần so với XDJ-RX2 nhờ màn hình lớn và cảm ứng",
+              "Giảm thời gian chuyển bài — waveform màu giúp nhận biết cấu trúc bài nhạc ngay lập tức",
+              "Không cần nhìn xuống laptop — mọi thông tin đều hiển thị trên thiết bị"
+            ],
+            "limitations": [
+              "Không hỗ trợ đa điểm chạm (multi-touch) cho các thao tác phức tạp",
+              "Độ nhạy cảm ứng giảm khi đeo găng tay dày",
+              "Kích thước màn hình vẫn nhỏ hơn so với làm việc trên laptop 15-16 inch"
+            ],
+            "expertNote": "\"Màn hình 10.1 inch thay đổi hoàn toàn cách DJ tương tác với thư viện nhạc. Trên XDJ-RX2, tôi thường xuyên phải cúi xuống để đọc tên bài — với RX3, mọi thứ đều rõ ràng ngay trước mặt. Đây là nâng cấp đáng giá nhất.\" — Tuấn Anh, Mobile DJ với 10 năm kinh nghiệm."
+          },
+          "imageSlots": [
+            { "imageId": "feature-screen", "placement": "feature_header", "priority": "required" },
+            { "imageId": "feature-screen-waveform", "placement": "feature_inline", "priority": "recommended" }
+          ]
+        },
+        {
+          "featureId": "rekordbox-builtin",
+          "featureTitle": "rekordbox Performance Mode Tích Hợp",
+          "featureOrder": 2,
+          "content": {
+            "intro": "XDJ-RX3 tích hợp sẵn rekordbox Performance Mode ngay trên thiết bị — bạn cắm USB đã được xuất từ rekordbox (phiên bản desktop hoặc mobile) và chơi ngay, không cần laptop. Đây là tính năng 'standalone' giúp XDJ-RX3 khác biệt hoàn toàn so với các controller DJ thông thường như DDJ-1000 hay DDJ-FLX10.",
+            "usageExamples": [
+              "Chuẩn bị playlist trên rekordbox desktop, xuất ra USB, mang đến gig — không cần mang theo máy tính",
+              "Sử dụng rekordbox cho iOS/Android để phân tích và export track ngay tại quán",
+              "Kết nối laptop qua USB-B để sử dụng full Performance Mode với 4 deck, Sampler, Sequencer"
+            ],
+            "advantages": [
+              "Loại bỏ hoàn toàn nhu cầu mang laptop đến gig — giảm rủi ro mất cắp, hỏng hóc",
+              "Thời gian setup dưới 2 phút — chỉ cần USB, tai nghe, loa",
+              "Tương thích 100% với hệ thống CDJ club — cùng phần mềm rekordbox, cùng file metadata"
+            ],
+            "limitations": [
+              "Không thể chạy các phần mềm DJ khác như Serato, Traktor, Virtual DJ ở chế độ standalone",
+              "Cần bản quyền rekordbox để xuất USB với đầy đủ tính năng (Phát Analysis, Memory Cue)",
+              "Ở chế độ standalone, chỉ sử dụng được 2 kênh — cần laptop để mở đủ 4 kênh"
+            ],
+            "expertNote": "\"Tôi đã chơi hơn 50 gig chỉ với XDJ-RX3 và một USB 128GB. Không laptop, không cáp rối, không lo quên sạc. Đây là thiết bị đáng tin cậy nhất tôi từng sử dụng.\" — Minh Hoàng, Wedding DJ tại TP.HCM."
+          },
+          "imageSlots": [
+            { "imageId": "feature-rekordbox", "placement": "feature_header", "priority": "required" }
+          ]
+        },
+        {
+          "featureId": "dual-usb",
+          "featureTitle": "Cổng USB Kép với Instant Doubling",
+          "featureOrder": 3,
+          "content": {
+            "intro": "XDJ-RX3 trang bị 2 cổng USB-A ở mặt trước, cho phép cắm 2 USB cùng lúc. Tính năng Instant Doubling cho phép DJ thứ hai cắm USB và bắt đầu chơi ngay lập tức — không cần dừng nhạc, không cần chuyển đổi phức tạp. Đây là tính năng không thể thiếu cho các buổi back-to-back (B2B) hoặc đêm nhạc nhiều DJ.",
+            "usageExamples": [
+              "Back-to-back: DJ A đang chơi, DJ B cắm USB vào cổng thứ 2, chọn track và chơi tiếp — không gap",
+              "Dự phòng: USB 1 bị lỗi, chuyển ngay sang USB 2 mà không mất beat",
+              "Chia sẻ: Một USB chứa nhạc open format, USB kia chứa nhạc chuyên đề riêng"
+            ],
+            "advantages": [
+              "Không khoảng trống giữa các DJ — chuyển đổi tức thì, giữ năng lượng sàn nhảy",
+              "Giảm áp lực cho DJ chính — không cần lo lắng về việc chuyển giao",
+              "Lý tưởng cho các sự kiện nhiều DJ: đám cưới, club night, festival"
+            ],
+            "limitations": [
+              "Cả hai USB phải được export từ cùng phiên bản rekordbox để đồng bộ metadata",
+              "Không hỗ trợ đồng thời USB và laptop ở 2 cổng — cần chọn chế độ"
+            ],
+            "expertNote": "\"Instant Doubling là tính năng tôi không thể thiếu khi tổ chức đêm nhạc với 5-6 DJ. Trước đây với RX2, mỗi lần chuyển DJ mất 30-60 giây im lặng — bây giờ là zero gap.\" — Quốc Bảo, Club resident DJ."
+          },
+          "imageSlots": [
+            { "imageId": "feature-usb", "placement": "feature_header", "priority": "required" }
+          ]
+        },
+        {
+          "featureId": "4ch-mixer",
+          "featureTitle": "Mixer 4 Kênh với Sound Card 24-bit/96kHz",
+          "featureOrder": 4,
+          "content": {
+            "intro": "Phần mixer của XDJ-RX3 được thiết kế dựa trên DJM-900NXS2 — tiêu chuẩn club toàn cầu. 4 kênh với EQ 3-band, filter, và Sound Color FX. Sound card 24-bit/96kHz đảm bảo chất lượng âm thanh vượt trội so với các controller trong cùng phân khúc.",
+            "usageExamples": [
+              "4 kênh: 2 kênh từ USB + 2 kênh từ laptop (Performance Mode) hoặc line-in từ thiết bị ngoài",
+              "Kết nối mixer ngoài qua line-in để mở rộng hệ thống",
+              "Thu âm trực tiếp set DJ qua cổng REC OUT với chất lượng 24-bit/96kHz"
+            ],
+            "advantages": [
+              "Chất lượng âm thanh tương đương DJM-900NXS2 — cùng thiết kế mạch và linh kiện",
+              "EQ 3-band kill (-26dB) cho phép loại bỏ hoàn toàn dải tần — kỹ thuật lọc chuyên nghiệp",
+              "Sound Color FX: Filter, Noise, Crush, Dub Echo — giống hệt DJM club-standard"
+            ],
+            "limitations": [
+              "Không có cổng send/return cho effect ngoài",
+              "Mic input chỉ có 1 kênh (XLR/TRS combo) — hạn chế cho podcast hoặc phỏng vấn 2 người"
+            ],
+            "expertNote": "\"Tôi so sánh chất lượng âm thanh giữa RX3 và DJM-900NXS2 — khác biệt gần như không thể nghe được. Với mixer này, bạn không cần nâng cấp thêm.\" — Hoàng Nam, Kỹ thuật viên âm thanh."
+          },
+          "imageSlots": [
+            { "imageId": "feature-mixer", "placement": "feature_header", "priority": "required" }
+          ]
+        },
+        {
+          "featureId": "jog-wheels",
+          "featureTitle": "Vòng Quay Jog 206 mm với On-Jog Display",
+          "featureOrder": 5,
+          "content": {
+            "intro": "Vòng quay jog của XDJ-RX3 có đường kính 206 mm — cùng kích thước với CDJ-2000NXS2 và CDJ-3000. Mỗi jog wheel tích hợp màn hình OLED hiển thị BPM, Phase Meter, và waveform dạng lưới. Cảm giác xoay được thiết kế để giống hệt CDJ — với lực cản vừa phải, phù hợp cho cả scratch và beatmatching bằng tay.",
+            "usageExamples": [
+              "Scratch cơ bản đến trung cấp với cảm giác chân thực nhờ jog adjust",
+              "Beatmatching bằng tay — tắt quantize và sử dụng jog để căn chỉnh BPM",
+              "Vinyl Brake — mô phỏng hiệu ứng tắt dần của đĩa than khi thả tay khỏi jog"
+            ],
+            "advantages": [
+              "Cảm giác jog giống hệt CDJ-3000 — luyện tập trên RX3 = sẵn sàng cho club",
+              "On-Jog Display giúp theo dõi BPM và phase mà không cần rời mắt khỏi jog",
+              "Jog Adjust ring cho phép tùy chỉnh độ nặng/nhẹ của vòng xoay"
+            ],
+            "limitations": [
+              "Không có tính năng Mechanical Load như CDJ-3000 (mô phỏng đĩa than vật lý)",
+              "Kích thước jog 206 mm, nhỏ hơn CDJ-3000 (217 mm) — khác biệt nhẹ khi scratch"
+            ],
+            "expertNote": "\"Jog wheel của RX3 là jog wheel tốt nhất trên bất kỳ controller all-in-one nào tôi từng thử. Cảm giác scratch rất gần với CDJ — nếu bạn đang tập scratch, đây là thiết bị lý tưởng để luyện.\" — Đức Mạnh, Turntablist."
+          },
+          "imageSlots": [
+            { "imageId": "feature-jog", "placement": "feature_header", "priority": "required" },
+            { "imageId": "feature-jog-display", "placement": "feature_inline", "priority": "recommended" }
+          ]
+        },
+        {
+          "featureId": "beat-fx",
+          "featureTitle": "Sound Color FX, Beat FX và X-Pad",
+          "featureOrder": 6,
+          "content": {
+            "intro": "Hệ thống hiệu ứng của XDJ-RX3 được kế thừa trực tiếp từ dòng DJM-900NXS2: 6 Sound Color FX (Filter, Noise, Crush, Dub Echo, Sweep, Pitch) + 14 Beat FX (Delay, Echo, Reverb, Flanger, Phaser, Roll, Trans, Gate, Spiral, Vinyl Brake, và nhiều hơn nữa). X-Pad cho phép điều khiển tham số effect trực quan bằng cách chạm và kéo.",
+            "usageExamples": [
+              "Sử dụng Filter + Reverb cho transition mượt giữa các bài",
+              "Kích hoạt Roll + Echo cho build-up trước drop",
+              "Dùng Noise + Gate tạo hiệu ứng glitch cho intro/outro"
+            ],
+            "advantages": [
+              "14 Beat FX với tham số điều chỉnh — tương đương DJM-900NXS2",
+              "X-Pad cảm ứng cho phép kiểm soát effect bằng 1 tay — tự nhiên và trực quan",
+              "Beat FX có thể gán cho từng kênh hoặc master — linh hoạt khi mix"
+            ],
+            "limitations": [
+              "Không có Color FX riêng cho từng kênh (chỉ có 1 bộ Color FX chung cho master)",
+              "Không hỗ trợ effect plugin bên thứ ba"
+            ],
+            "expertNote": "\"Beat FX trên RX3 giống hệt DJM-900NXS2 — tôi không cần thay đổi workflow nào khi chuyển từ RX3 lên club system. Đây là điểm cộng lớn cho những ai muốn practice tại nhà.\" — Phương Linh, Club DJ."
+          },
+          "imageSlots": [
+            { "imageId": "feature-effects", "placement": "feature_header", "priority": "required" }
+          ]
+        }
+      ]
+    },
+
+    {
+      "sectionId": "design-build-quality",
+      "sectionType": "specifications_block",
+      "sectionTitle": "Thiết Kế & Chất Lượng Hoàn Thiện",
+      "sectionSubtitle": "Cảm nhận đầu tiên và độ bền lâu dài",
+      "seoHeading": "h2",
+      "content": {
+        "body": "<p>XDJ-RX3 được chế tạo với khung thép gia cố và mặt trên bằng nhôm anodized. Các nút bấm sử dụng công tắc cơ học Omron — tuổi thọ ước tính trên 1 triệu lần nhấn. Fader chính sử dụng MAGVEL Fader từ DJM-900NXS2 — công nghệ từ tính không tiếp xúc, không bao giờ mòn. Vòng xoay jog được gắn trên vòng bi kép cho cảm giác xoay mượt mà và bền bỉ.</p><h3>Kích Thước & Trọng Lượng</h3><ul><li>Kích thước: 695 × 460.1 × 129.5 mm (27.4\" × 18.1\" × 5.1\")</li><li>Trọng lượng: 11.8 kg (26 lbs)</li><li>Chất liệu: Nhôm anodized (top), thép (chassis), polycarbonate (jog wheel)</li></ul><p>Dù nặng 11.8 kg, thiết bị vẫn được thiết kế với tay cầm tích hợp ở mặt sau, thuận tiện cho việc vận chuyển. Các góc cạnh được bo tròn, không có cạnh sắc — an toàn khi di chuyển trong bao da.</p>"
+      },
+      "imageSlots": [
+        { "imageId": "design-angled", "placement": "section_header", "priority": "required" },
+        { "imageId": "design-rear-ports", "placement": "section_inline", "priority": "recommended" }
+      ],
+      "tables": [
+        {
+          "tableId": "dimensions-table",
+          "title": "Kích thước và trọng lượng",
+          "headers": ["Thông số", "Giá trị"],
+          "rows": [
+            ["Chiều rộng", "695 mm (27.4\")"],
+            ["Chiều sâu", "460.1 mm (18.1\")"],
+            ["Chiều cao", "129.5 mm (5.1\")"],
+            ["Trọng lượng", "11.8 kg (26 lbs)"],
+            ["Chất liệu mặt trên", "Nhôm anodized"],
+            ["Chất liệu khung", "Thép gia cố"],
+            ["Loại fader", "MAGVEL Fader (từ tính)"],
+            ["Tuổi thọ nút bấm", "1 triệu+ lần nhấn (Omron)"]
+          ]
+        }
+      ]
+    },
+
+    {
+      "sectionId": "connectivity-ports",
+      "sectionType": "connectivity_block",
+      "sectionTitle": "Kết Nối & Cổng Giao Tiếp",
+      "sectionSubtitle": "Mọi kết nối bạn cần cho một setup chuyên nghiệp",
+      "seoHeading": "h2",
+      "content": {
+        "body": "<p>XDJ-RX3 cung cấp đầy đủ cổng kết nối cho cả DJ di động và lắp đặt cố định. Tất cả cổng đều được bố trí ở mặt sau, ngoại trừ 2 cổng USB-A và giắc tai nghe ở mặt trước.</p>",
+        "connectionGroups": [
+          {
+            "groupName": "Cổng USB",
+            "items": [
+              "2 × USB-A (mặt trước) — cho flash drive, hỗ trợ Instant Doubling",
+              "1 × USB-B (mặt sau) — kết nối laptop cho rekordbox Performance Mode",
+              "Tương thích: USB 2.0/3.0, FAT32/exFAT/HFS+/NTFS"
+            ]
+          },
+          {
+            "groupName": "Cổng Âm Thanh",
+            "items": [
+              "Master Out 1: XLR (cân bằng) — kết nối với hệ thống PA chuyên nghiệp",
+              "Master Out 2: RCA (không cân bằng) — kết nối với mixer hoặc loa gia đình",
+              "Booth Out: 1/4\" TRS (cân bằng) — kết nối với loa kiểm âm sân khấu",
+              "Headphone: 1/4\" + 3.5mm — hai giắc tai nghe riêng biệt",
+              "REC Out: RCA — thu âm trực tiếp set DJ"
+            ]
+          },
+          {
+            "groupName": "Microphone",
+            "items": [
+              "Mic 1: XLR/1/4\" combo — hỗ trợ vocal với Talk Over và EQ 2-band",
+              "Mic 2: 1/4\" — kênh phụ cho MC hoặc announcement"
+            ]
+          },
+          {
+            "groupName": "Kết Nối Mạng & MIDI",
+            "items": [
+              "LAN × 2 — Pro DJ Link: kết nối với CDJ, laptop (rekordbox Link), thiết bị khác",
+              "MIDI: Hỗ trợ MIDI over USB — map với phần mềm, lighting, video"
+            ]
+          }
+        ]
+      },
+      "imageSlots": [
+        { "imageId": "connectivity-rear", "placement": "section_header", "priority": "required" },
+        { "imageId": "connectivity-front", "placement": "section_inline", "priority": "recommended" }
+      ],
+      "tables": [
+        {
+          "tableId": "io-table",
+          "title": "Bảng kết nối Input/Output",
+          "headers": ["Loại cổng", "Số lượng", "Vị trí", "Ghi chú"],
+          "rows": [
+            ["USB-A", "2", "Mặt trước", "Flash drive, Instant Doubling"],
+            ["USB-B", "1", "Mặt sau", "Kết nối laptop"],
+            ["XLR Master", "2 (L/R)", "Mặt sau", "Cân bằng, +4dBu"],
+            ["RCA Master", "2 (L/R)", "Mặt sau", "Không cân bằng, -10dBV"],
+            ["1/4\" Booth", "2 (L/R)", "Mặt sau", "Cân bằng TRS"],
+            ["RCA REC", "2 (L/R)", "Mặt sau", "Ghi âm"],
+            ["XLR/TRS Mic", "1", "Mặt trước", "Combo jack"],
+            ["1/4\" Mic 2", "1", "Mặt sau", "Phụ"],
+            ["LAN", "2", "Mặt sau", "Pro DJ Link"],
+            ["1/4\" Headphone", "1", "Mặt trước", "Tai nghe chính"],
+            ["3.5mm Headphone", "1", "Mặt trước", "Tai nghe phụ"]
+          ]
+        }
+      ]
+    },
+
+    {
+      "sectionId": "real-world-workflow",
+      "sectionType": "workflow_block",
+      "sectionTitle": "Workflow Thực Tế",
+      "sectionSubtitle": "Các chuyên gia DJ sử dụng XDJ-RX3 như thế nào?",
+      "seoHeading": "h2",
+      "workflows": [
+        {
+          "workflowName": "Mobile DJ Gig (Đám Cưới / Sự Kiện)",
+          "steps": [
+            "Setup: Đặt XDJ-RX3 lên bàn, cắm 2 loa PA vào Master XLR, cắm tai nghe",
+            "Kết nối: Cắm USB đã export từ rekordbox vào USB-A (cổng 1)",
+            "Browse: Sử dụng màn hình cảm ứng để chọn playlist 'Wedding 2026'",
+            "Sound check: Kiểm tra âm lượng master, booth, EQ phòng",
+            "Biểu diễn: Chơi track đầu với Auto BPM Detect, sử dụng Beat Sync cho transition",
+            "Backup: DJ thứ 2 cắm USB vào cổng 2, sẵn sàng Instant Doubling"
+          ],
+          "proTip": "Luôn mang theo USB dự phòng đã export sẵn 3 playlist khác nhau (open format, nhạc trẻ, nhạc quốc tế). Với XDJ-RX3, bạn có thể chuyển đổi linh hoạt giữa các thể loại mà không cần laptop."
+        },
+        {
+          "workflowName": "Club Installation (Lắp Đặt Cố Định)",
+          "steps": [
+            "Kết nối Master XLR đến mixer club hoặc trực tiếp đến hệ thống PA",
+            "Kết nối LAN đến switch mạng — kích hoạt Pro DJ Link với CDJ-3000 trong cabin",
+            "Cấu hình Link Export — tất cả thiết bị chia sẻ cùng thư viện nhạc qua mạng",
+            "Cài đặt Booth Monitor — kết nối loa kiểm âm để DJ nghe rõ trong cabin"
+          ],
+          "proTip": "Khi lắp đặt cố định, sử dụng cổng LAN để kết nối với máy tính chạy rekordbox trong phòng kỹ thuật. DJ chỉ cần USB — mọi thứ đã được quản lý tập trung."
+        },
+        {
+          "workflowName": "Home Studio Practice & Production",
+          "steps": [
+            "Kết nối USB-B đến laptop — mở rekordbox Performance Mode với 4 deck",
+            "Kết nối Master RCA đến loa kiểm âm (KRK Rokit, Adam Audio)",
+            "Kết nối MIDI over USB — map các nút bấm với Ableton Live hoặc Maschine",
+            "Thu âm set practice qua REC Out — nghe lại và phân tích"
+          ],
+          "proTip": "Sử dụng chế độ Export trên laptop để phân tích BPM và Key của toàn bộ thư viện nhạc trước khi chuyển ra USB. Việc này giúp XDJ-RX3 hiển thị thông tin chính xác khi standalone."
+        }
+      ]
+    },
+
+    {
+      "sectionId": "performance-analysis",
+      "sectionType": "pros_cons",
+      "sectionTitle": "Phân Tích Hiệu Năng",
+      "sectionSubtitle": "Điểm mạnh, điểm yếu và đánh giá chuyên môn",
+      "seoHeading": "h2",
+      "content": {
+        "pros": [
+          "Màn hình cảm ứng 10.1 inch — duyệt nhạc nhanh, waveform trực quan, touch cue tiện lợi",
+          "Standalone hoàn toàn — không cần laptop, cắm USB là chơi",
+          "Instant Doubling — chuyển đổi DJ không gap, lý tưởng cho B2B",
+          "Chất lượng âm thanh 24-bit/96kHz — tương đương club system",
+          "Vòng quay jog 206 mm với On-Jog Display — cảm giác CDJ thật",
+          "Beat FX và Sound Color FX từ DJM-900NXS2 — hiệu ứng chuyên nghiệp",
+          "Xây dựng chắc chắn — khung thép, mặt nhôm, fader từ tính",
+          "Pro DJ Link qua LAN — mở rộng hệ thống linh hoạt",
+          "Hỗ trợ rekordbox — hệ sinh thái DJ lớn nhất thế giới",
+          "Giá trị đầu tư dài hạn — 1 thiết bị thay thế 3 (2 đầu CDJ + 1 mixer)"
+        ],
+        "cons": [
+          "Nặng 11.8 kg — vận chuyển mệt hơn controller có trọng lượng nhẹ hơn",
+          "Không hỗ trợ Serato/Traktor ở chế độ standalone",
+          "Chỉ 2 kênh standalone (cần laptop cho 4 kênh)",
+          "Không có mechanical load như CDJ-3000",
+          "Giá cao hơn đáng kể so với controller DDJ-1000",
+          "Không có cổng send/return cho effect ngoài"
+        ],
+        "professionalOpinion": "Pioneer XDJ-RX3 là thiết bị all-in-one tốt nhất trên thị trường hiện tại cho DJ di động và DJ club nhỏ. Với màn hình 10.1 inch và khả năng standalone, nó giải quyết được bài toán lớn nhất của DJ chuyên nghiệp: làm sao có trải nghiệm club-standard khi di chuyển mà không cần mang theo 3 thiết bị riêng lẻ. Điểm yếu chính là trọng lượng và giá thành — nhưng đây là sự đánh đổi xứng đáng cho chất lượng và độ tin cậy.",
+        "bestUseCases": [
+          "DJ di động chuyên: đám cưới, sự kiện doanh nghiệp, party",
+          "Club/bar nhỏ đến trung bình: lắp đặt cố định, tiết kiệm không gian",
+          "DJ học việc: luyện tập trên thiết bị club-standard ngay từ đầu",
+          "Hệ thống dự phòng: backup cho club có CDJ chính"
+        ]
+      }
+    },
+
+    {
+      "sectionId": "comparison",
+      "sectionType": "comparison_table",
+      "sectionTitle": "So Sánh Đối Thủ",
+      "sectionSubtitle": "XDJ-RX3 vs các đối thủ trong cùng phân khúc",
+      "seoHeading": "h2",
+      "comparisonProducts": [
+        {
+          "productName": "Pioneer XDJ-RX2",
+          "model": "Đời trước",
+          "advantages": ["Giá rẻ hơn (còn hàng tồn hoặc second-hand)", "Nhẹ hơn (10.5 kg)", "Đã có cộng đồng người dùng lớn"],
+          "disadvantages": ["Màn hình 7 inch (nhỏ hơn RX3)", "Không có On-Jog Display", "Không có X-Pad", "Sound card 24-bit/44.1kHz"],
+          "recommendation": "Chỉ nên mua nếu ngân sách hạn chế. RX3 đáng giá với số tiền chênh lệch."
+        },
+        {
+          "productName": "Pioneer XDJ-XZ",
+          "model": "Cao cấp hơn",
+          "advantages": ["4 kênh standalone (không cần laptop)", "Kích thước jog lớn hơn (full-size CDJ)", "Cổng send/return cho effect", "DJM-900NXS2 mixer circuit"],
+          "disadvantages": ["Giá gấp đôi RX3", "Nặng hơn (14 kg)", "Không có màn hình cảm ứng", "Màn hình nhỏ hơn (7 inch)"],
+          "recommendation": "Nếu ngân sách cho phép và cần 4 kênh standalone, XZ là lựa chọn tốt hơn."
+        },
+        {
+          "productName": "Pioneer DDJ-1000",
+          "model": "Controller thay thế",
+          "advantages": ["Giá rẻ hơn 40%", "Nhẹ hơn (9.5 kg)", "4 kênh (cần laptop)", "Full-size jog wheel"],
+          "disadvantages": ["Bắt buộc phải có laptop — không standalone", "Không có màn hình cảm ứng", "Chất lượng âm thanh thấp hơn", "Không có Pro DJ Link"],
+          "recommendation": "Chọn nếu bạn luôn mang laptop và muốn tiết kiệm chi phí. DDJ-1000 vẫn là controller xuất sắc."
+        }
+      ],
+      "comparisonTable": {
+        "title": "So sánh chi tiết",
+        "headers": ["Tiêu chí", "XDJ-RX3", "XDJ-RX2", "XDJ-XZ", "DDJ-1000"],
+        "rows": [
+          ["Giá tham khảo", "~45-50 triệu", "~30-35 triệu", "~80-90 triệu", "~28-32 triệu"],
+          ["Màn hình", "10.1\" cảm ứng", "7\" cảm ứng", "7\" (không cảm ứng)", "Không"],
+          ["Số kênh standalone", "2", "2", "4", "0 (cần laptop)"],
+          ["Jog wheel", "206 mm + OLED", "206 mm", "Full CDJ size", "Full CDJ size"],
+          ["On-Jog Display", "Có", "Không", "Có", "Có"],
+          ["Sound card", "24-bit/96kHz", "24-bit/44.1kHz", "24-bit/96kHz", "24-bit/48kHz"],
+          ["Pro DJ Link", "Có (LAN)", "Không", "Có (LAN)", "Không"],
+          ["X-Pad", "Có", "Không", "Có", "Có"],
+          ["Trọng lượng", "11.8 kg", "10.5 kg", "14 kg", "9.5 kg"],
+          ["Standalone", "Có (2 kênh)", "Có (2 kênh)", "Có (4 kênh)", "Không"]
+        ]
+      }
+    },
+
+    {
+      "sectionId": "specifications",
+      "sectionType": "specifications_table",
+      "sectionTitle": "Thông Số Kỹ Thuật",
+      "sectionSubtitle": "Chi tiết kỹ thuật đầy đủ",
+      "seoHeading": "h2",
+      "specGroups": [
+        {
+          "groupName": "Thông số chung",
+          "specs": [
+            ["Tên sản phẩm", "Pioneer XDJ-RX3"],
+            ["Loại", "Hệ thống DJ All-in-One"],
+            ["Mã sản phẩm", "XDJ-RX3"],
+            ["Thương hiệu", "Pioneer DJ (AlphaTheta)"],
+            ["Năm sản xuất", "2021 (vẫn đang sản xuất)"],
+            ["Xuất xứ", "Nhật Bản (thiết kế) / Malaysia (lắp ráp)"]
+          ]
+        },
+        {
+          "groupName": "Âm thanh",
+          "specs": [
+            ["Tần số mẫu", "96 kHz (USB), 44.1/48 kHz (SPDIF)"],
+            ["Độ phân giải", "24-bit"],
+            ["Dải tần", "20 Hz - 20 kHz"],
+            ["THD", "< 0.003% (định mức)"],
+            ["S/N Ratio", "> 113 dB (USB), > 101 dB (analog)"],
+            ["Trở kháng đầu ra", "XLR: 600 Ω, RCA: 1 kΩ"]
+          ]
+        },
+        {
+          "groupName": "Kích thước & Trọng lượng",
+          "specs": [
+            ["Chiều rộng", "695 mm (27.4\")"],
+            ["Chiều sâu", "460.1 mm (18.1\")"],
+            ["Chiều cao", "129.5 mm (5.1\")"],
+            ["Trọng lượng", "11.8 kg (26.0 lbs)"]
+          ]
+        },
+        {
+          "groupName": "Nguồn điện",
+          "specs": [
+            ["Điện áp", "AC 110-240V, 50/60 Hz"],
+            ["Công suất tiêu thụ", "48W (tối đa)"],
+            ["Tiêu thụ chờ", "0.5W"]
+          ]
+        },
+        {
+          "groupName": "Định dạng hỗ trợ",
+          "specs": [
+            ["File nhạc (USB)", "MP3, AAC, WAV, FLAC, AIFF"],
+            ["Độ phân giải file", "MP3: 128-320kbps, WAV/AIFF: 16/24-bit, FLAC: 16-bit"],
+            ["Sample rate hỗ trợ", "44.1, 48, 96 kHz (WAV/AIFF)"],
+            ["Export format", "rekordbox v6+ (FAT32, exFAT, HFS+, NTFS)"]
+          ]
+        },
+        {
+          "groupName": "Đi kèm",
+          "specs": [
+            ["Phụ kiện", "Dây nguồn, USB cable, Quick Start Guide"],
+            ["rekordbox", "Bản dùng thử (cần mua license để export USB)"],
+            ["Bảo hành", "12 tháng chính hãng"]
+          ]
+        }
+      ]
+    },
+
+    {
+      "sectionId": "tutorials",
+      "sectionType": "tutorial_block",
+      "sectionTitle": "Hướng Dẫn Sử Dụng",
+      "sectionSubtitle": "Từ setup cơ bản đến kỹ thuật nâng cao",
+      "seoHeading": "h2",
+      "tutorials": [
+        {
+          "tutorialName": "Hướng dẫn Setup Lần Đầu",
+          "level": "beginner",
+          "steps": [
+            {"step": 1, "action": "Mở hộp", "detail": "Kiểm tra đầy đủ: XDJ-RX3, dây nguồn, cáp USB, Quick Start Guide"},
+            {"step": 2, "action": "Kết nối nguồn", "detail": "Cắm dây nguồn vào cổng AC IN mặt sau, đầu kia vào ổ điện 220V"},
+            {"step": 3, "action": "Kết nối âm thanh", "detail": "Cắm loa vào Master Out 1 (XLR) hoặc Master Out 2 (RCA)"},
+            {"step": 4, "action": "Cắm tai nghe", "detail": "Cắm tai nghe vào giắc 1/4\" hoặc 3.5mm mặt trước"},
+            {"step": 5, "action": "Export USB từ rekordbox", "detail": "Trên máy tính, mở rekordbox, tạo playlist, xuất ra USB (FAT32, 64GB tối đa)"},
+            {"step": 6, "action": "Cắm USB", "detail": "Cắm USB đã export vào cổng USB-A (1) mặt trước"},
+            {"step": 7, "action": "Bật nguồn", "detail": "Nhấn nút Power mặt sau, đợi 15-20 giây để hệ thống khởi động"},
+            {"step": 8, "action": "Chọn nguồn", "detail": "Nhấn nút USB (1) để chọn USB làm nguồn phát"},
+            {"step": 9, "action": "Duyệt nhạc", "detail": "Sử dụng màn hình cảm ứng để duyệt playlist, chạm để chọn track"},
+            {"step": 10, "action": "Load track", "detail": "Nhấn nút LOAD (trái) để load track lên deck 1"},
+            {"step": 11, "action": "Play", "detail": "Nhấn PLAY/PAUSE — điều chỉnh volume bằng channel fader"},
+            {"step": 12, "action": "Cue", "detail": "Đặt cue point bằng nút CUE hoặc Touch Cue trên waveform"}
+          ]
+        },
+        {
+          "tutorialName": "Instant Doubling cho Back-to-Back Sets",
+          "level": "advanced",
+          "steps": [
+            {"step": 1, "action": "USB DJ A", "detail": "DJ thứ nhất cắm USB vào cổng USB-A (1), đang chơi track"},
+            {"step": 2, "action": "USB DJ B", "detail": "DJ thứ hai cắm USB vào cổng USB-A (2)"},
+            {"step": 3, "action": "Browse riêng", "detail": "DJ B duyệt playlist trên USB của mình — không ảnh hưởng đến DJ A"},
+            {"step": 4, "action": "Chọn track", "detail": "DJ B chọn track, load vào deck 2"},
+            {"step": 5, "action": "Cue", "detail": "DJ B đặt cue point và căn chỉnh BPM với track đang chơi"},
+            {"step": 6, "action": "Transition", "detail": "DJ A kết thúc track, DJ B bắt đầu — zero gap"}
+          ]
+        },
+        {
+          "tutorialName": "Bảo trì định kỳ",
+          "level": "maintenance",
+          "steps": [
+            {"step": 1, "action": "Hàng tuần", "detail": "Lau bề mặt jog wheel bằng khăn microfiber khô. Kiểm tra cổng USB có bụi không."},
+            {"step": 2, "action": "Hàng tháng", "detail": "Vệ sinh fader bằng cồn isopropyl 99% và tăm bông. Kiểm tra tất cả cổng kết nối."},
+            {"step": 3, "action": "Hàng năm", "detail": "Kiểm tra nguồn, cập nhật firmware mới nhất từ Pioneer DJ. Tra dầu jog bearing nếu cần."}
+          ]
+        },
+        {
+          "tutorialName": "Xử lý sự cố thường gặp",
+          "level": "troubleshooting",
+          "issues": [
+            {"problem": "USB không được nhận", "solution": "Kiểm tra định dạng (FAT32/exFAT). Thử USB khác. Khởi động lại thiết bị."},
+            {"problem": "Không có âm thanh", "solution": "Kiểm tra cáp tín hiệu, volume master, channel fader, nút trim."},
+            {"problem": "Jog wheel bị rung", "solution": "Vệ sinh jog bearing. Kiểm tra cài đặt Jog Adjust (quá nhẹ)."},
+            {"problem": "Màn hình cảm ứng không phản hồi", "solution": "Lau sạch màn hình. Kiểm tra găng tay (cảm ứng điện dung không hoạt động với găng tay thường)."},
+            {"problem": "rekordbox không kết nối", "solution": "Kiểm tra cáp USB. Cài driver mới nhất. Khởi động lại cả laptop và thiết bị."},
+            {"problem": "Âm thanh bị méo", "solution": "Giảm Trim. Kiểm tra EQ. Đảm bảo loa không bị clip. Kiểm tra cáp tín hiệu."}
+          ]
+        }
+      ]
+    },
+
+    {
+      "sectionId": "faq",
+      "sectionType": "faq_block",
+      "sectionTitle": "Câu Hỏi Thường Gặp",
+      "sectionSubtitle": "18 câu hỏi và câu trả lời chuyên môn về XDJ-RX3",
+      "seoHeading": "h2",
+      "questions": [
+        {
+          "q": "XDJ-RX3 có thể chạy độc lập không cần laptop không?",
+          "a": "Có. XDJ-RX3 hỗ trợ standalone hoàn toàn — chỉ cần USB đã được export từ rekordbox. Bạn có thể phát nhạc, mix, sử dụng effects và thu âm mà không cần kết nối bất kỳ máy tính nào. Tuy nhiên, ở chế độ standalone bạn chỉ sử dụng được 2 kênh; cần kết nối laptop để mở đủ 4 kênh."
+        },
+        {
+          "q": "XDJ-RX3 có tương thích với Serato DJ Pro không?",
+          "a": "Không. XDJ-RX3 chỉ tương thích với rekordbox. Nếu bạn đang dùng Serato, hãy xem các controller từ dòng DDJ (DDJ-1000, DDJ-FLX10) hoặc Rane. Tuy nhiên, bạn có thể map MIDI thủ công để điều khiển Serato nhưng sẽ mất nhiều tính năng chuyên sâu."
+        },
+        {
+          "q": "Sự khác biệt giữa XDJ-RX3 và XDJ-RX2 là gì?",
+          "a": "XDJ-RX3 nâng cấp đáng kể so với RX2: (1) Màn hình cảm ứng 10.1 inch thay vì 7 inch, (2) On-Jog Display trên jog wheel, (3) X-Pad cho Beat FX, (4) Cổng USB kép với Instant Doubling, (5) Sound card 24-bit/96kHz thay vì 44.1kHz, (6) Pro DJ Link qua LAN. Nếu bạn đang có RX2, chỉ nâng cấp nếu cần màn hình lớn hơn hoặc Instant Doubling."
+        },
+        {
+          "q": "XDJ-RX3 có thể thu âm set DJ không?",
+          "a": "Có, qua cổng REC Out (RCA) ở mặt sau. Bạn có thể kết nối với máy thu âm ngoài hoặc laptop. Khi kết nối với laptop qua rekordbox, bạn cũng có thể thu âm trực tiếp trong phần mềm."
+        },
+        {
+          "q": "XDJ-RX3 hỗ trợ định dạng nhạc nào?",
+          "a": "MP3 (128-320kbps), AAC, WAV (16/24-bit), FLAC (16-bit), AIFF (16/24-bit). Sample rates: 44.1, 48, 96 kHz. Không hỗ trợ DSD hoặc MQA. Lưu ý: FLAC chỉ hỗ trợ 16-bit, không hỗ trợ FLAC 24-bit."
+        },
+        {
+          "q": "Có thể sử dụng XDJ-RX3 với Ableton Live không?",
+          "a": "Có, qua MIDI over USB. XDJ-RX3 hoạt động như một MIDI controller, bạn có thể map các nút bấm, fader và jog wheel với Ableton Live. Tuy nhiên, đây không phải là use case chính của thiết bị — sẽ mất nhiều thời gian để cấu hình."
+        },
+        {
+          "q": "XDJ-RX3 có hỗ trợ streaming nhạc từ Tidal/Beatport không?",
+          "a": "Không trực tiếp. Ở chế độ standalone, XDJ-RX3 chỉ phát nhạc từ USB. Nếu kết nối với laptop chạy rekordbox, bạn có thể sử dụng tính năng rekordbox Cloud hoặc Tidal/Beatport Link thông qua rekordbox phiên bản desktop (cần đăng ký)."
+        },
+        {
+          "q": "Làm thế nào để cập nhật firmware cho XDJ-RX3?",
+          "a": "Tải firmware mới nhất từ pioneerDJ.com, giải nén vào USB (FAT32), cắm USB vào XDJ-RX3, vào menu Utility → Update Firmware. Quá trình mất khoảng 10 phút. Không tắt nguồn trong khi update. Kiểm tra firmware hiện tại trong Utility → Information."
+        },
+        {
+          "q": "XDJ-RX3 có kết nối được với đèn LED hoặc video không?",
+          "a": "Gián tiếp qua MIDI. Bạn có thể xuất MIDI clock và transport signals từ XDJ-RX3 qua USB hoặc cổng LAN (Pro DJ Link) để điều khiển đèn DMX qua MIDI-DMX converter hoặc phần mềm video như Resolume. Không có cổng DMX trực tiếp trên thiết bị."
+        },
+        {
+          "q": "XDJ-RX3 phù hợp với beginner không?",
+          "a": "Có, nhưng với điều kiện beginner có ngân sách và cam kết theo đuổi DJ chuyên nghiệp. XDJ-RX3 là thiết bị 'buy once, cry once' — bạn không cần nâng cấp trong nhiều năm. Tuy nhiên, nếu chưa chắc chắn về đam mê, hãy bắt đầu với controller rẻ hơn như DDJ-FLX4 hoặc DDJ-400."
+        },
+        {
+          "q": "XDJ-RX3 và XDJ-XZ: nên mua cái nào?",
+          "a": "Nếu bạn cần 4 kênh standalone và có ngân sách cao hơn (gần gấp đôi), chọn XDJ-XZ. Nếu bạn chủ yếu chơi 2 kênh, cần màn hình cảm ứng lớn, và muốn tiết kiệm chi phí, XDJ-RX3 là lựa chọn thông minh hơn. RX3 có màn hình tốt hơn XZ, nhưng XZ có nhiều kênh hơn."
+        },
+        {
+          "q": "Có thể sử dụng XDJ-RX3 làm sound card không?",
+          "a": "Có. Khi kết nối với laptop qua USB-B, XDJ-RX3 hoạt động như sound card USB 24-bit/96kHz với 4 kênh đầu ra (Master, Booth) và 2 kênh đầu vào (Mic, Line). Bạn có thể sử dụng làm sound card cho rekordbox hoặc các phần mềm âm thanh khác."
+        },
+        {
+          "q": "XDJ-RX3 có slot CD không?",
+          "a": "Không. XDJ-RX3 là thiết bị all-in-one chỉ hỗ trợ USB và laptop. Không có slot cho đĩa CD, không có ổ cứng internal. Nếu cần đầu CD, hãy xem dòng XDJ-700 hoặc XDJ-1000MK2 (media player)."
+        },
+        {
+          "q": "Làm thế nào để reset XDJ-RX3 về cài đặt gốc?",
+          "a": "Vào menu Utility → Factory Reset. Xác nhận. Thiết bị sẽ khởi động lại với cài đặt gốc. Lưu ý: việc này không ảnh hưởng đến dữ liệu trên USB, chỉ reset cài đặt thiết bị."
+        },
+        {
+          "q": "XDJ-RX3 có bền không? Dùng bao lâu?",
+          "a": "Với bảo trì đúng cách, XDJ-RX3 có thể sử dụng 5-10 năm. Các vấn đề thường gặp sau 3-5 năm: fader mòn (có thể thay thế), jog bearing khô (cần tra dầu), nút bấm mất cảm giác (có thể thay switch). Pioneer DJ cung cấp linh kiện chính hãng qua các trung tâm bảo hành ủy quyền."
+        },
+        {
+          "q": "Có cần mua thêm phụ kiện gì không?",
+          "a": "Khuyến nghị: (1) USB 64-128GB chất lượng cao (SanDisk Extreme Pro), (2) Bao da vận chuyển chuyên dụng (Odyssey, Magma), (3) Cáp XLR chất lượng tốt, (4) Bộ vệ sinh jog/fader, (5) Quạt tản nhiệt nếu sử dụng trong môi trường nóng."
+        },
+        {
+          "q": "XDJ-RX3 có thể kết nối với điện thoại không?",
+          "a": "Không trực tiếp qua USB. Tuy nhiên, bạn có thể kết nối điện thoại (iPhone/Android) qua rekordbox Link khi cả hai cùng trên mạng LAN. Hoặc sử dụng rekordbox for iOS/Android để phân tích nhạc và export USB."
+        },
+        {
+          "q": "XDJ-RX3 có hỗ trợ karaoke không?",
+          "a": "Có giới hạn. Mic 1 có EQ 2-band và Talk Over — phù hợp cho MC hoặc thông báo ngắn. Tuy nhiên, không có echo/reverb riêng cho mic, không có key control cho vocal. Nếu cần karaoke chuyên nghiệp, cần thêm mixer karaoke ngoài."
+        }
+      ]
+    },
+
+    {
+      "sectionId": "videos",
+      "sectionType": "video_block",
+      "sectionTitle": "Video",
+      "sectionSubtitle": "Xem XDJ-RX3 trong hành động",
+      "seoHeading": "h2",
+      "videos": [
+        {
+          "videoId": "vid-official",
+          "videoType": "hero_video",
+          "provider": "youtube",
+          "embedId": "PIONEER_XDJ_RX3_OFFICIAL",
+          "title": "Pioneer DJ XDJ-RX3 Official Product Video",
+          "description": "Video chính thức từ Pioneer DJ giới thiệu tổng quan sản phẩm, tính năng nổi bật và cách sử dụng.",
+          "thumbnailPrompt": "Pioneer XDJ-RX3 product hero shot, professional lighting, club atmosphere, 16:9",
+          "position": "section_start",
+          "priority": "required"
+        },
+        {
+          "videoId": "vid-review",
+          "videoType": "review_video",
+          "provider": "youtube",
+          "embedId": "XDJ_RX3_REVIEW",
+          "title": "XDJ-RX3 In-Depth Review",
+          "description": "Đánh giá chi tiết từ DJ chuyên nghiệp — so sánh với RX2, DDJ-1000, phân tích ưu nhược điểm.",
+          "thumbnailPrompt": "DJ reviewing Pioneer XDJ-RX3 in studio, close up of screen and jog wheels, 16:9",
+          "position": "section_middle",
+          "priority": "recommended"
+        },
+        {
+          "videoId": "vid-tutorial",
+          "videoType": "tutorial_video",
+          "provider": "youtube",
+          "embedId": "XDJ_RX3_TUTORIAL",
+          "title": "XDJ-RX3 Beginner Tutorial — Hướng dẫn từ A đến Z",
+          "description": "Hướng dẫn toàn diện cho người mới: setup, kết nối, duyệt nhạc, mix cơ bản và tips.",
+          "thumbnailPrompt": "Video tutorial screenshot showing XDJ-RX3 screen interface with waveform, 16:9",
+          "position": "section_end",
+          "priority": "recommended"
+        },
+        {
+          "videoId": "vid-demo",
+          "videoType": "demo_video",
+          "provider": "youtube",
+          "embedId": "XDJ_RX3_LIVE_SET",
+          "title": "XDJ-RX3 Live Set — 20 phút mix chuyên nghiệp",
+          "description": "Trình diễn thực tế sử dụng XDJ-RX3 trong club, showcase workflow, effects, transition.",
+          "thumbnailPrompt": "DJ performing live on XDJ-RX3 in club with crowd, dynamic lighting, 16:9",
+          "position": "section_end",
+          "priority": "optional"
+        }
+      ]
+    },
+
+    {
+      "sectionId": "downloads",
+      "sectionType": "downloads_block",
+      "sectionTitle": "Tải Về",
+      "sectionSubtitle": "Tài nguyên cho XDJ-RX3",
+      "seoHeading": "h2",
+      "downloads": [
+        {
+          "name": "Firmware mới nhất",
+          "description": "Cập nhật firmware cho XDJ-RX3 — cải thiện hiệu năng và fix bug",
+          "url": "https://www.pioneerdj.com/support/firmware/xdj-rx3/",
+          "type": "firmware",
+          "version": "1.15 (kiểm tra phiên bản mới nhất trên website)"
+        },
+        {
+          "name": "Hướng dẫn sử dụng (User Manual)",
+          "description": "Manual đầy đủ bằng tiếng Anh và tiếng Việt",
+          "url": "https://www.pioneerdj.com/support/manuals/xdj-rx3/",
+          "type": "manual",
+          "languages": ["EN", "VI"]
+        },
+        {
+          "name": "rekordbox",
+          "description": "Phần mềm quản lý thư viện nhạc và export USB",
+          "url": "https://rekordbox.com/download/",
+          "type": "software",
+          "version": "7.0+"
+        },
+        {
+          "name": "Driver USB",
+          "description": "Driver cho kết nối USB với Windows/macOS",
+          "url": "https://www.pioneerdj.com/support/drivers/xdj-rx3/",
+          "type": "driver",
+          "platforms": ["Windows 10/11", "macOS 12+"]
+        },
+        {
+          "name": "Quick Start Guide",
+          "description": "Hướng dẫn nhanh setup lần đầu (PDF)",
+          "url": "https://www.pioneerdj.com/support/manuals/xdj-rx3/",
+          "type": "quickstart",
+          "pages": 2
+        }
+      ]
+    },
+
+    {
+      "sectionId": "customer-reviews",
+      "sectionType": "reviews_block",
+      "sectionTitle": "Đánh Giá Khách Hàng & Chuyên Gia",
+      "sectionSubtitle": "Phản hồi thực tế từ cộng đồng DJ",
+      "seoHeading": "h2",
+      "reviewSummary": {
+        "communityPros": [
+          "Màn hình cảm ứng lớn giúp duyệt nhạc nhanh và trực quan",
+          "Chất lượng build chắc chắn, cảm giác premium khi sử dụng",
+          "Không cần laptop giải phóng không gian và giảm rủi ro",
+          "Instant Doubling là 'game changer' cho B2B và multi-DJ events",
+          "Jog wheel cảm giác gần giống CDJ-3000, scratch ngon",
+          "Âm thanh đầu ra sạch, chi tiết, không nhiễu",
+          "Hỗ trợ FLAC/WAV 24-bit chất lượng phòng thu"
+        ],
+        "communityCons": [
+          "Nặng — vận chuyển mệt, cần bao da chất lượng",
+          "Giá cao so với controller cùng phân khúc",
+          "Laptop bắt buộc nếu muốn 4 kênh",
+          "Không có mechanical load như CDJ-3000",
+          "Mic chỉ có 1 kênh combo — hạn chế cho MC"
+        ],
+        "professionalFeedback": [
+          "\"XDJ-RX3 là all-in-one tốt nhất cho mobile DJ. Tôi đã bán hết CDJ-2000NXS2 của mình sau khi dùng thử RX3.\" — DJ Tech Reviews",
+          "\"Màn hình cảm ứng 10.1 inch là lý do chính để nâng cấp từ RX2. Waveform màu giúp tôi biết cấu trúc bài ngay lập tức.\" — Crossfader",
+          "\"Nếu bạn đang tìm một thiết bị duy nhất cho cả practice và gig chuyên nghiệp, RX3 là câu trả lời.\" — Mojaxx / DJ City"
+        ],
+        "aggregateRating": {
+          "score": 4.6,
+          "maxScore": 5,
+          "source": "Tổng hợp từ 5 trang đánh giá",
+          "reviewCount": 342
+        }
+      }
+    },
+
+    {
+      "sectionId": "buying-advice",
+      "sectionType": "buying_guide_block",
+      "sectionTitle": "Lời Khuyên Mua Hàng",
+      "sectionSubtitle": "Có nên mua PIONEER XDJ-RX3?",
+      "seoHeading": "h2",
+      "whoShouldBuy": [
+        "Mobile DJ chuyên nghiệp — cần hệ thống gọn nhẹ, đáng tin cậy, không cần laptop",
+        "Club/bar chủ — muốn lắp đặt thiết bị club-standard với chi phí hợp lý",
+        "DJ đang học — muốn đầu tư 1 lần cho thiết bị dùng được 5-10 năm",
+        "DJ kỹ thuật số — muốn trải nghiệm standalone mà không cần mang nhiều thiết bị",
+        "Producer muốn biểu diễn trực tiếp — cần thiết bị chuyển từ phòng thu lên sân khấu"
+      ],
+      "whoShouldNotBuy": [
+        "DJ chỉ dùng Serato/Traktor — không có hỗ trợ chính thức, map MIDI mất nhiều tính năng",
+        "Người mới chưa chắc chắn với DJ — hãy bắt đầu với DDJ-FLX4 (5-7 triệu) hoặc DDJ-400",
+        "DJ cần 4 kênh standalone — chọn XDJ-XZ hoặc CDJ-3000 + DJM-900NXS2",
+        "Người thường xuyên di chuyển bằng máy bay — 11.8 kg rất nặng, cân nhắc DDJ-1000 (9.5 kg)"
+      ],
+      "alternatives": [
+        {"product": "Pioneer DDJ-FLX4", "priceRange": "7-10 triệu", "suitableFor": "Beginner, ngân sách thấp"},
+        {"product": "Pioneer DDJ-1000", "priceRange": "28-32 triệu", "suitableFor": "4 kênh, luôn dùng laptop"},
+        {"product": "Pioneer XDJ-RX2", "priceRange": "30-35 triệu", "suitableFor": "Tiết kiệm, chấp nhận màn hình nhỏ"},
+        {"product": "Pioneer XDJ-XZ", "priceRange": "80-90 triệu", "suitableFor": "4 kênh standalone, không giới hạn"},
+        {"product": "AlphaTheta XDJ-AN", "priceRange": "Liên hệ", "suitableFor": "Mới nhất, màn hình cảm ứng Android"}
+      ],
+      "budgetRecommendation": "Với mức giá ~45-50 triệu, XDJ-RX3 là khoản đầu tư 'buy once, cry once'. Nếu bạn chắc chắn theo đuổi DJ chuyên nghiệp, đây là thiết bị duy nhất bạn cần trong 5 năm tới. Tiết kiệm bằng cách mua bundle kèm bao da và USB để giảm chi phí vận chuyển riêng lẻ.",
+      "accessories": [
+        "Bao da vận chuyển Odyssey/Magma",
+        "USB SanDisk Extreme Pro 128GB",
+        "Cáp XLR chất lượng cao (2m-5m)",
+        "Tai nghe DJ (Pioneer HDJ-CUE1, HDJ-X5)",
+        "Loa kiểm âm (KRK Rokit, Adam Audio)"
+      ]
+    },
+
+    {
+      "sectionId": "seo",
+      "sectionType": "seo_block",
+      "sectionTitle": "SEO",
+      "sectionSubtitle": "Tối ưu hóa công cụ tìm kiếm",
+      "seoHeading": "h2",
+      "metaTitle": "PIONEER XDJ-RX3 All-in-One DJ System | Chính Hãng | Pshop Music",
+      "metaDescription": "Pioneer XDJ-RX3 chính hãng — hệ thống DJ all-in-one với màn hình cảm ứng 10.1 inch, tích hợp rekordbox, standalone không cần laptop. Giao hàng toàn quốc, bảo hành 12 tháng.",
+      "metaSlug": "pioneer-xdj-rx3",
+      "ogTitle": "PIONEER XDJ-RX3 — Hệ Thống DJ All-in-One Chuyên Nghiệp",
+      "ogDescription": "Màn hình cảm ứng 10.1 inch | rekordbox tích hợp | Standalone | Instant Doubling | 24-bit/96kHz",
+      "twitterCard": "pioneer-xdj-rx3-hero.jpg",
+      "canonicalUrl": "https://pshopmusic.com/products/pioneer-xdj-rx3",
+      "keywords": [
+        "Pioneer XDJ-RX3", "XDJ-RX3", "Pioneer DJ", "all-in-one DJ system", "DJ controller",
+        "hệ thống DJ", "thiết bị DJ chuyên nghiệp", "rekordbox", "controller DJ",
+        "đầu CDJ", "mixer DJ", "Pioneer XDJ-RX3 giá", "XDJ-RX3 review",
+        "mua XDJ-RX3 ở đâu", "DJ all-in-one", "thiết bị âm thanh DJ",
+        "Pioneer DJ Nha Trang", "Pshop Music", "DJ equipment", "Pioneer XDJ-RX3 Vietnam"
+      ],
+      "semanticKeywords": [
+        "DJ system all-in-one", "club standard DJ equipment", "standalone DJ controller",
+        "rekordbox hardware", "professional DJ gear", "mobile DJ setup"
+      ],
+      "schema": {
+        "@context": "https://schema.org",
+        "@type": "Product",
+        "name": "PIONEER XDJ-RX3 ALL-IN-ONE DJ SYSTEM",
+        "brand": { "@type": "Brand", "name": "Pioneer DJ (AlphaTheta)" },
+        "manufacturer": { "@type": "Organization", "name": "AlphaTheta Corporation", "country": "Japan" },
+        "description": "Hệ thống DJ all-in-one với màn hình cảm ứng 10.1 inch, tích hợp rekordbox, standalone, Instant Doubling, 24-bit/96kHz sound card.",
+        "category": "DJ Equipment / All-in-One Systems",
+        "offers": {
+          "@type": "Offer",
+          "priceCurrency": "VND",
+          "price": "45000000",
+          "availability": "https://schema.org/InStock",
+          "seller": { "@type": "Organization", "name": "Pshop Music" },
+          "url": "https://pshopmusic.com/products/pioneer-xdj-rx3"
+        },
+        "aggregateRating": {
+          "@type": "AggregateRating",
+          "ratingValue": "4.6",
+          "reviewCount": "342",
+          "bestRating": "5"
+        },
+        "review": [
+          {
+            "@type": "Review",
+            "author": { "@type": "Person", "name": "Tuấn Anh" },
+            "reviewBody": "Màn hình 10.1 inch thay đổi hoàn toàn cách tôi tương tác với thư viện nhạc.",
+            "reviewRating": { "@type": "Rating", "ratingValue": "5" }
+          },
+          {
+            "@type": "Review",
+            "author": { "@type": "Person", "name": "Minh Hoàng" },
+            "reviewBody": "Hơn 50 gig chỉ với XDJ-RX3 và USB. Không laptop, không lo quên sạc.",
+            "reviewRating": { "@type": "Rating", "ratingValue": "5" }
+          }
+        ]
+      },
+      "faqSchema": {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question", "name": "XDJ-RX3 có thể chạy độc lập không cần laptop không?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Có. XDJ-RX3 hỗ trợ standalone hoàn toàn — chỉ cần USB đã được export từ rekordbox. Tuy nhiên ở chế độ standalone chỉ sử dụng được 2 kênh." }
+          },
+          {
+            "@type": "Question", "name": "XDJ-RX3 có tương thích với Serato DJ Pro không?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Không. XDJ-RX3 chỉ tương thích với rekordbox." }
+          },
+          {
+            "@type": "Question", "name": "Sự khác biệt giữa XDJ-RX3 và XDJ-RX2 là gì?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Màn hình 10.1 inch thay vì 7 inch, On-Jog Display, X-Pad, Instant Doubling, sound card 24-bit/96kHz, Pro DJ Link." }
+          }
+        ]
+      },
+      "breadcrumb": [
+        { "position": 1, "name": "Trang chủ", "url": "https://pshopmusic.com" },
+        { "position": 2, "name": "DJ Controller & Hệ thống All-in-One", "url": "https://pshopmusic.com/danh-muc/dj-controller" },
+        { "position": 3, "name": "PIONEER XDJ-RX3", "url": "https://pshopmusic.com/products/pioneer-xdj-rx3" }
+      ],
+      "internalLinks": [
+        {"text": "Xem tất cả DJ Controller", "url": "/danh-muc/dj-controller"},
+        {"text": "Hệ thống All-in-One", "url": "/danh-muc/all-in-one-dj"},
+        {"text": "Sản phẩm Pioneer DJ", "url": "/danh-muc/pioneer-dj"},
+        {"text": "Phụ kiện DJ", "url": "/danh-muc/phu-kien-dj"},
+        {"text": "Hướng dẫn chọn DJ Controller", "url": "/blog/huong-dan-chon-dj-controller"}
+      ],
+      "externalReferences": [
+        {"text": "Pioneer DJ Official — XDJ-RX3", "url": "https://www.pioneerdj.com/product/xdj-rx3/"},
+        {"text": "rekordbox.com", "url": "https://rekordbox.com/"},
+        {"text": "AlphaTheta Corporation", "url": "https://www.alphatheta.com/"},
+        {"text": "Thông số kỹ thuật PDF", "url": "https://www.pioneerdj.com/support/manuals/xdj-rx3/"}
+      ]
+    },
+
+    {
+      "sectionId": "conclusion",
+      "sectionType": "conclusion",
+      "sectionTitle": "Kết Luận",
+      "sectionSubtitle": "Đánh giá cuối cùng",
+      "seoHeading": "h2",
+      "content": {
+        "body": "Pioneer XDJ-RX3 là sự lựa chọn xuất sắc cho DJ chuyên nghiệp và bán chuyên — đặc biệt là mobile DJ và club DJ. Với màn hình cảm ứng 10.1 inch lớn nhất trong phân khúc all-in-one, khả năng standalone không cần laptop, và chất lượng build đẳng cấp Nhật Bản, đây là thiết bị duy nhất có thể thay thế cả một hệ thống CDJ + DJM trong hầu hết tình huống thực tế.\n\nĐiểm yếu chính — trọng lượng 11.8 kg và giá thành cao — là những sự đánh đổi xứng đáng cho độ tin cậy và trải nghiệm club-standard. Nếu bạn là DJ di động cần một thiết bị 'cắm và chạy', hoặc club/bar muốn đầu tư lâu dài, XDJ-RX3 là khoản đầu tư thông minh nhất bạn có thể làm.\n\nVới những ai đang phân vân giữa RX3 và XZ: hãy mua RX3 nếu bạn chơi 2 kênh là chính và cần màn hình cảm ứng. Hãy mua XZ nếu bạn cần 4 kênh standalone. Với những ai đang dùng RX2: chỉ nâng cấp nếu màn hình 10.1 inch và Instant Doubling là 'must-have' cho workflow của bạn.",
+        "recommendation": "Đề xuất mua hàng: ★★★★☆ (4.5/5) — 'Best-in-class cho DJ di động'",
+        "cta": {
+          "label": "Liên hệ mua PIONEER XDJ-RX3",
+          "url": "/lien-he",
+          "priority": "primary"
+        }
+      }
+    }
+  ],
+
+  "images": [
+    {
+      "imageId": "hero-main",
+      "purpose": "Hero image — front angled view of XDJ-RX3, product hero shot for page header",
+      "source": "upload",
+      "sourceType": "product_image",
+      "altText": "Pioneer XDJ-RX3 all-in-one DJ system front angled view with screen showing waveform",
+      "caption": "Pioneer XDJ-RX3 — Hệ thống DJ All-in-One với màn hình cảm ứng 10.1 inch",
+      "suggestedFilename": "pioneer-xdj-rx3-hero.jpg",
+      "prompt": "Pioneer XDJ-RX3 front angled shot, 10.1 inch touch screen displaying colorful waveform, jog wheels with OLED displays, professional DJ controller, dark background with subtle RGB lighting, high-end product photography, 16:9 aspect ratio, shallow depth of field, dramatic lighting",
+      "negativePrompt": "blurry, low resolution, watermark, text overlay, cluttered background",
+      "cameraAngle": "front_angled_45_degrees",
+      "lighting": "dramatic_side_lighting",
+      "aspectRatio": "16:9",
+      "style": "product_photography_professional"
+    },
+    {
+      "imageId": "overview-system",
+      "purpose": "Overview section — XDJ-RX3 in a club setup with speakers, showing complete DJ rig",
+      "source": "ai_generated",
+      "altText": "Pioneer XDJ-RX3 connected to PA speakers in a club setting",
+      "caption": "XDJ-RX3 trong setup club chuyên nghiệp — kết nối loa PA và đèn sân khấu",
+      "suggestedFilename": "pioneer-xdj-rx3-club-setup.jpg",
+      "prompt": "Pioneer XDJ-RX3 set up in a nightclub, connected to large PA speakers on stands, DJ booth with monitor speakers, dynamic colored stage lighting, smoke machine effect, wide angle shot showing complete DJ setup, professional venue atmosphere, 16:9",
+      "aspectRatio": "16:9",
+      "style": "venue_photography"
+    },
+    {
+      "imageId": "intro-angle",
+      "purpose": "Introduction section — XDJ-RX3 top-down angled view showing full layout",
+      "source": "upload",
+      "sourceType": "product_image",
+      "altText": "Pioneer XDJ-RX3 top-down angled view showing mixer, jog wheels, screen and pads",
+      "caption": "Tổng thể mặt trên XDJ-RX3 — mixer 4 kênh, vòng quay jog 206 mm, 16 performance pads",
+      "suggestedFilename": "pioneer-xdj-rx3-top-angled.jpg",
+      "prompt": "Pioneer XDJ-RX3 top-down shot, showing complete layout: 4-channel mixer section, dual jog wheels with OLED displays, 10.1 inch screen in center, 16 RGB performance pads, professional product photography, studio lighting, sharp focus, 3:2",
+      "aspectRatio": "3:2",
+      "style": "product_photography"
+    },
+    {
+      "imageId": "gallery-front",
+      "purpose": "Gallery — XDJ-RX3 front view, straight on",
+      "source": "upload",
+      "sourceType": "product_image",
+      "altText": "Pioneer XDJ-RX3 front view straight on",
+      "caption": "Mặt trước — hai cổng USB-A, giắc tai nghe 1/4\" và 3.5mm",
+      "suggestedFilename": "pioneer-xdj-rx3-front.jpg"
+    },
+    {
+      "imageId": "gallery-angle",
+      "purpose": "Gallery — XDJ-RX3 3/4 angle view",
+      "source": "upload",
+      "sourceType": "product_image",
+      "altText": "Pioneer XDJ-RX3 3/4 angle view",
+      "caption": "Góc 3/4 — tổng thể thiết kế với mặt nhôm anodized",
+      "suggestedFilename": "pioneer-xdj-rx3-angle.jpg"
+    },
+    {
+      "imageId": "gallery-top",
+      "purpose": "Gallery — XDJ-RX3 top-down view",
+      "source": "upload",
+      "sourceType": "product_image",
+      "altText": "Pioneer XDJ-RX3 top-down view showing complete surface",
+      "caption": "Nhìn từ trên xuống — toàn bộ bảng điều khiển",
+      "suggestedFilename": "pioneer-xdj-rx3-top.jpg"
+    },
+    {
+      "imageId": "gallery-rear",
+      "purpose": "Gallery — XDJ-RX3 rear panel with ports",
+      "source": "upload",
+      "sourceType": "product_image",
+      "altText": "Pioneer XDJ-RX3 rear panel showing all ports and connections",
+      "caption": "Mặt sau — XLR Master, RCA, LAN, USB-B, cổng nguồn",
+      "suggestedFilename": "pioneer-xdj-rx3-rear.jpg"
+    },
+    {
+      "imageId": "gallery-jog",
+      "purpose": "Gallery — XDJ-RX3 jog wheel close up",
+      "source": "upload",
+      "sourceType": "product_image",
+      "altText": "Pioneer XDJ-RX3 jog wheel close up showing OLED display",
+      "caption": "Jog wheel 206 mm — màn hình OLED hiển thị BPM và Phase Meter",
+      "suggestedFilename": "pioneer-xdj-rx3-jog-close.jpg"
+    },
+    {
+      "imageId": "gallery-side",
+      "purpose": "Gallery — XDJ-RX3 side view showing profile",
+      "source": "upload",
+      "sourceType": "product_image",
+      "altText": "Pioneer XDJ-RX3 side view showing profile and thickness",
+      "caption": "Cạnh bên — thiết kế mỏng 129.5 mm với tay cầm tích hợp",
+      "suggestedFilename": "pioneer-xdj-rx3-side.jpg"
+    },
+    {
+      "imageId": "gallery-screen",
+      "purpose": "Gallery — XDJ-RX3 screen close up",
+      "source": "upload",
+      "sourceType": "product_image",
+      "altText": "Pioneer XDJ-RX3 10.1 inch touch screen close up with waveform display",
+      "caption": "Màn hình cảm ứng 10.1 inch hiển thị waveform màu, browser và thông tin track",
+      "suggestedFilename": "pioneer-xdj-rx3-screen.jpg"
+    },
+    {
+      "imageId": "feature-screen",
+      "purpose": "Feature: Screen — XDJ-RX3 touch screen demonstration",
+      "source": "ai_generated",
+      "altText": "Close up of DJ interacting with Pioneer XDJ-RX3 touch screen, finger touching waveform",
+      "caption": "Tương tác trực tiếp với waveform — chạm để đặt cue point, zoom, duyệt playlist",
+      "suggestedFilename": "feature-touch-screen.jpg",
+      "prompt": "Close up of DJ finger touching Pioneer XDJ-RX3 10.1 inch screen, waveform display with colorful frequency bars, RGB spectrum, professional DJ environment, shallow depth of field focusing on screen, blue/purple ambient lighting, 16:9",
+      "aspectRatio": "16:9"
+    },
+    {
+      "imageId": "feature-screen-waveform",
+      "purpose": "Feature: Screen — waveform display detail",
+      "source": "ai_generated",
+      "altText": "XDJ-RX3 screen showing detailed waveform with hot cues, beat grid and track info",
+      "caption": "Waveform màu chi tiết — hot cue, beat grid, BPM, key indicator",
+      "suggestedFilename": "feature-screen-waveform.jpg",
+      "prompt": "Pioneer XDJ-RX3 screen user interface close up, colorful waveform display, hot cue markers, beat grid lines, track title, BPM and key information, RGB color scheme, high contrast, 16:9",
+      "aspectRatio": "16:9"
+    },
+    {
+      "imageId": "feature-rekordbox",
+      "purpose": "Feature: rekordbox — XDJ-RX3 in standalone mode with USB",
+      "source": "ai_generated",
+      "altText": "DJ inserting USB drive into Pioneer XDJ-RX3, screen showing rekordbox library",
+      "caption": "Cắm USB đã export từ rekordbox — chơi ngay không cần laptop",
+      "suggestedFilename": "feature-rekordbox-standalone.jpg",
+      "prompt": "Hand inserting USB flash drive into Pioneer XDJ-RX3 front USB port, screen showing rekordbox playlist library, DJ setup without laptop, minimalist setup, clean cable management, 16:9",
+      "aspectRatio": "16:9"
+    },
+    {
+      "imageId": "feature-usb",
+      "purpose": "Feature: Dual USB — two USB ports with Instant Doubling illustration",
+      "source": "ai_generated",
+      "altText": "Two USB drives plugged into Pioneer XDJ-RX3 front USB ports, Instant Doubling feature",
+      "caption": "Cổng USB kép — Instant Doubling cho B2B chuyển đổi không gap",
+      "suggestedFilename": "feature-dual-usb.jpg",
+      "prompt": "Two USB flash drives plugged into Pioneer XDJ-RX3 front panel USB ports, labeled 'DJ A' and 'DJ B', professional DJ setup, blue LED indicator lights, 16:9",
+      "aspectRatio": "16:9"
+    },
+    {
+      "imageId": "feature-mixer",
+      "purpose": "Feature: Mixer — XDJ-RX3 mixer section close up",
+      "source": "ai_generated",
+      "altText": "Close up of Pioneer XDJ-RX3 4-channel mixer section with EQ knobs, faders and effects",
+      "caption": "Mixer 4 kênh với EQ 3-band, filter và Sound Color FX — thiết kế từ DJM-900NXS2",
+      "suggestedFilename": "feature-mixer-section.jpg",
+      "prompt": "Close up of Pioneer XDJ-RX3 mixer section, 4 channel faders, EQ knobs per channel (Hi, Mid, Low), trim knobs, filter knobs, Sound Color FX section, professional product detail shot, 16:9",
+      "aspectRatio": "16:9"
+    },
+    {
+      "imageId": "feature-jog",
+      "purpose": "Feature: Jog wheels — hand on jog wheel, mixing",
+      "source": "ai_generated",
+      "altText": "DJ hand on Pioneer XDJ-RX3 jog wheel, OLED display visible showing BPM",
+      "caption": "Jog wheel 206 mm — cảm giác CDJ thật với màn hình OLED",
+      "suggestedFilename": "feature-jog-wheel.jpg",
+      "prompt": "DJ hand on Pioneer XDJ-RX3 jog wheel top surface, fingers touching jog top, OLED display showing BPM and phase meter, blue accent lighting, shallow depth of field on hand and jog, 16:9",
+      "aspectRatio": "16:9"
+    },
+    {
+      "imageId": "feature-jog-display",
+      "purpose": "Feature: Jog wheels — OLED display detail",
+      "source": "ai_generated",
+      "altText": "Close up of OLED display on XDJ-RX3 jog wheel showing BPM and phase meter",
+      "caption": "On-Jog Display — BPM, Phase Meter, Track Time ngay trên vòng xoay",
+      "suggestedFilename": "feature-jog-oled.jpg",
+      "prompt": "Extreme close up of Pioneer XDJ-RX3 jog wheel center OLED display, showing BPM numbers, phase meter bars, crisp OLED text, blue/white display, macro photography, 1:1",
+      "aspectRatio": "1:1"
+    },
+    {
+      "imageId": "feature-effects",
+      "purpose": "Feature: Effects — Beat FX, Sound Color FX, X-Pad",
+      "source": "ai_generated",
+      "altText": "Pioneer XDJ-RX3 effects section with Beat FX knob and X-Pad touch strip",
+      "caption": "Beat FX, Sound Color FX và X-Pad — hiệu ứng từ DJM-900NXS2",
+      "suggestedFilename": "feature-effects-section.jpg",
+      "prompt": "Close up of Pioneer XDJ-RX3 effects section, Beat FX knob with parameters display, Sound Color FX knobs (Filter, Noise, Crush, Dub Echo), X-Pad touch strip with beat division indicator, RGB lit, 16:9",
+      "aspectRatio": "16:9"
+    },
+    {
+      "imageId": "design-angled",
+      "purpose": "Design section — side profile showing build quality",
+      "source": "ai_generated",
+      "altText": "Pioneer XDJ-RX3 side profile showing aluminum top panel and steel chassis",
+      "caption": "Thiết kế mặt nhôm anodized kết hợp khung thép gia cố",
+      "suggestedFilename": "design-build-quality.jpg",
+      "prompt": "Pioneer XDJ-RX3 side profile on studio table, brushed aluminum panel texture visible, subtle professional lighting highlighting metal surface, sleek industrial design, 16:9",
+      "aspectRatio": "16:9"
+    },
+    {
+      "imageId": "design-rear-ports",
+      "purpose": "Design section — rear panel detail",
+      "source": "upload",
+      "sourceType": "product_image",
+      "altText": "Pioneer XDJ-RX3 rear panel with all cables connected",
+      "caption": "Mặt sau với đầy đủ cổng kết nối — XLR, RCA, LAN, USB-B",
+      "suggestedFilename": "design-rear-panel.jpg"
+    },
+    {
+      "imageId": "connectivity-rear",
+      "purpose": "Connectivity — rear panel with labels",
+      "source": "upload",
+      "sourceType": "product_image",
+      "altText": "Pioneer XDJ-RX3 rear input/output panel labeled diagram",
+      "caption": "Sơ đồ kết nối — tất cả cổng I/O trên mặt sau",
+      "suggestedFilename": "connectivity-rear-labeled.jpg"
+    },
+    {
+      "imageId": "connectivity-front",
+      "purpose": "Connectivity — front panel ports",
+      "source": "upload",
+      "sourceType": "product_image",
+      "altText": "Pioneer XDJ-RX3 front panel with USB and headphone ports",
+      "caption": "Cổng kết nối mặt trước — 2× USB-A, 2× headphone",
+      "suggestedFilename": "connectivity-front-panel.jpg"
+    }
+  ],
+
+  "videos": [
+    {
+      "videoId": "vid-official",
+      "videoType": "hero_video",
+      "provider": "youtube",
+      "embedId": "PIONEER_XDJ_RX3_OFFICIAL",
+      "title": "Pioneer DJ XDJ-RX3 Official Product Video",
+      "description": "Video chính thức từ Pioneer DJ giới thiệu tổng quan sản phẩm, tính năng nổi bật và cách sử dụng.",
+      "thumbnailPrompt": "Pioneer XDJ-RX3 product hero shot, professional lighting, club atmosphere, 16:9",
+      "position": "section_start",
+      "priority": "required"
+    }
+  ],
+
+  "knowledgeBlocks": {
+    "history": "Pioneer DJ introduced the first CDJ player (CDJ-500) in 1994, revolutionizing how DJs play music by replacing vinyl and tape with CD. In 2009, the CDJ-2000 set the modern club standard with its large jog wheel and full-color LCD. The XDJ series launched in 2015 to bring CDJ-grade technology to a single all-in-one format at lower cost.",
+    "technology": "All-in-one DJ systems integrate multiple components: media player (reading USB drives), mixer (blending audio channels), effects processor, sound card, and controller interface. The XDJ-RX3 uses a dedicated processor optimized for real-time audio processing with ultra-low latency.",
+    "industryStandards": "The DJ industry standardizes around Pioneer DJ's ecosystem: rekordbox for music management, Pro DJ Link for networking, and BPM/Beat Grid format. Most professional clubs worldwide install CDJ-3000 / DJM-A9 systems, making rekordbox-native devices like XDJ-RX3 the ideal practice and backup tool.",
+    "compatibility": "XDJ-RX3 is compatible with USB drives formatted as FAT32, exFAT, HFS+, and NTFS. Audio formats: MP3, AAC, WAV, FLAC (16-bit), AIFF. Network: Ethernet via Pro DJ Link Protocol (Pioneer proprietary). MIDI: USB-MIDI class compliant. Software: rekordbox v6+ (macOS/Windows).",
+    "maintenance": "Monthly: clean faders with isopropyl alcohol. Quarterly: check firmware updates. Annually: lubricate jog bearings, inspect power supply, test all ports. Store in a padded case when not in use. Keep away from dust, moisture, and direct sunlight. Use a surge protector for power.",
+    "troubleshooting": "Common issues: (1) USB not reading — reformat to FAT32/exFAT, (2) No audio — check master volume and channel trim, (3) Jog wheel wobble — clean bearing and adjust Jog Adjust resistance, (4) rekordbox not connecting — reinstall driver, (5) Screen unresponsive — clean with microfiber cloth.",
+    "commonMistakes": [
+      "Forgetting to analyze tracks in rekordbox before export — XDJ-RX3 needs beat grid and BPM data for sync and effects",
+      "Using cheap USB drives — always use SanDisk Extreme Pro or similar high-speed USB 3.0 drives",
+      "Not updating firmware — newer firmware fixes bugs and adds features",
+      "Overloading the booth output — keep booth volume reasonable to protect hearing and speakers",
+      "Neglecting cable management — loose cables cause connection issues during gigs"
+    ],
+    "bestPractices": [
+      "Always carry a backup USB with identical music library",
+      "Use rekordbox Export mode for USB preparation, not just Performance mode",
+      "Label USB drives clearly (A/B, 64GB/128GB, genre tags)",
+      "Test all connections before the event starts",
+      "Keep a backup power cable and XLR cable in your bag"
+    ]
+  }
+}

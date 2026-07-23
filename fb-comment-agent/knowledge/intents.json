@@ -1,0 +1,54 @@
+{
+  "intents": {
+    "ask_menu": {
+      "keywords": ["menu", "thực đơn", "có món gì", "ăn gì", "món nào ngon", "giới thiệu món", "list món", "các món"],
+      "confidenceBoost": 0.9,
+      "examples": ["Cho xin menu", "Quán có món gì ngon?", "Gửi tôi thực đơn với", "Ăn gì ở đây?"]
+    },
+    "ask_address": {
+      "keywords": ["địa chỉ", "ở đâu", "đường nào", "chỗ nào", "maps", "google maps", "đến quán", "số nhà"],
+      "confidenceBoost": 0.85,
+      "examples": ["Quán ở đâu?", "Cho xin địa chỉ", "Gửi maps cho tôi"]
+    },
+    "ask_hours": {
+      "keywords": ["giờ mở cửa", "mấy giờ", "mở cửa", "đóng cửa", "giờ làm", "sáng mấy", "tối mấy"],
+      "confidenceBoost": 0.85,
+      "examples": ["Mấy giờ mở cửa?", "Tối mấy đóng?", "Sáng mấy giờ bán?"]
+    },
+    "ask_phone": {
+      "keywords": ["số điện thoại", "gọi", "hotline", "liên hệ", "sdt", "phone", "call"],
+      "confidenceBoost": 0.85,
+      "examples": ["Cho xin số điện thoại", "Liên hệ đặt bàn", "Gọi quán"]
+    },
+    "ask_delivery": {
+      "keywords": ["grab", "shipper", "giao hàng", "delivery", "ship", "đặt đồ", "mang về", "takeaway", "grab food", "shopeefood", "baemin", "now"],
+      "confidenceBoost": 0.9,
+      "examples": ["Có Grab không?", "Giao hàng tới đây được không?", "Ship không?", "Đặt Shopee Food"]
+    },
+    "ask_price": {
+      "keywords": ["bao nhiêu tiền", "giá", "đắt không", "rẻ không", "cost", "price", "tổng thiệt hại"],
+      "confidenceBoost": 0.8,
+      "examples": ["Bao nhiêu một tô?", "Giá cả thế nào?", "Mắc không?"]
+    },
+    "ask_promotion": {
+      "keywords": ["khuyến mãi", "giảm giá", "coupon", "voucher", "sale", "combo", "ưu đãi", "deal", "km"],
+      "confidenceBoost": 0.8,
+      "examples": ["Có khuyến mãi gì không?", "Combo rẻ hơn không?", "Sinh nhật có giảm giá?"]
+    },
+    "complaint": {
+      "keywords": ["tệ", "dở", "không ngon", "thất vọng", "chậm", "sai món", "bẩn", "đau bụng", "phàn nàn"],
+      "confidenceBoost": 0.7,
+      "examples": ["Hôm nay hủ tiếu bị nhão quá", "Giao sai món rồi", "Phục vụ chậm quá"]
+    },
+    "praise": {
+      "keywords": ["ngon", "tuyệt", "ngất", "đỉnh", "nhất", "wow", "xuất sắc", "quá ok", "ngon miệng", "thích"],
+      "confidenceBoost": 0.7,
+      "examples": ["Hủ tiếu ở đây ngon nhất quận", "Ngon tuyệt vời", "Sẽ quay lại"]
+    },
+    "spam": {
+      "keywords": [],
+      "confidenceBoost": 0.5,
+      "examples": ["", "ok", "hi", "hello", "test", "...", "link-only", "emoji-only"]
+    }
+  }
+}

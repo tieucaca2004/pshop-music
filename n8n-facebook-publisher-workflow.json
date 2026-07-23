@@ -1,0 +1,185 @@
+{
+  "name": "Facebook Page Publisher",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {},
+        "responseHeaders": {},
+        "responseData": "{{ $json }}",
+        "responseMode": "onReceived",
+        "path": "facebook-publish",
+        "responseContentType": "application/json"
+      },
+      "id": "webhook",
+      "name": "Webhook - Receive Content",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const { page_id, page_access_token, message, image_urls, link, published } = $input.first().json;\n\nconst errors = [];\nif (!page_id) errors.push('page_id is required');\nif (!page_access_token) errors.push('page_access_token is required');\nif (!message && !image_urls?.length && !link) errors.push('At least one of message, image_urls, or link is required');\n\nif (errors.length > 0) {\n  throw new Error('Validation failed: ' + errors.join('; '));\n}\n\nreturn {\n  page_id,\n  page_access_token,\n  message: message || '',\n  image_urls: Array.isArray(image_urls) ? image_urls : [],\n  link: link || '',\n  published: published !== false,\n  schedule_time: $input.first().json.schedule_time || null\n};"
+      },
+      "id": "validate",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.image_urls.length }}",
+              "value2": 0,
+              "operation": "larger"
+            }
+          ]
+        }
+      },
+      "id": "hasImages",
+      "name": "Has Images?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const { page_id, page_access_token, message, image_urls, link, published } = item.json;\n  \n  // Upload each image as unpublished media\n  const mediaIds = [];\n  for (const url of image_urls) {\n    const response = await this.helpers.httpRequest({\n      method: 'POST',\n      url: `https://graph.facebook.com/v25.0/${page_id}/photos`,\n      qs: {\n        url: url,\n        published: false,\n        access_token: page_access_token\n      }\n    });\n    mediaIds.push({ media_fbid: response.id });\n  }\n  \n  // If only one image, use /photos endpoint with message\n  if (mediaIds.length === 1 && message) {\n    const response = await this.helpers.httpRequest({\n      method: 'POST',\n      url: `https://graph.facebook.com/v25.0/${page_id}/photos`,\n      qs: {\n        url: image_urls[0],\n        message: message,\n        access_token: page_access_token\n      }\n    });\n    results.push({ post_id: response.id, post_type: 'photo' });\n    continue;\n  }\n  \n  // For text-only or multiple images, use /feed endpoint\n  const feedParams = {\n    message: message,\n    access_token: page_access_token\n  };\n  \n  if (mediaIds.length > 0) {\n    feedParams.attached_media = JSON.stringify(mediaIds);\n  }\n  \n  if (link) {\n    feedParams.link = link;\n  }\n  \n  if (item.json.schedule_time) {\n    feedParams.scheduled_publish_time = Math.floor(new Date(item.json.schedule_time).getTime() / 1000);\n  }\n  \n  if (published === false && !item.json.schedule_time) {\n    feedParams.published = false;\n  }\n  \n  const response = await this.helpers.httpRequest({\n    method: 'POST',\n    url: `https://graph.facebook.com/v25.0/${page_id}/feed`,\n    qs: feedParams\n  });\n  \n  results.push({\n    post_id: response.id,\n    post_type: mediaIds.length > 1 ? 'multi_photo' : link ? 'link' : 'text',\n    image_count: mediaIds.length\n  });\n}\n\nreturn results;"
+      },
+      "id": "processWithImages",
+      "name": "Process With Images",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nconst results = [];\n\nfor (const item of items) {\n  const { page_id, page_access_token, message, link, published } = item.json;\n  \n  const params = {\n    message: message,\n    access_token: page_access_token\n  };\n  \n  if (link) {\n    params.link = link;\n  }\n  \n  if (item.json.schedule_time) {\n    params.scheduled_publish_time = Math.floor(new Date(item.json.schedule_time).getTime() / 1000);\n  }\n  \n  if (published === false && !item.json.schedule_time) {\n    params.published = false;\n  }\n  \n  const response = await this.helpers.httpRequest({\n    method: 'POST',\n    url: `https://graph.facebook.com/v25.0/${page_id}/feed`,\n    qs: params\n  });\n  \n  results.push({\n    post_id: response.id,\n    post_type: link ? 'link' : 'text',\n    image_count: 0\n  });\n}\n\nreturn results;"
+      },
+      "id": "processTextOnly",
+      "name": "Process Text Only",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map(item => ({\n  success: true,\n  post_id: item.json.post_id,\n  post_type: item.json.post_type,\n  image_count: item.json.image_count || 0,\n  timestamp: new Date().toISOString(),\n  status: 'published',\n  page_url: `https://facebook.com/${item.json.post_id}`\n}));"
+      },
+      "id": "formatResponse",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "options": {},
+        "respondMode": "responseNode",
+        "responseBodyType": "auto",
+        "responseCode": 200,
+        "responseHeaders": {
+          "entries": [
+            {
+              "name": "content-type",
+              "value": "application/json"
+            }
+          ]
+        }
+      },
+      "id": "respondToWebhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nreturn items.map(item => ({\n  level: 'error',\n  input: item.json,\n  error: item.json.error || 'Unknown error',\n  timestamp: new Date().toISOString()\n}));"
+      },
+      "id": "errorHandler",
+      "name": "Error Handler - Log to File",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 600]
+    }
+  ],
+  "connections": {
+    "Webhook - Receive Content": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Has Images?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Images?": {
+      "main": [
+        [
+          {
+            "node": "Process With Images",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Process Text Only",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process With Images": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Text Only": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
