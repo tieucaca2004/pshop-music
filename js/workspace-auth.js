@@ -124,6 +124,36 @@ var WorkspaceAuth = (function () {
     return (n / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
+  // apiFetch(path, options) -> Promise<data> — shared caller for the
+  // tenant-scoped Cloud Functions API (functions/routes/*.js via
+  // apiGateway). Attaches the current user's ID token, parses the
+  // { success, data } / { success:false, error } envelope from
+  // functions/shared/response.js, and rejects with an Error carrying the
+  // backend's error code/message on failure. Hoisted here (Task 2.9) so
+  // workspace-dashboard.js's team-count call and workspace-team.js's CRUD
+  // calls share one implementation instead of each duplicating
+  // getIdToken()+fetch()+base-URL (previously only duplicated once, in
+  // workspace-dashboard.js — fixed before a third copy was added).
+  var API_BASE = 'https://us-central1-pshop-music.cloudfunctions.net/apiGateway';
+
+  function apiFetch(path, options) {
+    var user = firebase.auth().currentUser;
+    if (!user) return Promise.reject(new Error('Not authenticated.'));
+    return user.getIdToken().then(function (token) {
+      var opts = Object.assign({}, options);
+      opts.headers = Object.assign({ Authorization: 'Bearer ' + token }, opts.headers);
+      return fetch(API_BASE + path, opts);
+    }).then(function (r) {
+      return r.json().then(function (body) {
+        if (!body || body.success !== true) {
+          var err = (body && body.error) || {};
+          throw new Error(err.message || 'Request failed.');
+        }
+        return body.data;
+      });
+    });
+  }
+
   // ─── Init: Auth Gate ─────────────────────────────────────────────
   function init(page, title) {
     return AuthContext.init().then(function () {
@@ -190,6 +220,7 @@ var WorkspaceAuth = (function () {
     renderLoading: renderLoading,
     renderEmpty: renderEmpty,
     renderErrorState: renderErrorState,
-    formatBytes: formatBytes
+    formatBytes: formatBytes,
+    apiFetch: apiFetch
   };
 })();

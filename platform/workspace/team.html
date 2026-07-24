@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team - PSH Workspace</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="workspaceSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="workspaceTopbar"></div>
+    <div class="admin-wrap">
+      <div class="panel">
+        <h3>Invite Member</h3>
+        <div class="admin-actions" style="gap:1rem;flex-wrap:wrap;align-items:flex-end">
+          <div class="form-group" style="max-width:280px;margin:0"><label>Email</label><input type="email" id="tInviteEmail" placeholder="teammate@example.com"></div>
+          <div class="form-group" style="margin:0">
+            <label>Role</label>
+            <select id="tInviteRole">
+              <option value="business_editor">Editor</option>
+              <option value="business_viewer">Viewer</option>
+            </select>
+          </div>
+          <button class="submit-btn" id="tInviteBtn">Invite</button>
+        </div>
+        <p class="status-msg" id="tInviteStatus" style="display:block"></p>
+        <p class="small-muted">Invited members get a Firebase account with a temporary password immediately — there is no email invitation flow yet, so share the password shown above with them directly.</p>
+      </div>
+      <div class="panel">
+        <h3>Members</h3>
+        <p class="small-muted" id="tEmpty" style="display:none"></p>
+        <div class="admin-table-wrap">
+          <table class="admin-table">
+            <thead><tr><th></th><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+            <tbody id="tTableBody"></tbody>
+          </table>
+        </div>
+        <p class="small-muted">Resend Invitation and Activate/Deactivate are deferred — functions/routes/team.js has no invitation-token or member-status capability to reuse yet.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script src="/js/auth-context.js"></script>
+<script src="/js/workspace-auth.js"></script>
+<script src="/js/workspace-team.js"></script>
+</body>
+</html>

@@ -11,10 +11,11 @@
  *     (Media count, Documents count, total bytes) instead of listing the
  *     tenant's Storage tree three separate times.
  *   - GET /v1/businesses/{businessId}/team (functions/routes/team.js,
- *     existing backend service, Admin SDK) -> Team Member Count. This is a
- *     business_admin/super_admin-only endpoint; business_editor/viewer
- *     accounts get a 403, in which case the Team card shows "—" instead of
- *     blocking the rest of the dashboard.
+ *     existing backend service, Admin SDK) -> Team Member Count, via
+ *     WorkspaceAuth.apiFetch() (Task 2.9). This is a business_admin/
+ *     super_admin-only endpoint; business_editor/viewer accounts get a 403,
+ *     in which case the Team card shows "—" instead of blocking the rest of
+ *     the dashboard.
  *
  * Recent Activity: functions/routes/auditLogs.js + functions/shared/
  * auditLog.js exist on the backend, but no admin/platform UI anywhere
@@ -37,16 +38,8 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function fetchTeamCount(businessId) {
-    var user = firebase.auth().currentUser;
-    if (!user) return Promise.resolve(null);
-    return user.getIdToken()
-      .then(function (token) {
-        return fetch('https://us-central1-pshop-music.cloudfunctions.net/apiGateway/v1/businesses/' + businessId + '/team', {
-          headers: { Authorization: 'Bearer ' + token }
-        });
-      })
-      .then(function (r) { return r.json(); })
-      .then(function (data) { return (data && data.success && Array.isArray(data.data)) ? data.data.length : null; })
+    return WorkspaceAuth.apiFetch('/v1/businesses/' + businessId + '/team')
+      .then(function (members) { return Array.isArray(members) ? members.length : null; })
       .catch(function () { return null; });
   }
 
