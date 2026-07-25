@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quản lý Menu - A Tiểu</title>
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="workspaceSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="workspaceTopbar"></div>
+    <div class="admin-wrap">
+      <h1>📋 Quản lý Menu - Hủ Tiếu Xào A Tiểu</h1>
+      <div id="amStatus"></div>
+      <div class="panel">
+        <div style="display:flex;gap:1rem;margin-bottom:1rem">
+          <input type="text" id="amName" placeholder="Tên món">
+          <input type="number" id="amPrice" placeholder="Giá (VNĐ)">
+          <select id="amCategory">
+            <option value="main">Món chính</option>
+            <option value="appetizer">Khai vị</option>
+            <option value="soup">Súp - Canh</option>
+            <option value="drink">Nước uống</option>
+            <option value="combo">Combo</option>
+          </select>
+          <textarea id="amDesc" placeholder="Mô tả" rows="1" style="flex:2"></textarea>
+          <button class="btn-primary" id="amAddBtn">Thêm</button>
+        </div>
+        <table style="width:100%">
+          <thead><tr><th>Tên</th><th>Danh mục</th><th>Giá</th><th>Mô tả</th><th></th></tr></thead>
+          <tbody id="amTableBody"></tbody>
+        </table>
+        <p id="amEmpty" class="small-muted">Chưa có món nào.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script src="/js/admin-atieu-menu.js"></script>
+</body>
+</html>
