@@ -4,7 +4,7 @@
  * See README.md "Nâng cấp lên Firebase" for step-by-step instructions.
  */
 const firebaseConfig = {
-  apiKey: "AIzaSyD-R2cQb-EI4I8wy60z1tuShIXny39Rawc",
+  apiKey: "AIzaSyBZvQZRL6aDkMLJdoyx4mDtMd_K2ThgbuQ",
   authDomain: "pshop-music.firebaseapp.com",
   databaseURL: "https://pshop-music-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "pshop-music",
