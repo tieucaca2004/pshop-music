@@ -207,3 +207,27 @@ const AdminAuth = (function () {
     getUiMode
   };
 })();
+
+// Verify Email banner — shows when user's email is not verified
+(function checkVerifyEmail() {
+  firebase.auth().onAuthStateChanged(function(user) {
+    if (user && !user.emailVerified) {
+      var b = document.getElementById("verifyEmailBanner");
+      if (!b) {
+        b = document.createElement("div");
+        b.id = "verifyEmailBanner";
+        b.style.cssText = "background:#fff3cd;padding:10px 20px;text-align:center;font-size:0.9rem";
+        b.innerHTML = 'Email chưa được xác thực. <a href="#" id="verifyEmailBtn" style="color:#856404;text-decoration:underline">Gửi lại email xác thực</a>';
+        document.body.prepend(b);
+        document.getElementById("verifyEmailBtn").onclick = function(e) {
+          e.preventDefault();
+          user.sendEmailVerification().then(function() {
+            document.getElementById("verifyEmailBtn").textContent = "Đã gửi! Kiểm tra hộp thư.";
+          }).catch(function(err) {
+            alert("Lỗi: " + err.message);
+          });
+        };
+      }
+    }
+  });
+})();
