@@ -39,7 +39,7 @@ var WorkspaceAuth = (function () {
     { key: 'files',          label: 'Files',            href: '/platform/workspace/files.html',     icon: '&#128194;' },
     { key: 'settings',       label: 'Settings',         href: '/platform/workspace/settings.html',  icon: '&#9881;' },
     { key: 'team',           label: 'Team',             href: '/platform/workspace/team.html',      icon: '&#128101;' },
-    { key: 'business-profile', label: 'Business Profile', href: '/platform/workspace/business-profile.html', icon: '&#128100;' }
+    { key: 'business-settings', label: 'Business Settings', href: '/platform/workspace/business-settings.html', icon: '&#128100;' }
   ];
 
   // ─── Internal State ──────────────────────────────────────────────

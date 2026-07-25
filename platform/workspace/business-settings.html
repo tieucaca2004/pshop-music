@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business Settings - PSH Workspace</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="workspaceSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="workspaceTopbar"></div>
+    <div class="admin-wrap">
+      <p id="bsStatus" class="small-muted" style="margin-bottom:1rem"></p>
+
+      <div class="panel" id="bsFormPanel" style="display:none">
+        <h3>Business Profile</h3>
+        <form id="bsForm">
+          <div class="form-row">
+            <label>Business Name <span class="required">*</span>
+              <input type="text" id="bsName" maxlength="120" required>
+            </label>
+            <label>Business Code
+              <input type="text" id="bsCode" readonly style="background:var(--bg-alt);color:var(--text-muted)">
+            </label>
+          </div>
+
+          <div class="form-row">
+            <label>Email <span class="required">*</span>
+              <input type="email" id="bsEmail" maxlength="200" required>
+            </label>
+            <label>Phone
+              <input type="tel" id="bsPhone" maxlength="30" placeholder="+84 912 345 678">
+            </label>
+          </div>
+
+          <div class="form-row">
+            <label>Website
+              <input type="url" id="bsWebsite" maxlength="300" placeholder="https://example.com">
+            </label>
+            <label>Timezone <span class="required">*</span>
+              <select id="bsTimezone"></select>
+            </label>
+          </div>
+
+          <label>Address
+            <input type="text" id="bsAddress" maxlength="500">
+          </label>
+
+          <div class="form-row">
+            <label>Country
+              <input type="text" id="bsCountry" readonly style="background:var(--bg-alt);color:var(--text-muted)">
+            </label>
+            <label>City / Province
+              <input type="text" id="bsCity" maxlength="100">
+            </label>
+          </div>
+
+          <div class="form-row">
+            <label>Currency
+              <input type="text" id="bsCurrency" readonly style="background:var(--bg-alt);color:var(--text-muted)">
+            </label>
+            <label>Language
+              <input type="text" id="bsLanguage" readonly style="background:var(--bg-alt);color:var(--text-muted)">
+            </label>
+          </div>
+
+          <label>Description
+            <textarea id="bsDescription" rows="4" maxlength="2000"></textarea>
+          </label>
+
+          <h3>Branding</h3>
+          <div class="form-row">
+            <label>Logo
+              <input type="hidden" id="bsLogo">
+              <div id="bsLogoPreview" class="medialib-slot-wrapper"></div>
+              <div style="margin-top:0.5rem">
+                <button type="button" class="btn-secondary" id="bsLogoUpload">Upload New</button>
+                <input type="file" id="bsLogoFileInput" accept="image/*" style="display:none">
+              </div>
+            </label>
+            <label>Cover Image
+              <input type="hidden" id="bsCoverImage">
+              <div id="bsCoverPreview" class="medialib-slot-wrapper"></div>
+              <div style="margin-top:0.5rem">
+                <button type="button" class="btn-secondary" id="bsCoverUpload">Upload New</button>
+                <input type="file" id="bsCoverFileInput" accept="image/*" style="display:none">
+              </div>
+            </label>
+          </div>
+
+          <div class="admin-actions" style="margin-top:1.5rem">
+            <button type="submit" class="btn-primary" id="bsSaveBtn">Save Changes</button>
+            <button type="button" class="btn-secondary" id="bsCancelBtn">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script src="/js/auth-context.js"></script>
+<script src="/js/workspace-auth.js"></script>
+<script src="/js/storage-upload.js"></script>
+<script src="/js/media-library.js"></script>
+<script src="/js/media-library-picker.js"></script>
+<script src="/js/workspace-business-settings.js"></script>
+</body>
+</html>
