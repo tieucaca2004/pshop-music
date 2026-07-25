@@ -6,8 +6,12 @@
  * - Claude: Advanced coding provider (architecture, large refactoring, multi-file, security, debugging)
  * - OpenAI: Content generation only (marketing, blog, social media — unchanged)
  *
- * This router does NOT modify existing content-generation modules.
- * It only defines which provider handles which type of coding task.
+ * Complexity Score (primary decision factor):
+ *   1-2: DeepSeek (low complexity)
+ *     3: DeepSeek default, Claude if low confidence (medium complexity)
+ *   4-5: Claude (high complexity)
+ *
+ * Affected modules is a secondary signal only.
  */
 const CodingRouter = (function() {
   'use strict';
@@ -16,76 +20,135 @@ const CodingRouter = (function() {
   var ADVANCED_PROVIDER = 'claude';
   var CONTENT_PROVIDER = 'openai';
 
-  // Decision rules — task complexity determines provider selection
-  var COMPLEXITY_KEYWORDS = {
-    advanced: [
-      'architecture', 'refactor', 'migration', 'multi-file', 'multi file',
-      'security', 'performance', 'optimization', 'debugging', 'complex',
-      'design', 'pattern', 'strategy', 'cross-cutting', 'integration',
-      'pipeline', 'deployment', 'scalability', 'database schema',
-      'authentication flow', 'authorization', 'permission',
-      'technical design', 'difficult', 'large'
-    ],
-    simple: [
-      'crud', 'small', 'bug', 'fix', 'simple', 'basic', 'unit test',
-      'boilerplate', 'documentation', 'template', 'style', 'format',
-      'variable', 'function', 'method', 'component', 'page',
-      'routine', 'minor', 'trivial', 'easy'
-    ]
+  // Keyword-to-complexity mapping — used when no explicit score is given
+  var COMPLEXITY_MAP = {
+    // Score 1-2 keywords (simple)
+    level1: ['crud', 'boilerplate', 'trivial', 'typo', 'rename', 'format', 'style', 'comment'],
+    level2: ['small', 'simple', 'basic', 'easy', 'minor', 'routine', 'unit test', 'documentation',
+             'template', 'variable', 'function', 'method', 'component', 'page', 'ui', 'bug fix'],
+
+    // Score 3 keywords (medium)
+    level3: ['medium', 'enhancement', 'multiple modules', 'related files', 'service',
+             'implementation', 'middleware', 'controller', 'route', 'integration'],
+
+    // Score 4-5 keywords (complex)
+    level4: ['architecture', 'design', 'refactor', 'large', 'complex', 'migration',
+             'security', 'authentication', 'authorization', 'performance', 'optimization',
+             'difficult', 'debugging', 'strategy', 'pattern', 'multi-system'],
+    level5: ['critical', 'database migration', 'schema change', 'cross-cutting',
+             'pipeline', 'deployment', 'scalability', 'fundamental']
   };
 
   /**
-   * resolve(complexity, affectedModules) -> { provider, reason }
+   * assessComplexity(context) -> number (1-5)
+   * Analyze task description to estimate complexity score.
+   */
+  function assessComplexity(context) {
+    if (!context) return 3;
+    var lower = context.toLowerCase();
+    var totalScore = 0;
+
+    // Count keyword matches per level, weighted
+    totalScore += countMatches(lower, COMPLEXITY_MAP.level1) * 1.0;
+    totalScore += countMatches(lower, COMPLEXITY_MAP.level2) * 1.5;
+    totalScore += countMatches(lower, COMPLEXITY_MAP.level3) * 2.5;
+    totalScore += countMatches(lower, COMPLEXITY_MAP.level4) * 3.5;
+    totalScore += countMatches(lower, COMPLEXITY_MAP.level5) * 4.5;
+
+    // Find highest matching level
+    var maxLevel = 0;
+    if (matchAny(lower, COMPLEXITY_MAP.level5)) maxLevel = Math.max(maxLevel, 5);
+    if (matchAny(lower, COMPLEXITY_MAP.level4)) maxLevel = Math.max(maxLevel, 4);
+    if (matchAny(lower, COMPLEXITY_MAP.level3)) maxLevel = Math.max(maxLevel, 3);
+    if (matchAny(lower, COMPLEXITY_MAP.level2)) maxLevel = Math.max(maxLevel, 2);
+    if (matchAny(lower, COMPLEXITY_MAP.level1)) maxLevel = Math.max(maxLevel, 1);
+
+    // Weighted score: combine hit density with highest level
+    var hitDensity = totalScore / Math.max(lower.split(/\s+/).length, 1);
+    var score = Math.max(maxLevel, Math.min(5, Math.round(hitDensity + maxLevel * 0.5)));
+    return Math.max(1, Math.min(5, score));
+  }
+
+  function countMatches(text, keywords) {
+    var count = 0;
+    for (var i = 0; i < keywords.length; i++) {
+      if (text.indexOf(keywords[i]) !== -1) count++;
+    }
+    return count;
+  }
+
+  function matchAny(text, keywords) {
+    for (var i = 0; i < keywords.length; i++) {
+      if (text.indexOf(keywords[i]) !== -1) return true;
+    }
+    return false;
+  }
+
+  /**
+   * resolve(complexity, affectedModules, context) -> { provider, reason, complexityScore }
    *
-   * Returns which provider should handle the task.
+   * Primary decision: complexity score
+   * Secondary signal: affected modules count
    *
-   * @param {string|number} complexity - 'low'/'high' or 1-5 scale
-   * @param {number} affectedModules - number of modules affected
-   * @param {string} context - task description (optional, for keyword analysis)
-   * @returns {{ provider: string, reason: string }}
+   * @param {number|string} complexity - Explicit score (1-5) or 'low'/'medium'/'high'
+   * @param {number} affectedModules - Number of modules affected (secondary signal)
+   * @param {string} context - Task description for keyword analysis
+   * @returns {{ provider: string, reason: string, complexityScore: number }}
    */
   function resolve(complexity, affectedModules, context) {
-    // Check affected modules first — multi-module changes need Claude
-    if (affectedModules >= 2) {
-      return { provider: ADVANCED_PROVIDER, reason: 'Affects ' + affectedModules + ' modules — needs Claude Code' };
-    }
+    var score;
+    var scoreReason = '';
 
-    // Check explicit complexity rating
+    // Determine complexity score
     if (typeof complexity === 'number') {
-      if (complexity >= 4) {
-        return { provider: ADVANCED_PROVIDER, reason: 'Complexity ' + complexity + '/5 — needs Claude Code' };
+      score = Math.max(1, Math.min(5, Math.round(complexity)));
+      scoreReason = 'Explicit score ' + score + '/5';
+    } else if (typeof complexity === 'string') {
+      switch (complexity.toLowerCase()) {
+        case 'low': case 'easy': score = 2; scoreReason = 'Low complexity'; break;
+        case 'medium': case 'moderate': score = 3; scoreReason = 'Medium complexity'; break;
+        case 'high': case 'hard': case 'very hard': score = 4; scoreReason = 'High complexity'; break;
+        default: score = assessComplexity(context || complexity);
       }
-      if (complexity <= 2) {
-        return { provider: DEFAULT_PROVIDER, reason: 'Complexity ' + complexity + '/5 — suitable for DeepSeek' };
-      }
+    } else if (context) {
+      score = assessComplexity(context);
+      scoreReason = 'Estimated score ' + score + '/5 from context';
+    } else {
+      score = 3;
+      scoreReason = 'Default score 3/5';
     }
 
-    if (typeof complexity === 'string') {
-      if (complexity === 'high' || complexity === 'hard' || complexity === 'very hard') {
-        return { provider: ADVANCED_PROVIDER, reason: 'High complexity — needs Claude Code' };
-      }
-      if (complexity === 'low' || complexity === 'easy') {
-        return { provider: DEFAULT_PROVIDER, reason: 'Low complexity — suitable for DeepSeek' };
-      }
+    // Primary decision: complexity score
+    if (score >= 4) {
+      return {
+        provider: ADVANCED_PROVIDER,
+        reason: scoreReason + ' — needs Claude Code',
+        complexityScore: score
+      };
     }
 
-    // Keyword-based context analysis
-    if (context) {
-      var lower = context.toLowerCase();
-      for (var i = 0; i < COMPLEXITY_KEYWORDS.advanced.length; i++) {
-        if (lower.indexOf(COMPLEXITY_KEYWORDS.advanced[i]) !== -1) {
-          return { provider: ADVANCED_PROVIDER, reason: 'Contains advanced keywords — needs Claude Code' };
-        }
-      }
-      for (var j = 0; j < COMPLEXITY_KEYWORDS.simple.length; j++) {
-        if (lower.indexOf(COMPLEXITY_KEYWORDS.simple[j]) !== -1) {
-          return { provider: DEFAULT_PROVIDER, reason: 'Contains simple keywords — suitable for DeepSeek' };
-        }
-      }
+    if (score <= 2) {
+      return {
+        provider: DEFAULT_PROVIDER,
+        reason: scoreReason + ' — suitable for DeepSeek',
+        complexityScore: score
+      };
     }
 
-    // Default fallback
-    return { provider: DEFAULT_PROVIDER, reason: 'Default — routed to DeepSeek' };
+    // Score 3: medium complexity — affected modules as tiebreaker
+    if (affectedModules >= 2) {
+      return {
+        provider: ADVANCED_PROVIDER,
+        reason: scoreReason + ' + ' + affectedModules + ' modules — Claude Code recommended',
+        complexityScore: score
+      };
+    }
+
+    return {
+      provider: DEFAULT_PROVIDER,
+      reason: scoreReason + ' — DeepSeek default. Claude if low confidence.',
+      complexityScore: score
+    };
   }
 
   /**
@@ -105,6 +168,7 @@ const CodingRouter = (function() {
   return {
     resolve: resolve,
     isContentTask: isContentTask,
+    assessComplexity: assessComplexity,
     DEFAULT_PROVIDER: DEFAULT_PROVIDER,
     ADVANCED_PROVIDER: ADVANCED_PROVIDER,
     CONTENT_PROVIDER: CONTENT_PROVIDER
