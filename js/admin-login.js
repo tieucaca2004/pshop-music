@@ -3,6 +3,24 @@
  * bootstrap flow: if the "roles" node is completely empty (first run), show
  * a "create first admin account" form instead of the login form. Once at
  * least one role exists, the bootstrap form never appears again — further
+// --- Các hàm hỗ trợ Authentication
+function handleForgotPassword() {
+  var email = document.getElementById("loginEmail").value.trim();
+  if (!email) {
+    loginError.textContent = "Nhập email trước khi yêu cầu đặt lại mật khẩu.";
+    loginError.style.display = "block";
+    return;
+  }
+  firebase.auth().sendPasswordResetEmail(email).then(function() {
+    loginError.textContent = "Đã gửi email đặt lại mật khẩu. Kiểm tra hộp thư của bạn.";
+    loginError.style.color = "#27ae60";
+    loginError.style.display = "block";
+  }).catch(function(err) {
+    loginError.textContent = "Lỗi: " + translateAuthError(err);
+    loginError.style.color = "";
+    loginError.style.display = "block";
+  });
+}
  * accounts must be created by an existing admin via admin/users.html.
  */
 document.addEventListener('DOMContentLoaded', () => {
@@ -104,3 +122,4 @@ document.addEventListener('DOMContentLoaded', () => {
     el.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginBtn').click(); });
   });
 });
+document.getElementById("forgotPwLink").addEventListener("click", function(e) { e.preventDefault(); handleForgotPassword(); });
