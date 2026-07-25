@@ -12,28 +12,20 @@ document.addEventListener('DOMContentLoaded', () => {
   let slugManuallyEdited = false;
   const postCoverPicker = MediaLibraryPicker.mount('postCover', 'postCoverPreview');
 
-  function escapeHtml(str) {
-    return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]));
-  }
 
   function slugify(str) {
-    return String(str || '')
       .normalize('NFD').replace(/[̀-ͯ]/g, '')
       .replace(/đ/g, 'd').replace(/Đ/g, 'D')
       .toLowerCase().trim()
       .replace(/[^a-z0-9\s-]/g, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-');
-  }
 
   function load() {
     BlogDB.getAll().then(list => {
       posts = list.slice().sort((a, b) => (b.publishedAt || b.createdAt || 0) - (a.publishedAt || a.createdAt || 0));
       render();
-    });
-  }
 
   function render() {
     document.getElementById('blogTotal').textContent = posts.length;
@@ -41,12 +33,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!posts.length) {
       body.innerHTML = '<tr><td colspan="5" style="color:var(--ink-mute);text-align:center;padding:2rem">Chưa có bài viết nào.</td></tr>';
       return;
-    }
     body.innerHTML = posts.map(p => `
       <tr>
-        <td>${p.coverImage ? `<img src="${escapeHtml(p.coverImage)}" onerror="this.style.display='none'">` : '—'}</td>
-        <td>${escapeHtml(p.title)}<br><span class="small-muted">/blog-post.html?slug=${escapeHtml(p.slug)}</span></td>
-        <td>${escapeHtml(p.author || '')}</td>
+        <td>${p.coverImage ? `<img src="${PSH.escapeHtml(p.coverImage)}" onerror="this.style.display='none'">` : '—'}</td>
+        <td>${PSH.escapeHtml(p.title)}<br><span class="small-muted">/blog-post.html?slug=${PSH.escapeHtml(p.slug)}</span></td>
+        <td>${PSH.escapeHtml(p.author || '')}</td>
         <td>${p.status === 'published' ? 'Đã đăng' : '<span style="color:var(--ink-mute)">Bản nháp</span>'}</td>
         <td>
           <div class="row-actions">
@@ -55,7 +46,6 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         </td>
       </tr>`).join('');
-  }
 
   function edit(id) {
     const p = posts.find(x => x.id === id);
@@ -76,21 +66,18 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('blogFormTitle').textContent = 'SỬA BÀI VIẾT';
     document.getElementById('blogSaveBtn').textContent = 'CẬP NHẬT BÀI VIẾT';
     document.getElementById('blogFormPanel').scrollIntoView({ behavior: 'smooth' });
-  }
 
   function resetForm() {
     editingId = null;
     slugManuallyEdited = false;
     ['postTitle', 'postSlug', 'postExcerpt', 'postCover', 'postTags', 'postSeoTitle', 'postSeoDescription'].forEach(id => {
       document.getElementById(id).value = '';
-    });
     postCoverPicker.refresh();
     document.getElementById('postAuthor').value = 'Pshop Music';
     document.getElementById('postStatus').value = 'draft';
     if (quill) quill.setText('');
     document.getElementById('blogFormTitle').textContent = 'THÊM BÀI VIẾT MỚI';
     document.getElementById('blogSaveBtn').textContent = 'LƯU BÀI VIẾT';
-  }
 
   function save() {
     const title = document.getElementById('postTitle').value.trim();
@@ -112,38 +99,31 @@ document.addEventListener('DOMContentLoaded', () => {
       seoDescription: document.getElementById('postSeoDescription').value.trim(),
       contentHtml: quill ? quill.root.innerHTML : '',
       updatedAt: Date.now()
-    };
     if (data.status === 'published' && !(editingId && posts.find(p => p.id === editingId).publishedAt)) {
       data.publishedAt = Date.now();
-    }
 
     const action = editingId ? BlogDB.update(editingId, data) : BlogDB.add(data);
     action.then(() => {
       showStatus(editingId ? 'Đã cập nhật bài viết.' : 'Đã thêm bài viết mới.');
       resetForm();
       load();
-    });
-  }
 
   function remove(id) {
     const p = posts.find(x => x.id === id);
     if (!p) return;
     if (!confirm(`Xóa bài viết "${p.title}"?`)) return;
     BlogDB.remove(id).then(load);
-  }
 
   function showStatus(msg) {
     const el = document.getElementById('blogStatus');
     el.textContent = msg;
     el.style.display = 'block';
     setTimeout(() => { el.style.display = 'none'; }, 3000);
-  }
 
   document.getElementById('blogSaveBtn').addEventListener('click', save);
   document.getElementById('blogResetBtn').addEventListener('click', resetForm);
   document.getElementById('postTitle').addEventListener('input', e => {
     if (!slugManuallyEdited) document.getElementById('postSlug').value = slugify(e.target.value);
-  });
   document.getElementById('postSlug').addEventListener('input', () => { slugManuallyEdited = true; });
 
   if (typeof Quill !== 'undefined') {
@@ -160,9 +140,6 @@ document.addEventListener('DOMContentLoaded', () => {
           ['image', 'link'],
           ['clean']
         ]
-      }
-    });
-  }
 
   window.AdminBlog = { edit, remove };
 });

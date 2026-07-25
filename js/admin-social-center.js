@@ -45,15 +45,10 @@ const AdminSocialCenter = (function () {
   let currentView = 'list';
   let scheduleTimer = null;
 
-  function escapeHtml(str) {
-    return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]));
-  }
 
-  function formatDate(ts) {
+  function PSH.formatDate(ts) {
     return ts ? new Date(ts).toLocaleString('vi-VN') : '';
-  }
 
   // getYoutubeEmbedUrl — cùng pattern đã lặp lại ở js/category.js/
   // js/ai/modules/blog-writer.js/facebook-post-generator.js/
@@ -69,38 +64,30 @@ const AdminSocialCenter = (function () {
     if (!id) { m = str.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/); if (m) id = m[1]; }
     if (!id) { m = str.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/); if (m) id = m[1]; }
     return id ? `https://www.youtube.com/embed/${id}` : '';
-  }
 
   /* ================= Load dữ liệu (tái sử dụng DraftDB/DB đã có) ================= */
 
   function loadProducts() {
     return (typeof DB !== 'undefined' ? DB.getAll() : Promise.resolve([])).then(list => { allProducts = list; });
-  }
 
   function loadDrafts() {
     return DraftDB.getAll().then(list => {
       allDrafts = list.filter(d => RELEVANT_MODULES.includes(d.moduleId));
       render();
-    });
-  }
 
   /* ================= Filter + Search ================= */
 
   function currentFilters() {
-    return {
       platform: (document.getElementById('smcFilterPlatform') || {}).value || '',
       status: (document.getElementById('smcFilterStatus') || {}).value || '',
       dateFrom: (document.getElementById('smcFilterDateFrom') || {}).value || '',
       search: ((document.getElementById('smcSearch') || {}).value || '').trim().toLowerCase()
-    };
-  }
 
   function productNameFor(draft) {
     const pid = (draft.inputParams && draft.inputParams.productId) || draft.targetId;
     if (!pid) return '';
     const p = allProducts.find(x => x.id === pid);
     return p ? p.name : '';
-  }
 
   function draftSearchText(draft) {
     const c = draft.content || {};
@@ -111,7 +98,6 @@ const AdminSocialCenter = (function () {
       Array.isArray(c.tags) ? c.tags.join(' ') : ''
     ];
     return parts.filter(Boolean).join(' ').toLowerCase();
-  }
 
   function filterDrafts(drafts, filters) {
     return drafts.filter(d => {
@@ -120,11 +106,8 @@ const AdminSocialCenter = (function () {
       if (filters.dateFrom) {
         const fromTs = new Date(filters.dateFrom).getTime();
         if (!isNaN(fromTs) && (d.createdAt || 0) < fromTs) return false;
-      }
       if (filters.search && !draftSearchText(d).includes(filters.search)) return false;
       return true;
-    });
-  }
 
   /* ================= Render Danh sách ================= */
 
@@ -142,13 +125,12 @@ const AdminSocialCenter = (function () {
     return `
       <div class="panel" data-draft-id="${draft.id}" style="margin-bottom:1.2rem">
         <div class="toolbar-row">
-          <h3 style="margin:0">${escapeHtml(label)}${productName ? ' — ' + escapeHtml(productName) : ''}</h3>
-          <span class="small-muted">${escapeHtml(statusLabel)} · ${formatDate(draft.createdAt)}</span>
+          <h3 style="margin:0">${PSH.escapeHtml(label)}${productName ? ' — ' + PSH.escapeHtml(productName) : ''}</h3>
+          <span class="small-muted">${PSH.escapeHtml(statusLabel)} · ${PSH.formatDate(draft.createdAt)}</span>
         </div>
         <div style="margin-top:0.8rem">${bodyHtml}</div>
         ${actionsHtml}
       </div>`;
-  }
 
   function renderActionBar(draft) {
     const isFacebook = draft.moduleId === 'facebook-post-generator';
@@ -162,7 +144,6 @@ const AdminSocialCenter = (function () {
         ${(!isFacebook && canPublish) ? `<button type="button" class="btn-secondary" onclick="AdminSocialCenter.rejectDraftAction('${draft.id}')">TỪ CHỐI</button>` : ''}
       </div>
       ${isFacebook && canPublish ? renderFacebookScheduleBar(draft) : ''}`;
-  }
 
   // renderFacebookScheduleBar — "Schedule Publish" chỉ áp dụng Facebook (đúng
   // phạm vi "For now, implement only Facebook"). "Publish Now" cho Facebook
@@ -175,12 +156,11 @@ const AdminSocialCenter = (function () {
       <p class="small-muted" style="margin-bottom:0.5rem">🕒 Lên lịch đăng (chỉ hoạt động khi trang này đang mở trong trình duyệt — xem PROJECT_ARCHITECTURE.md).</p>
       ${versions.map(v => `
         <div class="admin-actions" style="margin:0 0 0.5rem;align-items:center">
-          <span class="small-muted">Phiên bản ${escapeHtml(v.label)}${v.scheduledAt ? ` — đã lên lịch ${formatDate(v.scheduledAt)}` : ''}</span>
-          <input type="datetime-local" id="scheduleInput-${draft.id}-${escapeHtml(v.label)}">
-          <button type="button" class="btn-secondary" onclick="AdminSocialCenter.schedulePublish('${draft.id}','${escapeHtml(v.label)}')">Lên lịch</button>
+          <span class="small-muted">Phiên bản ${PSH.escapeHtml(v.label)}${v.scheduledAt ? ` — đã lên lịch ${PSH.formatDate(v.scheduledAt)}` : ''}</span>
+          <input type="datetime-local" id="scheduleInput-${draft.id}-${PSH.escapeHtml(v.label)}">
+          <button type="button" class="btn-secondary" onclick="AdminSocialCenter.schedulePublish('${draft.id}','${PSH.escapeHtml(v.label)}')">Lên lịch</button>
         </div>`).join('')}
     </div>`;
-  }
 
   function render() {
     if (currentView === 'history') { renderHistory(); return; }
@@ -192,7 +172,6 @@ const AdminSocialCenter = (function () {
     if (!list) return;
     list.innerHTML = filtered.length ? filtered.map(renderCard).join('') : '<p class="small-muted">Không có nội dung nào khớp bộ lọc.</p>';
     if (editingDraftId && filtered.some(d => d.id === editingDraftId)) mountEditPanel(editingDraftId);
-  }
 
   /* ================= Post History (đọc lại field đã có sẵn, không bảng mới) ================= */
 
@@ -206,48 +185,37 @@ const AdminSocialCenter = (function () {
               platform: 'Facebook', destination: v.selectedPage || '(không rõ)',
               status: v.publishStatus, publishedAt: v.publishedAt || 0,
               postId: v.facebookPostId || '', error: v.publishError || ''
-            });
-          }
-        });
-      } else if (d.status === 'published') {
         rows.push({
           platform: MODULE_LABELS[d.moduleId] || d.moduleId, destination: '—',
           status: 'published', publishedAt: d.publishedAt || 0, postId: '—', error: ''
-        });
-      }
-    });
     rows.sort((a, b) => (b.publishedAt || 0) - (a.publishedAt || 0));
     const body = document.getElementById('smcHistoryBody');
     if (!body) return;
     body.innerHTML = rows.length ? rows.map(r => `
       <tr>
-        <td>${escapeHtml(r.platform)}</td>
-        <td>${escapeHtml(r.destination)}</td>
+        <td>${PSH.escapeHtml(r.platform)}</td>
+        <td>${PSH.escapeHtml(r.destination)}</td>
         <td>${r.status === 'failed' ? '<span style="color:#b3261e">Thất bại</span>' : '✅ Đã đăng'}</td>
-        <td>${formatDate(r.publishedAt)}</td>
-        <td><code>${escapeHtml(r.postId)}</code></td>
-        <td>${escapeHtml(r.error)}</td>
+        <td>${PSH.formatDate(r.publishedAt)}</td>
+        <td><code>${PSH.escapeHtml(r.postId)}</code></td>
+        <td>${PSH.escapeHtml(r.error)}</td>
       </tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted2);padding:2rem">Chưa có lịch sử đăng bài nào.</td></tr>';
-  }
 
   function switchView(view) {
     currentView = view;
     document.getElementById('smcListView').style.display = view === 'list' ? 'block' : 'none';
     document.getElementById('smcHistoryView').style.display = view === 'history' ? 'block' : 'none';
     render();
-  }
 
   /* ================= Edit Panel (mới — không có sẵn ở drafts.html) ================= */
 
   function toggleEdit(draftId) {
     editingDraftId = editingDraftId === draftId ? null : draftId;
     render();
-  }
 
   function cancelEdit() {
     editingDraftId = null;
     render();
-  }
 
   function renderEditPanel(draft) {
     const c = draft.content || {};
@@ -258,55 +226,49 @@ const AdminSocialCenter = (function () {
         <h4 style="margin-top:0">Chỉnh sửa</h4>
         ${versions.map((v, i) => `
           <div style="margin-bottom:1rem;padding-bottom:0.8rem;border-bottom:1px solid var(--border2,#333)">
-            <p class="small-muted"><strong>Phiên bản ${escapeHtml(v.label)}</strong></p>
-            <div class="form-group full"><label>Hook</label><input type="text" id="editHook-${id}-${i}" value="${escapeHtml(v.hook || '')}"></div>
-            <div class="form-group full"><label>Caption</label><textarea id="editCaption-${id}-${i}" rows="3">${escapeHtml(v.caption || '')}</textarea></div>
-            <div class="form-group full"><label>CTA</label><input type="text" id="editCta-${id}-${i}" value="${escapeHtml(v.cta || '')}"></div>
-            <div class="form-group full"><label>Hashtags (phân tách bằng dấu phẩy)</label><input type="text" id="editHashtags-${id}-${i}" value="${escapeHtml((v.hashtags || []).join(', '))}"></div>
+            <p class="small-muted"><strong>Phiên bản ${PSH.escapeHtml(v.label)}</strong></p>
+            <div class="form-group full"><label>Hook</label><input type="text" id="editHook-${id}-${i}" value="${PSH.escapeHtml(v.hook || '')}"></div>
+            <div class="form-group full"><label>Caption</label><textarea id="editCaption-${id}-${i}" rows="3">${PSH.escapeHtml(v.caption || '')}</textarea></div>
+            <div class="form-group full"><label>CTA</label><input type="text" id="editCta-${id}-${i}" value="${PSH.escapeHtml(v.cta || '')}"></div>
+            <div class="form-group full"><label>Hashtags (phân tách bằng dấu phẩy)</label><input type="text" id="editHashtags-${id}-${i}" value="${PSH.escapeHtml((v.hashtags || []).join(', '))}"></div>
           </div>`).join('')}
-        <div class="form-group full"><label>Link YouTube (dán link mới để thay Video, để trống để bỏ Video)</label><input type="text" id="editYoutube-${id}" value="${escapeHtml(c.youtubeEmbedUrl || '')}"></div>
-        <div class="form-group full"><label>Ảnh đại diện</label><textarea id="editFeaturedInput-${id}" style="display:none">${escapeHtml(c.featuredImage || '')}</textarea><div id="editFeaturedBox-${id}"></div></div>
+        <div class="form-group full"><label>Link YouTube (dán link mới để thay Video, để trống để bỏ Video)</label><input type="text" id="editYoutube-${id}" value="${PSH.escapeHtml(c.youtubeEmbedUrl || '')}"></div>
+        <div class="form-group full"><label>Ảnh đại diện</label><textarea id="editFeaturedInput-${id}" style="display:none">${PSH.escapeHtml(c.featuredImage || '')}</textarea><div id="editFeaturedBox-${id}"></div></div>
         <div class="form-group full"><label>Ảnh Gallery (Thêm/Bỏ ảnh)</label><textarea id="editGalleryInput-${id}" style="display:none">${(c.galleryImages || []).join('\n')}</textarea><div id="editGalleryBox-${id}"></div></div>
         ${renderSaveCancel(id)}
       </div>`;
-    }
     if (draft.moduleId === 'banner-generator') {
       return `<div class="panel">
         <h4 style="margin-top:0">Chỉnh sửa Banner</h4>
-        <div class="form-group full"><label>Tiêu đề</label><input type="text" id="editTitle-${id}" value="${escapeHtml(c.title || '')}"></div>
-        <div class="form-group full"><label>Phụ đề</label><input type="text" id="editSubtitle-${id}" value="${escapeHtml(c.subtitle || '')}"></div>
-        <div class="form-group full"><label>CTA</label><input type="text" id="editCta-${id}" value="${escapeHtml(c.cta || '')}"></div>
-        <div class="form-group full"><label>Ảnh Banner</label><textarea id="editFeaturedInput-${id}" style="display:none">${escapeHtml(c.image || '')}</textarea><div id="editFeaturedBox-${id}"></div></div>
+        <div class="form-group full"><label>Tiêu đề</label><input type="text" id="editTitle-${id}" value="${PSH.escapeHtml(c.title || '')}"></div>
+        <div class="form-group full"><label>Phụ đề</label><input type="text" id="editSubtitle-${id}" value="${PSH.escapeHtml(c.subtitle || '')}"></div>
+        <div class="form-group full"><label>CTA</label><input type="text" id="editCta-${id}" value="${PSH.escapeHtml(c.cta || '')}"></div>
+        <div class="form-group full"><label>Ảnh Banner</label><textarea id="editFeaturedInput-${id}" style="display:none">${PSH.escapeHtml(c.image || '')}</textarea><div id="editFeaturedBox-${id}"></div></div>
         ${renderSaveCancel(id)}
       </div>`;
-    }
     if (draft.moduleId === 'blog-writer') {
       return `<div class="panel">
         <h4 style="margin-top:0">Chỉnh sửa Blog</h4>
-        <div class="form-group full"><label>Tiêu đề</label><input type="text" id="editTitle-${id}" value="${escapeHtml(c.title || '')}"></div>
-        <div class="form-group full"><label>Đoạn trích</label><textarea id="editExcerpt-${id}" rows="3">${escapeHtml(c.excerpt || '')}</textarea></div>
-        <div class="form-group full"><label>Ảnh Cover</label><textarea id="editFeaturedInput-${id}" style="display:none">${escapeHtml(c.coverImage || '')}</textarea><div id="editFeaturedBox-${id}"></div></div>
+        <div class="form-group full"><label>Tiêu đề</label><input type="text" id="editTitle-${id}" value="${PSH.escapeHtml(c.title || '')}"></div>
+        <div class="form-group full"><label>Đoạn trích</label><textarea id="editExcerpt-${id}" rows="3">${PSH.escapeHtml(c.excerpt || '')}</textarea></div>
+        <div class="form-group full"><label>Ảnh Cover</label><textarea id="editFeaturedInput-${id}" style="display:none">${PSH.escapeHtml(c.coverImage || '')}</textarea><div id="editFeaturedBox-${id}"></div></div>
         ${renderSaveCancel(id)}
       </div>`;
-    }
     if (draft.moduleId === 'product-description-writer') {
       return `<div class="panel">
         <h4 style="margin-top:0">Chỉnh sửa Product</h4>
-        <div class="form-group full"><label>Tên</label><input type="text" id="editTitle-${id}" value="${escapeHtml(c.name || '')}"></div>
-        <div class="form-group full"><label>Mô tả ngắn</label><textarea id="editExcerpt-${id}" rows="2">${escapeHtml(c.shortDescription || '')}</textarea></div>
-        <div class="form-group full"><label>Tags (phân tách bằng dấu phẩy)</label><input type="text" id="editTags-${id}" value="${escapeHtml((c.tags || []).join(', '))}"></div>
+        <div class="form-group full"><label>Tên</label><input type="text" id="editTitle-${id}" value="${PSH.escapeHtml(c.name || '')}"></div>
+        <div class="form-group full"><label>Mô tả ngắn</label><textarea id="editExcerpt-${id}" rows="2">${PSH.escapeHtml(c.shortDescription || '')}</textarea></div>
+        <div class="form-group full"><label>Tags (phân tách bằng dấu phẩy)</label><input type="text" id="editTags-${id}" value="${PSH.escapeHtml((c.tags || []).join(', '))}"></div>
         ${renderSaveCancel(id)}
       </div>`;
-    }
     return '<p class="small-muted">Không có trình chỉnh sửa cho loại nội dung này.</p>';
-  }
 
   function renderSaveCancel(id) {
     return `<div class="admin-actions">
       <button type="button" class="submit-btn" onclick="AdminSocialCenter.saveEdit('${id}')">LƯU</button>
       <button type="button" class="btn-secondary" onclick="AdminSocialCenter.cancelEdit()">HỦY</button>
     </div>`;
-  }
 
   // mountEditPanel — gắn MediaLibraryPicker (tái sử dụng NGUYÊN VẸN, không
   // viết Media Picker mới) vào đúng ô ảnh vừa render — PHẢI gọi SAU khi
@@ -315,11 +277,8 @@ const AdminSocialCenter = (function () {
   function mountEditPanel(draftId) {
     if (document.getElementById('editFeaturedInput-' + draftId)) {
       MediaLibraryPicker.mount('editFeaturedInput-' + draftId, 'editFeaturedBox-' + draftId);
-    }
     if (document.getElementById('editGalleryInput-' + draftId)) {
       MediaLibraryPicker.mountMulti('editGalleryInput-' + draftId, 'editGalleryBox-' + draftId);
-    }
-  }
 
   function saveEdit(draftId) {
     const draft = allDrafts.find(d => d.id === draftId);
@@ -334,7 +293,6 @@ const AdminSocialCenter = (function () {
         caption: (document.getElementById(`editCaption-${draftId}-${i}`) || {}).value || '',
         cta: (document.getElementById(`editCta-${draftId}-${i}`) || {}).value || '',
         hashtags: ((document.getElementById(`editHashtags-${draftId}-${i}`) || {}).value || '').split(',').map(s => s.trim()).filter(Boolean)
-      }));
       const youtubeInput = (document.getElementById('editYoutube-' + draftId) || {}).value || '';
       const featuredInput = (document.getElementById('editFeaturedInput-' + draftId) || {}).value || '';
       const galleryInput = (document.getElementById('editGalleryInput-' + draftId) || {}).value || '';
@@ -343,33 +301,23 @@ const AdminSocialCenter = (function () {
         youtubeEmbedUrl: getYoutubeEmbedUrl(youtubeInput),
         featuredImage: featuredInput,
         galleryImages: galleryInput.split(/[\n,;]/).map(s => s.trim()).filter(Boolean)
-      });
-    } else if (draft.moduleId === 'banner-generator') {
       newContent = Object.assign({}, newContent, {
         title: (document.getElementById('editTitle-' + draftId) || {}).value || '',
         subtitle: (document.getElementById('editSubtitle-' + draftId) || {}).value || '',
         cta: (document.getElementById('editCta-' + draftId) || {}).value || '',
         image: (document.getElementById('editFeaturedInput-' + draftId) || {}).value || ''
-      });
-    } else if (draft.moduleId === 'blog-writer') {
       newContent = Object.assign({}, newContent, {
         title: (document.getElementById('editTitle-' + draftId) || {}).value || '',
         excerpt: (document.getElementById('editExcerpt-' + draftId) || {}).value || '',
         coverImage: (document.getElementById('editFeaturedInput-' + draftId) || {}).value || ''
-      });
-    } else if (draft.moduleId === 'product-description-writer') {
       newContent = Object.assign({}, newContent, {
         name: (document.getElementById('editTitle-' + draftId) || {}).value || '',
         shortDescription: (document.getElementById('editExcerpt-' + draftId) || {}).value || '',
         tags: ((document.getElementById('editTags-' + draftId) || {}).value || '').split(',').map(s => s.trim()).filter(Boolean)
-      });
-    }
 
     DraftDB.update(draftId, { content: newContent }).then(() => {
       editingDraftId = null;
       loadDrafts();
-    });
-  }
 
   /* ================= Duplicate / Delete / Publish / Reject (tái sử dụng DraftDB/AdminAI) ================= */
 
@@ -386,13 +334,10 @@ const AdminSocialCenter = (function () {
       status: 'draft',
       providerUsed: draft.providerUsed,
       createdBy: draft.createdBy
-    }).then(loadDrafts);
-  }
 
   function deleteDraft(draftId) {
     if (!confirm('Xóa nội dung này? Không thể hoàn tác.')) return;
     DraftDB.remove(draftId).then(loadDrafts);
-  }
 
   // publishNow — Banner/Blog/Product tái sử dụng publishDraftById() (gọi
   // đúng publishToTarget() có sẵn, KHÔNG viết lại Publish Pipeline). Facebook
@@ -400,12 +345,10 @@ const AdminSocialCenter = (function () {
   // Preview tái sử dụng (versionCardHtml → publishVersionToFacebook()).
   function publishNow(draftId) {
     AdminAI.publishDraftById(draftId).then(loadDrafts).catch(err => alert('Lỗi khi Publish: ' + err.message));
-  }
 
   function rejectDraftAction(draftId) {
     if (!confirm('Từ chối nội dung này? Vẫn giữ lại để tra cứu, không xóa.')) return;
     AdminAI.rejectDraftById(draftId).then(loadDrafts);
-  }
 
   /* ================= Schedule Publish (Facebook, V1 — client-side) ================= */
 
@@ -421,11 +364,8 @@ const AdminSocialCenter = (function () {
       if (idx === -1) return;
       versions[idx] = Object.assign({}, versions[idx], { scheduledAt: when, publishStatus: 'scheduled' });
       return DraftDB.update(draftId, { content: Object.assign({}, draft.content, { versions }) });
-    }).then(() => {
       alert('Đã lên lịch đăng lúc ' + new Date(when).toLocaleString('vi-VN') + '. Chỉ tự động đăng khi trang Social Media Center đang mở trong trình duyệt.');
       loadDrafts();
-    });
-  }
 
   // checkScheduled — quét mọi Draft Facebook còn ở trạng thái Nháp, tìm phiên
   // bản có `scheduledAt` đã tới hạn (`publishStatus === 'scheduled'`), tự gọi
@@ -436,17 +376,11 @@ const AdminSocialCenter = (function () {
         (draft.content.versions || []).forEach(v => {
           if (v.publishStatus === 'scheduled' && v.scheduledAt && Date.now() >= v.scheduledAt) {
             AdminAI.publishVersionToFacebook(draft.id, v.label);
-          }
-        });
-      });
-    });
-  }
 
   function startScheduleChecker() {
     if (scheduleTimer) return;
     checkScheduled();
     scheduleTimer = setInterval(checkScheduled, 60000);
-  }
 
   // Deep link từ Founder Agent V3 (CMS Operator) — ?highlight=<draftId>:
   // cuộn tới + đánh dấu đúng Draft, tái sử dụng NGUYÊN VẸN render() đã có (0
@@ -461,9 +395,6 @@ const AdminSocialCenter = (function () {
       if (card.dataset.draftId === highlightId) {
         card.classList.add('agent-field-highlight');
         card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    });
-  }
 
   function init() {
     Promise.all([loadProducts(), loadDrafts()]).then(applyDeepLink);
@@ -483,10 +414,8 @@ const AdminSocialCenter = (function () {
     if (tabHistory) tabHistory.addEventListener('click', () => switchView('history'));
 
     startScheduleChecker();
-  }
 
   return {
     init, toggleEdit, cancelEdit, saveEdit,
     duplicateDraft, deleteDraft, publishNow, rejectDraftAction, schedulePublish
-  };
 })();

@@ -23,15 +23,10 @@ const AdminImageAI = (function () {
   let allProducts = [];
   let allBlogPosts = [];
 
-  function escapeHtml(str) {
-    return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]));
-  }
 
-  function formatDate(ts) {
+  function PSH.formatDate(ts) {
     return ts ? new Date(ts).toLocaleString('vi-VN') : '';
-  }
 
   function box() { return document.getElementById('imgStatusBox'); }
 
@@ -39,8 +34,7 @@ const AdminImageAI = (function () {
     const b = box();
     if (!b) return;
     b.style.display = 'block';
-    b.innerHTML = `<div class="panel"><p class="small-muted">${escapeHtml(msg)}</p></div>`;
-  }
+    b.innerHTML = `<div class="panel"><p class="small-muted">${PSH.escapeHtml(msg)}</p></div>`;
 
   /* ================= Load Product/Blog options (form + picker trong từng card) ================= */
 
@@ -48,38 +42,29 @@ const AdminImageAI = (function () {
     return DB.getAll().then(list => {
       allProducts = list;
       const select = document.getElementById('imgProduct');
-      if (select) select.innerHTML = '<option value="">(không chọn)</option>' + list.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('');
-    });
-  }
+      if (select) select.innerHTML = '<option value="">(không chọn)</option>' + list.map(p => `<option value="${PSH.escapeHtml(p.id)}">${PSH.escapeHtml(p.name)}</option>`).join('');
 
   function loadBlogOptions() {
     return BlogDB.getAll().then(list => {
       allBlogPosts = list;
       const select = document.getElementById('imgBlogPost');
-      if (select) select.innerHTML = '<option value="">(không chọn)</option>' + list.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.title)}</option>`).join('');
-    });
-  }
+      if (select) select.innerHTML = '<option value="">(không chọn)</option>' + list.map(p => `<option value="${PSH.escapeHtml(p.id)}">${PSH.escapeHtml(p.title)}</option>`).join('');
 
   function productPickerOptionsHtml() {
-    return '<option value="">(chọn sản phẩm)</option>' + allProducts.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('');
-  }
+    return '<option value="">(chọn sản phẩm)</option>' + allProducts.map(p => `<option value="${PSH.escapeHtml(p.id)}">${PSH.escapeHtml(p.name)}</option>`).join('');
 
   function blogPickerOptionsHtml() {
-    return '<option value="">(chọn bài Blog)</option>' + allBlogPosts.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.title)}</option>`).join('');
-  }
+    return '<option value="">(chọn bài Blog)</option>' + allBlogPosts.map(p => `<option value="${PSH.escapeHtml(p.id)}">${PSH.escapeHtml(p.title)}</option>`).join('');
 
   /* ================= Sinh ảnh (form "TẠO ẢNH" + "Tạo lại") ================= */
 
   function buildInputParamsFromForm() {
-    return {
       imageType: document.getElementById('imgType').value,
       productId: document.getElementById('imgProduct').value || '',
       promotion: document.getElementById('imgPromotion').value.trim(),
       blogPostId: document.getElementById('imgBlogPost').value || '',
       customPrompt: document.getElementById('imgCustomPrompt').value.trim(),
       size: document.getElementById('imgSize').value
-    };
-  }
 
   function renderInProgress(job) {
     showMessage('');
@@ -91,20 +76,18 @@ const AdminImageAI = (function () {
       </div>
     </div>`;
     document.getElementById('imgCancelBtn').addEventListener('click', () => cancelJob(job.id));
-  }
 
   function renderFailed(job, item) {
     const b = box();
     b.style.display = 'block';
     const errorMsg = (item && item.error) || 'Tạo ảnh thất bại.';
     b.innerHTML = `<div class="panel">
-      <p class="small-muted" style="color:#b3261e">Lỗi: ${escapeHtml(errorMsg)}</p>
+      <p class="small-muted" style="color:#b3261e">Lỗi: ${PSH.escapeHtml(errorMsg)}</p>
       <div class="admin-actions" style="margin-top:0.6rem">
         <button type="button" class="btn-secondary" id="imgRetryBtn">THỬ LẠI</button>
       </div>
     </div>`;
     document.getElementById('imgRetryBtn').addEventListener('click', () => retryJob(job.id));
-  }
 
   function retryJob(jobId) {
     showMessage('Đang thử lại...');
@@ -113,16 +96,12 @@ const AdminImageAI = (function () {
       activeJobId = jobId;
       pollJob();
       startPolling();
-    });
-  }
 
   function cancelJob(jobId) {
     const user = AdminAuth.getUser();
     AIJobQueue.cancel(jobId, user.uid, user.email).then(() => {
       stopPolling();
       showMessage('Đã hủy yêu cầu tạo ảnh.');
-    });
-  }
 
   function pollJob() {
     if (!activeJobId) return;
@@ -132,27 +111,21 @@ const AdminImageAI = (function () {
       if (job.status === 'queued' || job.status === 'running') {
         renderInProgress(job);
         return;
-      }
       stopPolling();
       const item = job.items && job.items[0];
       if (job.status === 'completed' && item && item.status === 'completed' && item.resultDraftId) {
         showMessage('Đã tạo ảnh xong — xem bên dưới. Ảnh vẫn ở dạng Nháp, chưa dùng vào đâu cả.');
         loadImageDrafts();
         return;
-      }
       if (job.status === 'cancelled') { showMessage('Đã hủy yêu cầu tạo ảnh.'); return; }
       renderFailed(job, item);
-    });
-  }
 
   function startPolling() {
     if (pollTimer) return;
     pollTimer = setInterval(pollJob, 3000);
-  }
 
   function stopPolling() {
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-  }
 
   function runGeneration(inputParams) {
     const user = AdminAuth.getUser();
@@ -161,7 +134,6 @@ const AdminImageAI = (function () {
       if (!check.granted) {
         showMessage(`Không có quyền tạo ảnh (thiếu "${check.permission || 'quyền chưa được gán'}").`);
         return;
-      }
       // Route through PipelineAdapter when possible
       if (typeof PipelineAdapter !== 'undefined' && typeof PipelineAdapter.generateThroughPipeline === 'function') {
         PipelineAdapter.generateThroughPipeline(MODULE_ID, inputParams, user.uid, user.email).then(function(result) {
@@ -169,32 +141,20 @@ const AdminImageAI = (function () {
             activeJobId = result.job && result.job.id;
             showMessage('Đã tạo ảnh xong (qua pipeline).');
             loadImageDrafts();
-          } else {
             showMessage('Lỗi pipeline: ' + (result.error || 'không rõ'));
-          }
-        });
-      } else {
         return PluginManager.loadPlugins().then(() => PluginManager.loadPlugin(MODULE_ID)).then(plugin => {
           if (!plugin) { showMessage('Không tìm thấy Plugin "Image AI" — vào Plugin Manager để bật.'); return; }
           return plugin.execute([inputParams], user.uid, user.email).then(job => {
             activeJobId = job.id;
             return AIJobQueue.resume(user.uid, user.email);
-          }).then(() => { pollJob(); startPolling(); });
-        });
-      }
-    }).catch(err => showMessage('Lỗi: ' + err.message));
-  }
 
   function generate() {
     runGeneration(buildInputParamsFromForm());
-  }
 
   function regenerate(draftId) {
     return DraftDB.get(draftId).then(d => {
       if (!d) return;
       runGeneration(d.inputParams);
-    });
-  }
 
   /* ================= Founder Actions — luôn CỘNG THÊM, không ghi đè/xóa ảnh đang có ================= */
 
@@ -207,10 +167,6 @@ const AdminImageAI = (function () {
         // Also route through PipelineAdapter for asset tracking
         if (typeof PipelineAdapter !== 'undefined') {
           PipelineAdapter.saveToAssetLibrary(draftId, MODULE_ID, d.content, [label], AdminAuth.getUser().uid);
-        }
-      });
-    });
-  }
 
   function saveToProductGallery(draftId, explicitProductId) {
     return DraftDB.get(draftId).then(d => {
@@ -226,14 +182,8 @@ const AdminImageAI = (function () {
             // Route through PipelineAdapter for asset tracking
             if (typeof PipelineAdapter !== 'undefined') {
               PipelineAdapter.logGenerationEvent({ moduleId: MODULE_ID, type: 'image', title: 'Saved to Product Gallery: ' + (p.name || productId), inputParams: d.inputParams, draftId: draftId, status: 'completed', userId: AdminAuth.getUser().uid });
-            }
             showMessage(`Đã thêm ảnh vào Gallery của "${p.name}".`);
             return loadImageDrafts();
-          });
-        });
-      });
-    });
-  }
 
   // saveAsFeatured — đưa ảnh mới lên ĐẦU mảng images
   function saveAsFeatured(draftId, explicitProductId) {
@@ -250,11 +200,6 @@ const AdminImageAI = (function () {
           return appendUsedIn(draftId, 'Featured Image: ' + (p.name || productId)).then(() => {
             showMessage(`Đã đặt làm Ảnh đại diện cho "${p.name}".`);
             return loadImageDrafts();
-          });
-        });
-      });
-    });
-  }
 
   function saveToBlogCover(draftId, explicitBlogPostId) {
     return DraftDB.get(draftId).then(d => {
@@ -268,14 +213,8 @@ const AdminImageAI = (function () {
             // Route through PipelineAdapter
             if (typeof PipelineAdapter !== 'undefined') {
               PipelineAdapter.logGenerationEvent({ moduleId: MODULE_ID, type: 'image', title: 'Blog Cover: ' + (post.title || blogPostId), inputParams: d.inputParams, draftId: draftId, status: 'completed', userId: AdminAuth.getUser().uid });
-            }
             showMessage(`Đã đặt làm Cover cho bài "${post.title}".`);
             return loadImageDrafts();
-          });
-        });
-      });
-    });
-  }
 
   function insertIntoBlog(draftId, explicitBlogPostId) {
     return DraftDB.get(draftId).then(d => {
@@ -284,17 +223,12 @@ const AdminImageAI = (function () {
       if (!blogPostId) { showMessage('Vui lòng chọn 1 bài Blog trước khi chèn ảnh.'); return; }
       return BlogDB.get(blogPostId).then(post => {
         if (!post) { showMessage('Không tìm thấy bài Blog.'); return; }
-        const imgTag = `<img src="${escapeHtml(d.content.imageUrl)}" alt="" class="blog-inline-image">`;
+        const imgTag = `<img src="${PSH.escapeHtml(d.content.imageUrl)}" alt="" class="blog-inline-image">`;
         const contentHtml = (post.contentHtml || '') + '\n' + imgTag;
         return BlogDB.update(blogPostId, { contentHtml }).then(() => {
           return appendUsedIn(draftId, 'Chèn vào bài Blog: ' + (post.title || blogPostId)).then(() => {
             showMessage(`Đã chèn ảnh vào bài "${post.title}".`);
             return loadImageDrafts();
-          });
-        });
-      });
-    });
-  }
 
   // saveAsBanner — luôn tạo Banner MỚI (không có Banner nào để "ghi đè" —
   // đúng "Do NOT overwrite existing images automatically"). Title/CTA/Link để
@@ -308,23 +242,16 @@ const AdminImageAI = (function () {
         title: c.sourceProductName || '',
         subtitle: '', cta: '', link: '',
         zone: 'home-top', order: 0, active: true
-      }).then(() => {
         return appendUsedIn(draftId, 'Banner mới').then(() => {
           // Route through PipelineAdapter
           if (typeof PipelineAdapter !== 'undefined') {
             PipelineAdapter.logGenerationEvent({ moduleId: MODULE_ID, type: 'image', title: 'New Banner from ' + (c.sourceProductName || 'image'), inputParams: d.inputParams, draftId: draftId, status: 'completed', userId: AdminAuth.getUser().uid });
-          }
           showMessage('Đã tạo Banner mới — vào Banner Manager để hoàn thiện Tiêu đề/CTA/Link.');
           return loadImageDrafts();
-        });
-      });
-    });
-  }
 
   function deleteDraft(draftId) {
     if (!confirm('Xóa ảnh này? Không thể hoàn tác.')) return;
     return DraftDB.remove(draftId).then(loadImageDrafts);
-  }
 
   /* ================= Render lưới ảnh đã tạo ================= */
 
@@ -332,7 +259,7 @@ const AdminImageAI = (function () {
     const c = d.content || {};
     const hasProduct = !!c.sourceProductId;
     const hasBlog = !!c.sourceBlogPostId;
-    const usedInHtml = (c.usedIn || []).map(u => `<span class="small-muted" style="display:inline-block;background:var(--bg-alt);padding:0.15rem 0.5rem;border-radius:4px;margin:0.2rem 0.3rem 0 0">✅ ${escapeHtml(u)}</span>`).join('');
+    const usedInHtml = (c.usedIn || []).map(u => `<span class="small-muted" style="display:inline-block;background:var(--bg-alt);padding:0.15rem 0.5rem;border-radius:4px;margin:0.2rem 0.3rem 0 0">✅ ${PSH.escapeHtml(u)}</span>`).join('');
 
     const productActionsHtml = hasProduct
       ? `<div class="admin-actions" style="flex-wrap:wrap;margin:0">
@@ -358,13 +285,13 @@ const AdminImageAI = (function () {
 
     return `
       <div class="panel" data-draft-id="${d.id}" style="display:flex;flex-direction:column;gap:0.5rem">
-        <img src="${escapeHtml(c.imageUrl)}" style="width:100%;border-radius:8px;aspect-ratio:1/1;object-fit:cover;background:var(--bg-alt)" onerror="this.style.opacity='0.3'" alt="">
-        <p class="small-muted" style="margin:0"><strong>${escapeHtml(c.imageType || '')}</strong> · ${escapeHtml(c.size || '')} · ${formatDate(d.createdAt)} · ${escapeHtml(d.providerUsed || '—')}</p>
-        <details><summary class="small-muted" style="cursor:pointer">Xem Prompt</summary><p class="small-muted" style="white-space:pre-wrap">${escapeHtml(c.prompt || '')}</p></details>
+        <img src="${PSH.escapeHtml(c.imageUrl)}" style="width:100%;border-radius:8px;aspect-ratio:1/1;object-fit:cover;background:var(--bg-alt)" onerror="this.style.opacity='0.3'" alt="">
+        <p class="small-muted" style="margin:0"><strong>${PSH.escapeHtml(c.imageType || '')}</strong> · ${PSH.escapeHtml(c.size || '')} · ${PSH.formatDate(d.createdAt)} · ${PSH.escapeHtml(d.providerUsed || '—')}</p>
+        <details><summary class="small-muted" style="cursor:pointer">Xem Prompt</summary><p class="small-muted" style="white-space:pre-wrap">${PSH.escapeHtml(c.prompt || '')}</p></details>
         ${usedInHtml ? `<div>${usedInHtml}</div>` : ''}
         <div class="admin-actions" style="flex-wrap:wrap;margin:0">
           <button type="button" class="btn-secondary" onclick="AdminImageAI.regenerate('${d.id}')">🔄 Tạo lại</button>
-          <a class="btn-secondary" href="${escapeHtml(c.imageUrl)}" download target="_blank" rel="noopener">⬇ Tải xuống</a>
+          <a class="btn-secondary" href="${PSH.escapeHtml(c.imageUrl)}" download target="_blank" rel="noopener">⬇ Tải xuống</a>
           <button type="button" class="btn-danger" onclick="AdminImageAI.deleteDraft('${d.id}')">🗑 Xóa</button>
         </div>
         ${productActionsHtml}
@@ -373,7 +300,6 @@ const AdminImageAI = (function () {
           <button type="button" class="btn-secondary" onclick="AdminImageAI.saveAsBanner('${d.id}')">🖼 Dùng làm Banner</button>
         </div>
       </div>`;
-  }
 
   function loadImageDrafts() {
     return DraftDB.getAll().then(list => {
@@ -387,21 +313,16 @@ const AdminImageAI = (function () {
       grid.innerHTML = drafts.length
         ? drafts.map(renderCard).join('')
         : '<p class="small-muted">Chưa có ảnh nào — dùng form phía trên để tạo ảnh đầu tiên.</p>';
-    });
-  }
 
   function init() {
     AdminAuth.init({ page: 'ai', title: 'IMAGE AI' }).then(() => {
       loadProductOptions();
       loadBlogOptions();
       loadImageDrafts();
-    });
     const btn = document.getElementById('imgGenerateBtn');
     if (btn) btn.addEventListener('click', generate);
-  }
 
   return {
     init, regenerate, deleteDraft,
     saveToProductGallery, saveAsFeatured, saveToBlogCover, insertIntoBlog, saveAsBanner
-  };
 })();

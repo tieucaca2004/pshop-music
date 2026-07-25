@@ -25,11 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let slides = [];
   let sortable = null;
 
-  function escapeHtml(str) {
-    return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]));
-  }
 
   // detectWhiteBackground(imageUrl) -> Promise<boolean> — ĐÚNG bản gốc ở
   // js/admin-agent.js (Founder Agent V5 "smart-background") — lấy mẫu màu 6
@@ -55,15 +51,9 @@ document.addEventListener('DOMContentLoaded', () => {
             samples.forEach(([x, y]) => {
               const px = ctx.getImageData(x, y, 1, 1).data;
               if (px[0] > 235 && px[1] > 235 && px[2] > 235) whiteCount++;
-            });
             resolve(whiteCount >= samples.length - 1);
-          } catch (e) { resolve(false); }
-        };
         img.onerror = () => resolve(false);
         img.src = imageUrl;
-      } catch (e) { resolve(false); }
-    });
-  }
 
   // handleSlideImageUpload — Founder chọn/tải Ảnh Slide mới: reset Zoom/Vị
   // trí về mặc định (khung cũ không hợp bố cục ảnh mới hoàn toàn khác), rồi
@@ -84,9 +74,6 @@ document.addEventListener('DOMContentLoaded', () => {
         slides[i].image = resultUrl;
         refreshPreview(i);
         showStatus('Đã tự động phát hiện + xóa phông nền trắng cho Ảnh Slide ' + (i + 1) + '.');
-      }).catch(() => {}); // lỗi Cloud Function -> giữ nguyên ảnh gốc thật, không báo lỗi làm phiền
-    }).catch(() => {});
-  }
 
   // LEGACY_POSITION_XY/deriveTitlePos/deriveSubPos — ĐÚNG logic quy đổi 9
   // điểm cũ đã dùng ở js/home.js (updateHeroText) để khung xem trước ở đây
@@ -95,29 +82,21 @@ document.addEventListener('DOMContentLoaded', () => {
     'top-left': { x: 8, y: 18 }, 'top-center': { x: 50, y: 18 }, 'top-right': { x: 92, y: 18 },
     'middle-left': { x: 8, y: 50 }, 'middle-center': { x: 50, y: 50 }, 'middle-right': { x: 92, y: 50 },
     'bottom-left': { x: 8, y: 58 }, 'bottom-center': { x: 50, y: 58 }, 'bottom-right': { x: 92, y: 58 }
-  };
   function deriveTitlePos(s) {
     if (typeof s.titlePosX === 'number' && typeof s.titlePosY === 'number') return { x: s.titlePosX, y: s.titlePosY };
     return LEGACY_POSITION_XY[s.position] || LEGACY_POSITION_XY['bottom-left'];
-  }
   function deriveSubPos(s) {
     if (typeof s.subPosX === 'number' && typeof s.subPosY === 'number') return { x: s.subPosX, y: s.subPosY };
     const t = deriveTitlePos(s);
-    return { x: t.x, y: Math.min(96, t.y + 22) };
-  }
   // deriveTagPos/deriveBtnsPos — ĐÚNG logic quy đổi ở js/home.js (Nhãn địa
   // danh/2 nút bấm giờ kéo/ẩn riêng được theo từng Slide) — sửa 1 nơi phải
   // sửa nơi kia.
   function deriveTagPos(s) {
     if (typeof s.tagPosX === 'number' && typeof s.tagPosY === 'number') return { x: s.tagPosX, y: s.tagPosY };
     const t = deriveTitlePos(s);
-    return { x: t.x, y: Math.max(2, t.y - 10) };
-  }
   function deriveBtnsPos(s) {
     if (typeof s.btnsPosX === 'number' && typeof s.btnsPosY === 'number') return { x: s.btnsPosX, y: s.btnsPosY };
     const sp = deriveSubPos(s);
-    return { x: sp.x, y: Math.min(96, sp.y + 10) };
-  }
   const TITLE_BASE_FONT = 0.62; // rem, khớp cỡ chữ mini-label cũ ở titleScale=100
   const SUB_BASE_FONT = 0.5;    // rem, cỡ chữ mô tả trong khung mini nhỏ hơn tiêu đề
 
@@ -135,11 +114,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const posX = typeof s.imagePosX === 'number' ? s.imagePosX : 50;
     const posY = typeof s.imagePosY === 'number' ? s.imagePosY : 30;
     const bgStyle = bgSrc
-      ? `background-image:url('${escapeHtml(bgSrc)}');background-position:${posX}% ${posY}%;transform:scale(${zoom / 100})`
+      ? `background-image:url('${PSH.escapeHtml(bgSrc)}');background-position:${posX}% ${posY}%;transform:scale(${zoom / 100})`
       : 'background:#222';
     // Ảnh sản phẩm chồng lên — CHỈ hiện khi có Ảnh nền riêng (2 lớp), khớp
     // đúng điều kiện js/home.js updateHeroText().
-    const subjectHtml = (s.bgImage && s.image) ? `<img class="hero-mini-subject" src="${escapeHtml(s.image)}" alt="">` : '';
+    const subjectHtml = (s.bgImage && s.image) ? `<img class="hero-mini-subject" src="${PSH.escapeHtml(s.image)}" alt="">` : '';
     const tp = deriveTitlePos(s);
     const sp = deriveSubPos(s);
     const titleScale = typeof s.titleScale === 'number' ? s.titleScale : 100;
@@ -147,14 +126,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const hasTitle = !!(s.title && s.title.trim());
     const titleHtml = hasTitle ? `
       <div class="hero-mini-label hero-mini-title" style="left:${tp.x}%;top:${tp.y}%;font-size:${(TITLE_BASE_FONT * titleScale / 100).toFixed(2)}rem" onpointerdown="event.stopPropagation();AdminSliders.startTitleDrag(event,${i})" title="Kéo để di chuyển Tiêu đề">
-        ${escapeHtml(s.title)}
+        ${PSH.escapeHtml(s.title)}
         <button type="button" class="hero-mini-label-del" onclick="event.stopPropagation();AdminSliders.deleteTitle(${i})" title="Xóa tiêu đề">✕</button>
         <span class="hero-mini-resize-handle" title="Kéo để đổi cỡ chữ Tiêu đề" onpointerdown="event.stopPropagation();AdminSliders.startTitleResize(event,${i})"></span>
       </div>` : `<div class="hero-mini-label-empty">Chưa có tiêu đề — gõ ở ô bên trái</div>`;
     const hasSub = !!(s.subtitle && s.subtitle.trim());
     const subHtml = hasSub ? `
       <div class="hero-mini-label hero-mini-sub" style="left:${sp.x}%;top:${sp.y}%;font-size:${(SUB_BASE_FONT * subScale / 100).toFixed(2)}rem" onpointerdown="event.stopPropagation();AdminSliders.startSubDrag(event,${i})" title="Kéo để di chuyển Mô tả">
-        ${escapeHtml(s.subtitle)}
+        ${PSH.escapeHtml(s.subtitle)}
         <span class="hero-mini-resize-handle" title="Kéo để đổi cỡ chữ Mô tả" onpointerdown="event.stopPropagation();AdminSliders.startSubResize(event,${i})"></span>
       </div>` : '';
     const zoomHandle = bgSrc ? `<span class="hero-mini-zoom-handle" title="Kéo để Zoom ảnh nền (${zoom}%)" onpointerdown="event.stopPropagation();AdminSliders.startImageZoom(event,${i})"></span>` : '';
@@ -168,13 +147,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const tagHtml = s.tagHidden
       ? `<div class="hero-mini-hidden-chip" style="left:${tagP.x}%;top:${tagP.y}%" onclick="AdminSliders.toggleTagHidden(${i})" title="Bấm để hiện lại Nhãn địa danh">Nhãn địa danh: Đã ẩn — bấm để hiện lại</div>`
       : `<div class="hero-mini-label hero-mini-tag" style="left:${tagP.x}%;top:${tagP.y}%" onpointerdown="event.stopPropagation();AdminSliders.startTagDrag(event,${i})" title="Kéo để di chuyển Nhãn địa danh (chữ dùng chung, sửa ở Cài đặt &gt; HERO TRANG CHỦ)">
-        ${escapeHtml(tagText)}
+        ${PSH.escapeHtml(tagText)}
         <button type="button" class="hero-mini-label-del" onclick="event.stopPropagation();AdminSliders.toggleTagHidden(${i})" title="Ẩn Nhãn địa danh ở Slide này">✕</button>
       </div>`;
     const btnsHtml = s.btnsHidden
       ? `<div class="hero-mini-hidden-chip" style="left:${btnsP.x}%;top:${btnsP.y}%" onclick="AdminSliders.toggleBtnsHidden(${i})" title="Bấm để hiện lại 2 Nút bấm">2 Nút bấm: Đã ẩn — bấm để hiện lại</div>`
       : `<div class="hero-mini-label hero-mini-btns" style="left:${btnsP.x}%;top:${btnsP.y}%" onpointerdown="event.stopPropagation();AdminSliders.startBtnsDrag(event,${i})" title="Kéo để di chuyển 2 Nút bấm (chữ dùng chung, sửa ở Cài đặt &gt; HERO TRANG CHỦ)">
-        ${escapeHtml(cta1Text)} / ${escapeHtml(cta2Text)}
+        ${PSH.escapeHtml(cta1Text)} / ${PSH.escapeHtml(cta2Text)}
         <button type="button" class="hero-mini-label-del" onclick="event.stopPropagation();AdminSliders.toggleBtnsHidden(${i})" title="Ẩn 2 Nút bấm ở Slide này">✕</button>
       </div>`;
     return `
@@ -187,7 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
         ${btnsHtml}
         ${zoomHandle}
       </div>`;
-  }
 
   // startTitleDrag/startSubDrag — kéo TỰ DO nhãn Tiêu đề/Mô tả bằng Pointer
   // Events, ghi thẳng % thật (không snap về ô nào) — CHỈ cập nhật style tại
@@ -213,7 +191,6 @@ document.addEventListener('DOMContentLoaded', () => {
       lastY = Math.round(Math.min(100, Math.max(0, (ev.clientY - rect.top) / rect.height * 100)) * 10) / 10;
       labelEl.style.left = lastX + '%';
       labelEl.style.top = lastY + '%';
-    }
     function up() {
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
@@ -221,10 +198,8 @@ document.addEventListener('DOMContentLoaded', () => {
       slides[i][posXField] = lastX;
       slides[i][posYField] = lastY;
       refreshPreview(i);
-    }
     document.addEventListener('pointermove', move);
     document.addEventListener('pointerup', up);
-  }
   function startTitleDrag(e, i) { startTextDrag(e, i, 'title'); }
   function startSubDrag(e, i) { startTextDrag(e, i, 'sub'); }
   function startTagDrag(e, i) { startTextDrag(e, i, 'tag'); }
@@ -237,11 +212,9 @@ document.addEventListener('DOMContentLoaded', () => {
   function toggleTagHidden(i) {
     slides[i].tagHidden = !slides[i].tagHidden;
     refreshPreview(i);
-  }
   function toggleBtnsHidden(i) {
     slides[i].btnsHidden = !slides[i].btnsHidden;
     refreshPreview(i);
-  }
 
   // startTitleResize/startSubResize — kéo TỰ DO tay cầm góc nhãn để đổi CỠ
   // CHỮ (không giới hạn mức nào, thay hẳn cho không có control cỡ chữ trước
@@ -264,17 +237,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const dist = Math.hypot(ev.clientX - startRect.left, ev.clientY - startRect.top);
       lastScale = Math.min(300, Math.max(40, Math.round(startScale * (dist / startDist))));
       labelEl.style.fontSize = (baseFont * lastScale / 100).toFixed(2) + 'rem';
-    }
     function up() {
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
       labelEl.classList.remove('resizing-text');
       slides[i][scaleField] = lastScale;
       refreshPreview(i);
-    }
     document.addEventListener('pointermove', move);
     document.addEventListener('pointerup', up);
-  }
   function startTitleResize(e, i) { startTextResize(e, i, 'title', TITLE_BASE_FONT); }
   function startSubResize(e, i) { startTextResize(e, i, 'sub', SUB_BASE_FONT); }
 
@@ -302,7 +272,6 @@ document.addEventListener('DOMContentLoaded', () => {
       lastX = Math.round(Math.min(100, Math.max(0, startPosX - dx)));
       lastY = Math.round(Math.min(100, Math.max(0, startPosY - dy)));
       bgEl.style.backgroundPosition = lastX + '% ' + lastY + '%';
-    }
     function up() {
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
@@ -310,10 +279,8 @@ document.addEventListener('DOMContentLoaded', () => {
       slides[i].imagePosX = lastX;
       slides[i].imagePosY = lastY;
       refreshPreview(i);
-    }
     document.addEventListener('pointermove', move);
     document.addEventListener('pointerup', up);
-  }
 
   // startImageZoom — kéo TỰ DO tay cầm góc dưới-phải khung để Zoom to/nhỏ
   // ảnh nền — khoảng cách từ góc trên-trái khung tới điểm thả chuột so với
@@ -336,32 +303,26 @@ document.addEventListener('DOMContentLoaded', () => {
       const dist = Math.hypot(ev.clientX - startRect.left, ev.clientY - startRect.top);
       lastZoom = Math.min(300, Math.max(100, Math.round(startZoom * (dist / startDist))));
       bgEl.style.transform = 'scale(' + (lastZoom / 100) + ')';
-    }
     function up() {
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
       bgEl.classList.remove('zooming-bg');
       slides[i].imageZoom = lastZoom;
       refreshPreview(i);
-    }
     document.addEventListener('pointermove', move);
     document.addEventListener('pointerup', up);
-  }
 
   function deleteTitle(i) {
     slides[i].title = '';
     refreshPreview(i);
     const input = document.getElementById('slideTitleInput-' + i);
     if (input) input.value = '';
-  }
 
   function load() {
     SiteContentDB.get().then(content => {
       siteContent = content;
       slides = Array.isArray(content.heroSlides) ? content.heroSlides.slice() : [];
       render();
-    });
-  }
 
   function render() {
     const wrap = document.getElementById('slideList');
@@ -383,15 +344,15 @@ document.addEventListener('DOMContentLoaded', () => {
                   </div>
                   <div class="form-group">
                     <label>TIÊU ĐỀ LỚN <span class="small-muted">(kéo trong khung bên phải để di chuyển tự do, kéo góc để đổi cỡ chữ, bấm ✕ để xóa)</span></label>
-                    <input type="text" id="slideTitleInput-${i}" value="${escapeHtml(s.title)}" oninput="AdminSliders.setField(${i},'title',this.value);AdminSliders.refreshPreview(${i})">
+                    <input type="text" id="slideTitleInput-${i}" value="${PSH.escapeHtml(s.title)}" oninput="AdminSliders.setField(${i},'title',this.value);AdminSliders.refreshPreview(${i})">
                   </div>
                   <div class="form-group">
                     <label>LINK KHI BẤM (để trống = cuộn xuống danh mục)</label>
-                    <input type="text" value="${escapeHtml(s.link)}" placeholder="category.html?cat=loa" oninput="AdminSliders.setField(${i},'link',this.value)">
+                    <input type="text" value="${PSH.escapeHtml(s.link)}" placeholder="category.html?cat=loa" oninput="AdminSliders.setField(${i},'link',this.value)">
                   </div>
                   <div class="form-group full">
                     <label>MÔ TẢ NGẮN <span class="small-muted">(kéo trong khung bên phải để di chuyển tự do, kéo góc để đổi cỡ chữ)</span></label>
-                    <input type="text" value="${escapeHtml(s.subtitle)}" oninput="AdminSliders.setField(${i},'subtitle',this.value);AdminSliders.refreshPreview(${i})">
+                    <input type="text" value="${PSH.escapeHtml(s.subtitle)}" oninput="AdminSliders.setField(${i},'subtitle',this.value);AdminSliders.refreshPreview(${i})">
                   </div>
                 </div>
               </div>
@@ -408,23 +369,19 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>`).join('') || '<p class="small-muted">Chưa có slide nào. Bấm "+ THÊM SLIDE" để bắt đầu.</p>';
 
     initSortable();
-  }
 
   // Cập nhật mini preview tại chỗ mà không render lại toàn bộ (tránh mất focus input).
   function refreshPreview(i) {
     const el = document.getElementById('preview-' + i);
     if (el) el.innerHTML = miniPreview(i, slides[i]);
-  }
 
   function setField(i, field, value) {
     slides[i][field] = value;
-  }
 
   function remove(i) {
     if (!confirm('Xóa slide này?')) return;
     slides.splice(i, 1);
     render();
-  }
 
   // addSlide — ghi thẳng toạ độ % mặc định (KHÔNG dùng field "position" 9
   // điểm cũ đã bỏ) — trùng khớp toạ độ LEGACY_POSITION_XY['bottom-left'] để
@@ -433,22 +390,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const def = LEGACY_POSITION_XY['bottom-left'];
     slides.push({ image: '', title: '', subtitle: '', link: '', titlePosX: def.x, titlePosY: def.y });
     render();
-  }
 
   function saveAll() {
     const content = Object.assign({}, siteContent, { heroSlides: slides });
     SiteContentDB.save(content).then(() => {
       siteContent = content;
       showStatus('Đã lưu slider trang chủ — có hiệu lực ngay cho mọi khách truy cập.');
-    });
-  }
 
   function showStatus(msg) {
     const el = document.getElementById('sliderStatus');
     el.textContent = msg;
     el.style.display = 'block';
     setTimeout(() => { el.style.display = 'none'; }, 3000);
-  }
 
   // SortableJS — khởi tạo lại sau mỗi render() vì DOM được rebuild hoàn toàn.
   function initSortable() {
@@ -465,9 +418,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const moved = slides.splice(oldIndex, 1)[0];
         slides.splice(newIndex, 0, moved);
         render(); // rebuild với thứ tự mới để idx labels đúng
-      }
-    });
-  }
 
   document.getElementById('addSlideBtn').addEventListener('click', addSlide);
   document.getElementById('saveSlidesBtn').addEventListener('click', saveAll);
@@ -481,6 +431,4 @@ document.addEventListener('DOMContentLoaded', () => {
       if (j < 0 || j >= slides.length) return;
       [slides[i], slides[j]] = [slides[j], slides[i]];
       render();
-    }, remove, refreshPreview
-  };
 });

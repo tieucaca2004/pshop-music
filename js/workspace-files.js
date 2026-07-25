@@ -25,17 +25,11 @@ document.addEventListener('DOMContentLoaded', function () {
     load('');
   });
 
-  function escapeHtml(str) {
-    return String(str || '').replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
 
-  function formatDate(ts) {
+  function PSH.formatDate(ts) {
     if (!ts) return '';
     var d = new Date(ts);
     return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
 
   function load(searchTerm) {
     var body = document.getElementById('fTableBody');
@@ -49,38 +43,30 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!items.length) {
         body.innerHTML = '';
         empty.style.display = 'block';
-        empty.textContent = searchTerm ? 'No files match "' + escapeHtml(searchTerm) + '".' : 'No files yet — upload a document to get started.';
+        empty.textContent = searchTerm ? 'No files match "' + PSH.escapeHtml(searchTerm) + '".' : 'No files yet — upload a document to get started.';
         return;
-      }
       body.innerHTML = items.map(function (item) {
-        return '<tr data-path="' + escapeHtml(item.fullPath) + '">' +
-          '<td>' + escapeHtml(item.name) + '</td>' +
+        return '<tr data-path="' + PSH.escapeHtml(item.fullPath) + '">' +
+          '<td>' + PSH.escapeHtml(item.name) + '</td>' +
           '<td>' + WorkspaceAuth.formatBytes(item.size) + '</td>' +
-          '<td>' + formatDate(item.timeCreated) + '</td>' +
+          '<td>' + PSH.formatDate(item.timeCreated) + '</td>' +
           '<td class="admin-actions">' +
-            '<a class="link-btn f-download-btn" href="' + escapeHtml(item.url || '#') + '" target="_blank" rel="noopener">Download</a>' +
+            '<a class="link-btn f-download-btn" href="' + PSH.escapeHtml(item.url || '#') + '" target="_blank" rel="noopener">Download</a>' +
             '<button class="link-btn f-rename-btn">Rename</button>' +
             '<button class="btn-danger f-remove-btn">Delete</button>' +
           '</td></tr>';
-      }).join('');
       body.querySelectorAll('.f-remove-btn').forEach(function (btn) {
         btn.addEventListener('click', function () { removeItem(btn.closest('[data-path]').dataset.path, searchTerm); });
-      });
       body.querySelectorAll('.f-rename-btn').forEach(function (btn) {
         btn.addEventListener('click', function () { renameItem(btn.closest('[data-path]').dataset.path, searchTerm); });
-      });
-    }).catch(function (e) {
       body.innerHTML = '';
       empty.style.display = 'block';
       empty.style.color = '#c0392b';
       empty.textContent = 'Failed to load files: ' + e.message;
-    });
-  }
 
   function removeItem(fullPath, searchTerm) {
     if (!confirm('Delete this file? Anything referencing it elsewhere will lose the file.')) return;
     MediaLibrary.remove(fullPath).then(function () { load(searchTerm); });
-  }
 
   function renameItem(fullPath, searchTerm) {
     var currentName = fullPath.substring(fullPath.lastIndexOf('/') + 1);
@@ -88,10 +74,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (!newName || newName === currentName) return;
     MediaLibrary.rename(fullPath, newName).then(function () {
       load(searchTerm);
-    }).catch(function (e) {
       alert('Rename failed: ' + e.message);
-    });
-  }
 
   function handleUpload(e) {
     var file = e.target.files[0];
@@ -103,8 +86,5 @@ document.addEventListener('DOMContentLoaded', function () {
       e.target.value = '';
       load(document.getElementById('fSearchInput').value);
       setTimeout(function () { status.textContent = ''; }, 2000);
-    }).catch(function (err) {
       status.textContent = 'Upload failed: ' + err.message;
-    });
-  }
 });

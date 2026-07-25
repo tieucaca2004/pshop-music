@@ -12,19 +12,13 @@
  * tải danh sách để hiển thị dropdown).
  */
 const AdminAIContextBuilder = (function () {
-  function escapeHtml(str) {
-    return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]));
-  }
 
   function init() {
     AdminAuth.init({ page: 'ai-context-builder', title: 'PLUGIN AI — CONTEXT BUILDER', requiredRole: 'admin' }).then(() => {
       document.getElementById('cbPluginSelect').addEventListener('change', onPluginChange);
       document.getElementById('cbBuildBtn').addEventListener('click', onBuild);
       loadPlugins();
-    });
-  }
 
   // Danh sách Plugin qua PluginManager (AI_RULES.md mục 5b) — không đọc
   // thẳng PluginDB. Liệt kê cả Plugin đang Disable/Coming Soon vì đây là
@@ -32,10 +26,8 @@ const AdminAIContextBuilder = (function () {
   function loadPlugins() {
     return PluginManager.loadPlugins().then(plugins => {
       const select = document.getElementById('cbPluginSelect');
-      select.innerHTML = plugins.map(p => `<option value="${escapeHtml(p.metadata.id)}">${escapeHtml(p.metadata.name)}</option>`).join('');
+      select.innerHTML = plugins.map(p => `<option value="${PSH.escapeHtml(p.metadata.id)}">${PSH.escapeHtml(p.metadata.name)}</option>`).join('');
       onPluginChange();
-    });
-  }
 
   // inputFields không có trong PluginManager.metadata — đọc qua
   // AIModuleRegistry.get(), đúng cách js/admin-ai.js đã làm để dựng form
@@ -43,7 +35,6 @@ const AdminAIContextBuilder = (function () {
   function currentModule() {
     const id = document.getElementById('cbPluginSelect').value;
     return typeof AIModuleRegistry !== 'undefined' ? AIModuleRegistry.get(id) : null;
-  }
 
   function onPluginChange() {
     const module = currentModule();
@@ -55,25 +46,20 @@ const AdminAIContextBuilder = (function () {
     document.getElementById('cbPostGroup').style.display = hasPost ? '' : 'none';
     if (hasProduct) loadProducts();
     if (hasPost) loadPosts();
-  }
 
   function loadProducts() {
     const select = document.getElementById('cbProductSelect');
     if (select.dataset.loaded || typeof DB === 'undefined') return;
     select.dataset.loaded = '1';
     DB.getAll().then(list => {
-      select.innerHTML = list.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('');
-    });
-  }
+      select.innerHTML = list.map(p => `<option value="${PSH.escapeHtml(p.id)}">${PSH.escapeHtml(p.name)}</option>`).join('');
 
   function loadPosts() {
     const select = document.getElementById('cbPostSelect');
     if (select.dataset.loaded || typeof BlogDB === 'undefined') return;
     select.dataset.loaded = '1';
     BlogDB.getAll().then(list => {
-      select.innerHTML = list.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.title)}</option>`).join('');
-    });
-  }
+      select.innerHTML = list.map(p => `<option value="${PSH.escapeHtml(p.id)}">${PSH.escapeHtml(p.title)}</option>`).join('');
 
   function currentInputParams() {
     const module = currentModule();
@@ -81,9 +67,7 @@ const AdminAIContextBuilder = (function () {
     ((module && module.inputFields) || []).forEach(f => {
       if (f.type === 'productSelect') params.productId = document.getElementById('cbProductSelect').value || null;
       if (f.type === 'blogSelect') params.postId = document.getElementById('cbPostSelect').value || null;
-    });
     return params;
-  }
 
   function onBuild() {
     const module = currentModule();
@@ -91,28 +75,24 @@ const AdminAIContextBuilder = (function () {
     if (!module) {
       resultEl.innerHTML = '<p class="small-muted">Chưa có Plugin nào để xây dựng Context.</p>';
       return;
-    }
     resultEl.innerHTML = '<p class="small-muted">Đang xây dựng Context...</p>';
 
     ContextBuilder.build(module.id, currentInputParams()).then(pkg => {
       const promptPreview = ContextBuilder.toPromptText(pkg);
       const statusLine = pkg.missing.length
-        ? `Thiếu: ${pkg.missing.map(m => escapeHtml(m)).join(', ')} — vẫn hoạt động bình thường, không phải lỗi hệ thống.`
+        ? `Thiếu: ${pkg.missing.map(m => PSH.escapeHtml(m)).join(', ')} — vẫn hoạt động bình thường, không phải lỗi hệ thống.`
         : 'Đầy đủ dữ liệu.';
       resultEl.innerHTML = `
         <div class="panel">
-          <p><strong>Context Package cho "${escapeHtml(module.label)}"</strong></p>
-          <p class="small-muted">Đóng gói lúc ${escapeHtml(new Date(pkg.builtAt).toLocaleString('vi-VN'))} — ${statusLine}</p>
+          <p><strong>Context Package cho "${PSH.escapeHtml(module.label)}"</strong></p>
+          <p class="small-muted">Đóng gói lúc ${PSH.escapeHtml(new Date(pkg.builtAt).toLocaleString('vi-VN'))} — ${statusLine}</p>
           <h4 style="margin:1rem 0 0.5rem">Dữ liệu đã thu thập (Context Package)</h4>
-          <pre style="white-space:pre-wrap;background:var(--bg-alt);padding:1rem;font-size:0.82rem;max-height:320px;overflow:auto">${escapeHtml(JSON.stringify(pkg.data, null, 2))}</pre>
+          <pre style="white-space:pre-wrap;background:var(--bg-alt);padding:1rem;font-size:0.82rem;max-height:320px;overflow:auto">${PSH.escapeHtml(JSON.stringify(pkg.data, null, 2))}</pre>
           <h4 style="margin:1rem 0 0.5rem">Xem trước đoạn Context ghép vào Prompt</h4>
-          <pre style="white-space:pre-wrap;background:var(--bg-alt);padding:1rem;font-size:0.82rem">${escapeHtml(promptPreview || '(Không có Context bổ sung — Plugin vẫn chạy bình thường chỉ với dữ liệu người dùng nhập.)')}</pre>
+          <pre style="white-space:pre-wrap;background:var(--bg-alt);padding:1rem;font-size:0.82rem">${PSH.escapeHtml(promptPreview || '(Không có Context bổ sung — Plugin vẫn chạy bình thường chỉ với dữ liệu người dùng nhập.)')}</pre>
           <p class="small-muted" style="margin-top:1rem">Chỉ là bản xem trước cấu trúc Context — trang này KHÔNG tạo Job, KHÔNG gọi AI Provider, KHÔNG tạo Draft. Muốn chạy Plugin thật, dùng <a href="index.html" style="color:var(--gold-ink)">AI Assistant Dashboard</a>.</p>
         </div>`;
-    }).catch(err => {
-      resultEl.innerHTML = '<p style="color:#c0392b">Không xây dựng được Context: ' + escapeHtml(err.message) + '</p>';
-    });
-  }
+      resultEl.innerHTML = '<p style="color:#c0392b">Không xây dựng được Context: ' + PSH.escapeHtml(err.message) + '</p>';
 
   return { init };
 })();

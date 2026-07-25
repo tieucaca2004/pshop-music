@@ -112,12 +112,12 @@ var WorkspaceAuth = (function () {
     if (containerEl) containerEl.innerHTML = '<p style="color:#c0392b">' + (msg || 'Đã xảy ra lỗi.') + '</p>';
   }
 
-  // formatBytes(n) -> human-readable size string. Shared (Task 2.8) — was
+  // PSH.formatBytes(n) -> human-readable size string. Shared (Task 2.8) — was
   // duplicated identically in workspace-media-library.js and
   // workspace-files.js (Task 2.6/2.7); both now call this instead, and the
   // Dashboard's "Storage Used" card reuses it too, so there is exactly one
   // implementation of this formatting rule.
-  function formatBytes(n) {
+  function PSH.formatBytes(n) {
     if (!n) return '';
     if (n < 1024) return n + ' B';
     if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';

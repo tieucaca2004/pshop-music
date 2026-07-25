@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', function () {
         cardHtml(categories.length, 'Total Categories') +
         cardHtml(mediaCount, 'Total Media Files') +
         cardHtml(docCount, 'Total Documents') +
-        cardHtml(WorkspaceAuth.formatBytes(totalBytes) || '0 B', 'Total Storage Used') +
+        cardHtml(WorkspaceAuth.PSH.formatBytes(totalBytes) || '0 B', 'Total Storage Used') +
         cardHtml(teamCount === null ? '—' : teamCount, 'Team Members');
     }).catch(function (e) {
       WorkspaceAuth.renderErrorState(stats, 'Failed to load dashboard: ' + e.message);

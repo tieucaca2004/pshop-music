@@ -43,36 +43,26 @@ document.addEventListener('DOMContentLoaded', function () {
   function validatePhone(v) { return !v || /^[\d\s\-\+\(\)]{6,30}$/.test(v); }
   function validateUrl(v)   { return !v || /^https?:\/\/.+/.test(v); }
 
-  function escapeHtml(str) {
-    return String(str || '').replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
 
   // ─── Form helpers ─────────────────────────────────────────────────
   function setStatus(msg, isError) {
     var el = document.getElementById('bsStatus');
     if (el) el.innerHTML = isError
-      ? '<span style="color:#c0392b">&#10060; ' + escapeHtml(msg) + '</span>'
-      : '<span style="color:#27ae60">&#10004; ' + escapeHtml(msg) + '</span>';
-  }
+      ? '<span style="color:#c0392b">&#10060; ' + PSH.escapeHtml(msg) + '</span>'
+      : '<span style="color:#27ae60">&#10004; ' + PSH.escapeHtml(msg) + '</span>';
 
   function setFormLoading(loading) {
     document.getElementById('bsSaveBtn').disabled = loading;
     document.getElementById('bsSaveBtn').textContent = loading ? 'Saving...' : 'Save Changes';
-  }
 
   function initTimezoneSelect(selected) {
     var sel = document.getElementById('bsTimezone');
     sel.innerHTML = TIMEZONES.map(function (tz) {
       return '<option value="' + tz + '"' + (tz === selected ? ' selected' : '') + '>' + tz + '</option>';
-    }).join('');
-  }
 
   function getPickerSlotId(inputId, previewId) {
     // mount() creates a slot with id = previewId + '-slot'
     return previewId + '-slot';
-  }
 
   // ─── Upload helper — upload file then refresh the MediaLibraryPicker slot ──
   function handleUpload(inputId, previewId, pickerRef) {
@@ -88,11 +78,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (pickerRef && pickerRef.refresh) pickerRef.refresh();
         dirty = true;
         setStatus('Upload complete. Save changes to apply.');
-      }).catch(function (e) {
         setStatus('Upload failed: ' + e.message, true);
-      });
-    };
-  }
 
   // ─── Load profile data ───────────────────────────────────────────
   function loadProfile() {
@@ -105,7 +91,6 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!data) {
           setStatus('Business not found.', true);
           return;
-        }
 
         // Populate form fields
         document.getElementById('bsName').value = data.displayName || '';
@@ -120,10 +105,8 @@ document.addEventListener('DOMContentLoaded', function () {
         if (addrParts.length > 1) {
           document.getElementById('bsAddress').value = addrParts.slice(0, -1).join(', ');
           document.getElementById('bsCity').value = addrParts[addrParts.length - 1];
-        } else {
           document.getElementById('bsAddress').value = addr;
           document.getElementById('bsCity').value = data.city || '';
-        }
 
         initTimezoneSelect(data.timezone || 'Asia/Ho_Chi_Minh');
         document.getElementById('bsCountry').value = data.country || 'VN';
@@ -142,11 +125,8 @@ document.addEventListener('DOMContentLoaded', function () {
         panel.style.display = 'block';
         setStatus('Profile loaded. Edit fields and save.');
         dirty = false;
-      })
       .catch(function (e) {
         setStatus('Failed to load profile: ' + e.message, true);
-      });
-  }
 
   // ─── Save profile data ───────────────────────────────────────────
   function saveProfile(evt) {
@@ -181,12 +161,10 @@ document.addEventListener('DOMContentLoaded', function () {
       description: document.getElementById('bsDescription').value.trim(),
       logo: document.getElementById('bsLogo').value || '',
       coverImage: document.getElementById('bsCoverImage').value || ''
-    };
 
     // Remove empty strings so the PATCH only sends defined fields
     Object.keys(payload).forEach(function (k) {
       if (payload[k] === '') payload[k] = undefined;
-    });
 
     setFormLoading(true);
     setStatus('Saving...');
@@ -195,24 +173,18 @@ document.addEventListener('DOMContentLoaded', function () {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
-    }).then(function () {
       setFormLoading(false);
       dirty = false;
       setStatus('Business profile saved successfully!');
-    }).catch(function (e) {
       setFormLoading(false);
       setStatus('Save failed: ' + e.message, true);
-    });
-  }
 
   // ─── Confirm discard if dirty ─────────────────────────────────────
   function confirmDiscard() {
     if (dirty) {
       if (!confirm('You have unsaved changes. Discard them?')) return;
-    }
     dirty = false;
     loadProfile();
-  }
 
   // ─── Init ─────────────────────────────────────────────────────────
   WorkspaceAuth.init('business-settings', 'Business Settings').then(function (ctx) {
@@ -226,18 +198,14 @@ document.addEventListener('DOMContentLoaded', function () {
     // Wire upload buttons
     document.getElementById('bsLogoUpload').addEventListener('click', function () {
       handleUpload('bsLogoFileInput', 'bsLogoPreview', logoPicker);
-    });
     document.getElementById('bsCoverUpload').addEventListener('click', function () {
       handleUpload('bsCoverFileInput', 'bsCoverPreview', coverPicker);
-    });
 
     // Mark form as dirty on any change
     document.querySelectorAll('#bsForm input, #bsForm textarea, #bsForm select').forEach(function (el) {
       el.addEventListener('change', function () { dirty = true; });
       el.addEventListener('input', function () { dirty = true; });
-    });
 
     // Load data
     loadProfile();
-  });
 });

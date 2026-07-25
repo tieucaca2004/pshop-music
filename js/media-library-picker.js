@@ -26,18 +26,13 @@ const MediaLibraryPicker = (function () {
   let searchDebounce = null;
   let currentGridItems = [];
 
-  function escapeHtml(str) {
-    return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]));
-  }
 
-  function formatBytes(n) {
+  function PSH.formatBytes(n) {
     if (!n) return '';
     if (n < 1024) return n + ' B';
     if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
     return (n / (1024 * 1024)).toFixed(1) + ' MB';
-  }
 
   /* ================= Slot (1 ô ảnh — dùng chung cho mọi kiểu gắn) ================= */
 
@@ -63,24 +58,22 @@ const MediaLibraryPicker = (function () {
     return `
       <div class="medialib-slot" id="${slotId}">
         <div class="${thumbClass}">
-          ${url ? `<img src="${escapeHtml(url)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ''}
+          ${url ? `<img src="${PSH.escapeHtml(url)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">` : ''}
           <div class="medialib-thumb-empty" style="display:${url ? 'none' : 'flex'}">${url ? 'Ảnh lỗi' : 'Chưa có ảnh'}</div>
         </div>
         <div class="medialib-slot-actions">
-          <button type="button" class="link-btn" onclick="MediaLibraryPicker.chooseFor('${slotId}')">${escapeHtml(chooseLabel)}</button>
+          <button type="button" class="link-btn" onclick="MediaLibraryPicker.chooseFor('${slotId}')">${PSH.escapeHtml(chooseLabel)}</button>
           ${(url && !hasRemoveSlot) ? `<button type="button" class="link-btn" onclick="MediaLibraryPicker.clearFor('${slotId}')">Xóa</button>` : ''}
           ${hasRemoveSlot ? `<button type="button" class="link-btn" onclick="MediaLibraryPicker.removeSlotFor('${slotId}')">Bỏ ảnh này</button>` : ''}
           ${moveUpBtn}${moveDownBtn}${setFeaturedBtn}${featuredBadge}
         </div>
-        ${url ? `<details class="medialib-advanced"><summary>Advanced</summary><code>${escapeHtml(url)}</code></details>` : ''}
+        ${url ? `<details class="medialib-advanced"><summary>Advanced</summary><code>${PSH.escapeHtml(url)}</code></details>` : ''}
       </div>`;
-  }
 
   function registerSlot(url, onChange, opts) {
     const slotId = 'medialib-slot-' + (++slotCounter);
     slotRegistry[slotId] = { url, onChange, opts };
     return slotId;
-  }
 
   // renderSlot(url, onChange, opts) -> HTML string, nhúng vào template
   // render() của trang gọi (Slider/Category) — mỗi lần render() chạy lại,
@@ -88,14 +81,12 @@ const MediaLibraryPicker = (function () {
   function renderSlot(url, onChange, opts) {
     const slotId = registerSlot(url, onChange, opts);
     return slotHtml(slotId, url, opts);
-  }
 
   function refreshSlotDom(slotId) {
     const slot = slotRegistry[slotId];
     const el = document.getElementById(slotId);
     if (!slot || !el) return;
     el.outerHTML = slotHtml(slotId, slot.url, slot.opts);
-  }
 
   function chooseFor(slotId) {
     const slot = slotRegistry[slotId];
@@ -104,8 +95,6 @@ const MediaLibraryPicker = (function () {
       slot.url = url;
       slot.onChange(url);
       refreshSlotDom(slotId);
-    });
-  }
 
   function clearFor(slotId) {
     const slot = slotRegistry[slotId];
@@ -113,13 +102,11 @@ const MediaLibraryPicker = (function () {
     slot.url = '';
     slot.onChange('');
     refreshSlotDom(slotId);
-  }
 
   function removeSlotFor(slotId) {
     const slot = slotRegistry[slotId];
     if (!slot || !slot.opts || !slot.opts.onRemoveSlot) return;
     slot.opts.onRemoveSlot();
-  }
 
   // moveUpFor/moveDownFor/setFeaturedFor (Sprint 12 Requirement #10) - cùng
   // pattern với removeSlotFor(): slotHtml() chỉ gọi lại đúng callback đã đăng
@@ -128,19 +115,16 @@ const MediaLibraryPicker = (function () {
     const slot = slotRegistry[slotId];
     if (!slot || !slot.opts || !slot.opts.onMoveUp) return;
     slot.opts.onMoveUp();
-  }
 
   function moveDownFor(slotId) {
     const slot = slotRegistry[slotId];
     if (!slot || !slot.opts || !slot.opts.onMoveDown) return;
     slot.opts.onMoveDown();
-  }
 
   function setFeaturedFor(slotId) {
     const slot = slotRegistry[slotId];
     if (!slot || !slot.opts || !slot.opts.onSetFeatured) return;
     slot.opts.onSetFeatured();
-  }
 
   /* ================= mount() — field tĩnh, 1 ảnh (Banner/Blog) ================= */
 
@@ -156,11 +140,7 @@ const MediaLibraryPicker = (function () {
         url: input.value,
         onChange: url => { input.value = url; },
         opts
-      };
-    }
     renderInto();
-    return { refresh: renderInto };
-  }
 
   /* ================= mountMulti() — field tĩnh, nhiều ảnh (Product) ================= */
 
@@ -172,10 +152,8 @@ const MediaLibraryPicker = (function () {
 
     function currentUrls() {
       return textarea.value.split(/[\n,;]/).map(u => u.trim()).filter(Boolean);
-    }
     function setUrls(urls) {
       textarea.value = urls.join('\n');
-    }
     function renderInto() {
       const urls = currentUrls();
       // Reorder/Set Featured (Sprint 12 Requirement #10, Product Management) -
@@ -186,7 +164,6 @@ const MediaLibraryPicker = (function () {
         const list = currentUrls();
         list[i] = newUrl;
         setUrls(list);
-      }, Object.assign({
         chooseLabel: 'Đổi ảnh',
         isFeatured: i === 0,
         onRemoveSlot: () => {
@@ -194,7 +171,6 @@ const MediaLibraryPicker = (function () {
           list.splice(i, 1);
           setUrls(list);
           renderInto();
-        },
         onMoveUp: i > 0 ? () => {
           const list = currentUrls();
           const tmp = list[i - 1];
@@ -202,7 +178,6 @@ const MediaLibraryPicker = (function () {
           list[i] = tmp;
           setUrls(list);
           renderInto();
-        } : null,
         onMoveDown: i < urls.length - 1 ? () => {
           const list = currentUrls();
           const tmp = list[i + 1];
@@ -210,15 +185,12 @@ const MediaLibraryPicker = (function () {
           list[i] = tmp;
           setUrls(list);
           renderInto();
-        } : null,
         onSetFeatured: i > 0 ? () => {
           const list = currentUrls();
           const [item] = list.splice(i, 1);
           list.unshift(item);
           setUrls(list);
           renderInto();
-        } : null
-      }, opts))).join('');
       const maxImages = opts && opts.maxImages;
       const atMax = maxImages && urls.length >= maxImages;
       const addSlotId = 'medialib-add-' + (++slotCounter);
@@ -235,19 +207,12 @@ const MediaLibraryPicker = (function () {
             list.push(url);
             setUrls(list);
             renderInto();
-          }
-        };
-      }
-    }
     renderInto();
-    return { refresh: renderInto };
-  }
 
   function addTo(addSlotId) {
     const slot = slotRegistry[addSlotId];
     if (!slot || !slot.onAdd) return;
     openModal(url => slot.onAdd(url));
-  }
 
   /* ================= Modal dùng chung (tạo 1 lần, tái sử dụng mọi nơi) ================= */
 
@@ -275,42 +240,32 @@ const MediaLibraryPicker = (function () {
     document.getElementById('medialibSearch').addEventListener('input', () => {
       clearTimeout(searchDebounce);
       searchDebounce = setTimeout(loadGrid, 200);
-    });
     document.getElementById('medialibUploadBtn').addEventListener('click', () => {
       document.getElementById('medialibUploadInput').click();
-    });
     document.getElementById('medialibUploadInput').addEventListener('change', e => {
       if (e.target.files[0]) handleUpload(e.target.files[0]);
       e.target.value = '';
-    });
 
     const dropzone = document.getElementById('medialibDropzone');
     ['dragenter', 'dragover'].forEach(evt => dropzone.addEventListener(evt, e => {
       e.preventDefault();
       dropzone.classList.add('medialib-dragover');
-    }));
     ['dragleave', 'drop'].forEach(evt => dropzone.addEventListener(evt, e => {
       e.preventDefault();
       dropzone.classList.remove('medialib-dragover');
-    }));
     dropzone.addEventListener('drop', e => {
       const file = e.dataTransfer.files && e.dataTransfer.files[0];
       if (file && file.type.indexOf('image/') === 0) handleUpload(file);
-    });
 
     modalEl.addEventListener('click', e => {
       if (e.target === modalEl) closeModal();
-    });
-  }
 
   function showStatus(msg) {
     const el = document.getElementById('medialibStatus');
     el.textContent = msg;
     el.style.display = 'block';
-  }
   function hideStatus() {
     document.getElementById('medialibStatus').style.display = 'none';
-  }
 
   function handleUpload(file) {
     showStatus('Đang tải ảnh lên... 0%');
@@ -320,9 +275,7 @@ const MediaLibraryPicker = (function () {
         document.getElementById('medialibSearch').value = '';
         loadGrid();
         if (modalOnSelect) { modalOnSelect(url); closeModal(); }
-      })
       .catch(err => showStatus('Lỗi tải ảnh: ' + err.message));
-  }
 
   function loadGrid() {
     const grid = document.getElementById('medialibGrid');
@@ -333,34 +286,28 @@ const MediaLibraryPicker = (function () {
       if (!items.length) {
         grid.innerHTML = '<p class="small-muted">Không tìm thấy ảnh nào. Kéo thả hoặc bấm "Tải ảnh lên" để thêm ảnh mới.</p>';
         return;
-      }
       grid.innerHTML = items.map((item, index) => itemHtml(item, index)).join('');
-    }).catch(err => {
-      grid.innerHTML = '<p style="color:#c0392b">Không tải được Thư viện ảnh: ' + escapeHtml(err.message) + '</p>';
-    });
-  }
+      grid.innerHTML = '<p style="color:#c0392b">Không tải được Thư viện ảnh: ' + PSH.escapeHtml(err.message) + '</p>';
 
   // Dùng index vào currentGridItems thay vì nhúng thẳng URL/fullPath vào
   // chuỗi onclick — tránh URL (có thể chứa ký tự đặc biệt) làm hỏng cú
   // pháp JS trong attribute.
   function itemHtml(item, index) {
-    const meta = [formatBytes(item.size), item.timeCreated ? new Date(item.timeCreated).toLocaleDateString('vi-VN') : ''].filter(Boolean).join(' · ');
+    const meta = [PSH.formatBytes(item.size), item.timeCreated ? new Date(item.timeCreated).toLocaleDateString('vi-VN') : ''].filter(Boolean).join(' · ');
     return `
       <div class="medialib-grid-item">
         <div class="medialib-grid-thumb" onclick="MediaLibraryPicker.pickIndex(${index})">
-          <img src="${escapeHtml(item.url || '')}" loading="lazy">
+          <img src="${PSH.escapeHtml(item.url || '')}" loading="lazy">
         </div>
-        <div class="medialib-grid-meta">${escapeHtml(meta)}</div>
+        <div class="medialib-grid-meta">${PSH.escapeHtml(meta)}</div>
         <button type="button" class="link-btn medialib-delete-btn" onclick="MediaLibraryPicker.confirmDeleteIndex(${index})">Xóa khỏi Thư viện</button>
       </div>`;
-  }
 
   function pickIndex(index) {
     const item = currentGridItems[index];
     if (!item || !modalOnSelect) return;
     modalOnSelect(item.url);
     closeModal();
-  }
 
   // confirmDeleteIndex() — Functional Requirement #6: KHÔNG xóa Storage nếu
   // chưa được xác nhận. Đây là hành động XÓA THẬT khỏi Storage (khác với
@@ -371,7 +318,6 @@ const MediaLibraryPicker = (function () {
     if (!item) return;
     if (!confirm('Xóa ảnh này khỏi Thư viện? Hành động này xóa file thật khỏi Storage và không thể hoàn tác. Nếu ảnh đang được dùng ở nơi khác (Product/Banner/...), nơi đó sẽ mất ảnh.')) return;
     MediaLibrary.remove(item.fullPath).then(loadGrid).catch(err => alert('Không xóa được: ' + err.message));
-  }
 
   function openModal(onSelect) {
     ensureModalDom();
@@ -379,17 +325,14 @@ const MediaLibraryPicker = (function () {
     document.getElementById('medialibSearch').value = '';
     modalEl.classList.add('open');
     loadGrid();
-  }
 
   function closeModal() {
     if (modalEl) modalEl.classList.remove('open');
     modalOnSelect = null;
-  }
 
   return {
     mount, mountMulti, renderSlot,
     chooseFor, clearFor, removeSlotFor, addTo,
     moveUpFor, moveDownFor, setFeaturedFor,
     openModal, closeModal, pickIndex, confirmDeleteIndex
-  };
 })();

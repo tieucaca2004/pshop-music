@@ -10,11 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let columns = [];
   let social = [];
 
-  function escapeHtml(str) {
-    return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[c]));
-  }
 
   function load() {
     SiteContentDB.get().then(content => {
@@ -24,22 +20,15 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('footerCopyText').value = (content.footer && content.footer.copyText) || '';
       renderColumns();
       renderSocial();
-    });
-  }
 
   function linksToText(links) {
     return (links || []).map(l => `${l.label} | ${l.link}`).join('\n');
-  }
 
   function textToLinks(text) {
     return text.split('\n').map(l => l.trim()).filter(Boolean).map(line => {
       const idx = line.indexOf('|');
-      return {
         label: (idx === -1 ? line : line.slice(0, idx)).trim(),
         link: (idx === -1 ? '' : line.slice(idx + 1)).trim()
-      };
-    });
-  }
 
   function renderColumns() {
     const wrap = document.getElementById('footerColumns');
@@ -48,11 +37,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="field-grid">
           <div class="form-group full">
             <label>TÊN CỘT ${i + 1}</label>
-            <input type="text" value="${escapeHtml(col.title)}" oninput="AdminFooter.setColumnTitle(${i},this.value)">
+            <input type="text" value="${PSH.escapeHtml(col.title)}" oninput="AdminFooter.setColumnTitle(${i},this.value)">
           </div>
           <div class="form-group full">
             <label>LIÊN KẾT TRONG CỘT — mỗi dòng: Tên hiển thị | Link</label>
-            <textarea rows="4" oninput="AdminFooter.setColumnLinks(${i},this.value)">${escapeHtml(linksToText(col.links))}</textarea>
+            <textarea rows="4" oninput="AdminFooter.setColumnLinks(${i},this.value)">${PSH.escapeHtml(linksToText(col.links))}</textarea>
           </div>
         </div>
         <div class="admin-actions">
@@ -61,7 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
           <button class="btn-danger" onclick="AdminFooter.removeColumn(${i})">XÓA CỘT</button>
         </div>
       </div>`).join('');
-  }
 
   function setColumnTitle(i, value) { columns[i].title = value; }
   function setColumnLinks(i, text) { columns[i].links = textToLinks(text); }
@@ -71,18 +59,15 @@ document.addEventListener('DOMContentLoaded', () => {
     if (j < 0 || j >= columns.length) return;
     [columns[i], columns[j]] = [columns[j], columns[i]];
     renderColumns();
-  }
 
   function removeColumn(i) {
     if (!confirm('Xóa cột footer này?')) return;
     columns.splice(i, 1);
     renderColumns();
-  }
 
   function addColumn() {
     columns.push({ title: 'Cột mới', links: [] });
     renderColumns();
-  }
 
   function renderSocial() {
     const wrap = document.getElementById('socialList');
@@ -95,13 +80,12 @@ document.addEventListener('DOMContentLoaded', () => {
             <option value="zalo" ${s.platform === 'zalo' ? 'selected' : ''}>Zalo</option>
             <option value="shopee" ${s.platform === 'shopee' ? 'selected' : ''}>Shopee</option>
           </select>
-          <input type="text" value="${escapeHtml(s.url)}" placeholder="https://..." oninput="AdminFooter.setSocialField(${i},'url',this.value)">
+          <input type="text" value="${PSH.escapeHtml(s.url)}" placeholder="https://..." oninput="AdminFooter.setSocialField(${i},'url',this.value)">
         </div>
         <div class="cms-row-actions">
           <button class="btn-danger" onclick="AdminFooter.removeSocial(${i})">Xóa</button>
         </div>
       </div>`).join('') || '<p class="small-muted">Chưa có mạng xã hội nào.</p>';
-  }
 
   function setSocialField(i, field, value) { social[i][field] = value; }
   function removeSocial(i) { social.splice(i, 1); renderSocial(); }
@@ -110,19 +94,15 @@ document.addEventListener('DOMContentLoaded', () => {
   function saveAll() {
     const content = Object.assign({}, siteContent, {
       footer: { columns, social, copyText: document.getElementById('footerCopyText').value.trim() }
-    });
     SiteContentDB.save(content).then(() => {
       siteContent = content;
       showStatus('Đã lưu footer — có hiệu lực ngay trên mọi trang.');
-    });
-  }
 
   function showStatus(msg) {
     const el = document.getElementById('footerStatus');
     el.textContent = msg;
     el.style.display = 'block';
     setTimeout(() => { el.style.display = 'none'; }, 3000);
-  }
 
   document.getElementById('addColumnBtn').addEventListener('click', addColumn);
   document.getElementById('addSocialBtn').addEventListener('click', addSocial);
