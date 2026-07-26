@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Media Workspace — PSH Console</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   PSH Console — Media Workspace
+   Design System: Inter, card-based
+   ============================================================ */
+:root {
+  --bg: #f5f5f7;
+  --surface: #fff;
+  --border: #e5e5ea;
+  --border-light: #f0f0f2;
+  --text: #1d1d1f;
+  --text-secondary: #86868b;
+  --text-tertiary: #aeaeb2;
+  --primary: #4F46E5;
+  --primary-hover: #4338CA;
+  --primary-light: #e8e8ff;
+  --media-gradient: linear-gradient(135deg, #06B6D4, #10B981);
+  --success: #10B981;
+  --success-bg: #d1fae5;
+  --warning: #F59E0B;
+  --warning-bg: #fef3c7;
+  --danger: #EF4444;
+  --danger-bg: #fee2e2;
+  --sidebar-w: 240px;
+  --sidebar-collapsed-w: 60px;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
+  --shadow: 0 1px 3px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.06);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,.08);
+  --transition: .2s ease;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  min-height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ============================================================
+   SIDEBAR (Media)
+   ============================================================ */
+.media-sidebar {
+  width: var(--sidebar-w);
+  min-height: 100vh;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transition: width var(--transition);
+  z-index: 50;
+  position: relative;
+}
+
+.media-sidebar.collapsed {
+  width: var(--sidebar-collapsed-w);
+}
+
+.media-brand {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.media-logo {
+  width: 32px;
+  height: 32px;
+  background: var(--media-gradient);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.media-brand-text {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.media-brand-badge {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0D9488;
+  background: #ccfbf1;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  margin-left: 0.25rem;
+}
+
+.media-nav {
+  flex: 1;
+  padding: 0.75rem;
+  overflow-y: auto;
+}
+
+.media-nav-section {
+  margin-bottom: 0.5rem;
+}
+
+.media-nav-category {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.5rem 0.75rem 0.25rem;
+}
+
+.media-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all .15s;
+  margin-bottom: 1px;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.media-nav-item:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.media-nav-item.active {
+  background: #ccfbf1;
+  color: #0F766E;
+  font-weight: 600;
+}
+
+.media-nav-item .nav-icon {
+  font-size: 1.05rem;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.media-nav-item .nav-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.media-sidebar.collapsed .media-brand-text,
+.media-sidebar.collapsed .media-brand-badge,
+.media-sidebar.collapsed .media-nav-item .nav-label,
+.media-sidebar.collapsed .media-nav-category { display: none; }
+.media-sidebar.collapsed .media-nav-item { justify-content: center; padding: 0.55rem 0; }
+.media-sidebar.collapsed .media-logo { margin: 0 auto; }
+
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  border-top: 1px solid var(--border);
+  font-size: 1rem;
+  transition: color .15s;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  width: 100%;
+  font-family: inherit;
+}
+
+.sidebar-toggle:hover { color: var(--text); }
+
+/* ============================================================
+   MAIN LAYOUT
+   ============================================================ */
+.media-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.media-topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-shrink: 0;
+  min-height: 52px;
+}
+
+.media-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.media-topbar-left h1 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.media-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.media-user {
+  font-size: 0.825rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.media-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--media-gradient);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.btn-signout {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-family: inherit;
+  transition: all .15s;
+}
+
+.btn-signout:hover {
+  background: var(--bg);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.media-content {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+/* ============================================================
+   BREADCRUMB
+   ============================================================ */
+.breadcrumb {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.breadcrumb a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.breadcrumb a:hover { color: var(--primary); }
+
+/* ============================================================
+   MEDIA DASHBOARD GRID
+   ============================================================ */
+.media-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.media-stat-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  transition: all .2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.media-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--media-gradient);
+  opacity: 0.6;
+}
+
+.media-stat-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
+}
+
+.media-stat-card-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.media-stat-card-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.media-stat-card-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.2rem;
+}
+
+.media-stat-card-sub {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-top: 0.15rem;
+}
+
+/* ============================================================
+   PANELS
+   ============================================================ */
+.panel {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.panel-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.panel-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* ============================================================
+   SECTION CARDS
+   ============================================================ */
+.media-section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.media-section-card {
+  text-align: center;
+  padding: 1.75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all .2s;
+}
+
+.media-section-card:hover {
+  border-color: #06B6D4;
+  box-shadow: 0 4px 12px rgba(6,182,212,.1);
+}
+
+.media-section-card .section-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+}
+
+.media-section-card .section-name {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--text);
+  margin-bottom: 0.2rem;
+}
+
+.media-section-card .section-desc {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* ============================================================
+   RECENT MEDIA LIST
+   ============================================================ */
+.recent-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+}
+
+.recent-item {
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.5rem;
+  cursor: pointer;
+  transition: border-color .15s;
+}
+
+.recent-item:hover {
+  border-color: var(--primary);
+}
+
+.recent-item-icon {
+  font-size: 1.5rem;
+}
+
+.recent-item-name {
+  font-size: 0.7rem;
+  color: var(--text-tertiary);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   PLACEHOLDER PAGE
+   ============================================================ */
+.placeholder-hero {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.placeholder-hero .hero-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.placeholder-hero .hero-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+
+.placeholder-hero .hero-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  max-width: 480px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+.feature-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.feature-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.feature-card-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.feature-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.feature-card-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.feature-card-desc {
+  font-size: 0.775rem;
+  color: var(--text-secondary);
+  margin-top: 0.15rem;
+}
+
+/* ============================================================
+   EMPTY / LOADING / ERROR STATES
+   ============================================================ */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  color: var(--text-secondary);
+}
+
+.loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  margin-bottom: 0.75rem;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: var(--text-secondary);
+}
+
+.empty-state-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+.empty-state-title { font-weight: 600; font-size: 1rem; color: var(--text); margin-bottom: 0.25rem; }
+.empty-state-desc { font-size: 0.85rem; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  padding: 0.2rem;
+  color: var(--text-secondary);
+  font-family: inherit;
+}
+
+@media (max-width: 768px) {
+  .media-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .media-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .media-sidebar.collapsed {
+    width: var(--sidebar-w);
+  }
+
+  .media-sidebar.collapsed .media-brand-text,
+  .media-sidebar.collapsed .media-brand-badge,
+  .media-sidebar.collapsed .media-nav-item .nav-label,
+  .media-sidebar.collapsed .media-nav-category {
+    display: inline;
+  }
+
+  .media-sidebar.collapsed .media-nav-item {
+    justify-content: flex-start;
+    padding: 0.55rem 0.75rem;
+  }
+
+  .hamburger-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,.25);
+    z-index: 99;
+  }
+
+  .sidebar-overlay.open {
+    display: block;
+  }
+
+  .media-stats-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+
+  .media-topbar {
+    padding: 0.5rem 1rem;
+  }
+
+  .media-content {
+    padding: 1rem;
+  }
+
+  .feature-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .media-stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .media-stat-card {
+    padding: 1rem;
+  }
+
+  .media-stat-card-value {
+    font-size: 1.25rem;
+  }
+
+  .media-content {
+    padding: 0.75rem;
+  }
+
+  .panel {
+    padding: 1rem;
+  }
+
+  .placeholder-hero {
+    padding: 2rem 1rem;
+  }
+
+  .placeholder-hero .hero-icon {
+    font-size: 3rem;
+  }
+
+  .recent-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== SIDEBAR OVERLAY (mobile) ========== -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- ========== SIDEBAR ========== -->
+<aside class="media-sidebar" id="mediaSidebar">
+  <div class="media-brand">
+    <div class="media-logo">M</div>
+    <span class="media-brand-text">Media Workspace</span>
+    <span class="media-brand-badge">Platform</span>
+  </div>
+  <nav class="media-nav" id="mediaNav">
+    <div class="media-nav-section">
+      <div class="media-nav-category">Media</div>
+      <button class="media-nav-item active" data-route="dashboard">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Dashboard</span>
+      </button>
+      <button class="media-nav-item" data-route="images">
+        <span class="nav-icon">🖼️</span>
+        <span class="nav-label">Images</span>
+      </button>
+      <button class="media-nav-item" data-route="videos">
+        <span class="nav-icon">🎬</span>
+        <span class="nav-label">Videos</span>
+      </button>
+      <button class="media-nav-item" data-route="audio">
+        <span class="nav-icon">🎵</span>
+        <span class="nav-label">Audio</span>
+      </button>
+      <button class="media-nav-item" data-route="documents">
+        <span class="nav-icon">📄</span>
+        <span class="nav-label">Documents</span>
+      </button>
+    </div>
+    <div class="media-nav-section">
+      <div class="media-nav-category">Management</div>
+      <button class="media-nav-item" data-route="templates">
+        <span class="nav-icon">📋</span>
+        <span class="nav-label">Templates</span>
+      </button>
+      <button class="media-nav-item" data-route="uploads">
+        <span class="nav-icon">📤</span>
+        <span class="nav-label">Uploads</span>
+      </button>
+      <button class="media-nav-item" data-route="library">
+        <span class="nav-icon">🗂️</span>
+        <span class="nav-label">Library</span>
+      </button>
+    </div>
+  </nav>
+  <button class="sidebar-toggle" id="sidebarToggle" title="Toggle Sidebar">◀</button>
+</aside>
+
+<!-- ========== MAIN ========== -->
+<main class="media-main">
+  <header class="media-topbar">
+    <div class="media-topbar-left">
+      <button class="hamburger-btn" id="hamburgerBtn" aria-label="Toggle navigation">☰</button>
+      <h1 id="pageTitle">Media Workspace</h1>
+    </div>
+    <div class="media-topbar-right">
+      <div class="media-user">
+        <div class="media-user-avatar" id="userAvatar">M</div>
+        <span id="userEmail">Loading...</span>
+        <button class="btn-signout" id="signOutBtn">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="media-content" id="mediaContent">
+    <div class="loading-state">
+      <div class="loading-spinner"></div>
+      <span>Loading Media Workspace...</span>
+    </div>
+  </div>
+</main>
+
+<!-- ========== DEPENDENCIES ========== -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script src="/js/workspace-engine.js"></script>
+<script src="/js/module-runtime.js"></script>
+
+<script>
+/* ============================================================
+   Media Workspace — Application Controller
+   ============================================================
+   Platform Media capability — shell only, no generation,
+   no uploads, no processing pipelines.
+   Reuses Workspace Engine and Module Registry.
+   ============================================================ */
+(function() {
+  'use strict';
+
+  // ─── Register Media Platform Modules (extension point) ──
+  var MEDIA_MODULES = [
+    {id:'media-dashboard',name:'Media Dashboard',icon:'📊',route:'/platform/media/?section=dashboard',permission:'viewer',category:'media',order:1},
+    {id:'media-images',name:'Images',icon:'🖼️',route:'/platform/media/?section=images',permission:'editor',category:'media',order:2},
+    {id:'media-videos',name:'Videos',icon:'🎬',route:'/platform/media/?section=videos',permission:'editor',category:'media',order:3},
+    {id:'media-audio',name:'Audio',icon:'🎵',route:'/platform/media/?section=audio',permission:'editor',category:'media',order:4},
+    {id:'media-documents',name:'Documents',icon:'📄',route:'/platform/media/?section=documents',permission:'editor',category:'media',order:5},
+    {id:'media-templates',name:'Templates',icon:'📋',route:'/platform/media/?section=templates',permission:'admin',category:'media',order:6},
+    {id:'media-uploads',name:'Uploads',icon:'📤',route:'/platform/media/?section=uploads',permission:'editor',category:'media',order:7},
+    {id:'media-library',name:'Library',icon:'🗂️',route:'/platform/media/?section=library',permission:'viewer',category:'media',order:8}
+  ];
+
+  (function registerModules() {
+    MEDIA_MODULES.forEach(function(mod) {
+      if (typeof WorkspaceEngine !== 'undefined') {
+        WorkspaceEngine.registerModule(mod);
+      }
+    });
+    WorkspaceEngine.setFeatureFlag('media_workspace', true, 'platform');
+  })();
+
+  // ─── State ───────────────────────────────────────────────
+  var state = {
+    user: null,
+    currentRoute: 'dashboard'
+  };
+
+  // ─── DOM Refs ────────────────────────────────────────────
+  var $ = function(id) { return document.getElementById(id); };
+  var content = $('mediaContent');
+  var pageTitle = $('pageTitle');
+  var navItems = document.querySelectorAll('.media-nav-item');
+
+  // ─── Init ────────────────────────────────────────────────
+  function init() {
+    firebase.auth().onAuthStateChanged(function(user) {
+      if (!user) {
+        window.location.href = '/platform/login/';
+        return;
+      }
+
+      state.user = user;
+      $('userEmail').textContent = user.email || '';
+      $('userAvatar').textContent = (user.displayName || user.email || 'M').charAt(0).toUpperCase();
+
+      handleRoute();
+      window.addEventListener('hashchange', handleRoute);
+    });
+
+    $('signOutBtn').addEventListener('click', function() {
+      firebase.auth().signOut();
+    });
+
+    $('sidebarToggle').addEventListener('click', function() {
+      $('mediaSidebar').classList.toggle('collapsed');
+    });
+
+    $('hamburgerBtn').addEventListener('click', function() {
+      $('mediaSidebar').classList.add('open');
+      $('sidebarOverlay').classList.add('open');
+    });
+
+    $('sidebarOverlay').addEventListener('click', function() {
+      $('mediaSidebar').classList.remove('open');
+      $('sidebarOverlay').classList.remove('open');
+    });
+
+    navItems.forEach(function(item) {
+      item.addEventListener('click', function() {
+        var route = item.getAttribute('data-route');
+        navigate(route);
+        $('mediaSidebar').classList.remove('open');
+        $('sidebarOverlay').classList.remove('open');
+      });
+    });
+  }
+
+  // ─── Navigation ──────────────────────────────────────────
+  function navigate(route) {
+    window.location.hash = '#' + route;
+  }
+
+  function handleRoute() {
+    var hash = window.location.hash.replace(/^#\/?/, '');
+    var route = hash || 'dashboard';
+    state.currentRoute = route;
+
+    navItems.forEach(function(item) {
+      item.classList.toggle('active', item.getAttribute('data-route') === route);
+    });
+
+    renderRoute(route);
+  }
+
+  function renderRoute(route) {
+    switch (route) {
+      case 'dashboard': renderDashboard(); break;
+      case 'images': renderPlaceholder('Images', '🖼️', 'Upload, manage, and organize image assets. Browse thumbnails, view metadata, and organize images into collections and albums.'); break;
+      case 'videos': renderPlaceholder('Videos', '🎬', 'Store and manage video assets. Preview thumbnails, organize playlists, and manage video metadata across your business.'); break;
+      case 'audio': renderPlaceholder('Audio', '🎵', 'Manage audio files, podcasts, and sound assets. Organize playlists and control audio metadata.'); break;
+      case 'documents': renderPlaceholder('Documents', '📄', 'Upload and organize PDFs, Word documents, spreadsheets, and other business documents with full-text search.'); break;
+      case 'templates': renderPlaceholder('Templates', '📋', 'Create and manage reusable media templates for consistent branding across your business — social media, banners, and more.'); break;
+      case 'uploads': renderPlaceholder('Uploads', '📤', 'Bulk upload interface for all media types. Track upload progress, view history, and manage pending uploads.'); break;
+      case 'library': renderPlaceholder('Library', '🗂️', 'Browse the complete media library. Search, filter by type, and access all uploaded assets in one unified view.'); break;
+      default: navigate('dashboard'); break;
+    }
+  }
+
+  // ─── DASHBOARD ───────────────────────────────────────────
+  function renderDashboard() {
+    pageTitle.textContent = 'Media Workspace';
+    content.innerHTML =
+      '<div class="breadcrumb">Media Workspace / Dashboard</div>' +
+      '<div class="media-stats-grid">' +
+        statCard('🏷️', '0', 'Total Assets') +
+        statCard('🖼️', '0', 'Images') +
+        statCard('🎬', '0', 'Videos') +
+        statCard('🎵', '0', 'Audio Files') +
+        statCard('💾', '0 B', 'Storage Usage') +
+      '</div>' +
+
+      '<div class="panel">' +
+        '<div class="panel-header">' +
+          '<div><div class="panel-title">Media Types</div><div class="panel-subtitle">Browse and manage all media assets</div></div>' +
+        '</div>' +
+        '<div class="media-section-grid">' +
+          sectionCard('🖼️', 'Images', 'Photos & graphics') +
+          sectionCard('🎬', 'Videos', 'Video assets') +
+          sectionCard('🎵', 'Audio', 'Sound & music') +
+          sectionCard('📄', 'Documents', 'PDFs & reports') +
+          sectionCard('📋', 'Templates', 'Brand templates') +
+          sectionCard('📤', 'Uploads', 'New uploads') +
+          sectionCard('🗂️', 'Library', 'All assets') +
+        '</div>' +
+      '</div>' +
+
+      '<div class="panel">' +
+        '<div class="panel-header">' +
+          '<div><div class="panel-title">Recent Media</div><div class="panel-subtitle">No recent uploads yet</div></div>' +
+        '</div>' +
+        '<div class="recent-grid">' +
+          '<div class="recent-item"><div class="recent-item-icon">📁</div><div class="recent-item-name">Drop files here</div></div>' +
+          '<div class="recent-item"><div class="recent-item-icon">🖼️</div><div class="recent-item-name">Image gallery</div></div>' +
+          '<div class="recent-item"><div class="recent-item-icon">🎬</div><div class="recent-item-name">Video library</div></div>' +
+          '<div class="recent-item"><div class="recent-item-icon">📄</div><div class="recent-item-name">Documents</div></div>' +
+          '<div class="recent-item"><div class="recent-item-icon">🎵</div><div class="recent-item-name">Audio files</div></div>' +
+          '<div class="recent-item"><div class="recent-item-icon">📋</div><div class="recent-item-name">Templates</div></div>' +
+        '</div>' +
+      '</div>' +
+
+      '<div class="panel">' +
+        '<div class="panel-header">' +
+          '<div><div class="panel-title">Getting Started</div><div class="panel-subtitle">Steps to enable media capabilities</div></div>' +
+        '</div>' +
+        '<div class="feature-list">' +
+          featureCard('📤', 'Upload Media', 'Upload images, videos, audio files, and documents to the media library.') +
+          featureCard('🏷️', 'Organize Assets', 'Create collections and tag media for easy retrieval and browsing.') +
+          featureCard('📋', 'Use Templates', 'Apply branded templates to create consistent media across your business.') +
+          featureCard('🔍', 'Search Library', 'Find any media asset quickly with full-text search and filters.') +
+        '</div>' +
+      '</div>';
+  }
+
+  // ─── PLACEHOLDER PAGE ────────────────────────────────────
+  function renderPlaceholder(name, icon, desc) {
+    pageTitle.textContent = name;
+
+    var features = getFeatures(name);
+
+    content.innerHTML =
+      '<div class="breadcrumb"><a onclick="navigate(\'dashboard\')">Media Workspace</a> / ' + name + '</div>' +
+      '<div class="placeholder-hero">' +
+        '<div class="hero-icon">' + icon + '</div>' +
+        '<div class="hero-title">' + name + '</div>' +
+        '<div class="hero-desc">' + desc + '</div>' +
+      '</div>' +
+      (features.length > 0
+        ? '<div class="panel">' +
+            '<div class="panel-header"><div><div class="panel-title">Coming Features</div></div></div>' +
+            '<div class="feature-list">' +
+              features.map(function(f) { return featureCard(f.icon, f.title, f.desc); }).join('') +
+            '</div>' +
+          '</div>'
+        : '') +
+      '<div class="panel">' +
+        '<div class="panel-header"><div><div class="panel-title">Status</div><div class="panel-subtitle">This section will be available in a future Sprint</div></div></div>' +
+        '<div class="empty-state">' +
+          '<div class="empty-state-icon">🚧</div>' +
+          '<div class="empty-state-title">Under Construction</div>' +
+          '<div class="empty-state-desc">' + name + ' is planned for a future Sprint. Check back after Media Workspace Integration.</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function getFeatures(section) {
+    var map = {
+      'Images': [
+        {icon:'🖼️',title:'Image Gallery',desc:'Browse all images in a grid view with thumbnails and previews.'},
+        {icon:'🏷️',title:'Categories',desc:'Organize images into collections and albums.'},
+        {icon:'📝',title:'Metadata',desc:'View and edit EXIF data, alt text, and descriptions.'}
+      ],
+      'Videos': [
+        {icon:'🎬',title:'Video Player',desc:'Preview videos directly in the browser.'},
+        {icon:'📋',title:'Playlists',desc:'Organize videos into playlists and categories.'},
+        {icon:'🎞️',title:'Thumbnails',desc:'Auto-generated thumbnails for easy browsing.'}
+      ],
+      'Audio': [
+        {icon:'🎵',title:'Audio Player',desc:'Listen to audio files directly in the workspace.'},
+        {icon:'📋',title:'Playlists',desc:'Organize audio files into collections.'},
+        {icon:'🏷️',title:'Metadata',desc:'View artist, album, duration, and format info.'}
+      ],
+      'Documents': [
+        {icon:'📄',title:'Document Viewer',desc:'Preview PDFs and documents in the browser.'},
+        {icon:'🔍',title:'Full-text Search',desc:'Search document contents with keyword highlighting.'},
+        {icon:'📁',title:'Organize',desc:'Group documents into folders and categories.'}
+      ],
+      'Templates': [
+        {icon:'📋',title:'Brand Templates',desc:'Create reusable templates with brand colors and fonts.'},
+        {icon:'🎨',title:'Customizable',desc:'Edit template variables for each use case.'},
+        {icon:'📤',title:'Export',desc:'Export templates to PNG, PDF, or social media formats.'}
+      ],
+      'Uploads': [
+        {icon:'📤',title:'Bulk Upload',desc:'Upload multiple files at once with progress tracking.'},
+        {icon:'🔄',title:'Processing',desc:'Auto-resize, compress, and optimize uploaded media.'},
+        {icon:'📋',title:'Upload History',desc:'View and manage your upload history.'}
+      ],
+      'Library': [
+        {icon:'🗂️',title:'Unified View',desc:'Browse all media types in one place.'},
+        {icon:'🔍',title:'Search & Filter',desc:'Find assets by name, type, date, or tags.'},
+        {icon:'📊',title:'Usage Stats',desc:'See which assets are most used across your business.'}
+      ]
+    };
+    return map[section] || [];
+  }
+
+  // ─── Helpers ──────────────────────────────────────────────
+  function statCard(icon, value, label) {
+    return '<div class="media-stat-card"><div class="media-stat-card-icon">' + icon + '</div><div class="media-stat-card-value">' + value + '</div><div class="media-stat-card-label">' + label + '</div></div>';
+  }
+
+  function sectionCard(icon, name, desc) {
+    return '<div class="media-section-card" onclick="navigate(\'' + name.toLowerCase() + '\')">' +
+      '<div class="section-icon">' + icon + '</div>' +
+      '<div class="section-name">' + name + '</div>' +
+      '<div class="section-desc">' + desc + '</div>' +
+    '</div>';
+  }
+
+  function featureCard(icon, title, desc) {
+    return '<div class="feature-card"><div class="feature-card-icon">' + icon + '</div><div class="feature-card-info"><div class="feature-card-title">' + title + '</div><div class="feature-card-desc">' + desc + '</div></div></div>';
+  }
+
+  window.navigate = navigate;
+
+  // ─── Start ───────────────────────────────────────────────
+  init();
+})();
+</script>
+</body>
+</html>
