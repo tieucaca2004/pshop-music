@@ -1,0 +1,96 @@
+<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Workspace - PSH Console</title><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"><style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;color:#1d1d1f;min-height:100vh;display:flex}
+.ws-sidebar{width:260px;min-height:100vh;background:#fff;border-right:1px solid #e5e5ea;display:flex;flex-direction:column;flex-shrink:0}
+.ws-brand{padding:1rem 1.25rem;border-bottom:1px solid #e5e5ea;display:flex;align-items:center;gap:0.75rem}
+.ws-logo{width:32px;height:32px;background:linear-gradient(135deg,#4F46E5,#10B981);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:0.9rem}
+.ws-brand-text{font-weight:600;font-size:0.95rem}
+.ws-nav{flex:1;padding:0.75rem;overflow-y:auto}
+.ws-nav-item{display:flex;align-items:center;gap:0.75rem;padding:0.6rem 0.75rem;border-radius:8px;color:#515154;font-size:0.9rem;text-decoration:none;transition:all .15s;margin-bottom:2px}
+.ws-nav-item:hover{background:#f5f5f7;color:#1d1d1f}
+.ws-nav-item.active{background:#e8e8ff;color:#4F46E5;font-weight:500}
+.ws-nav-cat{font-size:0.7rem;font-weight:600;color:#86868b;text-transform:uppercase;padding:0.75rem 0.75rem 0.35rem;letter-spacing:0.05em}
+.ws-main{flex:1;display:flex;flex-direction:column}
+.ws-header{background:#fff;border-bottom:1px solid #e5e5ea;padding:0.75rem 1.5rem;display:flex;align-items:center;justify-content:space-between}
+.ws-biz-switcher{display:flex;align-items:center;gap:0.5rem;position:relative;cursor:pointer;padding:0.4rem 0.75rem;border-radius:6px;transition:background .15s}
+.ws-biz-switcher:hover{background:#f5f5f7}
+.ws-biz-name{font-weight:600;font-size:0.95rem}
+.ws-biz-dropdown{display:none;position:absolute;top:100%;left:0;background:#fff;border:1px solid #e5e5ea;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.08);min-width:200px;z-index:10;padding:0.25rem}
+.ws-biz-dropdown.show{display:block}
+.ws-biz-option{padding:0.6rem 0.75rem;cursor:pointer;font-size:0.85rem;transition:background .15s}
+.ws-biz-option:hover{background:#f5f5f7}
+.ws-user{display:flex;align-items:center;gap:0.5rem;font-size:0.85rem;color:#86868b}
+.ws-content{flex:1;padding:1.5rem;overflow-y:auto;background:#f5f5f7}
+.ws-dashboard{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem;margin-bottom:1.5rem}
+.ws-card{background:#fff;border-radius:10px;padding:1.25rem;border:1px solid #e5e5ea}
+.ws-card-num{font-size:1.75rem;font-weight:700;color:#1d1d1f}
+.ws-card-label{font-size:0.8rem;color:#86868b;margin-top:0.25rem}
+.ws-panel{background:#fff;border-radius:10px;padding:1.5rem;border:1px solid #e5e5ea;margin-bottom:1rem}
+.ws-panel h3{font-weight:600;font-size:1rem;margin-bottom:0.75rem}
+.ws-empty{padding:3rem;text-align:center;color:#86868b}
+@media(max-width:768px){.ws-sidebar{width:64px}.ws-sidebar .ws-brand-text,.ws-sidebar .ws-nav-item span{display:none}.ws-nav-item{justify-content:center;padding:0.6rem}.ws-header{padding:0.5rem 0.75rem}}
+</style></head>
+<body>
+<aside class="ws-sidebar">
+<div class="ws-brand"><div class="ws-logo">C</div><span class="ws-brand-text">PSH Console</span></div>
+<nav class="ws-nav">
+<div class="ws-nav-cat">Main</div>
+<a class="ws-nav-item active" href="/workspace/" id="navDashboard">📊 <span>Dashboard</span></a>
+<div class="ws-nav-cat">Business</div>
+<a class="ws-nav-item" href="/workspace/products">📦 <span>Products</span></a>
+<a class="ws-nav-item" href="/workspace/orders">📋 <span>Orders</span></a>
+<a class="ws-nav-item" href="/workspace/customers">👥 <span>Customers</span></a>
+<div class="ws-nav-cat">Content</div>
+<a class="ws-nav-item" href="/workspace/cms">📝 <span>CMS</span></a>
+<a class="ws-nav-item" href="/workspace/media">🖼️ <span>Media</span></a>
+<a class="ws-nav-item" href="/workspace/ai">🤖 <span>AI</span></a>
+<div class="ws-nav-cat">Settings</div>
+<a class="ws-nav-item" href="/workspace/team">👤 <span>Team</span></a>
+<a class="ws-nav-item" href="/workspace/settings">⚙️ <span>Settings</span></a>
+</nav></aside>
+<main class="ws-main">
+<header class="ws-header">
+<div class="ws-biz-switcher" id="bizSwitcher">
+<div><div class="ws-logo" id="switcherLogo" style="width:24px;height:24px;font-size:0.7rem">C</div></div>
+<div><div class="ws-biz-name" id="currentBiz">Loading...</div></div>
+<div class="ws-biz-dropdown" id="bizDropdown"></div>
+</div>
+<div class="ws-user"><span id="userEmail"></span><button class="btn-secondary" style="font-size:0.8rem;padding:0.3rem 0.6rem" onclick="firebase.auth().signOut();window.location='/console/business-selector.html'">Sign Out</button></div>
+</header>
+<div class="ws-content" id="wsContent">
+<div class="ws-dashboard" id="dashStats"></div>
+<div class="ws-panel"><h3>Welcome to PSH Console</h3><p style="color:#86868b;font-size:0.9rem">Your Workspace is ready. Use the sidebar to access business modules. More features will be added in upcoming sprints.</p></div>
+</div></main>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script>
+(function(){
+var bid=window.location.pathname.split('/')[2];if(!bid)bid=localStorage.getItem('psh_last_biz');if(!bid){window.location='/console/business-selector.html';return;}
+localStorage.setItem('psh_last_biz',bid);
+document.getElementById('currentBiz').textContent=bid;
+firebase.auth().onAuthStateChanged(function(u){
+if(!u){window.location='/console/business-selector.html';return;}
+document.getElementById('userEmail').textContent=u.email||'';
+document.getElementById('bizSwitcher').onclick=function(){
+var dd=document.getElementById('bizDropdown');
+if(dd.classList.contains('show')){dd.classList.remove('show');return;}
+firebase.database().ref('businessMembers').once('value').then(function(s){
+var all=s.val(),list=[],uid=u.uid;if(all)Object.keys(all).forEach(function(bid2){if(all[bid2]&&all[bid2][uid])list.push({businessId:bid2,role:all[bid2][uid].role})});
+dd.innerHTML=list.map(function(b){return'<div class="ws-biz-option" onclick="window.location=\'/workspace/'+b.businessId+'\'">'+(b.businessId===bid?'✓ ':'')+b.businessId+' <span style="color:#86868b;font-size:0.75rem">('+b.role+')</span></div>'}).join('');
+dd.classList.add('show');
+});};
+firebase.database().ref('businesses/'+bid+'/info').once('value').then(function(s){
+var i=s.val();if(i)document.getElementById('currentBiz').textContent=i.displayName||bid;
+});
+firebase.database().ref('products').once('value').then(function(s){
+var p=s.val()?Object.keys(s.val()).length:0;
+document.getElementById('dashStats').innerHTML=
+'<div class="ws-card"><div class="ws-card-num">'+p+'</div><div class="ws-card-label">Products</div></div>'+
+'<div class="ws-card"><div class="ws-card-num">—</div><div class="ws-card-label">Orders</div></div>'+
+'<div class="ws-card"><div class="ws-card-num">—</div><div class="ws-card-label">Customers</div></div>'+
+'<div class="ws-card"><div class="ws-card-num">1</div><div class="ws-card-label">Members</div></div>';
+});
+});})();
+</script></body></html>
