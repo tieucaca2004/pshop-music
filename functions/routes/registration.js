@@ -26,7 +26,7 @@ function getWebApiKey() {
     const key = functions.config().registration?.web_api_key;
     if (key) return key;
   } catch (_) { /* functions SDK not available */ }
-  return process.env.FIREBASE_WEB_API_KEY || 'AIzaSyD-R2cQb-EI4I8wy60z1tuShIXny39Rawc';
+  return process.env.FIREBASE_WEB_API_KEY || ""
 }
 
 function makeSlug(name) {
