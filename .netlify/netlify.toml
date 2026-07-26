@@ -1,13 +1,13 @@
 headersOrigin = "config"
+redirectsOrigin = "config"
 plugins = []
-redirects = []
 
 [functions]
 
 [functions."*"]
 
 [build]
-publish = "D:\\PshopMusicSite"
+publish = "/home/node/.openclaw/workspace/psh"
 publishOrigin = "config"
 
 [build.environment]
@@ -17,25 +17,12 @@ publishOrigin = "config"
 [build.processing.css]
 
 [build.processing.html]
-pretty_urls = false
 
 [build.processing.images]
 
 [build.processing.js]
 
 [build.services]
-
-[[headers]]
-for = "/admin.html"
-
-[headers.values]
-X-Robots-Tag = "noindex, nofollow"
-
-[[headers]]
-for = "/admin/*"
-
-[headers.values]
-X-Robots-Tag = "noindex, nofollow"
 
 [[headers]]
 for = "/*"
@@ -46,12 +33,7 @@ X-Content-Type-Options = "nosniff"
 Strict-Transport-Security = "max-age=31536000; includeSubDomains"
 Referrer-Policy = "strict-origin-when-cross-origin"
 Permissions-Policy = "camera=(), microphone=(), geolocation=()"
-
-[[headers]]
-for = "/js/*"
-
-[headers.values]
-Cache-Control = "public, max-age=31536000, immutable"
+Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
 for = "/css/*"
@@ -60,19 +42,49 @@ for = "/css/*"
 Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
-for = "/images/*"
+for = "/js/*"
 
 [headers.values]
 Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
-for = "/favicon*"
+for = "*.webp"
 
 [headers.values]
-Cache-Control = "public, max-age=604800, immutable"
+Cache-Control = "public, max-age=31536000, immutable"
 
-[[headers]]
-for = "/*.html"
+[[redirects]]
+from = "/admin"
+to = "/admin/login.html"
+status = 200.0
+force = false
 
-[headers.values]
-Cache-Control = "public, max-age=0, must-revalidate"
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/admin/*"
+to = "/admin/:splat/login.html"
+status = 200.0
+force = false
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
+
+[[redirects]]
+from = "/products/*"
+to = "/category.html?q=:splat"
+status = 200.0
+force = false
+
+[redirects.query]
+
+[redirects.conditions]
+
+[redirects.headers]
