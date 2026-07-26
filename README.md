@@ -144,3 +144,16 @@ Kho ảnh dùng chung cho Product/Blog/Banner/Slider/Category — xây hoàn to�
 
 - Toàn bộ dữ liệu mới (menu/footer/settings/danh mục...) dùng cơ chế "seed nếu rỗng, backfill nếu thiếu key" trong `SiteContentDB`/`CategoryDB` — không ghi đè dữ liệu admin đã tự chỉnh.
 - `wordpress-theme/` là gói theme WordPress dựng ở giai đoạn đầu, hiện **không đồng bộ** với kiến trúc CMS mới này — bỏ qua trừ khi được yêu cầu cập nhật riêng.
+
+
+---
+
+## Multi-Tenant Architecture (Approved 2026-07-26)
+
+PSH Business Platform đã chính thức phê duyệt kiến trúc multi-tenant Option B:
+
+- **Database Structure:** `businesses/{businessId}/...` namespace — cô lập dữ liệu giữa các tenant
+- **Data Provider:** Explicit `businessId` parameter xuyên suốt mọi hàm — clean architecture
+- **Authentication:** `businessMembers/{businessId}/{uid}` — một user nhiều doanh nghiệp, roles/{uid} legacy cho PShop Music
+
+Xem `docs/DECISION_RECORD_BUSINESS_MANAGER.md` cho chi tiết.
