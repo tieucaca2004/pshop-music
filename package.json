@@ -22,6 +22,9 @@
   },
   "homepage": "https://github.com/tieucaca2004/pshop-music#readme",
   "dependencies": {
-    "playwright": "^1.61.1"
+    "playwright": "^1.62.0"
+  },
+  "devDependencies": {
+    "firebase-tools": "^15.24.0"
   }
 }
