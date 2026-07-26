@@ -1,5 +1,11 @@
 # PSH PRODUCTION ARCHITECTURE
 
+> **Architecture Decisions — FOUNDER APPROVED (2026-07-26):**
+> - Database Structure: **businesses/{businessId}/...** namespace
+> - Data Provider: **Explicit businessId** parameter everywhere
+> - Authentication: **businessMembers/{businessId}/{uid}**, roles/{uid} legacy
+
+
 Target-state architecture for PSH Platform as a Business Operating Platform — current business (Pshop Music) live, future businesses (A Tiểu, others) accommodated by design without being implemented. This is a design document; nothing here is built by writing this file.
 
 ---

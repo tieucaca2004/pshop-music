@@ -1,6 +1,13 @@
 # Decision Record — Business Manager Foundation (Multi-Tenant Phase 1)
 
-**Trạng thái: CHỜ PHÊ DUYỆT.** Không có code nào được triển khai cho 3 quyết định dưới đây — đúng Architectural Constraint của Sprint 10 Requirement #1: "Nếu cần thay đổi Database Structure / Data Provider / Authentication Model → Không tự triển khai. Tạo Decision Record. Chờ phê duyệt."
+**Trạng thái: ✅ FOUNDER APPROVED (2026-07-26).**
+
+> **Quyết định của Founder (26/7/2026):**
+> - Database Structure: **Option B** — businesses/{businessId}/... namespace
+> - Data Provider: **Option B** — Explicit businessId parameter everywhere
+> - Authentication Model: **Option B** — businessMembers/{businessId}/{uid}, roles/{uid} giữ nguyên
+>
+> Founder đã chính thức phê duyệt Option B cho cả 3 quyết định kiến trúc. Không có code nào được triển khai cho 3 quyết định dưới đây — đúng Architectural Constraint của Sprint 10 Requirement #1: "Nếu cần thay đổi Database Structure / Data Provider / Authentication Model → Không tự triển khai. Tạo Decision Record. Chờ phê duyệt."
 
 Tài liệu này trình bày 3 quyết định kiến trúc độc lập nhưng liên quan chặt chẽ, cần Chief Architect chọn trước khi bất kỳ Requirement Business Manager nào có thể viết code thật.
 
