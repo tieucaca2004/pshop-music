@@ -1,0 +1,10 @@
+{
+  "rules": {
+    "roles": { ".read": "auth != null || !data.exists()", "$uid": { ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || (auth.uid === $uid && !root.child('roles').exists()))", ".validate": "newData.hasChildren(['role']) && (newData.child('role').val() === 'admin' || newData.child('role').val() === 'editor' || newData.child('role').val() === 'agent')" } },
+    "businessMembers": { "$businessId": { "$uid": { ".read": "auth != null", ".write": "auth != null && root.child('businessMembers').child($businessId).child(auth.uid).child('role').val() === 'owner'" } } },
+    "businesses": { "$businessId": { ".read": "auth != null && root.child('businessMembers').child($businessId).child(auth.uid).exists()", ".write": "auth != null && (root.child('businessMembers').child($businessId).child(auth.uid).child('role').val() === 'owner' || root.child('businessMembers').child($businessId).child(auth.uid).child('role').val() === 'admin')", "products": { ".indexOn": ["name","category","slug","status"] }, "categories": { ".indexOn": ["code","label","order"] }, "orders": { ".indexOn": ["orderNumber","createdAt","customerId","orderStatus"] }, "customers": { ".indexOn": ["phone","email","fullName","createdAt"] }, "inventory": { ".indexOn": ["sku","productId","stock"] } } },
+    "products": { ".read": true, ".write": "auth != null && root.child('roles').child(auth.uid).exists()" },
+    "categories": { ".read": true, ".write": "auth != null && root.child('roles').child(auth.uid).exists()" },
+    "$other": { ".read": false, ".write": false }
+  }
+}

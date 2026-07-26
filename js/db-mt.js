@@ -80,3 +80,42 @@ var DBMT = (function() {
   };
 })();
 if (typeof module !== 'undefined' && module.exports) { module.exports = DBMT; }
+
+// === Phase 2: Expanded Collections ===
+
+function getOrders(businessId) { return getAll('orders', businessId); }
+function getOrder(businessId, id) { return ref(businessId, 'orders/' + id).once('value').then(function(s) { return s.val(); }); }
+function addOrder(businessId, data) { return ref(businessId, 'orders').push(data).then(function(r) { return r.key; }); }
+function updateOrder(businessId, id, data) { return ref(businessId, 'orders/' + id).update(data); }
+
+function getCustomers(businessId) { return getAll('customers', businessId); }
+function getCustomer(businessId, id) { return ref(businessId, 'customers/' + id).once('value').then(function(s) { return s.val(); }); }
+function addCustomer(businessId, data) { return ref(businessId, 'customers').push(data).then(function(r) { return r.key; }); }
+
+function getInventory(businessId) { return getAll('inventory', businessId); }
+function updateInventory(businessId, sku, data) { return ref(businessId, 'inventory/' + sku).update(data); }
+
+function getMedia(businessId) { return getAll('media', businessId); }
+function addMedia(businessId, data) { return ref(businessId, 'media').push(data).then(function(r) { return r.key; }); }
+
+function getCms(businessId, collection) { return getAll('cms/' + collection, businessId); }
+function updateCms(businessId, collection, id, data) { return ref(businessId, 'cms/' + collection + '/' + id).update(data); }
+
+function getAiJobs(businessId) { return getAll('aiJobs', businessId); }
+function getAiDrafts(businessId) { return getAll('aiDrafts', businessId); }
+function addAiDraft(businessId, data) { return ref(businessId, 'aiDrafts').push(data).then(function(r) { return r.key; }); }
+
+function getFiles(businessId) { return getAll('files', businessId); }
+function getAnalytics(businessId, period) { return getAll('analytics/' + (period || 'daily'), businessId); }
+function getNotifications(businessId) { return getAll('notifications', businessId); }
+function addNotification(businessId, data) { return ref(businessId, 'notifications').push(data).then(function(r) { return r.key; }); }
+
+// Helper
+function getAll(collection, businessId) {
+  return ref(businessId, collection).once('value').then(function(s) {
+    var d = s.val(); return d ? Object.keys(d).map(function(k) { return Object.assign({ id: k }, d[k]); }) : [];
+  });
+}
+
+// Export additions
+if (typeof module !== 'undefined' && module.exports) { module.exports = DBMT; }
