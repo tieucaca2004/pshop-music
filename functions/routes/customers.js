@@ -1,3 +1,7 @@
+// MT-enabled
+const { sendSuccess, sendError } = require("../shared/middleware");
+const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter");
+
 /*
  * routes/customers.js — Multi-Tenant Customers (Phase 2, Task 10.0).
  *

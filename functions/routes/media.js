@@ -1,3 +1,7 @@
+// MT-enabled
+const { sendSuccess, sendError } = require("../shared/middleware");
+const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter");
+
 /*
  * routes/media.js — Sprint 14 Phase 2 (FINAL mục 17.13). Wrap Firebase
  * Storage qua Admin SDK — song song với `MediaLibrary`/`StorageUpload`

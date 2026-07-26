@@ -1,3 +1,7 @@
+// MT-enabled
+const { sendSuccess, sendError } = require("../shared/middleware");
+const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter");
+
 /*
  * routes/reports.js — Multi-Tenant Reports & Dashboard (Phase 3, Task 14.0).
  *

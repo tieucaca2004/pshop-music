@@ -1,3 +1,7 @@
+// MT-enabled
+const { sendSuccess, sendError } = require("../shared/middleware");
+const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter");
+
 /*
  * routes/payments.js — Multi-Tenant Payments (Phase 3, Task 12.0).
  *

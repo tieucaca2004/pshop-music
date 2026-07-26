@@ -1,3 +1,7 @@
+// MT-enabled
+const { sendSuccess, sendError } = require("../shared/middleware");
+const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter");
+
 /*
  * routes/webhooks.js — Sprint 14 Phase 6. Đăng ký/huỷ URL nhận Webhook Event
  * (`webhookSubs`) + đọc lại Event log (`apiEvents`, `shared/eventBus.js`) —

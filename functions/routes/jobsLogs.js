@@ -1,3 +1,7 @@
+// MT-enabled
+const { sendSuccess, sendError } = require("../shared/middleware");
+const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter");
+
 /*
  * routes/jobsLogs.js — Sprint 14 Phase 3 (FINAL mục 17.15, 17.23). Queue/Jobs
  * (`aiJobs`, đúng `JobDB`) + Logs (`aiLogs`, đúng `LogDB`) + History/

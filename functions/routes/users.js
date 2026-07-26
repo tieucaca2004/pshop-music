@@ -1,3 +1,7 @@
+// MT-enabled
+const { sendSuccess, sendError } = require("../shared/middleware");
+const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter");
+
 /*
  * routes/users.js — Sprint 14 Phase 2 (FINAL mục 17.22). Node RTDB thật:
  * `roles/{uid}` = { email, name, role, createdAt } (đúng shape xác nhận từ

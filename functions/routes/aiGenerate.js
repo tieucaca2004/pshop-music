@@ -1,3 +1,7 @@
+// MT-enabled
+const { sendSuccess, sendError } = require("../shared/middleware");
+const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter");
+
 /*
  * routes/aiGenerate.js — Sprint 14 Phase 5 (FINAL mục 17.19). `POST
  * /v1/ai/{route}/generate` cho 9 module AI thật + 3 route khung (Video/

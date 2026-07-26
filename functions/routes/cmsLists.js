@@ -1,3 +1,7 @@
+// MT-enabled
+const { sendSuccess, sendError } = require("../shared/middleware");
+const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter");
+
 /*
  * routes/cmsLists.js — Sprint 14 Phase 2 (FINAL mục 20 Phase 1 gốc, đổi số
  * Phase theo điều chỉnh Founder; mục 17.2-17.9). CRUD API cho 7 module CMS

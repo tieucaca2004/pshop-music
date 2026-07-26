@@ -1,3 +1,7 @@
+// MT-enabled
+const { sendSuccess, sendError } = require("../shared/middleware");
+const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter");
+
 /*
  * routes/health.js — Health API (Sprint 14 Phase 1, FINAL mục 12). 2 tầng:
  * publicHealth (GET /v1/health, KHÔNG cần token — cho uptime monitor/load

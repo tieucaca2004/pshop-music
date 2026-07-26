@@ -1,3 +1,7 @@
+// MT-enabled
+const { sendSuccess, sendError } = require("../shared/middleware");
+const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter");
+
 /*
  * routes/founder.js — Sprint 14 Phase 3 (`/v1/founder/home`) + Phase 5
  * (`/v1/ai/one-click-marketing` nối logic thật).

@@ -1,3 +1,7 @@
+// MT-enabled
+const { sendSuccess, sendError } = require("../shared/middleware");
+const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter");
+
 /*
  * routes/facebook.js — Sprint 14 Phase 3 (FINAL mục 17.21). `connection`/
  * `health`/`oauth/start` đọc/ghi trực tiếp RTDB (đúng node đã xác nhận:

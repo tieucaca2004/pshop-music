@@ -1,3 +1,7 @@
+// MT-enabled
+const { sendSuccess, sendError } = require("../shared/middleware");
+const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter");
+
 /*
  * routes/selfHealing.js — Sprint 14 Phase 6 (FINAL mục 13). `GET
  * /v1/{module}/status`, `POST /v1/{module}/validate`, `POST

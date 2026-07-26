@@ -1,3 +1,7 @@
+// MT-enabled
+const { sendSuccess, sendError } = require("../shared/middleware");
+const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter");
+
 /*
  * routes/socialMediaCenter.js — Sprint 14 Phase 3 (FINAL mục 17.20). Lọc
  * `aiDrafts` theo 4 module thật (`RELEVANT_MODULES`, đúng

@@ -1,3 +1,7 @@
+// MT-enabled
+const { sendSuccess, sendError } = require("../shared/middleware");
+const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter");
+
 /*
  * routes/openclaw.js — Sprint 14 Phase 6 (FINAL mục 19, OpenClaw Integration
  * — chuẩn hoá). "Nguyên tắc": OpenClaw KHÔNG BAO GIỜ chạm Firebase trực

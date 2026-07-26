@@ -1,3 +1,7 @@
+// MT-enabled
+const { sendSuccess, sendError } = require("../shared/middleware");
+const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter");
+
 /*
  * routes/cmsSingletons.js — Sprint 14 Phase 2 (FINAL mục 17.8, 17.10-17.12,
  * 17.22 "Settings" phần site identity/contact). 5 module dạng "1 node = 1

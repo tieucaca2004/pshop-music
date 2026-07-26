@@ -1,3 +1,7 @@
+// MT-enabled
+const { sendSuccess, sendError } = require("../shared/middleware");
+const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter");
+
 /*
  * routes/drafts.js — Sprint 14 Phase 3 (FINAL mục 17.14). Node RTDB thật
  * `aiDrafts`, đúng `DraftDB` (js/ai/ai-db.js:8). Publish/Reject port từ
