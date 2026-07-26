@@ -96,3 +96,33 @@ async function listMembers(businessId) {
 
 // Export additions
 module.exports = { create, update, archive, restore, softDelete, transfer, getInfo, listByUser, log, invite, acceptInvitation, cancelInvitation, listInvitations, removeMember, changeRole, suspendMember, unsuspendMember, listMembers };
+
+// === Reject Invitation ===
+async function rejectInvitation(invId, uid) {
+  const snap = await db.ref(INV + '/' + invId).once('value');
+  const inv = snap.val();
+  if (!inv) throw new Error('Invalid invitation');
+  if (inv.status !== 'pending') throw new Error('Invitation already ' + inv.status);
+  await db.ref(INV + '/' + invId + '/status').set('rejected');
+  await db.ref(INV + '/' + invId + '/rejectedBy').set(uid);
+  await log(inv.businessId, uid, 'invitation.rejected', { invitationId: invId });
+}
+
+// === Leave Business ===
+async function leaveBusiness(businessId, uid) {
+  const snap = await db.ref(MEMBERS + '/' + businessId + '/' + uid + '/role').once('value');
+  const role = snap.val();
+  if (role === 'owner') throw new Error('Owner cannot leave. Transfer ownership first.');
+  await db.ref(MEMBERS + '/' + businessId + '/' + uid).remove();
+  await log(businessId, uid, 'member.left', {});
+}
+
+// === Business Settings CRUD ===
+async function getSettings(businessId) { const s = await db.ref(BIZ + '/' + businessId + '/settings').once('value'); return s.val() || {}; }
+async function updateGeneralSettings(businessId, data, uid) { await db.ref(BIZ + '/' + businessId + '/settings/general').update(data); await log(businessId, uid, 'settings.general_updated', data); }
+async function updateBranding(businessId, data, uid) { await db.ref(BIZ + '/' + businessId + '/settings/branding').update(data); await log(businessId, uid, 'settings.branding_updated', data); }
+async function updateAISettings(businessId, data, uid) { await db.ref(BIZ + '/' + businessId + '/settings/ai').update(data); await log(businessId, uid, 'settings.ai_updated', data); }
+async function updateBilling(businessId, data, uid) { await db.ref(BIZ + '/' + businessId + '/settings/billing').update(data); await log(businessId, uid, 'settings.billing_updated', data); }
+async function updateLocalization(businessId, data, uid) { await db.ref(BIZ + '/' + businessId + '/info').update(data); await log(businessId, uid, 'settings.localization_updated', data); }
+
+module.exports = { create, update, archive, restore, softDelete, transfer, getInfo, listByUser, log, invite, acceptInvitation, cancelInvitation, rejectInvitation, listInvitations, removeMember, changeRole, suspendMember, unsuspendMember, listMembers, leaveBusiness, getSettings, updateGeneralSettings, updateBranding, updateAISettings, updateBilling, updateLocalization };
