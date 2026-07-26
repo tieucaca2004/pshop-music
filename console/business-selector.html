@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PSH Console</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:#f5f5f7;color:#1d1d1f;min-height:100vh}
+.console-shell{display:flex;flex-direction:column;min-height:100vh}
+.console-header{background:#fff;border-bottom:1px solid #e5e5ea;padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between}
+.console-brand{display:flex;align-items:center;gap:0.75rem}
+.console-logo{width:36px;height:36px;background:linear-gradient(135deg,#4F46E5,#10B981);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.1rem}
+.console-brand-text{font-weight:600;font-size:1.15rem;color:#1d1d1f}
+.console-user{font-size:0.85rem;color:#86868b}
+.console-main{flex:1;display:flex;align-items:center;justify-content:center;padding:2rem}
+.console-container{width:100%;max-width:720px}
+.console-welcome h1{font-size:1.75rem;font-weight:600;margin-bottom:0.5rem}
+.console-welcome p{color:#86868b;font-size:1rem;margin-bottom:2rem}
+.business-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;margin-bottom:2rem}
+.business-card{background:#fff;border-radius:12px;padding:1.5rem;border:1px solid #e5e5ea;cursor:pointer;transition:all .2s;position:relative}
+.business-card:hover{border-color:#4F46E5;box-shadow:0 4px 20px rgba(79,70,229,.1);transform:translateY(-2px)}
+.business-card-logo{width:48px;height:48px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1.2rem;margin-bottom:1rem}
+.business-card h3{font-weight:600;font-size:1.05rem;margin-bottom:0.25rem}
+.business-card .biz-type{font-size:0.8rem;color:#86868b;margin-bottom:0.5rem}
+.business-card .biz-meta{display:flex;gap:1rem;font-size:0.8rem;color:#86868b}
+.business-card .biz-role{padding:0.2rem 0.6rem;background:#e8e8ff;color:#4F46E5;border-radius:4px;font-weight:500}
+.create-card{border:2px dashed #d1d1d6;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:160px;cursor:pointer;transition:all .2s}
+.create-card:hover{border-color:#4F46E5;background:rgba(79,70,229,.02)}
+.create-card .plus{font-size:2rem;color:#4F46E5;margin-bottom:0.5rem}
+.create-card p{color:#4F46E5;font-weight:500;font-size:0.95rem}
+.console-footer{text-align:center;padding:1rem;font-size:0.8rem;color:#c7c7cc}
+.loading{text-align:center;padding:3rem;color:#86868b;font-size:1rem}
+@media(max-width:640px){.console-header{padding:0.75rem 1rem}.console-main{padding:1rem}.business-grid{grid-template-columns:1fr}.business-card{padding:1rem}.console-welcome h1{font-size:1.4rem}}
+</style>
+</head>
+<body>
+<div class="console-shell">
+  <header class="console-header">
+    <div class="console-brand">
+      <div class="console-logo">C</div>
+      <span class="console-brand-text">PSH Console</span>
+    </div>
+    <div class="console-user" id="userEmail"></div>
+  </header>
+  <main class="console-main">
+    <div class="console-container">
+      <div id="loadingMsg" class="loading">&#9679;&#9679;&#9679; Loading...</div>
+      <div id="businessSelector" style="display:none">
+        <div class="console-welcome">
+          <h1 id="welcomeMsg">Welcome back</h1>
+          <p>Choose a business to continue.</p>
+        </div>
+        <div class="business-grid" id="businessGrid"></div>
+      </div>
+    </div>
+  </main>
+  <footer class="console-footer">PSH Console &mdash; Business Operating Platform</footer>
+</div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script>
+(function(){
+  var LS_KEY = 'psh_last_business';
+  var grid = document.getElementById('businessGrid');
+  var selector = document.getElementById('businessSelector');
+  var loading = document.getElementById('loadingMsg');
+
+  function redirectTo(businessId) {
+    localStorage.setItem(LS_KEY, businessId);
+    window.location = '/workspace/' + businessId;
+  }
+
+  firebase.auth().onAuthStateChanged(function(user) {
+    if (!user) {
+      window.location = '/platform/login/';
+      return;
+    }
+    document.getElementById('userEmail').textContent = user.email || '';
+    document.getElementById('welcomeMsg').textContent = 'Welcome back, ' + (user.displayName || user.email || 'User');
+
+    firebase.database().ref('businessMembers').once('value').then(function(snap) {
+      var all = snap.val();
+      var memberships = [];
+      var uid = user.uid;
+      if (all) {
+        Object.keys(all).forEach(function(bid) {
+          var biz = all[bid];
+          if (biz && biz[uid]) {
+            memberships.push({ businessId: bid, member: biz[uid] });
+          }
+        });
+      }
+
+      loading.style.display = 'none';
+
+      if (memberships.length === 0) {
+        window.location = '/business/create';
+        return;
+      }
+
+      // Smart routing: check if last business exists
+      var lastBiz = localStorage.getItem(LS_KEY);
+      if (memberships.length === 1) {
+        redirectTo(memberships[0].businessId);
+        return;
+      }
+      if (lastBiz && memberships.some(function(m) { return m.businessId === lastBiz; })) {
+        redirectTo(lastBiz);
+        return;
+      }
+
+      selector.style.display = 'block';
+
+      // Fetch business info for each
+      var bizPromises = memberships.map(function(m) {
+        return firebase.database().ref('businesses/' + m.businessId + '/info').once('value').then(function(s) {
+          var info = s.val() || {};
+          // Count members
+          return firebase.database().ref('businessMembers/' + m.businessId).once('value').then(function(ms) {
+            var memberCount = ms.val() ? Object.keys(ms.val()).length : 0;
+            return { businessId: m.businessId, info: info, role: m.member.role, memberCount: memberCount };
+          });
+        });
+      });
+
+      Promise.all(bizPromises).then(function(bizList) {
+        // Sort by displayName
+        bizList.sort(function(a, b) { return (a.info.displayName || '').localeCompare(b.info.displayName || ''); });
+
+        grid.innerHTML = bizList.map(function(b) {
+          var initial = (b.info.displayName || b.businessId).charAt(0).toUpperCase();
+          return '<div class="business-card" onclick="redirectTo(\'' + b.businessId + '\')">' +
+            '<div class="business-card-logo" style="background:linear-gradient(135deg,' + getColor(b.businessId) + ')">' + initial + '</div>' +
+            '<h3>' + (b.info.displayName || b.businessId) + '</h3>' +
+            '<div class="biz-type">' + (b.info.slug || b.businessId) + ' &middot; ' + (b.info.plan || 'free') + '</div>' +
+            '<div class="biz-meta"><span class="biz-role">' + cap(b.role) + '</span><span>' + b.memberCount + ' member' + (b.memberCount !== 1 ? 's' : '') + '</span></div>' +
+            '</div>';
+        }).join('') +
+        '<div class="business-card create-card" onclick="window.location=\'/business/create\'">' +
+        '<div class="plus">+</div><p>Create Business</p></div>';
+
+        selector.style.display = 'block';
+      });
+    });
+  });
+
+  function getColor(id) {
+    var colors = ['#4F46E5,#10B981','#F59E0B,#EF4444','#8B5CF6,#EC4899','#06B6D4,#10B981','#F97316,#F59E0B'];
+    var idx = 0; for (var i = 0; i < id.length; i++) idx += id.charCodeAt(i);
+    return colors[idx % colors.length];
+  }
+  function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+  window.redirectTo = redirectTo;
+})();
+</script>
+</body>
+</html>
