@@ -27,3 +27,72 @@ async function listByUser(uid) { const snap = await db.ref(MEMBERS).once('value'
 async function log(businessId, uid, action, details) { await db.ref(AUDIT + '/' + businessId).push({ uid, action, details: details || {}, timestamp: Date.now() }); }
 
 module.exports = { create, update, archive, restore, softDelete, transfer, getInfo, listByUser, log };
+
+// === Invitation System ===
+const INV = 'businessInvitations';
+const crypto = require('crypto');
+
+async function invite(businessId, invitedBy, email, role) {
+  const token = crypto.randomBytes(32).toString('hex');
+  const id = 'inv-' + Date.now();
+  await db.ref(INV + '/' + id).set({
+    businessId, invitedBy, invitedEmail: email, role: role || 'viewer',
+    token, status: 'pending', createdAt: Date.now(),
+    expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000
+  });
+  await log(businessId, invitedBy, 'invitation.created', { invitationId: id, email, role });
+  return { invitationId: id, token };
+}
+
+async function acceptInvitation(token, uid, email) {
+  const snap = await db.ref(INV).orderByChild('token').equalTo(token).once('value');
+  let invId, inv;
+  snap.forEach(s => { invId = s.key; inv = s.val(); });
+  if (!inv) throw new Error('Invalid token');
+  if (inv.status !== 'pending') throw new Error('Invitation already ' + inv.status);
+  if (inv.expiresAt < Date.now()) { await db.ref(INV + '/' + invId + '/status').set('expired'); throw new Error('Invitation expired'); }
+  if (inv.invitedEmail !== email) throw new Error('Email mismatch');
+  await db.ref(MEMBERS + '/' + inv.businessId + '/' + uid).set({ role: inv.role, email, name: '', assignedAt: Date.now(), invitedBy: inv.invitedBy });
+  await db.ref(INV + '/' + invId + '/status').set('accepted');
+  await log(inv.businessId, uid, 'invitation.accepted', { invitationId: invId });
+}
+
+async function cancelInvitation(invId, uid) {
+  await db.ref(INV + '/' + invId + '/status').set('cancelled');
+  const snap = await db.ref(INV + '/' + invId + '/businessId').once('value');
+  await log(snap.val(), uid, 'invitation.cancelled', { invitationId: invId });
+}
+
+async function listInvitations(businessId) {
+  const snap = await db.ref(INV).orderByChild('businessId').equalTo(businessId).once('value');
+  const d = snap.val(); return d ? Object.keys(d).map(k => Object.assign({ id: k }, d[k])) : [];
+}
+
+// === Member Management ===
+async function removeMember(businessId, uid, removedBy) {
+  await db.ref(MEMBERS + '/' + businessId + '/' + uid).remove();
+  await log(businessId, removedBy, 'member.removed', { targetUid: uid });
+}
+
+async function changeRole(businessId, uid, newRole, changedBy) {
+  await db.ref(MEMBERS + '/' + businessId + '/' + uid + '/role').set(newRole);
+  await log(businessId, changedBy, 'member.role_changed', { targetUid: uid, newRole });
+}
+
+async function suspendMember(businessId, uid, suspendedBy) {
+  await db.ref(MEMBERS + '/' + businessId + '/' + uid + '/status').set('suspended');
+  await log(businessId, suspendedBy, 'member.suspended', { targetUid: uid });
+}
+
+async function unsuspendMember(businessId, uid, unsuspendedBy) {
+  await db.ref(MEMBERS + '/' + businessId + '/' + uid + '/status').set('active');
+  await log(businessId, unsuspendedBy, 'member.unsuspended', { targetUid: uid });
+}
+
+async function listMembers(businessId) {
+  const snap = await db.ref(MEMBERS + '/' + businessId).once('value');
+  const d = snap.val(); return d ? Object.keys(d).map(k => Object.assign({ uid: k }, d[k])) : [];
+}
+
+// Export additions
+module.exports = { create, update, archive, restore, softDelete, transfer, getInfo, listByUser, log, invite, acceptInvitation, cancelInvitation, listInvitations, removeMember, changeRole, suspendMember, unsuspendMember, listMembers };
