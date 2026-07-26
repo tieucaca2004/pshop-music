@@ -28,7 +28,7 @@ const MediaLibraryPicker = (function () {
 
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
 
-  function PSH.formatBytes(n) {
+  function PSH.PSH.formatBytes(n) {
     if (!n) return '';
     if (n < 1024) return n + ' B';
     if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
@@ -293,7 +293,7 @@ const MediaLibraryPicker = (function () {
   // chuỗi onclick — tránh URL (có thể chứa ký tự đặc biệt) làm hỏng cú
   // pháp JS trong attribute.
   function itemHtml(item, index) {
-    const meta = [PSH.formatBytes(item.size), item.timeCreated ? new Date(item.timeCreated).toLocaleDateString('vi-VN') : ''].filter(Boolean).join(' · ');
+    const meta = [PSH.PSH.formatBytes(item.size), item.timeCreated ? new Date(item.timeCreated).toLocaleDateString('vi-VN') : ''].filter(Boolean).join(' · ');
     return `
       <div class="medialib-grid-item">
         <div class="medialib-grid-thumb" onclick="MediaLibraryPicker.pickIndex(${index})">
