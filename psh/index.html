@@ -1,313 +1,52 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>PSH</title>
-<meta name="robots" content="noindex,nofollow">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-/* ============================================================
-   PSH — Application Shell
-   ============================================================ */
-:root{--bg:#f5f6f8;--surface:#fff;--border:#e6e8ec;--border-light:#f0f1f3;--text:#13161c;--text-secondary:#6b7280;--text-tertiary:#9ca3af;--primary:#4F46E5;--primary-hover:#4338CA;--primary-light:#eef2ff;--accent:#8b5cf6;--success:#10b981;--success-bg:#ecfdf5;--warning:#f59e0b;--warning-bg:#fffbeb;--danger:#ef4444;--danger-bg:#fef2f2;--sidebar-w:240px;--header-h:52px;--radius:10px;--radius-sm:6px;--shadow:0 1px 3px rgba(0,0,0,.04);--shadow-md:0 4px 12px rgba(0,0,0,.07);--shadow-lg:0 8px 30px rgba(0,0,0,.1);--transition:.15s ease;--font:Inter,system-ui,sans-serif}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{font-size:16px;-webkit-font-smoothing:antialiased}
-body{font-family:var(--font);color:var(--text);background:var(--surface);height:100vh;overflow:hidden;display:flex;flex-direction:column}
-/* ── Header ── */
-.header{height:var(--header-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1rem;flex-shrink:0;z-index:100}
-.header-left{display:flex;align-items:center;gap:.5rem}
-.hamburger{display:none;background:none;border:none;font-size:1.2rem;cursor:pointer;padding:.25rem;color:var(--text-secondary);font-family:inherit}
-.logo{width:28px;height:28px;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.65rem;flex-shrink:0}
-.brand{font-weight:700;font-size:.95rem;margin-left:.4rem}
-.biz-switcher{display:flex;align-items:center;gap:.25rem;margin-left:1rem;padding:.2rem .5rem;border-radius:4px;cursor:pointer;font-size:.75rem;font-weight:500;background:var(--bg);color:var(--text-secondary);border:1px solid var(--border)}
-.biz-switcher:hover{background:var(--border);color:var(--text)}
-.header-right{display:flex;align-items:center;gap:.35rem;margin-left:auto}
-.header-btn{width:30px;height:30px;border-radius:6px;border:none;background:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.9rem;transition:var(--transition);color:var(--text-secondary);position:relative}
-.header-btn:hover{background:var(--bg)}
-.notif-badge{position:absolute;top:4px;right:4px;width:14px;height:14px;background:var(--danger);border-radius:50%;color:#fff;font-size:.55rem;font-weight:700;display:flex;align-items:center;justify-content:center;border:2px solid var(--surface)}
-.user{display:flex;align-items:center;gap:.4rem;padding:.2rem .5rem;border-radius:4px;cursor:pointer;transition:var(--transition)}
-.user:hover{background:var(--bg)}
-.user-av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--accent));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:.6rem;flex-shrink:0}
-.user-name{font-size:.76rem;font-weight:500}
-/* ── Body ── */
-.body{display:flex;flex:1;overflow:hidden}
-/* ── Sidebar ── */
-.sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
-.sidebar.collapsed{width:52px}
-.nav-area{flex:1;overflow-y:auto;padding:.35rem .5rem}
-.nav-cat{font-size:.62rem;font-weight:600;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.06em;padding:.45rem .55rem .2rem}
-.nav-item{display:flex;align-items:center;gap:.55rem;padding:.4rem .55rem;border-radius:5px;color:var(--text-secondary);font-size:.78rem;font-weight:500;cursor:pointer;transition:all .1s;margin-bottom:1px;border:none;background:none;width:100%;text-align:left;font-family:var(--font);white-space:nowrap}
-.nav-item:hover{background:var(--bg);color:var(--text)}
-.nav-item.active{background:var(--primary-light);color:var(--primary);font-weight:600}
-.nav-item .ni-icon{font-size:.95rem;width:18px;text-align:center;flex-shrink:0}
-.nav-item .ni-label{overflow:hidden;text-overflow:ellipsis}
-.sidebar.collapsed .nav-cat,.sidebar.collapsed .nav-item .ni-label{display:none}
-.sidebar.collapsed .nav-item{justify-content:center;padding:.4rem 0}
-.sidebar-toggle{display:flex;align-items:center;justify-content:center;padding:.4rem;cursor:pointer;color:var(--text-tertiary);border-top:1px solid var(--border);font-size:.8rem;transition:color .15s;background:none;border-left:none;border-right:none;border-bottom:none;width:100%;font-family:var(--font);flex-shrink:0}
-.sidebar-toggle:hover{color:var(--text)}
-/* ── Workspace ── */
-.workspace{flex:1;overflow-y:auto;background:var(--bg);padding:0}
-.workspace-content{padding:1.5rem;max-width:1200px;margin:0 auto;width:100%}
-.loading-area{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4rem;color:var(--text-secondary)}
-.loading-spinner{width:24px;height:24px;border:2.5px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .5s linear infinite;margin-bottom:.5rem}
-@keyframes spin{to{transform:rotate(360deg)}}
-.loading-text{font-size:.8rem}
-.error-area{text-align:center;padding:3rem;color:var(--danger)}
-.error-area .retry-btn{margin-top:.75rem;padding:.4rem 1rem;border-radius:6px;border:1px solid var(--danger);background:none;color:var(--danger);cursor:pointer;font-family:var(--font);font-size:.8rem}
-.error-area .retry-btn:hover{background:var(--danger-bg)}
-/* ── User Menu ── */
-.user-menu{position:fixed;top:calc(var(--header-h) - 2px);right:.5rem;width:220px;background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);box-shadow:var(--shadow-lg);z-index:300;display:none;overflow:hidden}
-.user-menu.open{display:block}
-.menu-item{display:flex;align-items:center;gap:.5rem;padding:.45rem .65rem;font-size:.78rem;cursor:pointer;transition:var(--transition);border:none;background:none;width:100%;text-align:left;font-family:var(--font);color:var(--text)}
-.menu-item:hover{background:var(--bg)}
-.menu-divider{height:1px;background:var(--border);margin:.15rem 0}
-.menu-user{padding:.5rem .65rem;border-bottom:1px solid var(--border)}
-.menu-user .mu-name{font-weight:600;font-size:.82rem}
-.menu-user .mu-email{font-size:.7rem;color:var(--text-secondary)}
-/* ── Notifications Panel ── */
-.notif-panel{position:fixed;top:var(--header-h);right:0;width:320px;max-height:calc(100vh - var(--header-h));background:var(--surface);border-left:1px solid var(--border);box-shadow:var(--shadow-lg);z-index:200;transform:translateX(100%);transition:transform .25s;overflow-y:auto}
-.notif-panel.open{transform:translateX(0)}
-.notif-head{padding:.65rem .85rem;border-bottom:1px solid var(--border);font-weight:600;font-size:.82rem}
-.notif-item{padding:.55rem .85rem;border-bottom:1px solid var(--border-light);font-size:.78rem;cursor:pointer}
-.notif-item:hover{background:var(--bg)}
-.notif-item .ni-time{font-size:.68rem;color:var(--text-tertiary);margin-top:.1rem}
-/* ── Responsive ── */
-@media(max-width:900px){
-.sidebar{position:fixed;left:0;top:var(--header-h);bottom:0;z-index:150;transform:translateX(-100%);transition:transform .25s;box-shadow:var(--shadow-lg);width:260px}
-.sidebar.open{transform:translateX(0)}.sidebar.collapsed{width:260px}
-.sidebar.collapsed .nav-cat,.sidebar.collapsed .nav-item .ni-label{display:inline}
-.sidebar.collapsed .nav-item{justify-content:flex-start;padding:.4rem .55rem}
-.hamburger{display:inline-flex}.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:149}
-.sidebar-overlay.open{display:block}.workspace-content{padding:1rem}
-}
-@media(max-width:600px){
-.workspace-content{padding:.65rem}.biz-switcher{font-size:.7rem;padding:.15rem .35rem}.brand{font-size:.85rem}
-}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;color:#13161c;background:#f5f6f8;display:flex;overflow:hidden;height:100vh}
+.sidebar{width:220px;background:#fff;border-right:1px solid #e6e8ec;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+.logo{padding:1rem 1.25rem;font-weight:700;font-size:1rem;border-bottom:1px solid #e6e8ec;display:flex;align-items:center;gap:.5rem}
+.nav-area{flex:1;overflow-y:auto;padding:.5rem .75rem}
+.nav-cat{font-size:.6rem;font-weight:600;color:#9ca3af;text-transform:uppercase;letter-spacing:.06em;padding:.4rem .55rem .2rem}
+.nav-item{display:flex;align-items:center;gap:.5rem;padding:.4rem .55rem;border-radius:5px;color:#6b7280;font-size:.78rem;font-weight:500;cursor:pointer;transition:all .1s;margin-bottom:1px;text-decoration:none}
+.nav-item:hover{background:#f5f6f8;color:#13161c}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.iframe{width:100%;height:100%;border:none;background:#f5f6f8}
 </style>
 </head>
 <body>
-
-<!-- ========== HEADER ========== -->
-<header class="header">
-  <div class="header-left">
-    <button class="hamburger" onclick="toggleMobile()">☰</button>
-    <div class="logo">P</div>
-    <span class="brand">PSH</span>
-    <div class="biz-switcher" onclick="showToast('Business switcher coming')">🏢 <span id="bizName">Loading</span></div>
-  </div>
-  <div class="header-right">
-    <button class="header-btn" onclick="toggleNotif()">🔔<span class="notif-badge" id="notifCount">0</span></button>
-    <button class="header-btn" onclick="showToast('Help')">❓</button>
-    <div class="user" onclick="toggleMenu()">
-      <div class="user-av" id="userAv">F</div>
-      <span class="user-name" id="userName">Founder</span>
-    </div>
-  </div>
-</header>
-
-<!-- ========== BODY ========== -->
-<div class="body">
-
-<div class="sidebar-overlay" id="sideOverlay" onclick="closeMobileSidebar()"></div>
-
-<aside class="sidebar" id="sidebar">
-  <div class="nav-area" id="navArea">
-    <div class="nav-cat">Overview</div>
-    <div class="nav-item active" data-page="dashboard"><span class="ni-icon">📊</span><span class="ni-label">Dashboard</span></div>
-    <div class="nav-cat">Content</div>
-    <div class="nav-item" data-page="products"><span class="ni-icon">📦</span><span class="ni-label">Products</span></div>
-    <div class="nav-item" data-page="categories"><span class="ni-icon">🏷️</span><span class="ni-label">Categories</span></div>
-    <div class="nav-item" data-page="blog"><span class="ni-icon">📝</span><span class="ni-label">Blog</span></div>
-    <div class="nav-cat">Design</div>
-    <div class="nav-item" data-page="banners"><span class="ni-icon">🖼️</span><span class="ni-label">Banners</span></div>
-    <div class="nav-item" data-page="sliders"><span class="ni-icon">🔄</span><span class="ni-label">Sliders</span></div>
-    <div class="nav-cat">Media</div>
-    <div class="nav-item" data-page="media"><span class="ni-icon">📁</span><span class="ni-label">Media</span></div>
-    <div class="nav-item" data-page="videos"><span class="ni-icon">🎬</span><span class="ni-label">Videos</span></div>
-    <div class="nav-cat">Intelligence</div>
-    <div class="nav-item" data-page="ai"><span class="ni-icon">🤖</span><span class="ni-label">AI</span></div>
-    <div class="nav-item" data-page="ai-images"><span class="ni-icon">🎨</span><span class="ni-label">AI Images</span></div>
-    <div class="nav-cat">System</div>
-    <div class="nav-item" data-page="settings"><span class="ni-icon">⚙️</span><span class="ni-label">Settings</span></div>
-    <div class="nav-item" data-page="seo"><span class="ni-icon">🔍</span><span class="ni-label">SEO</span></div>
-    <div class="nav-item" data-page="billing"><span class="ni-icon">💳</span><span class="ni-label">Billing</span></div>
-    <div class="nav-cat">Admin</div>
-    <div class="nav-item" data-page="users"><span class="ni-icon">👥</span><span class="ni-label">Users</span></div>
-    <div class="nav-item" data-page="menu"><span class="ni-icon">📋</span><span class="ni-label">Menu</span></div>
-    <div class="nav-item" data-page="footer"><span class="ni-icon">🔽</span><span class="ni-label">Footer</span></div>
-  </div>
-  <div class="sidebar-toggle" onclick="toggleCollapse()">◀</div>
+<aside class="sidebar">
+<div class="logo"><span style="display:inline-flex;width:24px;height:24px;background:linear-gradient(135deg,#4F46E5,#8b5cf6);border-radius:5px;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:.6rem">P</span>PSH</div>
+<div class="nav-area">
+<div class="nav-cat">Overview</div>
+<a class="nav-item" href="/admin/index.html">📊 Dashboard</a>
+<div class="nav-cat">Content</div>
+<a class="nav-item" href="/admin/products.html">📦 Products</a>
+<a class="nav-item" href="/admin/categories.html">🏷️ Categories</a>
+<a class="nav-item" href="/admin/blog.html">📝 Blog</a>
+<div class="nav-cat">Design</div>
+<a class="nav-item" href="/admin/banners.html">🖼️ Banners</a>
+<a class="nav-item" href="/admin/sliders.html">🔄 Sliders</a>
+<div class="nav-cat">Media</div>
+<a class="nav-item" href="/admin/media-library.html">📁 Media</a>
+<a class="nav-item" href="/admin/videos.html">🎬 Videos</a>
+<div class="nav-cat">Intelligence</div>
+<a class="nav-item" href="/admin/ai/index.html">🤖 AI</a>
+<a class="nav-item" href="/admin/ai/images.html">🎨 AI Images</a>
+<div class="nav-cat">System</div>
+<a class="nav-item" href="/admin/settings.html">⚙️ Settings</a>
+<a class="nav-item" href="/admin/seo.html">🔍 SEO</a>
+<a class="nav-item" href="/admin/billing.html">💳 Billing</a>
+<div class="nav-cat">Admin</div>
+<a class="nav-item" href="/admin/users.html">👥 Users</a>
+<a class="nav-item" href="/admin/menu.html">📋 Menu</a>
+<a class="nav-item" href="/admin/footer.html">🔽 Footer</a>
+</div>
 </aside>
-
-<!-- ========== WORKSPACE ========== -->
-<main class="workspace" id="workspace">
-  <div id="wsContent" class="workspace-content"></div>
+<main class="main">
+<iframe class="iframe" src="/admin/index.html" name="psh-workspace"></iframe>
 </main>
-
-</div>
-
-<!-- ========== USER MENU ========== -->
-<div class="user-menu" id="userMenu">
-  <div class="menu-user">
-    <div class="mu-name" id="muName">Founder</div>
-    <div class="mu-email" id="muEmail">founder@psh.vn</div>
-  </div>
-  <button class="menu-item" onclick="navigate('billing')">💳 Subscription</button>
-  <button class="menu-item" onclick="navigate('settings')">⚙️ Settings</button>
-  <div class="menu-divider"></div>
-  <button class="menu-item" onclick="signOut()">🚪 Sign Out</button>
-</div>
-
-<!-- ========== NOTIFICATIONS ========== -->
-<div class="notif-panel" id="notifPanel">
-  <div class="notif-head">Notifications</div>
-  <div id="notifList"></div>
-</div>
-
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<script src="/js/firebase-config.js"></script>
-
-<script>
-(function(){
-'use strict';
-
-var $=function(id){return document.getElementById(id)};
-var ws=$('wsContent');
-var currentPage=null;
-var PAGE_MAP={
-dashboard:'/admin/index.html',products:'/admin/products.html',
-categories:'/admin/categories.html',blog:'/admin/blog.html',
-banners:'/admin/banners.html',sliders:'/admin/sliders.html',
-media:'/admin/media-library.html',videos:'/admin/videos.html',
-ai:'/admin/ai/index.html','ai-images':'/admin/ai/images.html',
-settings:'/admin/settings.html',seo:'/admin/seo.html',
-billing:'/admin/billing.html',
-users:'/admin/users.html',
-menu:'/admin/menu.html',
-footer:'/admin/footer.html'
-};
-var USER={};
-
-// ─── Auth ───
-firebase.auth().onAuthStateChanged(function(u){
-if(!u){window.location.href='/psh-console/auth.html';return;}
-USER.uid=u.uid;USER.email=u.email;USER.name=u.displayName||u.email||'User';
-$('userName').textContent=USER.name;
-$('userAv').textContent=USER.name.charAt(0).toUpperCase();
-$('muName').textContent=USER.name;
-$('muEmail').textContent=USER.email||'';
-loadBiz();
-});
-
-function loadBiz(){
-firebase.database().ref('businessMembers').once('value').then(function(snap){
-var d=snap.val();if(!d)return;
-Object.keys(d).forEach(function(bid){
-if(d[bid]&&d[bid][USER.uid]){
-firebase.database().ref('businesses/'+bid+'/info').once('value').then(function(is){
-var info=is.val();
-$('bizName').textContent=info&&info.displayName?info.displayName:bid;
-document.title=info&&info.displayName?info.displayName+' — PSH':'PSH';
-});
-}});
-// Load default page
-navigate('dashboard');
-});
-}
-
-// ─── Navigation ───
-window.navigate=function(page){
-if(page===currentPage)return;
-currentPage=page;
-document.querySelectorAll('.nav-item').forEach(function(i){i.classList.toggle('active',i.getAttribute('data-page')===page)});
-closeMobileSidebar();
-closeMenu();
-closeNotif();
-loadPage(page);
-};
-
-function loadPage(page){
-var url=PAGE_MAP[page];
-if(!url){ws.innerHTML='<div class="error-area">Page not found</div>';return;}
-// Show loading
-ws.innerHTML='<div class="loading-area"><div class="loading-spinner"></div><div class="loading-text">Loading '+page+'...</div></div>';
-// Fetch the page content
-fetch(url).then(function(r){
-if(!r.ok)throw new Error('HTTP '+r.status);
-return r.text();
-}).then(function(html){
-// Extract content from .admin-wrap or fallback to body content
-var parser=new DOMParser();
-var doc=parser.parseFromString(html,'text/html');
-var content=doc.querySelector('.admin-wrap');
-if(content){
-ws.innerHTML=content.innerHTML;
-}else{
-// Fallback: extract from body
-var body=doc.querySelector('body');
-ws.innerHTML=body?body.innerHTML:'<div class="error-area">Could not load content</div>';
-}
-// Execute any inline scripts
-ws.querySelectorAll('script').forEach(function(oldScript){
-var newScript=document.createElement('script');
-Array.from(oldScript.attributes).forEach(function(attr){newScript.setAttribute(attr.name,attr.value)});
-newScript.textContent=oldScript.textContent||'';
-oldScript.parentNode.replaceChild(newScript,oldScript);
-});
-}).catch(function(err){
-ws.innerHTML='<div class="error-area"><div style="font-size:1.2rem;margin-bottom:.5rem">⚠️</div><div>Could not load '+page+'. <button class="retry-btn" onclick="navigate(\''+page+'\')">Retry</button></div><div style="font-size:.7rem;color:var(--text-tertiary);margin-top:.5rem">'+err.message+'</div></div>';
-});
-}
-
-// ─── Sidebar ───
-window.toggleCollapse=function(){$('sidebar').classList.toggle('collapsed')};
-window.toggleMobile=function(){$('sidebar').classList.add('open');$('sideOverlay').classList.add('open')};
-window.closeMobileSidebar=function(){$('sidebar').classList.remove('open');$('sideOverlay').classList.remove('open')};
-
-// ─── Notifications ───
-window.toggleNotif=function(){$('notifPanel').classList.toggle('open')};
-window.closeNotif=function(){$('notifPanel').classList.remove('open')};
-document.addEventListener('click',function(e){
-var p=$('notifPanel');
-if(!p.contains(e.target)&&!e.target.closest('[onclick*="toggleNotif"]'))p.classList.remove('open');
-});
-
-function loadNotif(){
-var bid=$('bizName').textContent==='Loading'?null:$('bizName').textContent;
-if(bid){
-firebase.database().ref('businesses').once('value').then(function(){});
-}
-$('notifCount').textContent='0';
-$('notifList').innerHTML='<div style="padding:1.5rem;text-align:center;color:var(--text-secondary);font-size:.82rem">No notifications</div>';
-}
-
-// ─── User Menu ───
-window.toggleMenu=function(){$('userMenu').classList.toggle('open')};
-window.closeMenu=function(){$('userMenu').classList.remove('open')};
-document.addEventListener('click',function(e){
-var m=$('userMenu');
-if(!m.contains(e.target)&&!e.target.closest('.user'))m.classList.remove('open');
-});
-
-// ─── Sign Out ───
-window.signOut=function(){firebase.auth().signOut();window.location.href='/psh-console/auth.html'};
-
-// ─── Toast ───
-window.showToast=function(msg){
-var t=document.getElementById('_t')||function(){
-var e=document.createElement('div');e.id='_t';
-e.style.cssText='position:fixed;bottom:16px;right:16px;background:#13161c;color:#fff;padding:10px 18px;border-radius:8px;font-size:.82rem;box-shadow:0 8px 30px rgba(0,0,0,.15);z-index:9999;font-family:Inter,sans-serif;opacity:0;transform:translateY(8px);transition:all .25s;max-width:340px';
-document.body.appendChild(e);return e;
-}();
-t.textContent=msg;t.style.opacity='1';t.style.transform='translateY(0)';
-clearTimeout(t._h);t._h=setTimeout(function(){t.style.opacity='0';t.style.transform='translateY(8px)'},2500);
-};
-
-})();
-</script>
 </body>
 </html>
