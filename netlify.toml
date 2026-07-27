@@ -46,6 +46,3 @@
   to = "/psh/index.html"
   status = 200
 
-  from = "/psh/*"
-  to = "/psh/index.html"
-  status = 200
