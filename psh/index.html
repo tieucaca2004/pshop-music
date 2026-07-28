@@ -57,5 +57,33 @@ body{font-family:Inter,system-ui,sans-serif;color:#13161c;background:#f5f6f8;dis
 <main class="main">
 <iframe class="psh-iframe" src="/admin/index.html" name="psh-workspace"></iframe>
 </main>
-</body>
+
+<!-- Shared Runtime Libraries -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script src="/js/auth-context.js"></script>
+<script src="/js/business-context.js"></script>
+<script src="/js/business-members.js"></script>
+<script src="/js/db.js"></script>
+<script src="/js/cms-db.js"></script>
+<script src="/js/workspace-engine.js"></script>
+<script src="/js/module-runtime.js"></script>
+<script src="/js/subscription-middleware.js"></script>
+<script>
+// Shared Runtime init
+window.__PSH__ = window.__PSH__ || {};
+(function initRuntime() {
+  // Ensure Firebase initializes only once
+  if (window.__PSH__.runtimeReady) return;
+  
+  // AuthContext auto-inits with firebase.auth().onAuthStateChanged
+  // BusinessContext auto-inits similarly
+  // WorkspaceEngine loads existing modules
+  
+  window.__PSH__.runtimeReady = true;
+  console.log("[PSH Shared Runtime] initialized");
+})();
+</script></body>
 </html>
