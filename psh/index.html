@@ -134,5 +134,77 @@ window.__PSH__ = window.__PSH__ || {};
   NS.compatReady = true;
   console.log("[PSH Compatibility Layer] ready");
 })();
+</script>
+<script>
+(function() {
+  if (window.__PSH__ && window.__PSH__.moduleLoaderReady) return;
+  var NS = window.__PSH__ = window.__PSH__ || {};
+  
+  NS.ModuleLoader = {
+    _modules: {},
+    _cache: {},
+    _current: null,
+    
+    register: function(config) {
+      if (!config || !config.name) {
+        console.warn("[PSH ModuleLoader] register() requires a config with name");
+        return false;
+      }
+      if (this._modules[config.name]) {
+        console.warn("[PSH ModuleLoader] Module "" + config.name + "" already registered");
+        return false;
+      }
+      this._modules[config.name] = {
+        name: config.name,
+        path: config.path || "/admin/" + config.name + ".html",
+        initFn: config.initFn || null,
+        singleton: config.singleton !== false,
+        _loaded: false
+      };
+      console.log("[PSH ModuleLoader] Registered: " + config.name);
+      return true;
+    },
+    
+    load: function(name) {
+      var mod = this._modules[name];
+      if (!mod) {
+        console.warn("[PSH ModuleLoader] Unknown module: " + name);
+        return Promise.reject(new Error("Unknown module: " + name));
+      }
+      // For now, defer to iframe — do NOT load natively yet
+      console.log("[PSH ModuleLoader] load("" + name + "") — deferred to iframe");
+      return Promise.resolve({ deferred: true, name: name });
+    },
+    
+    unload: function() {
+      if (this._current) {
+        console.log("[PSH ModuleLoader] unload: " + this._current);
+        this._current = null;
+      }
+      return true;
+    },
+    
+    isRegistered: function(name) {
+      return !!this._modules[name];
+    },
+    
+    list: function() {
+      return Object.keys(this._modules);
+    }
+  };
+  
+  // Register all 16 known modules
+  var MODULE_NAMES = [
+    "dashboard", "products", "categories", "blog", "banners", "sliders",
+    "media-library", "videos", "ai", "ai-images",
+    "settings", "seo", "billing", "users", "menu", "footer"
+  ];
+  MODULE_NAMES.forEach(function(name) {
+    NS.ModuleLoader.register({ name: name });
+  });
+  
+  NS.moduleLoaderReady = true;
+  console.log("[PSH ModuleLoader] " + MODULE_NAMES.length + " modules registered");
+})();
 </script></body>
 </html>
