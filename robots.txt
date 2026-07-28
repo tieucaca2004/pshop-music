@@ -1,6 +1,7 @@
+
 User-agent: *
 Disallow: /admin/
 Disallow: /admin.html
 Allow: /
 
-Sitemap: https://pshopmusic.com/sitemap.xml
+Sitemap: https://psh.vn/sitemap.xml
