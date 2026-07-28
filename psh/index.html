@@ -20,7 +20,8 @@ body{font-family:Inter,system-ui,sans-serif;color:#13161c;background:#f5f6f8;dis
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:#f5f6f8}
 .psh-iframe{width:100%;height:100%;border:none;background:#fff}
 </style>
-</head>
+<!-- Compatibility CSS -->
+<link rel="stylesheet" href="/css/admin.css"></head>
 <body>
 <aside class="sidebar">
 <div class="brand">
@@ -84,6 +85,54 @@ window.__PSH__ = window.__PSH__ || {};
   
   window.__PSH__.runtimeReady = true;
   console.log("[PSH Shared Runtime] initialized");
+})();
+</script><!-- Compatibility Layer stubs -->
+<div id="adminSidebar" style="display:none"><div class="admin-brand">PSH</div></div>
+<div id="adminTopbar" style="display:none"></div>
+<div class="admin-shell" style="display:none"><div class="admin-main"></div></div>
+<!-- Compatibility Layer -->
+<script>
+(function() {
+  // Prevent double init
+  if (window.__PSH__ && window.__PSH__.compatReady) return;
+  var NS = window.__PSH__ = window.__PSH__ || {};
+  
+  // Load admin.css
+  var link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = "/css/admin.css";
+  document.head.appendChild(link);
+  
+  // AdminAuth compatibility: prevent AdminAuth from rendering admin sidebar/topbar
+  // when called from within PSH shell. Admin module JS still calls AdminAuth.init()
+  // which renders admin UI - we intercept and suppress only the rendering.
+  var checkCompat = setInterval(function() {
+    if (typeof AdminAuth !== "undefined") {
+      clearInterval(checkCompat);
+      var origInit = AdminAuth.init;
+      var origLogout = AdminAuth.logout;
+      
+      AdminAuth.init = function(options) {
+        return origInit.call(this, options).then(function(result) {
+          // PSH suppresses the rendered admin UI
+          var sb = document.getElementById("adminSidebar");
+          var tb = document.getElementById("adminTopbar");
+          if (sb) sb.style.display = "none";
+          if (tb) tb.style.display = "none";
+          return result;
+        });
+      };
+      
+      AdminAuth.logout = function() {
+        firebase.auth().signOut().then(function() {
+          window.location.href = "/psh-console/auth.html";
+        });
+      };
+    }
+  }, 100);
+  
+  NS.compatReady = true;
+  console.log("[PSH Compatibility Layer] ready");
 })();
 </script></body>
 </html>
