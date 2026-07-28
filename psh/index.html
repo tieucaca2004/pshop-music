@@ -206,5 +206,108 @@ window.__PSH__ = window.__PSH__ || {};
   NS.moduleLoaderReady = true;
   console.log("[PSH ModuleLoader] " + MODULE_NAMES.length + " modules registered");
 })();
+</script>
+<script>
+(function() {
+  if (window.__PSH__ && window.__PSH__.routerReady) return;
+  var NS = window.__PSH__ = window.__PSH__ || {};
+  
+  NS.Router = {
+    _routes: {},
+    _history: [],
+    _current: null,
+    
+    registerRoute: function(name, config) {
+      if (!name) { console.warn("[PSH Router] registerRoute requires a name"); return false; }
+      if (this._routes[name]) { console.warn("[PSH Router] Route "" + name + "" already registered"); return false; }
+      this._routes[name] = {
+        name: name,
+        path: config.path || "/admin/" + name + ".html",
+        type: config.type || "iframe",
+        title: config.title || name
+      };
+      return true;
+    },
+    
+    navigate: function(name) {
+      var route = this._routes[name];
+      if (!route) {
+        console.warn("[PSH Router] Unknown route: " + name);
+        return false;
+      }
+      this._history.push(name);
+      this._current = name;
+      
+      // All routes use iframe for now
+      var iframe = document.querySelector(".psh-iframe") || document.querySelector("iframe[name=psh-workspace]");
+      if (iframe) {
+        iframe.src = route.path;
+      }
+      
+      // Update sidebar active state
+      document.querySelectorAll(".nav-item").forEach(function(el) {
+        el.style.opacity = el.getAttribute("href") === route.path ? "1" : "0.6";
+        el.style.fontWeight = el.getAttribute("href") === route.path ? "600" : "400";
+      });
+      
+      return true;
+    },
+    
+    currentRoute: function() {
+      return this._current;
+    },
+    
+    back: function() {
+      if (this._history.length <= 1) return false;
+      this._history.pop();
+      var prev = this._history[this._history.length - 1];
+      if (prev) this.navigate(prev);
+      return true;
+    }
+  };
+  
+  // Register all 16 routes
+  var ROUTES = {
+    "dashboard": "/admin/index.html",
+    "products": "/admin/products.html",
+    "categories": "/admin/categories.html",
+    "blog": "/admin/blog.html",
+    "banners": "/admin/banners.html",
+    "sliders": "/admin/sliders.html",
+    "media-library": "/admin/media-library.html",
+    "videos": "/admin/videos.html",
+    "ai": "/admin/ai/index.html",
+    "ai-images": "/admin/ai/images.html",
+    "settings": "/admin/settings.html",
+    "seo": "/admin/seo.html",
+    "billing": "/admin/billing.html",
+    "users": "/admin/users.html",
+    "menu": "/admin/menu.html",
+    "footer": "/admin/footer.html"
+  };
+  Object.keys(ROUTES).forEach(function(name) {
+    NS.Router.registerRoute(name, { path: ROUTES[name], type: "iframe" });
+  });
+  
+  // Override sidebar nav-item clicks to use Router
+  document.addEventListener("click", function(e) {
+    var target = e.target.closest(".nav-item");
+    if (target && target.getAttribute("href")) {
+      e.preventDefault();
+      var href = target.getAttribute("href");
+      // Find route name from href
+      var found = null;
+      Object.keys(ROUTES).forEach(function(name) {
+        if (ROUTES[name] === href) found = name;
+      });
+      if (found) {
+        NS.Router.navigate(found);
+      }
+    }
+  }, true);
+  
+  NS.routerReady = true;
+  console.log("[PSH Router] " + Object.keys(ROUTES).length + " routes registered");
+})();
 </script></body>
 </html>
