@@ -56,7 +56,7 @@ body{font-family:Inter,system-ui,sans-serif;color:#13161c;background:#f5f6f8;dis
 </div>
 </aside>
 <main class="main">
-<iframe class="psh-iframe" src="/admin/index.html" name="psh-workspace"></iframe>
+<native class="psh-iframe" src="/admin/index.html" name="psh-workspace"></iframe>
 </main>
 
 <!-- Shared Runtime Libraries -->
@@ -171,10 +171,41 @@ window.__PSH__ = window.__PSH__ || {};
         console.warn("[PSH ModuleLoader] Unknown module: " + name);
         return Promise.reject(new Error("Unknown module: " + name));
       }
-      // For now, defer to iframe — do NOT load natively yet
-      console.log("[PSH ModuleLoader] load("" + name + "") — deferred to iframe");
+      var rt = window.__PSH__ && window.__PSH__.Router && window.__PSH__.Router._routes[name];
+      if (rt && rt.type === "native") {
+        var ifr = document.querySelector("iframe");
+        if (ifr) ifr.style.display = "none";
+        var ws = document.getElementById("pshNativeBox");
+        if (!ws) {
+          ws = document.createElement("div");
+          ws.id = "pshNativeBox";
+          ws.style.cssText = "flex:1;overflow-y:auto;background:#f5f6f8";
+          var m = document.querySelector(".main");
+          if (m) m.appendChild(ws);
+        }
+        ws.innerHTML = "<div style=\"padding:2rem;text-align:center;color:#6b7280\">Loading...</div>";
+        return fetch(mod.path).then(function(r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.text();
+        }).then(function(h) {
+          var d = new DOMParser().parseFromString(h, "text/html");
+          var c = d.querySelector(".admin-wrap");
+          if (!c) throw new Error("No .admin-wrap found");
+          ws.innerHTML = "<div class=\"admin-shell\"><div class=\"admin-main\"><div class=\"admin-wrap\">" + c.innerHTML + "</div></div></div>";
+          ws.querySelectorAll("script").forEach(function(os) {
+            var ns = document.createElement("script");
+            Array.from(os.attributes).forEach(function(a) { ns.setAttribute(a.name, a.value); });
+            ns.textContent = os.textContent || "";
+            os.parentNode.replaceChild(ns, os);
+          });
+          this._current = name;
+          console.log("[PSH] Native module loaded: " + name);
+          return { native: true, name: name };
+        }.bind(this));
+      }
+      console.log("[PSH] iframe module: " + name);
       return Promise.resolve({ deferred: true, name: name });
-    },
+      },
     
     unload: function() {
       if (this._current) {
@@ -186,6 +217,36 @@ window.__PSH__ = window.__PSH__ || {};
     
     isRegistered: function(name) {
       return !!this._modules[name];
+    },
+    loadNative: function(name, path) {
+      var ifr = document.querySelector("iframe");
+      if (ifr) ifr.style.display = "none";
+      var ws = document.getElementById("pshNativeBox");
+      if (!ws) {
+        ws = document.createElement("div");
+        ws.id = "pshNativeBox";
+        ws.style.cssText = "flex:1;overflow-y:auto;padding:16px";
+        var m = document.querySelector(".main");
+        if (m) m.appendChild(ws);
+      }
+      ws.innerHTML = "<div style=\"padding:2rem;text-align:center\">Loading...</div>";
+      return fetch(path).then(function(r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.text();
+      }).then(function(html) {
+        var d = new DOMParser().parseFromString(html, "text/html");
+        var c = d.querySelector(".admin-wrap");
+        if (!c) throw new Error("No content");
+        ws.innerHTML = "<div class=\"admin-shell\"><div class=\"admin-main\"><div class=\"admin-wrap\">" + c.innerHTML + "</div></div></div>";
+        ws.querySelectorAll("script").forEach(function(os) {
+          var ns = document.createElement("script");
+          Array.from(os.attributes).forEach(function(a) { ns.setAttribute(a.name, a.value); });
+          ns.textContent = os.textContent || "";
+          os.parentNode.replaceChild(ns, os);
+        });
+        console.log("[PSH] Native: " + name);
+        return { native: true, name: name };
+      });
     },
     
     list: function() {
@@ -223,7 +284,7 @@ window.__PSH__ = window.__PSH__ || {};
       this._routes[name] = {
         name: name,
         path: config.path || "/admin/" + name + ".html",
-        type: config.type || "iframe",
+        type: config.type || "native",
         title: config.title || name
       };
       return true;
@@ -286,7 +347,7 @@ window.__PSH__ = window.__PSH__ || {};
     "footer": "/admin/footer.html"
   };
   Object.keys(ROUTES).forEach(function(name) {
-    NS.Router.registerRoute(name, { path: ROUTES[name], type: "iframe" });
+    NS.Router.registerRoute(name, { path: ROUTES[name], type: "native" });
   });
   
   // Override sidebar nav-item clicks to use Router
