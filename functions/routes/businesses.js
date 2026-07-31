@@ -12,6 +12,7 @@
 const admin = require('firebase-admin');
 const { resolveBusinessId } = require('../shared/tenant');
 const { verifyAuth, requireBusiness, requireRole, requireSuperAdmin } = require('../shared/auth');
+const { validateImageUrlOrigin } = require('../shared/validation');
 
 const VALID_PLANS = ['free', 'starter', 'pro', 'enterprise'];
 const DEFAULT_TZ = 'Asia/Bangkok';
@@ -110,10 +111,14 @@ async function handle(req, res, helpers) {
       const body = req.body || {};
       const changes = {};
 
-      // Editable fields — only accept known profile fields
+      // Editable fields — only accept known profile fields. country/currency/
+      // language/city (Task 2.10, Business Settings) widen this allowlist to
+      // the info fields businesses.js already stores at creation (info.country,
+      // info.currency, info.language — see buildBusinessTree above) plus a new
+      // "city" field on the same node; no new route/table, same PATCH endpoint.
       const editable = ['displayName', 'description', 'logo', 'coverImage', 'email',
-        'phone', 'website', 'address', 'workingHours', 'timezone',
-        'brandInformation', 'socialLinks'];
+        'phone', 'website', 'address', 'city', 'country', 'currency', 'language',
+        'workingHours', 'timezone', 'brandInformation', 'socialLinks'];
 
       editable.forEach(function(f) {
         if (body[f] !== undefined) changes[f] = body[f];
@@ -126,6 +131,48 @@ async function handle(req, res, helpers) {
       // Reject changing ownerUid, businessId, slug (immutable fields)
       if (changes.ownerUid !== undefined || changes.businessId !== undefined || changes.slug !== undefined) {
         return sendError(res, 'INVALID_REQUEST', 'Không thể thay đổi ownerUid, businessId hoặc slug.');
+      }
+
+      // Field validation — required/format/length (Task 2.10).
+      var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      var PHONE_RE = /^[0-9+\-\s().]{6,30}$/;
+      var MAX_LEN = { displayName: 120, description: 2000, email: 254, phone: 30,
+        website: 300, address: 300, city: 100, country: 60, currency: 10,
+        language: 20, timezone: 64 };
+
+      if (changes.displayName !== undefined && !String(changes.displayName).trim()) {
+        return sendError(res, 'INVALID_REQUEST', 'Business Name không được để trống.');
+      }
+      if (changes.email !== undefined && changes.email !== '' && !EMAIL_RE.test(String(changes.email).trim())) {
+        return sendError(res, 'INVALID_REQUEST', 'Email không hợp lệ.');
+      }
+      if (changes.phone !== undefined && changes.phone !== '' && !PHONE_RE.test(String(changes.phone).trim())) {
+        return sendError(res, 'INVALID_REQUEST', 'Số điện thoại không hợp lệ.');
+      }
+      if (changes.website !== undefined && changes.website !== '') {
+        var site = String(changes.website).trim();
+        if (!/^https?:\/\//i.test(site)) {
+          return sendError(res, 'INVALID_REQUEST', 'Website phải bắt đầu bằng http:// hoặc https://.');
+        }
+        try { new URL(site); } catch (e) {
+          return sendError(res, 'INVALID_REQUEST', 'Website không hợp lệ.');
+        }
+      }
+      // logo/coverImage — reuse the same SSRF-safe image URL allowlist used
+      // for AI-generated images (shared/validation.js validateImageUrlOrigin),
+      // instead of a new one-off check.
+      var imageFields = ['logo', 'coverImage'];
+      for (var i = 0; i < imageFields.length; i++) {
+        var imgField = imageFields[i];
+        if (changes[imgField] !== undefined && changes[imgField] !== '') {
+          var urlErr = validateImageUrlOrigin(String(changes[imgField]).trim());
+          if (urlErr) return sendError(res, 'INVALID_REQUEST', imgField + ': ' + urlErr);
+        }
+      }
+      for (var lenField in MAX_LEN) {
+        if (changes[lenField] !== undefined && String(changes[lenField]).length > MAX_LEN[lenField]) {
+          return sendError(res, 'INVALID_REQUEST', 'Trường "' + lenField + '" vượt quá ' + MAX_LEN[lenField] + ' ký tự.');
+        }
       }
 
       changes.updatedAt = admin.database.ServerValue.TIMESTAMP;
