@@ -65,7 +65,7 @@ async function callOpenAiText(prompt) {
     if (!r.ok) throw new Error((data.error && data.error.message) || 'OpenAI API lỗi.');
     const text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
     return { text: (text || '').trim(), raw: data };
-  }, { attempts: 3, backoffMs: function (i) { return 500 * Math.pow(2, i); } });
+  }, { attempts: 3, timeoutMs: 60000, backoffMs: function (i) { return 500 * Math.pow(2, i); }, onAttemptFail: function (err, i) { console.warn('[aiGenerate] gpt-4o-mini attempt ' + (i + 1) + ' failed:', (err && err.message) ? err.message : err); } });
 }
 
 // callOpenAiImage — CÙNG hành vi action "generate_image" của openaiProxy
@@ -89,7 +89,7 @@ async function callOpenAiImage(prompt, size) {
     const token = require('crypto').randomUUID();
     await bucket.file(path).save(buffer, { metadata: { contentType: 'image/png', metadata: { firebaseStorageDownloadTokens: token } } });
     return { imageUrl: `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(path)}?alt=media&token=${token}` };
-  }, { attempts: 3, backoffMs: function (i) { return 500 * Math.pow(2, i); } });
+  }, { attempts: 3, timeoutMs: 90000, backoffMs: function (i) { return 500 * Math.pow(2, i); }, onAttemptFail: function (err, i) { console.warn('[aiGenerate] dall-e-3 attempt ' + (i + 1) + ' failed:', (err && err.message) ? err.message : err); } });
 }
 
 // runGeneration — logic thật (KHÔNG đổi 1 dòng nào so với thân

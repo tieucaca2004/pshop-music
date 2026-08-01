@@ -10,10 +10,18 @@
 
 // withRetry — gọi fn() tối đa `attempts` lần, dừng ngay khi thành công.
 // backoffMs(i) mặc định 500ms * 2^i (exponential), có thể override.
-async function withRetry(fn, { attempts = 3, backoffMs = i => 500 * Math.pow(2, i), onAttemptFail } = {}) {
+// timeoutMs (tùy chọn, ms) — nếu set, mỗi lần thử bị giới hạn thời gian; quá hạn coi như lỗi lần đó (backward-compat: mặc định KHÔNG timeout).
+async function withRetry(fn, { attempts = 3, backoffMs = i => 500 * Math.pow(2, i), onAttemptFail, timeoutMs } = {}) {
   let lastError;
   for (let i = 0; i < attempts; i++) {
     try {
+      if (timeoutMs) {
+        const result = await Promise.race([
+          fn(i),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Retry timeout after ' + timeoutMs + 'ms')), timeoutMs))
+        ]);
+        return result;
+      }
       return await fn(i);
     } catch (err) {
       lastError = err;
