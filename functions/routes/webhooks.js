@@ -10,6 +10,7 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  * hành, không phải thao tác CMS thường ngày).
  */
 const listResource = require('../shared/listResource');
+const eventBus = require('../shared/eventBus');
 const { validateSchema } = require('../shared/validation');
 
 const SUBS_NODE = 'webhookSubs';
@@ -53,6 +54,16 @@ async function handle(req, res, helpers) {
     const filtered = eventTypeFilter ? all.filter(e => e.eventType === eventTypeFilter) : all;
     const sorted = filtered.sort((a, b) => (b.emittedAt || 0) - (a.emittedAt || 0)).slice(0, limit);
     return sendSuccess(res, sorted);
+  }
+
+  // POST /v1/events — client ghi event workflow vào Event Bus (audit + webhook)
+  // PHASE D EXECUTION step 4: nối WorkflowEngine (client) -> eventBus -> audit/notification.
+  if (path === '/v1/events' && req.method === 'POST') {
+    if (!isAdmin(auth)) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin được ghi Event.');
+    const check = validateSchema(req.body, { eventType: { required: true, type: 'string' } });
+    if (!check.valid) return sendError(res, 'INVALID_REQUEST', check.issues.join(' '));
+    const event = await eventBus.emit(req.body.eventType, req.body.payload || { createdBy: auth.uid });
+    return sendSuccess(res, event, { status: 201 });
   }
 
   return null; // not handled by this router
