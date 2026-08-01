@@ -110,3 +110,25 @@ Doanh nghiệp MỚI dùng node mới; Pshop Music (doanh nghiệp đang chạy 
 4. Xác nhận có nên tiếp tục đầu tư vào Business Manager ngay bây giờ, hay chờ tới khi có doanh nghiệp thứ 2 thật sự chuẩn bị onboard (khuyến nghị của `SPRINT_10_PLANNING.md` mục 6/7: hoãn tới Sprint 13+, tránh Over-Engineering khi chưa có nhu cầu thật).
 
 Không có quyết định nào ở trên được tự động chọn — tài liệu này chỉ trình bày lựa chọn, không quyết định thay Chief Architect.
+
+---
+
+## Addendum 2026-08-01 — Xóa reference `subscription-middleware.js` (Phase 2 Fix Runtime)
+
+**Quyết định:** Xóa `<script src="/js/subscription-middleware.js">` khỏi `psh/index.html` (dòng 74).
+**Trạng thái:** ✅ Founder duyệt (2026-08-01).
+**Root Cause:** File `js/subscription-middleware.js` CHƯA từng tồn tại trong bất kỳ commit nào (git history rỗng). Không có bằng chứng thiết kế nào (Roadmap, Sprint Docs, UX/UI, Product Spec, Design Documents) chứng minh frontend cần middleware này. Chỉ là 1 `<script src>` tĩnh, cô lập trong PSH shell.
+**Lý do xóa:** (1) Không file tồn tại; (2) không thiết kế/UX/UI/Product Spec; (3) module thay thế **`functions/shared/subscriptionValidator.js`** (Phase 4 Task 15.0) đã xử lý subscription gating ở API layer (trả `402 SUBSCRIPTION_CANCELLED/EXPIRED`) — middleware client là thừa; (4) không nơi nào khác dùng → xóa không gây tác động.
+**Module thay thế:** `functions/shared/subscriptionValidator.js`
+**Phạm vi:** Chỉ xóa đúng reference này. Không sửa code nào khác. Không commit/merge/deploy (Phase 2).
+
+---
+
+## Addendum 2026-08-01 — Phase D Retry Engine (COMPLETE)
+
+**Quyết định:** Bọc mọi call OpenAI trong `shared/aiGenerate.js` bằng `withRetry` (từ `shared/retry.js`), thêm timeout + log.
+**Kiến trúc:** `withRetry(fn, {attempts:3, timeoutMs, backoffMs:500*2^i, onAttemptFail})` — retry exponential, timeout per-attempt, log retry qua console.warn. Áp dụng `callOpenAiText` (gpt-4o-mini, timeout 60s) + `callOpenAiImage` (dall-e-3, timeout 90s).
+**Verify:** Runtime node test PASS (retry 3 attempts → ok; timeout 50ms → fail đúng; final-fail throw). `node --check` cả 2 file PASS.
+**Commit:** `6e8e76f` (bọc withRetry) + `528d9ee` (timeout + log).
+**Production verify:** CHƯA — chờ `firebase deploy --only functions` (blocker hạ tầng, sandbox không firebase CLI).
+**Workflow nối:** Retry nằm trong `runGeneration()` → khi `aiGenerateWorker` deploy, async batch cũng hưởng retry/timeout (gộp Queue workflow).
