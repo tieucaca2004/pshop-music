@@ -67,6 +67,10 @@ async function handle(req, res, helpers) {
   if (action === 'publish' && req.method === 'POST') {
     const draft = await listResource.getOne(NODE, id);
     if (!draft) return sendError(res, 'NOT_FOUND', 'Không tìm thấy Nháp.');
+    // PHASE F: chống Duplicate Publish — nếu đã published, từ chối (tránh publishToTarget 2 lần + event trùng).
+    if (draft.status === 'published') {
+      return sendError(res, 'CONFLICT', 'Nháp này đã được publish trước đó.');
+    }
     try {
       await publishToTarget(draft);
     } catch (err) {
