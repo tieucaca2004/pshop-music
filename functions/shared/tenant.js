@@ -48,13 +48,16 @@ function resolveBusinessId(req) {
  * Returns { ok: true, role } or { ok: false, error }.
  */
 async function validateBusinessAccess(uid, businessId) {
+  console.log('[TRACE] validateBusinessAccess ENTER | uid:', uid, '| businessId:', businessId);
   // Super admin check — platform-wide access
   const superSnap = await admin.database()
     .ref('superAdmins/' + uid)
     .once('value');
+  console.log('[TRACE] validateBusinessAccess OUTPUT | superAdmins exists:', superSnap.exists());
   if (superSnap.exists()) {
     const adminData = superSnap.val();
     const role = (adminData && adminData.role) || 'super_admin';
+    console.log('[TRACE] validateBusinessAccess EXIT | OK super_admin role:', role);
     return { ok: true, role };
   }
 
@@ -62,24 +65,30 @@ async function validateBusinessAccess(uid, businessId) {
   const memberSnap = await admin.database()
     .ref('businesses/' + businessId + '/users/' + uid)
     .once('value');
+  console.log('[TRACE] validateBusinessAccess OUTPUT | business member exists:', memberSnap.exists());
   if (memberSnap.exists()) {
     const memberData = memberSnap.val();
     const role = (memberData && memberData.role) || 'business_viewer';
+    console.log('[TRACE] validateBusinessAccess EXIT | OK business member role:', role);
     return { ok: true, role };
   }
 
   // Legacy check: user exists in /roles/{uid} — grant access to legacy business
   if (businessId === LEGACY_BUSINESS) {
+    console.log('[TRACE] validateBusinessAccess INPUT | checking legacy roles for LEGACY_BUSINESS');
     const legacySnap = await admin.database()
       .ref('roles/' + uid)
       .once('value');
+    console.log('[TRACE] validateBusinessAccess OUTPUT | legacy roles exists:', legacySnap.exists());
     if (legacySnap.exists()) {
       const roleData = legacySnap.val();
       const role = (roleData && roleData.role) || roleData;
+      console.log('[TRACE] validateBusinessAccess EXIT | OK legacy role:', role);
       return { ok: true, role };
     }
   }
 
+  console.log('[TRACE] validateBusinessAccess EXIT | ERROR no access');
   return { ok: false, error: 'Tài khoản không có quyền truy cập vào doanh nghiệp này.' };
 }
 
@@ -91,19 +100,26 @@ async function validateBusinessAccess(uid, businessId) {
  * Returns { ok: false, status, code, error } on failure.
  */
 async function resolveTenant(req) {
+  console.log('[TRACE] resolveTenant ENTER | hasAuth:', !!req.auth, '| uid:', req.auth && req.auth.uid);
   // Must be authenticated first
   if (!req.auth || !req.auth.uid) {
+    console.log('[TRACE] resolveTenant EXIT | ERROR no auth');
     return { ok: false, status: 401, code: 'UNAUTHENTICATED', error: 'Cần xác thực trước khi phân giải tenant.' };
   }
 
   const uid = req.auth.uid;
   const businessId = resolveBusinessId(req);
+  console.log('[TRACE] resolveTenant OUTPUT | businessId:', businessId);
   if (!businessId) {
+    console.log('[TRACE] resolveTenant EXIT | ERROR INVALID_TENANT');
     return { ok: false, status: 400, code: 'INVALID_TENANT', error: 'Không thể xác định doanh nghiệp.' };
   }
 
+  console.log('[TRACE] resolveTenant INPUT | calling validateBusinessAccess uid:', uid, 'bid:', businessId);
   const access = await validateBusinessAccess(uid, businessId);
+  console.log('[TRACE] resolveTenant OUTPUT | validateBusinessAccess ok:', access.ok, '| role:', access.role);
   if (!access.ok) {
+    console.log('[TRACE] resolveTenant EXIT | ERROR TENANT_FORBIDDEN -', access.error);
     return { ok: false, status: 403, code: 'TENANT_FORBIDDEN', error: access.error };
   }
 
@@ -114,6 +130,7 @@ async function resolveTenant(req) {
     role: access.role
   };
 
+  console.log('[TRACE] resolveTenant EXIT | OK businessId:', businessId, 'role:', access.role);
   return { ok: true, businessId, uid, role: access.role };
 }
 
