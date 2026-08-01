@@ -60,14 +60,19 @@ function isPublicPath(path) {
 
 async function verifyAuth(req) {
   const authHeader = req.get('Authorization') || '';
+  console.log('[TRACE] verifyAuth ENTER | hasAuthHeader:', /^Bearer .+$/.test(authHeader));
   const match = authHeader.match(/^Bearer (.+)$/);
   if (!match) {
+    console.log('[TRACE] verifyAuth EXIT | ERROR missing token');
     return { ok: false, status: 401, code: 'UNAUTHENTICATED', error: 'Thiếu Authorization Bearer token.' };
   }
+  console.log('[TRACE] verifyAuth INPUT | token prefix:', match[1].slice(0, 12), 'len:', match[1].length);
   let decoded;
   try {
     decoded = await admin.auth().verifyIdToken(match[1]);
+    console.log('[TRACE] verifyAuth OUTPUT | uid:', decoded.uid, 'email:', decoded.email, 'email_verified:', decoded.email_verified, 'claims:', JSON.stringify(decoded.firebase && decoded.firebase.claims || {}));
   } catch (err) {
+    console.log('[TRACE] verifyAuth ERROR |', (err && err.message) ? err.message : err);
     return { ok: false, status: 401, code: 'UNAUTHENTICATED', error: 'Token không hợp lệ hoặc đã hết hạn.' };
   }
 
@@ -82,6 +87,7 @@ async function verifyAuth(req) {
     role: null // resolved in requireBusiness/requireRole
   };
 
+  console.log('[TRACE] verifyAuth EXIT | OK uid:', decoded.uid);
   return { ok: true, uid: decoded.uid, email: decoded.email || '' };
 }
 
@@ -100,14 +106,19 @@ async function verifyAuth(req) {
  * Returns { ok: false, status, code, error } on failure.
  */
 async function requireBusiness(req) {
+  console.log('[TRACE] requireBusiness ENTER | hasAuth:', !!req.auth, '| uid:', req.auth && req.auth.uid);
   // Must be authenticated first
   if (!req.auth || !req.auth.uid) {
+    console.log('[TRACE] requireBusiness EXIT | ERROR no auth:');
     return { ok: false, status: 401, code: 'UNAUTHENTICATED', error: 'Cần xác thực trước khi xác định doanh nghiệp.' };
   }
 
   // Resolve tenant via shared/tenant.js
+  console.log('[TRACE] requireBusiness INPUT | calling resolveTenant');
   const tenant = await resolveTenant(req);
+  console.log('[TRACE] requireBusiness OUTPUT | resolveTenant ok:', tenant.ok, '| businessId:', tenant.businessId, '| role:', tenant.role);
   if (!tenant.ok) {
+    console.log('[TRACE] requireBusiness EXIT | tenant fail status:', tenant.status, 'code:', tenant.code, 'err:', tenant.error);
     return tenant; // propagate error from tenant resolver
   }
 
