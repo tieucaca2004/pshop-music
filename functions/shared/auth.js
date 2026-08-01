@@ -28,22 +28,30 @@ const PUBLIC_PATHS = new Set(['/v1/health']);
 
 async function authenticate(req) {
   const authHeader = req.get('Authorization') || '';
+  console.log('[TRACE] authenticate ENTER | hasAuthHeader:', /^Bearer .+$/.test(authHeader));
   const match = authHeader.match(/^Bearer (.+)$/);
   if (!match) {
+    console.log('[TRACE] authenticate EXIT | ERROR missing token');
     return { ok: false, status: 401, code: 'UNAUTHENTICATED', error: 'Thiếu Authorization Bearer token.' };
   }
+  console.log('[TRACE] authenticate INPUT | token len:', match[1].length);
   let decoded;
   try {
     decoded = await admin.auth().verifyIdToken(match[1]);
+    console.log('[TRACE] authenticate OUTPUT | uid:', decoded.uid, 'email:', decoded.email);
   } catch (err) {
+    console.log('[TRACE] authenticate ERROR |', (err && err.message) ? err.message : err);
     return { ok: false, status: 401, code: 'UNAUTHENTICATED', error: 'Token không hợp lệ hoặc đã hết hạn.' };
   }
   const roleSnap = await admin.database().ref('roles/' + decoded.uid).once('value');
+  console.log('[TRACE] authenticate OUTPUT | roles exists:', roleSnap.exists());
   if (!roleSnap.exists()) {
+    console.log('[TRACE] authenticate EXIT | ERROR role not found');
     return { ok: false, status: 403, code: 'PERMISSION_DENIED', error: 'Tài khoản chưa được cấp quyền CMS.' };
   }
   const roleData = roleSnap.val();
   const role = (roleData && roleData.role) || roleData;
+  console.log('[TRACE] authenticate EXIT | OK role:', role);
   return { ok: true, uid: decoded.uid, email: decoded.email || '', role };
 }
 
