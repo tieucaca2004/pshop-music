@@ -245,6 +245,13 @@ const AdminApp = (function () {
     document.getElementById('pImages').value = images.join('\n');
     pImagesPicker.refresh();
     document.getElementById('pBgImage').value = p.backgroundImage || '';
+    // Task PRODUCT-SEO-01: load Product SEO fields (không đụng seoSettings/Website SEO)
+    document.getElementById('pSeoTitle').value = p.seoTitle || p.name || '';
+    document.getElementById('pSeoDescription').value = p.metaDescription || '';
+    document.getElementById('pSeoKeywords').value = Array.isArray(p.seoKeywords) ? p.seoKeywords.join(', ') : (p.seoKeywords || '');
+    document.getElementById('pCanonical').value = p.canonical || '';
+    document.getElementById('pOgImage').value = p.ogImage || p.image || '';
+    document.getElementById('pSlug').value = p.slug || '';
     if (pBgImagePicker) pBgImagePicker.refresh();
     // Sync ảnh đại diện đầu tiên vào BgRemover làm ảnh nguồn gợi ý
     if (typeof AdminBgRemover !== 'undefined' && images[0]) {
@@ -323,7 +330,14 @@ const AdminApp = (function () {
       backgroundImage: document.getElementById('pBgImage').value.trim(),
       description: quill && quill.getText().trim() ? quill.root.innerHTML : '',
       images: images,
-      image: images[0] || ''
+      image: images[0] || '',
+      // Task PRODUCT-SEO-01: Product SEO fields (không đụng seoSettings/Website SEO)
+      seoTitle: document.getElementById('pSeoTitle').value.trim(),
+      metaDescription: document.getElementById('pSeoDescription').value.trim(),
+      seoKeywords: document.getElementById('pSeoKeywords').value.split(',').map(s => s.trim()).filter(Boolean),
+      canonical: document.getElementById('pCanonical').value.trim(),
+      ogImage: document.getElementById('pOgImage').value.trim(),
+      slug: document.getElementById('pSlug').value.trim()
 
     const action = editingId ? DB.update(editingId, data) : DB.add(data);
     action.then(() => {
