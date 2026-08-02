@@ -41,15 +41,21 @@ const AdminFacebookConnect = (function () {
     return firebase.database().ref('facebookConnection');
   }
 
+  function escapeHtml(str) {
+    return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
 
   function generateStateNonce() {
     return 'st-' + Math.random().toString(36).slice(2) + '-' + Date.now();
+  }
 
   function getAppId() {
     return firebase.database().ref('facebookAppConfig/appId').once('value')
       .then(snap => snap.val() || '')
       .catch(() => '');
+  }
 
   // getStatus() — mặc định an toàn 'not_connected' nếu chưa có dữ liệu HOẶC
   // nếu đọc lỗi (vd Database Rules cho node này chưa được deploy) — không
@@ -58,6 +64,7 @@ const AdminFacebookConnect = (function () {
     return ref().once('value')
       .then(snap => snap.val() || { status: 'not_connected' })
       .catch(() => ({ status: 'not_connected' }));
+  }
 
   // computeEffectiveStatus() — Cloud Function chỉ ghi 'connected' tại thời
   // điểm chọn Page; độ "tươi" của Token phải tự tính LẠI mỗi lần hiển thị (so
@@ -70,12 +77,14 @@ const AdminFacebookConnect = (function () {
     if (remaining <= 0) return 'token_expired';
     if (remaining <= TOKEN_EXPIRING_SOON_MS) return 'token_expiring';
     return 'connected';
+  }
 
   const STATUS_LABELS = {
     not_connected: { icon: '⚪', label: 'Chưa kết nối' },
     connected: { icon: '🟢', label: 'Đã kết nối' },
     token_expiring: { icon: '🟠', label: 'Token sắp hết hạn' },
     token_expired: { icon: '🔴', label: 'Token đã hết hạn' }
+  };
 
   function renderMockBadge(isMockActive) {
     const badge = document.getElementById('fbMockModeBadge');
@@ -83,6 +92,7 @@ const AdminFacebookConnect = (function () {
     if (!isMockActive) { badge.style.display = 'none'; badge.innerHTML = ''; return; }
     badge.style.display = 'block';
     badge.innerHTML = '<p class="small-muted" style="color:#b36b00">🧪 Mock Mode — chưa có App ID thật, mọi kết nối/đăng bài hiện chỉ là dữ liệu giả lập để tự kiểm thử luồng.</p>';
+  }
 
   function renderCard(data, appId) {
     const statusEl = document.getElementById('fbConnectStatus');
@@ -95,8 +105,8 @@ const AdminFacebookConnect = (function () {
 
     const effectiveStatus = computeEffectiveStatus(data);
     const s = STATUS_LABELS[effectiveStatus] || STATUS_LABELS.not_connected;
-    statusEl.innerHTML = `${s.icon} ${PSH.escapeHtml(s.label)}` +
-      ((effectiveStatus !== 'not_connected' && data.pageName) ? `<br>Fanpage: <strong>${PSH.escapeHtml(data.pageName)}</strong>` : '');
+    statusEl.innerHTML = `${s.icon} ${escapeHtml(s.label)}` +
+      ((effectiveStatus !== 'not_connected' && data.pageName) ? `<br>Fanpage: <strong>${escapeHtml(data.pageName)}</strong>` : '');
 
     const connected = effectiveStatus === 'connected' || effectiveStatus === 'token_expiring';
     const expired = effectiveStatus === 'token_expired';
@@ -113,17 +123,21 @@ const AdminFacebookConnect = (function () {
     // lại" thật, tránh hiển thị nhầm 🟢 "đã kết nối thật" trong khi vẫn đang
     // dùng dữ liệu giả.
     renderMockBadge(!appId || !!data.isMock);
+  }
 
   function refresh() {
     return Promise.all([getStatus(), getAppId()]).then(([data, appId]) => renderCard(data, appId));
+  }
 
   function openConsentDialog() {
     const modal = document.getElementById('fbConsentModal');
     if (modal) modal.classList.add('open');
+  }
 
   function closeConsentDialog() {
     const modal = document.getElementById('fbConsentModal');
     if (modal) modal.classList.remove('open');
+  }
 
   // proceedOAuth() — Facebook Integration V1: KHÔNG còn báo "chưa cấu hình"
   // khi thiếu App ID — thay vào đó tự động chạy Mock Mode (xem comment đầu
@@ -147,15 +161,20 @@ const AdminFacebookConnect = (function () {
         // page selection → publish) y hệt luồng thật.
         window.location.href = `${FACEBOOK_OAUTH_CALLBACK_URL}?code=mock-code&state=${encodeURIComponent(state)}`;
         return;
+      }
       const authUrl = `${FACEBOOK_OAUTH_DIALOG_URL}?client_id=${encodeURIComponent(appId)}` +
         `&redirect_uri=${encodeURIComponent(FACEBOOK_OAUTH_CALLBACK_URL)}` +
         `&scope=${encodeURIComponent(FACEBOOK_SCOPES)}&response_type=code&state=${encodeURIComponent(state)}`;
       window.location.href = authUrl;
+    }).catch(err => alert('Không khởi tạo được phiên kết nối: ' + err.message));
+  }
 
   function disconnect() {
     if (!confirm('Ngắt kết nối Facebook? Bạn có thể kết nối lại bất kỳ lúc nào.')) return;
     ref().set({ status: 'not_connected' }).then(refresh).catch(() => {
       alert('Không ghi được vào Firebase — có thể Database Rules cho node "facebookConnection" chưa được deploy. Xem docs/FACEBOOK_INTEGRATION_SETUP.md.');
+    });
+  }
 
   // refreshToken() — Token Refresh (Facebook Integration V1). Gọi Cloud
   // Function facebookRefreshToken (đổi Long-Lived User Token còn hạn lấy 1
@@ -168,9 +187,13 @@ const AdminFacebookConnect = (function () {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
         body: JSON.stringify({})
+      }).then(res => res.json().then(data => ({ ok: res.ok, data })));
+    }).then(({ ok, data }) => {
       if (!ok || !data.success) { alert('Không làm mới được Token: ' + ((data && data.error) || 'Không rõ nguyên nhân.')); return; }
       alert('Đã làm mới Token thành công.');
       refresh();
+    }).catch(err => alert('Lỗi khi làm mới Token: ' + err.message));
+  }
 
   /* ================= App ID (Founder tự "Enter App ID" qua UI, không sửa code) ================= */
 
@@ -178,6 +201,7 @@ const AdminFacebookConnect = (function () {
     const input = document.getElementById('fbAppIdInput');
     if (!input) return Promise.resolve();
     return getAppId().then(appId => { input.value = appId; });
+  }
 
   function saveAppId() {
     const input = document.getElementById('fbAppIdInput');
@@ -186,6 +210,8 @@ const AdminFacebookConnect = (function () {
     firebase.database().ref('facebookAppConfig').update({ appId }).then(() => {
       alert(appId ? 'Đã lưu App ID.' : 'Đã xoá App ID — hệ thống quay lại Mock Mode.');
       refresh();
+    }).catch(err => alert('Lỗi khi lưu App ID: ' + err.message));
+  }
 
   /* ================= Page Selection (sau khi OAuth hoàn tất — thật hoặc Mock Mode) ================= */
 
@@ -198,6 +224,7 @@ const AdminFacebookConnect = (function () {
       box.style.display = 'block';
       box.innerHTML = '<div class="panel"><p class="small-muted">Tài khoản Facebook này chưa quản lý Fanpage nào.</p></div>';
       return;
+    }
     box.style.display = 'block';
     box.innerHTML = `<div class="panel">
       <h3>CHỌN FANPAGE MẶC ĐỊNH</h3>
@@ -205,9 +232,9 @@ const AdminFacebookConnect = (function () {
       <div style="display:flex;flex-direction:column;gap:0.6rem;margin:0.8rem 0">
         ${pages.map((p, i) => `
           <label style="display:flex;align-items:center;gap:0.6rem;cursor:pointer">
-            <input type="radio" name="fbPageChoice" value="${PSH.escapeHtml(p.id)}" ${i === 0 ? 'checked' : ''}>
-            ${p.picture ? `<img src="${PSH.escapeHtml(p.picture)}" style="width:32px;height:32px;border-radius:50%;object-fit:cover">` : ''}
-            <span>${PSH.escapeHtml(p.name)}</span>
+            <input type="radio" name="fbPageChoice" value="${escapeHtml(p.id)}" ${i === 0 ? 'checked' : ''}>
+            ${p.picture ? `<img src="${escapeHtml(p.picture)}" style="width:32px;height:32px;border-radius:50%;object-fit:cover">` : ''}
+            <span>${escapeHtml(p.name)}</span>
           </label>`).join('')}
       </div>
       <div class="admin-actions">
@@ -215,6 +242,7 @@ const AdminFacebookConnect = (function () {
       </div>
     </div>`;
     document.getElementById('fbPageSaveBtn').addEventListener('click', saveSelectedPage);
+  }
 
   function saveSelectedPage() {
     const chosen = document.querySelector('input[name="fbPageChoice"]:checked');
@@ -224,10 +252,14 @@ const AdminFacebookConnect = (function () {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
         body: JSON.stringify({ pageId: chosen.value })
+      }).then(res => res.json().then(data => ({ ok: res.ok, data })));
+    }).then(({ ok, data }) => {
       if (!ok) { alert('Lỗi khi lưu Fanpage: ' + (data.error || 'Không rõ nguyên nhân.')); return; }
       const box = pageSelectBox();
       if (box) { box.style.display = 'none'; box.innerHTML = ''; }
       refresh();
+    }).catch(err => alert('Lỗi khi lưu Fanpage: ' + err.message));
+  }
 
   // checkOAuthReturn() — sau khi Cloud Function facebookOAuthCallback redirect
   // trình duyệt về đúng trang này (?oauth=success hoặc ?oauth=error&reason=...),
@@ -245,11 +277,16 @@ const AdminFacebookConnect = (function () {
     if (oauth === 'error') {
       alert('Kết nối Facebook thất bại: ' + (params.get('reason') || 'Không rõ nguyên nhân.'));
       return;
+    }
     if (oauth === 'success') {
       const user = AdminAuth.getUser();
       firebase.database().ref('facebookPendingPages/' + user.uid + '/pages').once('value').then(snap => {
         renderPageSelection(snap.val());
+      }).catch(() => {
         alert('Đăng nhập Facebook thành công nhưng không đọc được danh sách Fanpage — vui lòng thử Kết nối lại.');
+      });
+    }
+  }
 
   function init() {
     const connectBtn = document.getElementById('fbConnectBtn');
@@ -275,6 +312,7 @@ const AdminFacebookConnect = (function () {
     loadAppIdField();
     refresh();
     checkOAuthReturn();
+  }
 
   return { init, getStatus, refresh };
 })();

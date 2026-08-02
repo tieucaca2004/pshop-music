@@ -42,7 +42,11 @@ const AdminApp = (function () {
     return labels.length ? labels.join(', ') : '—';
   }
 
+  function escapeHtml(str) {
+    return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
 
   // getYoutubeEmbedUrl - cung logic da dung o js/category.js/blog-writer.js/
   // facebook-post-generator.js (xem PROJECT_ARCHITECTURE.md) - lap lai o day
@@ -57,6 +61,7 @@ const AdminApp = (function () {
     if (!id) { m = str.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/); if (m) id = m[1]; }
     if (!id) { m = str.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/); if (m) id = m[1]; }
     return id ? `https://www.youtube.com/embed/${id}` : '';
+  }
 
   function renderYoutubePreview() {
     const box = document.getElementById('pYoutubePreview');
@@ -64,13 +69,15 @@ const AdminApp = (function () {
     const embedUrl = getYoutubeEmbedUrl(document.getElementById('pYoutubeUrl').value);
     if (!embedUrl) { box.style.display = 'none'; box.innerHTML = ''; return; }
     box.style.display = 'block';
-    box.innerHTML = `<div style="position:relative;padding-top:56.25%;height:0;max-width:360px;border-radius:8px;overflow:hidden"><iframe src="${PSH.escapeHtml(embedUrl)}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0" allowfullscreen loading="lazy"></iframe></div>`;
+    box.innerHTML = `<div style="position:relative;padding-top:56.25%;height:0;max-width:360px;border-radius:8px;overflow:hidden"><iframe src="${escapeHtml(embedUrl)}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:0" allowfullscreen loading="lazy"></iframe></div>`;
+  }
 
   function withTimeout(promise, ms) {
     return Promise.race([
       promise,
       new Promise((_, reject) => setTimeout(() => reject(new Error('Hết thời gian chờ kết nối database')), ms))
     ]);
+  }
 
   // renderCategoryCheckboxes — RULES Sprint 13: chỉ danh mục đang Hoạt động
   // (active !== false, đã lọc ở loadCategories), sắp theo displayOrder (field
@@ -81,26 +88,33 @@ const AdminApp = (function () {
     const wrap = document.getElementById('pCategoriesList');
     wrap.innerHTML = categories.map(c => `
       <label>
-        <input type="checkbox" value="${PSH.escapeHtml(c.code)}" ${selectedIds.includes(c.code) ? 'checked' : ''}>
-        ${c.icon ? PSH.escapeHtml(c.icon) + ' ' : ''}${PSH.escapeHtml(c.label)}
+        <input type="checkbox" value="${escapeHtml(c.code)}" ${selectedIds.includes(c.code) ? 'checked' : ''}>
+        ${c.icon ? escapeHtml(c.icon) + ' ' : ''}${escapeHtml(c.label)}
       </label>`).join('') || '<p class="small-muted">Chưa có danh mục nào đang hoạt động.</p>';
+  }
 
   function getCheckedCategoryIds() {
     return Array.from(document.querySelectorAll('#pCategoriesList input[type="checkbox"]:checked')).map(cb => cb.value);
+  }
 
   function loadCategories() {
     return withTimeout(CategoryDB.getAll(), 10000).then(list => {
       categories = list.filter(c => c.active !== false).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
       renderCategoryCheckboxes([]);
+    });
+  }
 
   function loadProducts(filter) {
     withTimeout(DB.getAll(), 10000).then(list => {
       products = list;
       renderTable(filter || '');
       applyDeepLink();
+    }).catch(err => {
       console.error('Không tải được dữ liệu sản phẩm:', err);
       document.getElementById('productTableBody').innerHTML =
         '<tr><td colspan="8" style="color:#c0392b;text-align:center;padding:2rem">Không kết nối được database.</td></tr>';
+    });
+  }
 
   // ── Deep link từ Founder Agent V3 (CMS Operator) ────────────────────────────
   // ?edit=<id> — tự mở đúng form Sửa, tái sử dụng NGUYÊN VẸN editProduct() đã
@@ -128,16 +142,19 @@ const AdminApp = (function () {
         el.value = value;
         el.classList.add('agent-field-highlight');
         el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }
 
   // rowHtml — 1 dòng sản phẩm (tách riêng khỏi renderTable để dùng lại được
   // trong từng khối Danh mục bên dưới).
   function rowHtml(p) {
     return `
       <tr>
-        <td>${p.image ? `<img src="${PSH.escapeHtml(p.image)}" onerror="this.style.display='none'">` : '—'}</td>
-        <td>${PSH.escapeHtml(p.name)}</td>
-        <td>${PSH.escapeHtml(catLabelsJoined(p))}</td>
-        <td>${p.price ? PSH.escapeHtml(p.price) : '<span style="color:var(--muted2)">Liên hệ</span>'}</td>
+        <td>${p.image ? `<img src="${escapeHtml(p.image)}" onerror="this.style.display='none'">` : '—'}</td>
+        <td>${escapeHtml(p.name)}</td>
+        <td>${escapeHtml(catLabelsJoined(p))}</td>
+        <td>${p.price ? escapeHtml(p.price) : '<span style="color:var(--muted2)">Liên hệ</span>'}</td>
         <td>${p.status === 'Used' ? 'Qua sử dụng' : 'Mới'}</td>
         <td>${p.stockStatus === 'outofstock' ? '<span style="color:#c0392b;font-weight:600">Hết hàng</span>' : 'Còn hàng'}</td>
         <td>${pubStatusLabel(p.pubStatus)}</td>
@@ -148,6 +165,7 @@ const AdminApp = (function () {
           </div>
         </td>
       </tr>`;
+  }
 
   // renderTable — Founder báo "tất cả sản phẩm chung 1 chỗ khó tìm" → nhóm
   // theo Danh mục CHÍNH (categoryIds[0]), mỗi nhóm 1 khối thu gọn/mở rộng
@@ -164,12 +182,14 @@ const AdminApp = (function () {
     if (filtered.length === 0) {
       body.innerHTML = '<tr><td colspan="8" style="color:var(--muted2);text-align:center;padding:2rem">Không có sản phẩm.</td></tr>';
       return;
+    }
 
     const NONE_CODE = '__none__';
     const groups = {};
     filtered.forEach(p => {
       const code = productCategoryIds(p)[0] || NONE_CODE;
       (groups[code] = groups[code] || []).push(p);
+    });
     const orderedCodes = categories.map(c => c.code).filter(code => groups[code]);
     if (groups[NONE_CODE]) orderedCodes.push(NONE_CODE);
 
@@ -178,10 +198,12 @@ const AdminApp = (function () {
       const rows = groups[code];
       return `<tr class="admin-cat-group-row"><td colspan="8" style="padding:0;border:none">
         <details class="admin-cat-group"${q ? ' open' : ''}>
-          <summary>${PSH.escapeHtml(label)} <span class="admin-cat-count">(${rows.length})</span></summary>
+          <summary>${escapeHtml(label)} <span class="admin-cat-count">(${rows.length})</span></summary>
           <table class="admin-table admin-table-nested"><tbody>${rows.map(rowHtml).join('')}</tbody></table>
         </details>
       </td></tr>`;
+    }).join('');
+  }
 
   // pubStatus mới thêm (Sprint 12 Requirement #10) — 42 sản phẩm thật hiện có
   // đều CHƯA có field này (undefined), phải hiển thị/coi như "Đã xuất bản"
@@ -191,6 +213,7 @@ const AdminApp = (function () {
     if (pubStatus === 'draft') return '<span style="color:var(--muted2)">Nháp</span>';
     if (pubStatus === 'hidden') return '<span style="color:#c0392b;font-weight:600">Ẩn</span>';
     return 'Đã xuất bản';
+  }
 
   function setBrandValue(brand) {
     const select = document.getElementById('pBrand');
@@ -200,19 +223,24 @@ const AdminApp = (function () {
       select.value = brand;
       custom.style.display = 'none';
       custom.value = '';
+    } else {
       select.value = '__other__';
       custom.style.display = 'block';
       custom.value = brand || '';
+    }
+  }
 
   function toggleCustomBrand() {
     const select = document.getElementById('pBrand');
     const custom = document.getElementById('pBrandCustom');
     custom.style.display = select.value === '__other__' ? 'block' : 'none';
+  }
 
   function getBrandValue() {
     const select = document.getElementById('pBrand');
     if (select.value === '__other__') return document.getElementById('pBrandCustom').value.trim();
     return select.value;
+  }
 
   function editProduct(id) {
     const p = products.find(x => x.id === id);
@@ -249,9 +277,11 @@ const AdminApp = (function () {
     // Sync ảnh đại diện đầu tiên vào BgRemover làm ảnh nguồn gợi ý
     if (typeof AdminBgRemover !== 'undefined' && images[0]) {
       AdminBgRemover.setSourceUrl('pBgRemover', images[0]);
+    }
     document.getElementById('formTitle').textContent = 'SỬA SẢN PHẨM';
     document.getElementById('saveBtn').textContent = 'CẬP NHẬT SẢN PHẨM';
     document.getElementById('formPanel').scrollIntoView({ behavior: 'smooth' });
+  }
 
   function deleteProduct(id) {
     const p = products.find(x => x.id === id);
@@ -260,12 +290,15 @@ const AdminApp = (function () {
     DB.remove(id).then(() => {
       showStatus('Đã xóa sản phẩm.');
       loadProducts(document.getElementById('adminSearch').value);
+    });
+  }
 
   function resetForm() {
     editingId = null;
     document.getElementById('pId').value = '';
     ['pName', 'pSku', 'pWarranty', 'pPrice', 'pOldPrice', 'pSpecs', 'pBadgeText', 'pSpecifications', 'pFeatures', 'pTags', 'pImages', 'pYoutubeUrl', 'pBgImage'].forEach(id => {
       document.getElementById(id).value = '';
+    });
     renderYoutubePreview();
     pImagesPicker.refresh();
     if (pBgImagePicker) pBgImagePicker.refresh();
@@ -281,6 +314,7 @@ const AdminApp = (function () {
     setBrandValue('');
     document.getElementById('formTitle').textContent = 'THÊM SẢN PHẨM MỚI';
     document.getElementById('saveBtn').textContent = 'LƯU SẢN PHẨM';
+  }
 
   function saveProduct() {
     const name = document.getElementById('pName').value.trim();
@@ -324,18 +358,22 @@ const AdminApp = (function () {
       description: quill && quill.getText().trim() ? quill.root.innerHTML : '',
       images: images,
       image: images[0] || ''
+    };
 
     const action = editingId ? DB.update(editingId, data) : DB.add(data);
     action.then(() => {
       showStatus(editingId ? 'Đã cập nhật sản phẩm.' : 'Đã thêm sản phẩm mới.');
       resetForm();
       loadProducts(document.getElementById('adminSearch').value);
+    });
+  }
 
   function showStatus(msg) {
     const el = document.getElementById('formStatus');
     el.textContent = msg;
     el.style.display = 'block';
     setTimeout(() => { el.style.display = 'none'; }, 3000);
+  }
 
   function exportJson() {
     DB.getAll().then(list => {
@@ -346,6 +384,8 @@ const AdminApp = (function () {
       a.download = 'pshop-products-' + new Date().toISOString().slice(0, 10) + '.json';
       a.click();
       URL.revokeObjectURL(url);
+    });
+  }
 
   function importJson(file) {
     const reader = new FileReader();
@@ -357,18 +397,26 @@ const AdminApp = (function () {
         DB.replaceAll(list).then(() => {
           showStatus('Đã nhập ' + list.length + ' sản phẩm.');
           loadProducts();
+        });
+      } catch (err) {
         alert('File JSON không hợp lệ.');
+      }
+    };
     reader.readAsText(file);
+  }
 
   function resetToSeed() {
     if (!confirm('Khôi phục về dữ liệu gốc? Mọi thay đổi hiện tại sẽ bị mất.')) return;
     DB.resetToSeed().then(() => {
       showStatus('Đã khôi phục dữ liệu gốc.');
       loadProducts();
+    });
+  }
 
   document.addEventListener('DOMContentLoaded', () => {
     AdminAuth.init({ page: 'products', title: 'QUẢN LÝ SẢN PHẨM' }).then(() => {
       loadCategories().then(() => loadProducts());
+    });
 
     pImagesPicker = MediaLibraryPicker.mountMulti('pImages', 'pImagesGrid');
     pBgImagePicker = MediaLibraryPicker.mount('pBgImage', 'pBgImageSlot');
@@ -379,6 +427,9 @@ const AdminApp = (function () {
         onResult: function (url) {
           document.getElementById('pBgImage').value = url;
           if (pBgImagePicker) pBgImagePicker.refresh();
+        }
+      });
+    }
 
     if (typeof Quill !== 'undefined') {
       quill = new Quill('#pDescriptionEditor', {
@@ -394,17 +445,23 @@ const AdminApp = (function () {
             ['image', 'link'],
             ['clean']
           ]
+        }
+      });
+    }
 
     let debounce;
     document.getElementById('adminSearch').addEventListener('input', e => {
       clearTimeout(debounce);
       debounce = setTimeout(() => renderTable(e.target.value), 150);
+    });
 
     document.getElementById('importFile').addEventListener('change', e => {
       if (e.target.files[0]) importJson(e.target.files[0]);
       e.target.value = '';
+    });
 
     document.getElementById('pYoutubeUrl').addEventListener('input', renderYoutubePreview);
+  });
 
   return { editProduct, deleteProduct, saveProduct, resetForm, exportJson, resetToSeed, toggleCustomBrand };
 })();

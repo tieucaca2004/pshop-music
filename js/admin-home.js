@@ -28,17 +28,24 @@ const AdminHome = (function () {
   const JOB_STATUS_LABELS = { queued: 'Đang chờ', running: 'Đang xử lý', completed: 'Hoàn tất', failed: 'Thất bại', cancelled: 'Đã hủy' };
   const DRAFT_STATUS_LABELS = { draft: 'Chờ duyệt', published: 'Đã publish', rejected: 'Đã từ chối' };
 
+  function escapeHtml(str) {
+    return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
 
   function formatTime(ts) {
     return ts ? new Date(ts).toLocaleString('vi-VN') : '(không rõ thời gian)';
+  }
 
   function pluginLabel(moduleId) {
     const m = typeof AIModuleRegistry !== 'undefined' ? AIModuleRegistry.get(moduleId) : null;
     return m ? m.label : (moduleId || '(không rõ)');
+  }
 
   function init() {
     AdminAuth.init({ page: 'founder-home', title: 'TRANG CHỦ' }).then(load);
+  }
 
   function load() {
     Promise.all([
@@ -62,21 +69,26 @@ const AdminHome = (function () {
       renderRecentJobs(recentJobs);
       renderRecentMedia(recentMedia, mediaOk ? null : media.error);
       renderRecentActivities(recentProducts, recentDrafts, recentJobs, mediaOk ? media.slice(0, MEDIA_LIMIT) : []);
+    });
+  }
 
   function renderBusiness(settings) {
     document.getElementById('homeBusiness').innerHTML = `
-      <h3 style="margin:0 0 0.3rem">${PSH.escapeHtml(settings.siteName || '(chưa đặt tên doanh nghiệp)')}</h3>
-      <p class="small-muted" style="margin:0">${PSH.escapeHtml(settings.address || '(chưa có địa chỉ)')}</p>`;
+      <h3 style="margin:0 0 0.3rem">${escapeHtml(settings.siteName || '(chưa đặt tên doanh nghiệp)')}</h3>
+      <p class="small-muted" style="margin:0">${escapeHtml(settings.address || '(chưa có địa chỉ)')}</p>`;
+  }
 
   function quickAction(label, href, disabled) {
     if (disabled) {
       return `<div class="panel" style="text-align:center;opacity:0.5;cursor:default">
-        <p style="margin:0;font-weight:600">${PSH.escapeHtml(label)}</p>
+        <p style="margin:0;font-weight:600">${escapeHtml(label)}</p>
         <p class="small-muted" style="margin:0.3rem 0 0">Sắp có</p>
       </div>`;
-    return `<a href="${PSH.escapeHtml(href)}" class="panel" style="text-align:center;display:block;text-decoration:none;color:var(--ink)">
-      <p style="margin:0;font-weight:600;color:var(--gold-ink)">${PSH.escapeHtml(label)}</p>
+    }
+    return `<a href="${escapeHtml(href)}" class="panel" style="text-align:center;display:block;text-decoration:none;color:var(--ink)">
+      <p style="margin:0;font-weight:600;color:var(--gold-ink)">${escapeHtml(label)}</p>
     </a>`;
+  }
 
   function renderQuickActions() {
     // Dung dung 7 Quick Action da giao - KHONG hien Queue/Plugin/Provider/
@@ -90,44 +102,50 @@ const AdminHome = (function () {
       quickAction('AI Video', null, true),
       quickAction('Marketing Drafts', 'ai/drafts.html')
     ].join('');
+  }
 
   function emptyMsg(text) {
-    return `<p class="small-muted">${PSH.escapeHtml(text)}</p>`;
+    return `<p class="small-muted">${escapeHtml(text)}</p>`;
+  }
 
   function renderRecentProducts(items) {
     const el = document.getElementById('homeRecentProducts');
     if (!items.length) { el.innerHTML = emptyMsg('Chưa có sản phẩm nào.'); return; }
     el.innerHTML = `<ul style="list-style:none;padding:0;margin:0">${items.map(p => `
       <li style="padding:0.5rem 0;border-bottom:1px solid var(--bg-alt)">
-        <strong>${PSH.escapeHtml(p.name)}</strong> — ${PSH.escapeHtml(p.price || '(chưa có giá)')}
+        <strong>${escapeHtml(p.name)}</strong> — ${escapeHtml(p.price || '(chưa có giá)')}
         <div class="small-muted">${formatTime(p.createdAt)}</div>
       </li>`).join('')}</ul>`;
+  }
 
   function renderRecentDrafts(items) {
     const el = document.getElementById('homeRecentDrafts');
     if (!items.length) { el.innerHTML = emptyMsg('Chưa có Draft nào — Draft xuất hiện sau khi dùng công cụ AI Content/Marketing Drafts.'); return; }
     el.innerHTML = `<ul style="list-style:none;padding:0;margin:0">${items.map(d => `
       <li style="padding:0.5rem 0;border-bottom:1px solid var(--bg-alt)">
-        <strong>${PSH.escapeHtml(pluginLabel(d.moduleId))}</strong> — ${PSH.escapeHtml(DRAFT_STATUS_LABELS[d.status] || d.status)}
+        <strong>${escapeHtml(pluginLabel(d.moduleId))}</strong> — ${escapeHtml(DRAFT_STATUS_LABELS[d.status] || d.status)}
         <div class="small-muted">${formatTime(d.createdAt)}</div>
       </li>`).join('')}</ul>`;
+  }
 
   function renderRecentJobs(items) {
     const el = document.getElementById('homeRecentJobs');
     if (!items.length) { el.innerHTML = emptyMsg('Chưa có hoạt động AI nào gần đây.'); return; }
     el.innerHTML = `<ul style="list-style:none;padding:0;margin:0">${items.map(j => `
       <li style="padding:0.5rem 0;border-bottom:1px solid var(--bg-alt)">
-        <strong>${PSH.escapeHtml(pluginLabel(j.moduleId))}</strong> — ${PSH.escapeHtml(JOB_STATUS_LABELS[j.status] || j.status)}
+        <strong>${escapeHtml(pluginLabel(j.moduleId))}</strong> — ${escapeHtml(JOB_STATUS_LABELS[j.status] || j.status)}
         <div class="small-muted">${formatTime(j.createdAt)}</div>
       </li>`).join('')}</ul>`;
+  }
 
   function renderRecentMedia(items, errorMsg) {
     const el = document.getElementById('homeRecentMedia');
-    if (errorMsg) { el.innerHTML = `<p style="color:#c0392b">Không đọc được Thư viện ảnh: ${PSH.escapeHtml(errorMsg)}</p>`; return; }
+    if (errorMsg) { el.innerHTML = `<p style="color:#c0392b">Không đọc được Thư viện ảnh: ${escapeHtml(errorMsg)}</p>`; return; }
     if (!items.length) { el.innerHTML = emptyMsg('Chưa có ảnh nào trong Thư viện.'); return; }
     el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:0.5rem">
-      ${items.map(m => `<img src="${PSH.escapeHtml(m.url || '')}" alt="${PSH.escapeHtml(m.name)}" style="width:100%;height:70px;object-fit:cover;border-radius:6px;background:var(--bg-alt)">`).join('')}
+      ${items.map(m => `<img src="${escapeHtml(m.url || '')}" alt="${escapeHtml(m.name)}" style="width:100%;height:70px;object-fit:cover;border-radius:6px;background:var(--bg-alt)">`).join('')}
     </div>`;
+  }
 
   function renderRecentActivities(products, drafts, jobs, media) {
     // Ghep lai TU CHINH 4 nguon da doc o tren thanh 1 dong thoi gian duy
@@ -145,9 +163,10 @@ const AdminHome = (function () {
     if (!activities.length) { el.innerHTML = emptyMsg('Chưa có hoạt động nào.'); return; }
     el.innerHTML = `<ul style="list-style:none;padding:0;margin:0">${activities.map(a => `
       <li style="padding:0.4rem 0;border-bottom:1px solid var(--bg-alt)">
-        ${PSH.escapeHtml(a.text)}
+        ${escapeHtml(a.text)}
         <div class="small-muted">${formatTime(a.ts)}</div>
       </li>`).join('')}</ul>`;
+  }
 
   return { init };
 })();

@@ -9,12 +9,18 @@ document.addEventListener('DOMContentLoaded', () => {
   let videos = [];
   let editingId = null;
 
+  function escapeHtml(str) {
+    return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
 
   function load() {
     VideoDB.getAll().then(list => {
       videos = list;
       render();
+    });
+  }
 
   function render() {
     document.getElementById('videoTotal').textContent = videos.length;
@@ -22,12 +28,13 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!videos.length) {
       body.innerHTML = '<tr><td colspan="5" style="color:var(--ink-mute);text-align:center;padding:2rem">Chưa có video nào.</td></tr>';
       return;
+    }
     body.innerHTML = videos.map(v => {
       const parsed = parseVideoUrl(v.url);
       return `
       <tr>
-        <td>${parsed && parsed.thumbnail ? `<img src="${PSH.escapeHtml(parsed.thumbnail)}">` : '—'}</td>
-        <td>${PSH.escapeHtml(v.title)}</td>
+        <td>${parsed && parsed.thumbnail ? `<img src="${escapeHtml(parsed.thumbnail)}">` : '—'}</td>
+        <td>${escapeHtml(v.title)}</td>
         <td>${parsed ? parsed.platform : '<span style="color:#c0392b">Link không hợp lệ</span>'}</td>
         <td>${v.active !== false ? 'Hiển thị' : '<span style="color:var(--ink-mute)">Tạm ẩn</span>'}</td>
         <td>
@@ -37,6 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         </td>
       </tr>`;
+    }).join('');
+  }
 
   function edit(id) {
     const v = videos.find(x => x.id === id);
@@ -50,6 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('videoFormTitle').textContent = 'SỬA VIDEO';
     document.getElementById('videoSaveBtn').textContent = 'CẬP NHẬT VIDEO';
     document.getElementById('videoFormPanel').scrollIntoView({ behavior: 'smooth' });
+  }
 
   function resetForm() {
     editingId = null;
@@ -58,6 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('vActive').checked = true;
     document.getElementById('videoFormTitle').textContent = 'THÊM VIDEO MỚI';
     document.getElementById('videoSaveBtn').textContent = 'LƯU VIDEO';
+  }
 
   function save() {
     const title = document.getElementById('vTitle').value.trim();
@@ -70,21 +81,26 @@ document.addEventListener('DOMContentLoaded', () => {
       description: document.getElementById('vDescription').value.trim(),
       order: parseInt(document.getElementById('vOrder').value, 10) || 0,
       active: document.getElementById('vActive').checked
+    };
     const action = editingId ? VideoDB.update(editingId, data) : VideoDB.add(data);
     action.then(() => {
       showStatus(editingId ? 'Đã cập nhật video.' : 'Đã thêm video mới.');
       resetForm();
       load();
+    });
+  }
 
   function remove(id) {
     if (!confirm('Xóa video này?')) return;
     VideoDB.remove(id).then(load);
+  }
 
   function showStatus(msg) {
     const el = document.getElementById('videoStatus');
     el.textContent = msg;
     el.style.display = 'block';
     setTimeout(() => { el.style.display = 'none'; }, 3000);
+  }
 
   document.getElementById('videoSaveBtn').addEventListener('click', save);
   document.getElementById('videoResetBtn').addEventListener('click', resetForm);

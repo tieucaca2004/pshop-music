@@ -1,17 +1,24 @@
 (function () {
+  function escapeHtml(str) {
+    return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
 
   function withTimeout(promise, ms) {
     return Promise.race([
       promise,
       new Promise((_, reject) => setTimeout(() => reject(new Error('Hết thời gian chờ kết nối database')), ms))
     ]);
+  }
 
   document.addEventListener('click', function (e) {
     const nav = document.getElementById('mobileNav');
     const toggle = document.querySelector('.nav-toggle');
     if (nav.classList.contains('open') && !nav.contains(e.target) && !toggle.contains(e.target)) {
       nav.classList.remove('open');
+    }
+  });
 
   window.submitForm = function () {
     const n = document.getElementById('fname').value.trim();
@@ -23,6 +30,8 @@
     setTimeout(() => {
       btn.style.display = 'none';
       document.getElementById('formSuccess').style.display = 'block';
+    }, 800);
+  };
 
   /* ---------------- Hero slideshow ---------------- */
   let heroSlidesData = [];
@@ -45,6 +54,7 @@
     form.method = 'GET';
     form.innerHTML = '<span class="icon">&#128269;</span><input type="text" name="q" placeholder="Tìm sản phẩm...">';
     mobileNav.insertBefore(form, mobileNav.firstChild);
+  }
 
   function renderHeroGlobalText(content) {
     const tagEl = document.getElementById('heroTag');
@@ -53,6 +63,7 @@
     if (tagEl && content.heroTag) tagEl.textContent = content.heroTag;
     if (ctaEl && content.heroCtaLabel) ctaEl.textContent = content.heroCtaLabel;
     if (cta2El && content.heroCta2Label) cta2El.textContent = content.heroCta2Label;
+  }
 
   // Zoom/Vị trí ảnh nền Slide (Sprint 14) — Founder kéo tự do trong
   // admin/sliders.html (khung xem trước, không giới hạn mức nào). Mặc định
@@ -75,8 +86,10 @@
       const zoom = typeof s.imageZoom === 'number' ? s.imageZoom : 100;
       const posX = typeof s.imagePosX === 'number' ? s.imagePosX : 50;
       const posY = typeof s.imagePosY === 'number' ? s.imagePosY : 30;
-      return `<div class="hero-slide${i === 0 ? ' active' : ''}" style="background-image:url('${PSH.escapeHtml(bgSrc || s)}');background-position:${posX}% ${posY}%;transform:scale(${zoom / 100})"></div>`;
+      return `<div class="hero-slide${i === 0 ? ' active' : ''}" style="background-image:url('${escapeHtml(bgSrc || s)}');background-position:${posX}% ${posY}%;transform:scale(${zoom / 100})"></div>`;
+    }).join('');
     updateHeroText(0);
+  }
 
   // LEGACY_POSITION_XY — quy đổi 9 điểm CŨ (đã bỏ, Founder yêu cầu thay bằng
   // kéo tự do) sang toạ độ % gần đúng, CHỈ để Slide cũ (đã có field
@@ -87,12 +100,16 @@
     'top-left': { x: 8, y: 18 }, 'top-center': { x: 50, y: 18 }, 'top-right': { x: 92, y: 18 },
     'middle-left': { x: 8, y: 50 }, 'middle-center': { x: 50, y: 50 }, 'middle-right': { x: 92, y: 50 },
     'bottom-left': { x: 8, y: 58 }, 'bottom-center': { x: 50, y: 58 }, 'bottom-right': { x: 92, y: 58 }
+  };
   function deriveTitlePos(slide) {
     if (typeof slide.titlePosX === 'number' && typeof slide.titlePosY === 'number') return { x: slide.titlePosX, y: slide.titlePosY };
     return LEGACY_POSITION_XY[slide.position] || LEGACY_POSITION_XY['bottom-left'];
+  }
   function deriveSubPos(slide) {
     if (typeof slide.subPosX === 'number' && typeof slide.subPosY === 'number') return { x: slide.subPosX, y: slide.subPosY };
     const t = deriveTitlePos(slide);
+    return { x: t.x, y: Math.min(96, t.y + 22) };
+  }
   // deriveTagPos/deriveBtnsPos — Nhãn địa danh ("Nha Trang · Khánh Hòa") và 2
   // nút bấm trước đây LUÔN đứng CHUNG khối với Tiêu đề/Mô tả (không kéo/ẩn
   // riêng được — Founder báo không xóa/di chuyển được). Giờ tách thành 2 khối
@@ -101,9 +118,13 @@
   function deriveTagPos(slide) {
     if (typeof slide.tagPosX === 'number' && typeof slide.tagPosY === 'number') return { x: slide.tagPosX, y: slide.tagPosY };
     const t = deriveTitlePos(slide);
+    return { x: t.x, y: Math.max(2, t.y - 10) };
+  }
   function deriveBtnsPos(slide) {
     if (typeof slide.btnsPosX === 'number' && typeof slide.btnsPosY === 'number') return { x: slide.btnsPosX, y: slide.btnsPosY };
     const s = deriveSubPos(slide);
+    return { x: s.x, y: Math.min(96, s.y + 10) };
+  }
 
   function updateHeroText(index) {
     const slide = heroSlidesData[index];
@@ -126,6 +147,7 @@
       const hasTitle = !!(slide.title && slide.title.trim());
       titleEl.style.display = hasTitle ? '' : 'none';
       if (hasTitle) titleEl.textContent = slide.title;
+    }
     // Cùng lỗi "để lại chữ CŨ" đã sửa cho tiêu đề ở trên nhưng bị bỏ sót cho
     // mô tả — Slide không có subtitle (vd Slide chỉ có ảnh) vẫn hiện mô tả
     // CŨ của Slide trước đó, đè lên đúng vị trí Slide hiện tại (đây mới là
@@ -135,6 +157,7 @@
       const hasSub = !!(slide.subtitle && slide.subtitle.trim());
       subEl.style.display = hasSub ? '' : 'none';
       if (hasSub) subEl.textContent = slide.subtitle;
+    }
     if (ctaBtn) ctaBtn.dataset.link = slide.link || '';
     // Ảnh sản phẩm chồng lên (Sprint 14) — CHỈ hiện khi Slide có "bgImage"
     // riêng (2 lớp) — không có Ảnh nền = ẢNH SLIDE đang tự làm backdrop toàn
@@ -144,7 +167,10 @@
       if (slide.bgImage && slide.image) {
         subjectEl.src = slide.image;
         subjectEl.style.display = '';
+      } else {
         subjectEl.style.display = 'none';
+      }
+    }
     // Vị trí + cỡ chữ TỰ DO (thay 9 điểm cũ) — ghi qua CSS custom property
     // trên #heroSection, css/style.css .hero-title-block/.hero-sub-block đọc
     // lại để định vị + .hero h1/.hero-sub đọc lại để co giãn cỡ chữ.
@@ -163,15 +189,21 @@
       heroSection.style.setProperty('--hero-btns-y', btnsP.y + '%');
       heroSection.style.setProperty('--hero-title-scale', (typeof slide.titleScale === 'number' ? slide.titleScale : 100) / 100);
       heroSection.style.setProperty('--hero-sub-scale', (typeof slide.subScale === 'number' ? slide.subScale : 100) / 100);
+    }
+  }
 
   window.handleHeroCta = function () {
     const link = document.getElementById('heroCta').dataset.link;
     if (!link) {
       document.getElementById('categories').scrollIntoView({ behavior: 'smooth' });
+    } else if (link.startsWith('#')) {
       const el = document.getElementById(link.slice(1));
       if (el) el.scrollIntoView({ behavior: 'smooth' });
       else location.href = link;
+    } else {
       location.href = link;
+    }
+  };
 
   function initHeroSlideshow() {
     const slidesWrap = document.getElementById('heroSlides');
@@ -193,15 +225,18 @@
       slides[current].classList.add('active');
       dots[current].classList.add('active');
       updateHeroText(current);
+    }
 
     function next() { goTo((current + 1) % slides.length); }
 
     function restart() {
       clearInterval(timer);
       timer = setInterval(next, 4500);
+    }
 
     dots.forEach((dot, i) => dot.addEventListener('click', () => { goTo(i); restart(); }));
     restart();
+  }
 
   /* ---------------- Category tiles ----------------
    * tileHasCover(t) — Ô có dùng Cover đầy đủ (Ảnh nền/Logo/Vị trí/Zoom/
@@ -213,6 +248,7 @@
     return !!(t.backgroundImage || t.logo || (t.position && t.position !== 'center') ||
       (t.zoom && t.zoom !== 100) || (t.opacity != null && t.opacity !== 100) ||
       (t.blur && t.blur > 0) || (t.overlay != null && t.overlay !== 100));
+  }
 
   function renderCategoryTiles(tiles) {
     const grid = document.getElementById('catTileGrid');
@@ -239,17 +275,21 @@
       if (tileHasCover(t)) {
         classes.push('has-cover');
         const bgHtml = t.backgroundImage
-          ? `<div class="cat-tile-bg" style="background-image:url('${PSH.escapeHtml(t.backgroundImage)}');filter:blur(${t.blur || 0}px)"></div><div class="cat-tile-cover-overlay" style="opacity:${(t.overlay != null ? t.overlay : 100) / 100}"></div>`
+          ? `<div class="cat-tile-bg" style="background-image:url('${escapeHtml(t.backgroundImage)}');filter:blur(${t.blur || 0}px)"></div><div class="cat-tile-cover-overlay" style="opacity:${(t.overlay != null ? t.overlay : 100) / 100}"></div>`
           : '';
         const prodHtml = t.image
-          ? `<img class="cat-tile-product-img" data-cover-position="${t.position || 'center'}" style="--cover-zoom:${(t.zoom || 100) / 100};--cover-opacity:${(t.opacity != null ? t.opacity : 100) / 100}" src="${PSH.escapeHtml(t.image)}" alt="${PSH.escapeHtml(t.label)}" loading="lazy" onerror="this.remove()">`
+          ? `<img class="cat-tile-product-img" data-cover-position="${t.position || 'center'}" style="--cover-zoom:${(t.zoom || 100) / 100};--cover-opacity:${(t.opacity != null ? t.opacity : 100) / 100}" src="${escapeHtml(t.image)}" alt="${escapeHtml(t.label)}" loading="lazy" onerror="this.remove()">`
           : '';
-        const logoHtml = t.logo ? `<img class="cat-tile-logo" src="${PSH.escapeHtml(t.logo)}" alt="" loading="lazy">` : '';
+        const logoHtml = t.logo ? `<img class="cat-tile-logo" src="${escapeHtml(t.logo)}" alt="" loading="lazy">` : '';
         inner = bgHtml + prodHtml + logoHtml;
+      } else {
         inner = t.image
-          ? `<img src="${PSH.escapeHtml(t.image)}" alt="${PSH.escapeHtml(t.label)}" loading="lazy" onerror="this.parentElement.classList.add('no-photo');this.remove()">`
+          ? `<img src="${escapeHtml(t.image)}" alt="${escapeHtml(t.label)}" loading="lazy" onerror="this.parentElement.classList.add('no-photo');this.remove()">`
           : '';
-      return `<a class="${classes.join(' ')}" href="${href}"${ratioStyle}>${inner}<span class="cat-tile-label">${PSH.escapeHtml(t.label)}</span></a>`;
+      }
+      return `<a class="${classes.join(' ')}" href="${href}"${ratioStyle}>${inner}<span class="cat-tile-label">${escapeHtml(t.label)}</span></a>`;
+    }).join('');
+  }
 
   // renderCategoriesIntro — tiêu đề "DANH MỤC SẢN PHẨM / CHỌN DANH MỤC ĐỂ
   // XEM..." phía trên lưới Ô, giờ quản lý qua CMS (admin/settings.html, mục
@@ -269,6 +309,7 @@
     if (titleEl) titleEl.textContent = content.categoriesTitle || '';
     if (descEl) descEl.textContent = content.categoriesDesc || '';
     wrap.style.display = '';
+  }
 
   /* ---------------- Banner zone (Banner Manager) ---------------- */
   function renderBanners() {
@@ -278,11 +319,14 @@
       const active = list.filter(b => b.active !== false && b.zone === 'home-top');
       if (!active.length) return;
       zone.innerHTML = active.map(b => {
-        const img = `<img src="${PSH.escapeHtml(b.image)}" alt="${PSH.escapeHtml(b.title || '')}" loading="lazy">`;
+        const img = `<img src="${escapeHtml(b.image)}" alt="${escapeHtml(b.title || '')}" loading="lazy">`;
         return b.link
-          ? `<a class="banner-item" href="${PSH.escapeHtml(b.link)}">${img}</a>`
+          ? `<a class="banner-item" href="${escapeHtml(b.link)}">${img}</a>`
           : `<div class="banner-item">${img}</div>`;
+      }).join('');
       zone.classList.add('has-banners');
+    }).catch(err => console.error('Không tải được banner:', err));
+  }
 
   /* ---------------- Settings (contact info) ---------------- */
   function renderSettings(settings) {
@@ -291,10 +335,12 @@
     if (phoneEl && settings.phone) {
       phoneEl.href = 'tel:' + settings.phone;
       phoneEl.textContent = settings.phoneDisplay || settings.phone;
+    }
     const addressEl = document.getElementById('contactAddress');
     if (addressEl && settings.address) {
       addressEl.textContent = settings.address;
       if (settings.mapLink) addressEl.href = settings.mapLink;
+    }
     const hoursEl = document.getElementById('contactHours');
     if (hoursEl && settings.openingHours) hoursEl.textContent = settings.openingHours;
 
@@ -304,6 +350,7 @@
     const messengerBtn = document.getElementById('messengerChatBtn');
     const messengerLink = settings.socials && settings.socials.messenger;
     if (messengerBtn && messengerLink) messengerBtn.href = messengerLink;
+  }
 
   /* ---------------- Services section ---------------- */
   function renderServices(content) {
@@ -314,14 +361,17 @@
     const svcListEl = document.getElementById('svcList');
     if (svcListEl && Array.isArray(content.serviceItems) && content.serviceItems.length) {
       svcListEl.innerHTML = content.serviceItems.map((item, i) => `
-        <div class="svc-item"><span class="svc-num">${String(i + 1).padStart(2, '0')}</span><div class="svc-body"><h4>${PSH.escapeHtml(item.title)}</h4><p>${item.desc || ''}</p></div></div>
+        <div class="svc-item"><span class="svc-num">${String(i + 1).padStart(2, '0')}</span><div class="svc-body"><h4>${escapeHtml(item.title)}</h4><p>${item.desc || ''}</p></div></div>
       `).join('');
+    }
 
     const rowsEl = document.getElementById('infoBoxRows');
     if (rowsEl && Array.isArray(content.infoBoxRows) && content.infoBoxRows.length) {
       rowsEl.innerHTML = content.infoBoxRows.map(row =>
-        `<div class="info-row"><span>${PSH.escapeHtml(row.label)}</span><span>${PSH.escapeHtml(row.value)}</span></div>`
+        `<div class="info-row"><span>${escapeHtml(row.label)}</span><span>${escapeHtml(row.value)}</span></div>`
       ).join('');
+    }
+  }
 
   if (typeof SiteContentDB !== 'undefined') {
     withTimeout(SiteContentDB.get(), 10000).then(content => {
@@ -334,20 +384,27 @@
       if (typeof SiteChrome !== 'undefined') {
         SiteChrome.renderNav(content.menu, content.settings);
         SiteChrome.renderFooter(content.footer);
+      }
       insertMobileNavSearch();
       initHeroSlideshow();
+    }).catch(err => {
       console.error('Không tải được nội dung trang, dùng nội dung mặc định:', err);
       if (typeof SEED_SITE_CONTENT !== 'undefined') {
         renderHeroGlobalText(SEED_SITE_CONTENT);
         renderCategoriesIntro(SEED_SITE_CONTENT);
         renderCategoryTiles(SEED_SITE_CONTENT.categoryTiles);
+      }
       insertMobileNavSearch();
       initHeroSlideshow();
+    });
+  } else {
     insertMobileNavSearch();
     initHeroSlideshow();
+  }
 
   renderBanners();
 
   if (typeof SeoDB !== 'undefined' && typeof SiteChrome !== 'undefined') {
     SeoDB.get().then(SiteChrome.applySeo).catch(() => {});
+  }
 })();

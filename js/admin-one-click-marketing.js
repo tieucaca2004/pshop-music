@@ -72,18 +72,26 @@ const AdminOneClickMarketing = (function () {
     };
   }
 
+  function escapeHtml(str) {
+    return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
 
   function saveDraft() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ state, currentStep })); } catch (e) { /* localStorage không khả dụng - bỏ qua, không phải lỗi nghiêm trọng */ }
+  }
 
   function loadDraft() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
 
   function clearDraft() {
     try { localStorage.removeItem(STORAGE_KEY); } catch (e) { /* ignore */ }
+  }
 
   // buildAIJobPlan(state) — hàm THUẦN: map dữ liệu Wizard sang đúng
   // inputParams của 4 Plugin AI đã Production tương ứng (xem docstring đầu
@@ -100,21 +108,29 @@ const AdminOneClickMarketing = (function () {
       {
         outputKey: 'websiteArticle', moduleId: 'blog-writer', label: 'Website Draft',
         inputParams: { topic: productLabel, tone: 'Chuyên nghiệp', keywords: s.category || s.productName }
+      },
       {
         outputKey: 'facebookPost', moduleId: 'facebook-post-generator', label: 'Facebook Draft',
         inputParams: { productId: s.productId || '', message: s.promotion || productLabel }
+      },
       {
         outputKey: 'bannerRequest', moduleId: 'banner-generator', label: 'Banner Request',
         inputParams: { theme: s.promotion || s.productName, link }
+      },
       {
         outputKey: 'aiImageRequest', moduleId: 'image-prompt-generator', label: 'Image Request',
         inputParams: { subject: productLabel, style: 'Ảnh sản phẩm studio' }
+      }
     ];
+  }
 
   function jobStatusLabel(status) {
+    return {
       queued: 'Đang chờ xử lý', running: 'Đang xử lý',
       completed: 'Hoàn tất — xem "Marketing Drafts" để Review & Publish',
       failed: 'Thất bại', cancelled: 'Đã hủy'
+    }[status] || status;
+  }
 
   // runOnePluginJob — đúng luồng admin-ai.js: Permission → PluginManager →
   // AIJobQueue. Mỗi output là 1 Job RIÊNG (không gộp batch) để 1 output lỗi
@@ -124,15 +140,21 @@ const AdminOneClickMarketing = (function () {
       if (!check.granted) {
         state.generatedJobs[entry.outputKey] = { error: `Không có quyền chạy "${entry.label}" (thiếu "${check.permission || 'quyền chưa được gán'}").` };
         return;
+      }
       return PluginManager.loadPlugin(entry.moduleId).then(plugin => {
         if (!plugin) {
           state.generatedJobs[entry.outputKey] = { error: 'Không tìm thấy plugin.' };
           return;
+        }
         return plugin.execute([entry.inputParams], user.uid, user.email)
           .then(job => {
             state.generatedJobs[entry.outputKey] = { jobId: job.id, status: job.status, moduleId: entry.moduleId };
             return AIJobQueue.resume(user.uid, user.email);
+          })
           .catch(err => { state.generatedJobs[entry.outputKey] = { error: err.message }; });
+      });
+    });
+  }
 
   function triggerRealGeneration() {
     const user = AdminAuth.getUser();
@@ -141,6 +163,7 @@ const AdminOneClickMarketing = (function () {
     if (!plan.length) {
       if (noteEl) noteEl.textContent = 'Cần nhập Tên sản phẩm (Bước 2) trước khi Generate AI thật.';
       return;
+    }
     state.generatedJobs = state.generatedJobs || {};
     if (noteEl) noteEl.textContent = 'Đang gửi yêu cầu AI thật...';
     // PluginManager.loadPlugin(id) (khac voi loadPlugins()) KHONG tu seed
@@ -156,6 +179,8 @@ const AdminOneClickMarketing = (function () {
       saveDraft();
       render();
       startPolling();
+    });
+  }
 
   function startPolling() {
     if (pollTimer) return;
@@ -168,12 +193,17 @@ const AdminOneClickMarketing = (function () {
         if (currentStep === STEP_LABELS.length - 1) render();
         const allDone = ids.every(k => ['completed', 'failed', 'cancelled'].includes(jobs[k].status));
         if (allDone) stopPolling();
+      });
+    }, 3000);
+  }
 
   function stopPolling() {
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  }
 
   function hasPendingOrDoneJobs(s) {
     return !!(s.generatedJobs && Object.keys(s.generatedJobs).some(k => s.generatedJobs[k] && s.generatedJobs[k].jobId));
+  }
 
   function init() {
     AdminAuth.init({ page: 'ai-one-click-marketing', title: 'ONE CLICK MARKETING' }).then(() => {
@@ -187,19 +217,24 @@ const AdminOneClickMarketing = (function () {
           state = draft.state;
           currentStep = draft.currentStep || 0;
           renderResumeBanner();
+        } else {
           state = defaultState();
           state.businessName = settings.siteName || '';
           state.address = settings.address || '';
+        }
         render();
         // Neu ban nhap khoi phuc dang co Job AI that chua xong (queued/
         // running), tiep tuc poll trang thai thay vi bo do sau khi tai lai
         // trang.
         if (hasPendingOrDoneJobs(state)) startPolling();
+      });
+    });
+  }
 
   function renderResumeBanner() {
     const banner = document.getElementById('ocmResumeBanner');
     banner.style.display = 'block';
-    banner.innerHTML = `<p class="small-muted">Có 1 bản nháp chưa hoàn tất — đang tiếp tục từ bước "${PSH.escapeHtml(STEP_LABELS[currentStep])}". <a href="#" id="ocmStartOver" style="color:var(--gold-ink)">Bắt đầu lại từ đầu</a></p>`;
+    banner.innerHTML = `<p class="small-muted">Có 1 bản nháp chưa hoàn tất — đang tiếp tục từ bước "${escapeHtml(STEP_LABELS[currentStep])}". <a href="#" id="ocmStartOver" style="color:var(--gold-ink)">Bắt đầu lại từ đầu</a></p>`;
     document.getElementById('ocmStartOver').addEventListener('click', e => {
       e.preventDefault();
       stopPolling();
@@ -208,6 +243,8 @@ const AdminOneClickMarketing = (function () {
       currentStep = 0;
       banner.style.display = 'none';
       render();
+    });
+  }
 
   function progressHtml() {
     // Buoc da di qua (i <= currentStep) co the bam thang toi - tru buoc
@@ -222,46 +259,54 @@ const AdminOneClickMarketing = (function () {
         const cursor = clickable && i !== currentStep ? 'cursor:pointer' : '';
         const tag = clickable && i !== currentStep ? 'button' : 'span';
         const attrs = tag === 'button' ? `class="ocmStepBadge" data-step="${i}" style="border:none;padding:0.3rem 0.8rem;border-radius:999px;font-size:0.85rem;${style};${cursor}"` : `style="padding:0.3rem 0.8rem;border-radius:999px;font-size:0.85rem;${style}"`;
-        return `<${tag} ${attrs}>${i + 1}. ${PSH.escapeHtml(label)}</${tag}>`;
+        return `<${tag} ${attrs}>${i + 1}. ${escapeHtml(label)}</${tag}>`;
+      }).join('')}
     </div>`;
+  }
 
   function productOptions() {
     return '<option value="">— Sản phẩm mới (nhập tay) —</option>' +
-      products.map(p => `<option value="${PSH.escapeHtml(p.id)}" ${p.id === state.productId ? 'selected' : ''}>${PSH.escapeHtml(p.name)}</option>`).join('');
+      products.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === state.productId ? 'selected' : ''}>${escapeHtml(p.name)}</option>`).join('');
+  }
 
   function categoryOptions() {
     return '<option value="">— Chọn danh mục —</option>' +
-      categories.map(c => `<option value="${PSH.escapeHtml(c.id)}" ${c.id === state.category ? 'selected' : ''}>${PSH.escapeHtml(c.label || c.id)}</option>`).join('');
+      categories.map(c => `<option value="${escapeHtml(c.id)}" ${c.id === state.category ? 'selected' : ''}>${escapeHtml(c.label || c.id)}</option>`).join('');
+  }
 
   function stepBusinessHtml() {
     return `<div class="panel">
       <h3 style="margin-top:0">Bước 1 — Doanh nghiệp</h3>
       <p class="small-muted">Thông tin doanh nghiệp dùng chung cho Gói Marketing — lấy từ Cài đặt chung, có thể chỉnh riêng cho lần này.</p>
-      <div class="form-group"><label>Thông tin doanh nghiệp</label><input type="text" id="ocmBusinessName" value="${PSH.escapeHtml(state.businessName)}"></div>
-      <div class="form-group"><label>Địa chỉ</label><input type="text" id="ocmAddress" value="${PSH.escapeHtml(state.address)}"></div>
+      <div class="form-group"><label>Thông tin doanh nghiệp</label><input type="text" id="ocmBusinessName" value="${escapeHtml(state.businessName)}"></div>
+      <div class="form-group"><label>Địa chỉ</label><input type="text" id="ocmAddress" value="${escapeHtml(state.address)}"></div>
     </div>`;
+  }
 
   function stepProductHtml() {
     return `<div class="panel">
       <h3 style="margin-top:0">Bước 2 — Sản phẩm</h3>
       <div class="form-group"><label>Chọn sản phẩm có sẵn</label><select id="ocmProductSelect">${productOptions()}</select></div>
-      <div class="form-group"><label>Tên sản phẩm</label><input type="text" id="ocmProductName" value="${PSH.escapeHtml(state.productName)}"></div>
-      <div class="form-group"><label>Giá</label><input type="text" id="ocmPrice" value="${PSH.escapeHtml(state.price)}"></div>
+      <div class="form-group"><label>Tên sản phẩm</label><input type="text" id="ocmProductName" value="${escapeHtml(state.productName)}"></div>
+      <div class="form-group"><label>Giá</label><input type="text" id="ocmPrice" value="${escapeHtml(state.price)}"></div>
       <div class="form-group"><label>Danh mục</label><select id="ocmCategory">${categoryOptions()}</select></div>
       <div class="form-group"><label>Hình sản phẩm</label>
-        <input type="hidden" id="ocmImageInput" value="${PSH.escapeHtml(state.image)}">
+        <input type="hidden" id="ocmImageInput" value="${escapeHtml(state.image)}">
         <div id="ocmImagePreview"></div>
       </div>
     </div>`;
+  }
 
   function stepGoalHtml() {
     return `<div class="panel">
       <h3 style="margin-top:0">Bước 3 — Mục tiêu Marketing</h3>
-      <div class="form-group"><label>Khuyến mãi</label><textarea id="ocmPromotion" rows="3" placeholder="VD: Giảm 20% cuối tuần, tặng phụ kiện...">${PSH.escapeHtml(state.promotion)}</textarea></div>
+      <div class="form-group"><label>Khuyến mãi</label><textarea id="ocmPromotion" rows="3" placeholder="VD: Giảm 20% cuối tuần, tặng phụ kiện...">${escapeHtml(state.promotion)}</textarea></div>
     </div>`;
+  }
 
   function reviewRow(label, value) {
-    return `<tr><td>${PSH.escapeHtml(label)}</td><td>${PSH.escapeHtml(value) || '<span style="color:var(--ink-mute)">(chưa nhập)</span>'}</td></tr>`;
+    return `<tr><td>${escapeHtml(label)}</td><td>${escapeHtml(value) || '<span style="color:var(--ink-mute)">(chưa nhập)</span>'}</td></tr>`;
+  }
 
   function stepReviewHtml() {
     return `<div class="panel">
@@ -277,9 +322,11 @@ const AdminOneClickMarketing = (function () {
         </tbody>
       </table>
     </div>`;
+  }
 
   function outputRow(label, content) {
-    return `<div class="panel"><h4 style="margin:0 0 0.5rem">${PSH.escapeHtml(label)}</h4><div class="small-muted" style="white-space:pre-wrap">${PSH.escapeHtml(content)}</div></div>`;
+    return `<div class="panel"><h4 style="margin:0 0 0.5rem">${escapeHtml(label)}</h4><div class="small-muted" style="white-space:pre-wrap">${escapeHtml(content)}</div></div>`;
+  }
 
   // outputRowWithStatus — giống outputRow() nhưng thêm 1 dòng trạng thái
   // Job AI THẬT (nếu đã bấm GENERATE) cho 4 output đã nối Plugin (Sprint 11
@@ -289,13 +336,16 @@ const AdminOneClickMarketing = (function () {
     let statusHtml = '';
     if (info) {
       statusHtml = info.error
-        ? `<p class="small-muted" style="color:#b3261e;margin:0.4rem 0 0">AI thật: ${PSH.escapeHtml(info.error)}</p>`
-        : `<p class="small-muted" style="margin:0.4rem 0 0">AI thật: ${PSH.escapeHtml(jobStatusLabel(info.status))}</p>`;
-    return `<div class="panel"><h4 style="margin:0 0 0.5rem">${PSH.escapeHtml(label)}</h4><div class="small-muted" style="white-space:pre-wrap">${PSH.escapeHtml(content)}</div>${statusHtml}</div>`;
+        ? `<p class="small-muted" style="color:#b3261e;margin:0.4rem 0 0">AI thật: ${escapeHtml(info.error)}</p>`
+        : `<p class="small-muted" style="margin:0.4rem 0 0">AI thật: ${escapeHtml(jobStatusLabel(info.status))}</p>`;
+    }
+    return `<div class="panel"><h4 style="margin:0 0 0.5rem">${escapeHtml(label)}</h4><div class="small-muted" style="white-space:pre-wrap">${escapeHtml(content)}</div>${statusHtml}</div>`;
+  }
 
   function stepGenerateHtml() {
     if (!packageResult) {
       return `<div class="panel"><p class="small-muted">Bấm "Sinh Gói Marketing" để tạo bản xem trước dạng mẫu — CHƯA gọi AI thật.</p></div>`;
+    }
     const p = packageResult;
     const jobsStarted = hasPendingOrDoneJobs(state);
     return `
@@ -320,6 +370,7 @@ const AdminOneClickMarketing = (function () {
         <button class="submit-btn" id="ocmGenerateRealBtn" ${jobsStarted ? 'disabled' : ''}>${jobsStarted ? 'ĐÃ GỬI YÊU CẦU AI' : 'GENERATE'}</button>
       </div>
       <p class="small-muted" id="ocmGenerateNote" style="margin-top:0.5rem"></p>`;
+  }
 
   function stepBodyHtml() {
     if (currentStep === 0) return stepBusinessHtml();
@@ -327,6 +378,7 @@ const AdminOneClickMarketing = (function () {
     if (currentStep === 2) return stepGoalHtml();
     if (currentStep === 3) return stepReviewHtml();
     return stepGenerateHtml();
+  }
 
   function navHtml() {
     const isFirst = currentStep === 0;
@@ -336,21 +388,27 @@ const AdminOneClickMarketing = (function () {
       <button class="submit-btn" id="ocmSaveDraftBtn" style="background:var(--bg-alt);color:var(--ink)">LƯU NHÁP</button>
       ${!isLast ? `<button class="submit-btn" id="ocmNextBtn">${currentStep === 3 ? 'SINH GÓI MARKETING' : 'TIẾP THEO'}</button>` : ''}
     </div>`;
+  }
 
   function readStepInputs() {
     if (currentStep === 0) {
       state.businessName = document.getElementById('ocmBusinessName').value.trim();
       state.address = document.getElementById('ocmAddress').value.trim();
+    } else if (currentStep === 1) {
       state.productName = document.getElementById('ocmProductName').value.trim();
       state.price = document.getElementById('ocmPrice').value.trim();
       state.category = document.getElementById('ocmCategory').value;
       state.image = document.getElementById('ocmImageInput').value.trim();
+    } else if (currentStep === 2) {
       state.promotion = document.getElementById('ocmPromotion').value.trim();
+    }
+  }
 
   function render() {
     const root = document.getElementById('ocmWizardRoot');
     root.innerHTML = progressHtml() + stepBodyHtml() + (currentStep < STEP_LABELS.length ? navHtml() : '');
     attachStepHandlers();
+  }
 
   function attachStepHandlers() {
     document.querySelectorAll('.ocmStepBadge').forEach(btn => {
@@ -358,6 +416,8 @@ const AdminOneClickMarketing = (function () {
         readStepInputs();
         currentStep = parseInt(btn.dataset.step, 10);
         render();
+      });
+    });
 
     if (currentStep === 1) {
       const select = document.getElementById('ocmProductSelect');
@@ -370,8 +430,12 @@ const AdminOneClickMarketing = (function () {
           document.getElementById('ocmCategory').value = chosen.category || '';
           document.getElementById('ocmImageInput').value = (chosen.image || (chosen.images && chosen.images[0]) || '');
           mediaPicker && mediaPicker.refresh();
+        } else {
           state.productId = '';
+        }
+      });
       mediaPicker = MediaLibraryPicker.mount('ocmImageInput', 'ocmImagePreview');
+    }
 
     const prevBtn = document.getElementById('ocmPrevBtn');
     if (prevBtn) prevBtn.addEventListener('click', () => { readStepInputs(); currentStep -= 1; render(); });
@@ -384,8 +448,10 @@ const AdminOneClickMarketing = (function () {
         // Buoc 5: dung OneClickMarketing.buildMarketingPackage() (ham
         // thuan, khong AI) - KHONG goi PluginManager/AIJobQueue/Provider.
         packageResult = OneClickMarketing.buildMarketingPackage(state);
+      }
       saveDraft();
       render();
+    });
 
     const saveDraftBtn = document.getElementById('ocmSaveDraftBtn');
     if (saveDraftBtn) saveDraftBtn.addEventListener('click', () => { readStepInputs(); saveDraft(); saveDraftBtn.textContent = 'ĐÃ LƯU'; setTimeout(() => { saveDraftBtn.textContent = 'LƯU NHÁP'; }, 1500); });
@@ -400,6 +466,8 @@ const AdminOneClickMarketing = (function () {
     if (generateRealBtn) generateRealBtn.addEventListener('click', () => {
       if (generateRealBtn.disabled) return;
       triggerRealGeneration();
+    });
+  }
 
   return { init };
 })();

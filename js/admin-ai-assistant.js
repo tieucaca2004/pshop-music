@@ -42,7 +42,11 @@ const AdminAIAssistant = (function () {
   let pollTimer = null;
   let historyEntries = [];
 
+  function escapeHtml(str) {
+    return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
 
   function init() {
     AdminAuth.init({ page: 'ai-assistant', title: 'AI ASSISTANT' }).then(({ user: u }) => {
@@ -56,20 +60,26 @@ const AdminAIAssistant = (function () {
         document.getElementById('historyPluginFilter').value = '';
         document.getElementById('historyDateFilter').value = '';
         renderHistoryList();
+      });
       loadHistory();
+    });
+  }
 
   function loadCandidates() {
     return Promise.all([
       typeof DB !== 'undefined' ? DB.getAll() : Promise.resolve([]),
       typeof BlogDB !== 'undefined' ? BlogDB.getAll() : Promise.resolve([])
     ]).then(([products, posts]) => ({ products, posts }));
+  }
 
   function setResult(html) {
     stopPolling();
     document.getElementById('assistantResult').innerHTML = html;
+  }
 
   function stopPolling() {
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  }
 
   function reasonMessage(result) {
     // Không lộ tên/id Plugin kỹ thuật ra người dùng (Requirement #4, Sprint 4
@@ -83,6 +93,8 @@ const AdminAIAssistant = (function () {
         return 'Bạn không có quyền thực hiện yêu cầu này.';
       default:
         return 'Không thực hiện được yêu cầu.';
+    }
+  }
 
   // ============== Đối tượng mơ hồ — Ambiguous Target Resolution (Sprint 4,
   // Requirement #3) ==============
@@ -94,6 +106,7 @@ const AdminAIAssistant = (function () {
 
   function findRouteConfig(pluginId) {
     return AITaskRouter.ROUTES.find(r => r.pluginId === pluginId);
+  }
 
   // Router chỉ trả {id,label} trong routeResult.ambiguous — Assistant tự làm
   // giàu thông tin hiển thị (danh mục/ngày tạo) bằng cách đối chiếu lại với
@@ -108,6 +121,8 @@ const AdminAIAssistant = (function () {
       label: item[nameKey],
       categoryLabel: routeConfig.targetType === 'product' ? (item.categoryLabel || item.category || '') : '',
       createdAt: item.createdAt || null
+    }));
+  }
 
   function showAmbiguousPicker(routeResult, candidates) {
     const routeConfig = findRouteConfig(routeResult.pluginId);
@@ -118,19 +133,20 @@ const AdminAIAssistant = (function () {
       // được tự đoán — báo rõ, không tạo Job (giữ đúng Functional Req #4).
       setResult('<p style="color:#c0392b">AI tìm thấy nhiều mục khớp nhưng không tải được chi tiết để bạn chọn — hãy nói rõ tên đầy đủ hơn trong yêu cầu.</p>');
       return;
+    }
 
     const rows = details.map(d => `
       <tr>
-        <td>${PSH.escapeHtml(d.label)}</td>
-        <td>${PSH.escapeHtml(d.categoryLabel || '—')}</td>
-        <td>${PSH.escapeHtml(d.id)}</td>
-        <td>${d.createdAt ? PSH.escapeHtml(new Date(d.createdAt).toLocaleDateString('vi-VN')) : '—'}</td>
-        <td><button class="btn-secondary assistant-pick-btn" data-id="${PSH.escapeHtml(d.id)}">Chọn</button></td>
+        <td>${escapeHtml(d.label)}</td>
+        <td>${escapeHtml(d.categoryLabel || '—')}</td>
+        <td>${escapeHtml(d.id)}</td>
+        <td>${d.createdAt ? escapeHtml(new Date(d.createdAt).toLocaleDateString('vi-VN')) : '—'}</td>
+        <td><button class="btn-secondary assistant-pick-btn" data-id="${escapeHtml(d.id)}">Chọn</button></td>
       </tr>`).join('');
 
     setResult(`
       <div class="panel">
-        <p>Yêu cầu của bạn khớp với nhiều mục cho: <strong>${PSH.escapeHtml(routeResult.outcomeLabel)}</strong>. Vui lòng chọn đúng đối tượng — không cần gõ lại yêu cầu.</p>
+        <p>Yêu cầu của bạn khớp với nhiều mục cho: <strong>${escapeHtml(routeResult.outcomeLabel)}</strong>. Vui lòng chọn đúng đối tượng — không cần gõ lại yêu cầu.</p>
         <table class="admin-table">
           <thead><tr><th>Tên</th><th>Danh mục</th><th>ID</th><th>Ngày tạo</th><th></th></tr></thead>
           <tbody>${rows}</tbody>
@@ -157,18 +173,23 @@ const AdminAIAssistant = (function () {
           ambiguous: [],
           inputParams: routeConfig.buildInputParams(chosen.id),
           reason: 'ok'
+        });
+      });
+    });
     // Hủy: Workflow dừng hẳn — không tạo Job, không ghi Draft (Functional Req #5).
     document.getElementById('assistantPickCancelBtn').addEventListener('click', () => setResult('<p class="small-muted">Đã hủy yêu cầu.</p>'));
+  }
 
   // ============== Theo dõi tiến trình (Sprint 4, Requirement #2) ==============
 
   function progressPanel(stageLabel, routeResult, extraHtml) {
     return `
       <div class="panel">
-        <p><strong>${PSH.escapeHtml(routeResult.outcomeLabel)}</strong>${routeResult.targetLabel ? ' — "' + PSH.escapeHtml(routeResult.targetLabel) + '"' : ''}</p>
-        <p class="small-muted">Trạng thái: ${PSH.escapeHtml(stageLabel)}</p>
+        <p><strong>${escapeHtml(routeResult.outcomeLabel)}</strong>${routeResult.targetLabel ? ' — "' + escapeHtml(routeResult.targetLabel) + '"' : ''}</p>
+        <p class="small-muted">Trạng thái: ${escapeHtml(stageLabel)}</p>
         ${extraHtml || ''}
       </div>`;
+  }
 
   // Panel cho 2 giai đoạn đầu (Request/Routing) — chưa có routeResult (chưa
   // xác định được Plugin), nên chưa thể hiển thị outcomeLabel như
@@ -177,16 +198,17 @@ const AdminAIAssistant = (function () {
   function simplePanel(stageLabel, message) {
     return `
       <div class="panel">
-        <p class="small-muted">Trạng thái: ${PSH.escapeHtml(stageLabel)}</p>
-        <p>${PSH.escapeHtml(message)}</p>
+        <p class="small-muted">Trạng thái: ${escapeHtml(stageLabel)}</p>
+        <p>${escapeHtml(message)}</p>
       </div>`;
+  }
 
   function renderDraftPreview(draft, routeResult) {
     setResult(`
       <div class="panel">
-        <p><strong>${PSH.escapeHtml(routeResult.outcomeLabel)}</strong>${routeResult.targetLabel ? ' — "' + PSH.escapeHtml(routeResult.targetLabel) + '"' : ''}</p>
+        <p><strong>${escapeHtml(routeResult.outcomeLabel)}</strong>${routeResult.targetLabel ? ' — "' + escapeHtml(routeResult.targetLabel) + '"' : ''}</p>
         <p class="small-muted">Trạng thái: Draft Ready — xem trước bên dưới, chưa áp dụng vào dữ liệu thật.</p>
-        <pre style="white-space:pre-wrap;background:var(--bg-alt);padding:1rem;font-size:0.82rem;max-height:260px;overflow:auto">${PSH.escapeHtml(JSON.stringify(draft.content, null, 2))}</pre>
+        <pre style="white-space:pre-wrap;background:var(--bg-alt);padding:1rem;font-size:0.82rem;max-height:260px;overflow:auto">${escapeHtml(JSON.stringify(draft.content, null, 2))}</pre>
         <div class="admin-actions">
           <button class="submit-btn" id="assistantPublishBtn">DUYỆT &amp; PUBLISH</button>
           <button class="btn-danger" id="assistantRejectBtn">TỪ CHỐI</button>
@@ -197,12 +219,18 @@ const AdminAIAssistant = (function () {
       AdminAI.publishDraftById(draft.id).then(() => {
         setResult(progressPanel('Hoàn tất — đã publish vào dữ liệu thật.', routeResult));
         loadHistory(); // cập nhật lại danh sách Lịch sử ở nền (Requirement #4) — không ảnh hưởng panel đang hiển thị
-        setResult(progressPanel('Publish thất bại: ' + PSH.escapeHtml(err.message), routeResult));
+      }).catch(err => {
+        setResult(progressPanel('Publish thất bại: ' + escapeHtml(err.message), routeResult));
+      });
+    });
     document.getElementById('assistantRejectBtn').addEventListener('click', () => {
       if (!confirm('Từ chối nội dung này? Vẫn giữ lại để tra cứu, không xóa.')) return;
       AdminAI.rejectDraftById(draft.id).then(() => {
         setResult(progressPanel('Đã từ chối nội dung này.', routeResult));
         loadHistory(); // cập nhật lại danh sách Lịch sử ở nền (Requirement #4)
+      });
+    });
+  }
 
   function handleJobFinished(job, routeResult) {
     const item = job.items && job.items[0];
@@ -211,12 +239,16 @@ const AdminAIAssistant = (function () {
         if (!draft) {
           setResult(progressPanel('Hoàn tất nhưng không tìm thấy Draft — kiểm tra ở <a href="drafts.html" style="color:var(--gold-ink)">Duyệt nội dung</a>.', routeResult));
           return;
+        }
         renderDraftPreview(draft, routeResult);
+      });
       return;
+    }
     // Failed — hiển thị đúng nguyên nhân từ item.error (Requirement #5, Sprint
     // 4 Req #2: không hiển thị "Unknown Error" chung chung).
     const reason = (item && item.error) || 'Không rõ nguyên nhân — kiểm tra ở Nhật ký.';
-    setResult(progressPanel('Failed', routeResult, `<p style="color:#c0392b">${PSH.escapeHtml(reason)}</p>`));
+    setResult(progressPanel('Failed', routeResult, `<p style="color:#c0392b">${escapeHtml(reason)}</p>`));
+  }
 
   // Job vừa kết thúc (bất kể thành công/thất bại) — cập nhật lại danh sách
   // Lịch sử (Requirement #4) để phiên vừa tạo xuất hiện ngay, không cần tải
@@ -224,6 +256,7 @@ const AdminAIAssistant = (function () {
   function refreshHistoryAfterJobEnds(job, routeResult) {
     handleJobFinished(job, routeResult);
     loadHistory();
+  }
 
   // Chỉ theo dõi đúng 1 Job vừa tạo (JobDB.get(jobId)) — không polling toàn
   // bộ JobDB như admin/ai/jobs.html, giảm tải Firebase (NFR Performance).
@@ -238,15 +271,21 @@ const AdminAIAssistant = (function () {
           stopPolling();
           refreshHistoryAfterJobEnds(job, routeResult);
           return;
+        }
         if (job.status === 'cancelled') {
           stopPolling();
           setResult(progressPanel('Đã hủy — job này đã bị hủy (có thể từ Job Queue).', routeResult));
           loadHistory();
           return;
+        }
         if (attempts >= POLL_MAX_ATTEMPTS) {
           stopPolling();
           setResult(progressPanel('Đang xử lý lâu hơn dự kiến — kiểm tra ở <a href="jobs.html" style="color:var(--gold-ink)">Job Queue</a>.', routeResult));
+        }
         // vẫn 'queued'/'running' — giữ nguyên panel "Processing...", chờ lượt poll kế tiếp.
+      });
+    }, POLL_INTERVAL_MS);
+  }
 
   // ============== Gửi yêu cầu / Safety Checkpoint ==============
 
@@ -261,12 +300,14 @@ const AdminAIAssistant = (function () {
       if (!outcome.dispatched) {
         setResult('<p style="color:#c0392b">' + reasonMessage(Object.assign({}, routeResult, outcome)) + '</p>');
         return;
+      }
       // Job chỉ được TẠO (enqueue) bởi PluginManager.execute() bên trong
       // AITaskRouter.dispatch() — Queue tự xử lý tuần tự khi resume() được
       // gọi, đúng cơ chế công khai đã có (giống hệt js/admin-ai.js.runModule()
       // đang làm cho Dashboard cũ). Không bypass Queue — chỉ gọi API công khai.
       AIJobQueue.resume(user.uid, user.email);
       trackJob(outcome.job.id, routeResult);
+    }).catch(err => {
       // Functional Requirement #6 (Sprint 4, Requirement #5): "Nếu Plugin
       // không khả dụng (vd đang Disable trong Plugin Manager), hiển thị
       // thông báo rõ ràng, không tạo Job." PluginManager.execute() (gọi bên
@@ -274,12 +315,14 @@ const AdminAIAssistant = (function () {
       // reject Promise khi plugin bị tắt hoặc thiếu dữ liệu bắt buộc, thay vì
       // trả {dispatched:false} — Assistant bắt lại đúng tại đây (Experience
       // Layer) để không bỏ sót, không hiển thị màn hình treo vô thời hạn.
-      setResult('<p style="color:#c0392b">Không thể thực hiện yêu cầu: ' + PSH.escapeHtml(err.message) + '</p>');
+      setResult('<p style="color:#c0392b">Không thể thực hiện yêu cầu: ' + escapeHtml(err.message) + '</p>');
+    });
+  }
 
   function showConfirmation(routeResult) {
     setResult(`
       <div class="panel">
-        <p>Tôi hiểu yêu cầu như sau: <strong>${PSH.escapeHtml(routeResult.outcomeLabel)}</strong>${routeResult.targetLabel ? ' cho "' + PSH.escapeHtml(routeResult.targetLabel) + '"' : ''}.</p>
+        <p>Tôi hiểu yêu cầu như sau: <strong>${escapeHtml(routeResult.outcomeLabel)}</strong>${routeResult.targetLabel ? ' cho "' + escapeHtml(routeResult.targetLabel) + '"' : ''}.</p>
         <p class="small-muted">Độ tin cậy: ${routeResult.confidence}%</p>
         <div class="admin-actions">
           <button class="submit-btn" id="assistantConfirmBtn">ĐÚNG, THỰC HIỆN</button>
@@ -288,6 +331,7 @@ const AdminAIAssistant = (function () {
       </div>`);
     document.getElementById('assistantConfirmBtn').addEventListener('click', () => dispatchAndShow(routeResult));
     document.getElementById('assistantCancelBtn').addEventListener('click', () => setResult('<p class="small-muted">Đã hủy yêu cầu.</p>'));
+  }
 
   function handleSend() {
     const text = document.getElementById('assistantInput').value.trim();
@@ -302,6 +346,7 @@ const AdminAIAssistant = (function () {
       if (routeResult.reason === 'target_ambiguous') {
         showAmbiguousPicker(routeResult, candidates);
         return;
+      }
       // Sprint 12 Requirement #1: route targetType:'freeText' (Blog/Banner)
       // hoặc targetRequired:false (Facebook không nhắc sản phẩm cụ thể) trả
       // về targetId=null NHƯNG reason='ok' hợp lệ (đã đủ inputParams) — kiểm
@@ -310,9 +355,14 @@ const AdminAIAssistant = (function () {
       if (!routeResult.pluginId || routeResult.reason !== 'ok') {
         setResult('<p style="color:#c0392b">' + reasonMessage(routeResult) + '</p>');
         return;
+      }
       if (routeResult.confidence >= CONFIDENCE_AUTO_THRESHOLD) {
         dispatchAndShow(routeResult);
+      } else {
         showConfirmation(routeResult);
+      }
+    });
+  }
 
   // ============== Conversation History (Sprint 4, Requirement #4) ==============
   //
@@ -333,17 +383,20 @@ const AdminAIAssistant = (function () {
     if (routeConfig) return routeConfig.outcomeLabel;
     const module = typeof AIModuleRegistry !== 'undefined' ? AIModuleRegistry.get(moduleId) : null;
     return module ? module.label : moduleId;
+  }
 
   function targetNameFor(inputParams, lookups) {
     if (!inputParams) return '';
     if (inputParams.productId && lookups.products[inputParams.productId]) return lookups.products[inputParams.productId].name;
     if (inputParams.postId && lookups.posts[inputParams.postId]) return lookups.posts[inputParams.postId].title;
     return '';
+  }
 
   function buildHistoryEntry(job, lookups) {
     const item = job.items && job.items[0];
     const outcomeLabel = outcomeLabelForModule(job.moduleId);
     const targetName = targetNameFor(item && item.inputParams, lookups);
+    return {
       jobId: job.id,
       createdAt: job.createdAt,
       outcomeLabel,
@@ -352,6 +405,8 @@ const AdminAIAssistant = (function () {
       jobStatus: job.status,
       resultDraftId: item && item.resultDraftId,
       errorMessage: item && item.error
+    };
+  }
 
   function loadHistory() {
     return Promise.all([
@@ -368,14 +423,17 @@ const AdminAIAssistant = (function () {
         .map(job => buildHistoryEntry(job, lookups));
       populatePluginFilterOptions();
       renderHistoryList();
+    });
+  }
 
   function populatePluginFilterOptions() {
     const select = document.getElementById('historyPluginFilter');
     const current = select.value;
     const labels = Array.from(new Set(historyEntries.map(e => e.outcomeLabel))).sort();
     select.innerHTML = '<option value="">Tất cả công việc</option>' +
-      labels.map(l => `<option value="${PSH.escapeHtml(l)}">${PSH.escapeHtml(l)}</option>`).join('');
+      labels.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
     select.value = current;
+  }
 
   // Tìm kiếm theo Request/Plugin/Thời gian (Functional Requirement #8) —
   // lọc hoàn toàn trên dữ liệu đã tải (historyEntries), không gọi thêm
@@ -392,25 +450,31 @@ const AdminAIAssistant = (function () {
         const d = e.createdAt ? new Date(e.createdAt) : null;
         const dStr = d ? d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0') : '';
         if (dStr !== dateFilter) return false;
+      }
       return true;
+    });
 
     const body = document.getElementById('historyTableBody');
     if (!filtered.length) {
       body.innerHTML = '<tr><td colspan="5" style="color:var(--ink-mute);text-align:center;padding:2rem">Chưa có phiên làm việc nào khớp.</td></tr>';
       return;
+    }
     body.innerHTML = filtered.map(e => `
       <tr>
-        <td>${PSH.escapeHtml(e.requestDescription)}</td>
-        <td>${PSH.escapeHtml(e.outcomeLabel)}</td>
-        <td>${e.createdAt ? PSH.escapeHtml(new Date(e.createdAt).toLocaleString('vi-VN')) : '—'}</td>
-        <td>${PSH.escapeHtml(JOB_STATUS_LABELS_HISTORY[e.jobStatus] || e.jobStatus)}</td>
-        <td><button class="btn-secondary assistant-history-open-btn" data-job-id="${PSH.escapeHtml(e.jobId)}">Xem</button></td>
+        <td>${escapeHtml(e.requestDescription)}</td>
+        <td>${escapeHtml(e.outcomeLabel)}</td>
+        <td>${e.createdAt ? escapeHtml(new Date(e.createdAt).toLocaleString('vi-VN')) : '—'}</td>
+        <td>${escapeHtml(JOB_STATUS_LABELS_HISTORY[e.jobStatus] || e.jobStatus)}</td>
+        <td><button class="btn-secondary assistant-history-open-btn" data-job-id="${escapeHtml(e.jobId)}">Xem</button></td>
       </tr>`).join('');
 
     document.querySelectorAll('.assistant-history-open-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const entry = historyEntries.find(e => e.jobId === btn.getAttribute('data-job-id'));
         if (entry) openHistorySession(entry);
+      });
+    });
+  }
 
   // Mở lại 1 phiên làm việc — CHỈ hiển thị lịch sử (Functional Requirement
   // #4): không gọi AIJobQueue.resume(), không gọi AITaskRouter.dispatch() —
@@ -425,19 +489,23 @@ const AdminAIAssistant = (function () {
         '<p class="small-muted">Job này vẫn đang xử lý — xem trực tiếp ở <a href="jobs.html" style="color:var(--gold-ink)">Job Queue</a> (không tự chạy lại từ đây).</p>' + backLink));
       bindHistoryBackLink();
       return;
+    }
     if (entry.jobStatus === 'failed') {
       setResult(progressPanel('Failed', pseudoRouteResult,
-        `<p style="color:#c0392b">${PSH.escapeHtml(entry.errorMessage || 'Không rõ nguyên nhân — kiểm tra ở Nhật ký.')}</p>` + backLink));
+        `<p style="color:#c0392b">${escapeHtml(entry.errorMessage || 'Không rõ nguyên nhân — kiểm tra ở Nhật ký.')}</p>` + backLink));
       bindHistoryBackLink();
       return;
+    }
     if (entry.jobStatus === 'cancelled') {
       setResult(progressPanel('Đã hủy', pseudoRouteResult, backLink));
       bindHistoryBackLink();
       return;
+    }
     if (!entry.resultDraftId) {
       setResult(progressPanel('Hoàn tất', pseudoRouteResult, '<p class="small-muted">Không có Draft liên quan.</p>' + backLink));
       bindHistoryBackLink();
       return;
+    }
     // Completed + có Draft — đọc trạng thái Draft thật (draft/published/
     // rejected, Functional Requirement #5/#6/#7).
     DraftDB.get(entry.resultDraftId).then(draft => {
@@ -445,23 +513,28 @@ const AdminAIAssistant = (function () {
         setResult(progressPanel('Hoàn tất', pseudoRouteResult, '<p class="small-muted">Không tìm thấy Draft (có thể đã bị xóa thủ công).</p>' + backLink));
         bindHistoryBackLink();
         return;
+      }
       if (draft.status === 'published') {
         setResult(progressPanel('Published', pseudoRouteResult,
-          `<p class="small-muted">Đã publish lúc ${draft.publishedAt ? PSH.escapeHtml(new Date(draft.publishedAt).toLocaleString('vi-VN')) : ''}.</p>
-           <pre style="white-space:pre-wrap;background:var(--bg-alt);padding:1rem;font-size:0.82rem;max-height:260px;overflow:auto">${PSH.escapeHtml(JSON.stringify(draft.content, null, 2))}</pre>` + backLink));
+          `<p class="small-muted">Đã publish lúc ${draft.publishedAt ? escapeHtml(new Date(draft.publishedAt).toLocaleString('vi-VN')) : ''}.</p>
+           <pre style="white-space:pre-wrap;background:var(--bg-alt);padding:1rem;font-size:0.82rem;max-height:260px;overflow:auto">${escapeHtml(JSON.stringify(draft.content, null, 2))}</pre>` + backLink));
         bindHistoryBackLink();
         return;
+      }
       if (draft.status === 'rejected') {
         setResult(progressPanel('Rejected', pseudoRouteResult,
-          `<pre style="white-space:pre-wrap;background:var(--bg-alt);padding:1rem;font-size:0.82rem;max-height:260px;overflow:auto">${PSH.escapeHtml(JSON.stringify(draft.content, null, 2))}</pre>` + backLink));
+          `<pre style="white-space:pre-wrap;background:var(--bg-alt);padding:1rem;font-size:0.82rem;max-height:260px;overflow:auto">${escapeHtml(JSON.stringify(draft.content, null, 2))}</pre>` + backLink));
         bindHistoryBackLink();
         return;
+      }
       // Vẫn 'draft' — cho Preview + Duyệt/Từ chối ngay tại đây, tái sử dụng
       // ĐÚNG renderDraftPreview() đã có ở Requirement #2 (không viết lại).
       renderDraftPreview(draft, pseudoRouteResult);
       const result = document.getElementById('assistantResult');
       result.insertAdjacentHTML('beforeend', backLink);
       bindHistoryBackLink();
+    });
+  }
 
   function bindHistoryBackLink() {
     const link = document.getElementById('assistantHistoryBackLink');
@@ -469,6 +542,8 @@ const AdminAIAssistant = (function () {
     link.addEventListener('click', ev => {
       ev.preventDefault();
       setResult('');
+    });
+  }
 
   return { init };
 })();

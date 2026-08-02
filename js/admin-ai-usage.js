@@ -8,12 +8,18 @@ const AdminAIUsage = (function () {
   const RANGE_LABELS = { today: 'Hôm nay', '7d': '7 ngày gần nhất', '30d': '30 ngày gần nhất' };
   const STATUS_LABELS = { completed: 'Completed', failed: 'Failed', cancelled: 'Cancelled', permission_denied: 'Permission Denied' };
 
+  function escapeHtml(str) {
+    return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
 
   function init() {
     AdminAuth.init({ page: 'ai-usage', title: 'PLUGIN AI — USAGE VISIBILITY', requiredRole: 'admin' }).then(() => {
       document.getElementById('usageRangeFilter').addEventListener('change', renderReport);
       renderReport();
+    });
+  }
 
   // Tên hiển thị Plugin — tái sử dụng nhãn có sẵn của AIModuleRegistry
   // (không viết logic ánh xạ mới); fallback về đúng moduleId nếu không tìm
@@ -22,11 +28,13 @@ const AdminAIUsage = (function () {
     if (moduleId === '(không rõ)') return moduleId;
     const module = typeof AIModuleRegistry !== 'undefined' ? AIModuleRegistry.get(moduleId) : null;
     return module ? module.label : moduleId;
+  }
 
   function breakdownRows(counts, labelFn) {
     const keys = Object.keys(counts).filter(k => counts[k] > 0).sort((a, b) => counts[b] - counts[a]);
     if (!keys.length) return '<tr><td colspan="2" style="color:var(--ink-mute)">Không có dữ liệu.</td></tr>';
-    return keys.map(k => `<tr><td>${PSH.escapeHtml(labelFn ? labelFn(k) : k)}</td><td>${counts[k]}</td></tr>`).join('');
+    return keys.map(k => `<tr><td>${escapeHtml(labelFn ? labelFn(k) : k)}</td><td>${counts[k]}</td></tr>`).join('');
+  }
 
   function renderReport() {
     const rangeKey = document.getElementById('usageRangeFilter').value;
@@ -37,11 +45,12 @@ const AdminAIUsage = (function () {
       if (report.total === 0) {
         // Functional Requirement #6: không có dữ liệu -> hiển thị trạng thái
         // phù hợp, không phải "System Error".
-        resultEl.innerHTML = `<div class="panel"><p class="small-muted">Chưa có dữ liệu sử dụng AI trong khoảng "${PSH.escapeHtml(RANGE_LABELS[rangeKey])}".</p></div>`;
+        resultEl.innerHTML = `<div class="panel"><p class="small-muted">Chưa có dữ liệu sử dụng AI trong khoảng "${escapeHtml(RANGE_LABELS[rangeKey])}".</p></div>`;
         return;
+      }
       resultEl.innerHTML = `
         <div class="panel">
-          <p><strong>Tổng số lần Generate (${PSH.escapeHtml(RANGE_LABELS[rangeKey])}): ${report.total}</strong></p>
+          <p><strong>Tổng số lần Generate (${escapeHtml(RANGE_LABELS[rangeKey])}): ${report.total}</strong></p>
           <p class="small-muted">Số liệu tổng hợp từ Nhật ký AI (aiLogs) — chỉ đọc, không phải Cost Tracking (chưa có dữ liệu token/chi phí).</p>
           <div class="field-grid" style="margin-top:1rem">
             <div>
@@ -61,7 +70,10 @@ const AdminAIUsage = (function () {
             </div>
           </div>
         </div>`;
-      resultEl.innerHTML = '<p style="color:#c0392b">Không đọc được dữ liệu Nhật ký AI: ' + PSH.escapeHtml(err.message) + '</p>';
+    }).catch(err => {
+      resultEl.innerHTML = '<p style="color:#c0392b">Không đọc được dữ liệu Nhật ký AI: ' + escapeHtml(err.message) + '</p>';
+    });
+  }
 
   return { init };
 })();

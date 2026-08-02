@@ -22,16 +22,22 @@
   const loadMoreWrap = document.getElementById('loadMoreWrap');
   const searchInput = document.getElementById('searchInput');
 
+  function escapeHtml(str) {
+    return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
 
   // AI-generated description đôi khi tự bọc cả phản hồi trong 1 khối code
   // markdown (```html ... ```) dù Prompt không yêu cầu — không phải thẻ HTML
   // thật, hiển thị nguyên văn "```html"/"```" nếu không loại bỏ trước khi
   // render qua innerHTML.
   function stripCodeFence(str) {
+    return String(str || '')
       .replace(/^\s*```[a-zA-Z]*\s*\n?/, '')
       .replace(/\n?\s*```\s*$/, '')
       .trim();
+  }
 
   // Sprint 12 Requirement #5 (Media AI — Product & Blog Media) — Product
   // KHÔNG có video AI sinh ra, chỉ dùng link YouTube Admin tự nhập thủ công
@@ -48,6 +54,7 @@
     if (!id) { m = str.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/); if (m) id = m[1]; }
     if (!id) { m = str.match(/youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/); if (m) id = m[1]; }
     return id ? `https://www.youtube.com/embed/${id}` : '';
+  }
 
   // Sprint 12 Requirement #1 (Product AI V2) — render Mô tả ngắn/Thông số
   // chi tiết/Tính năng/FAQ do Product AI sinh ra, khi có. Không có dữ liệu
@@ -66,17 +73,19 @@
 
     const featuresEl = document.getElementById('modalFeatures');
     if (Array.isArray(p.features) && p.features.length) {
-      featuresEl.innerHTML = p.features.map(f => `<li>${PSH.escapeHtml(f)}</li>`).join('');
+      featuresEl.innerHTML = p.features.map(f => `<li>${escapeHtml(f)}</li>`).join('');
       featuresEl.style.display = 'flex';
+    } else featuresEl.style.display = 'none';
 
     const faqEl = document.getElementById('modalFaq');
     if (Array.isArray(p.faq) && p.faq.length) {
       faqEl.innerHTML = p.faq.map(item => `
         <div class="modal-faq-item">
-          <div class="modal-faq-q">${PSH.escapeHtml(item.question || '')}</div>
-          <div class="modal-faq-a">${PSH.escapeHtml(item.answer || '')}</div>
+          <div class="modal-faq-q">${escapeHtml(item.question || '')}</div>
+          <div class="modal-faq-a">${escapeHtml(item.answer || '')}</div>
         </div>`).join('');
       faqEl.style.display = 'block';
+    } else faqEl.style.display = 'none';
 
     // Sprint 12 Requirement #5 — video KHÔNG do AI sinh ra, chỉ hiển thị nếu
     // Admin đã tự nhập link YouTube thật (p.youtubeUrl) — ẩn hoàn toàn nếu
@@ -84,10 +93,13 @@
     const videoEl = document.getElementById('modalVideo');
     const embedUrl = getYoutubeEmbedUrl(p.youtubeUrl);
     if (embedUrl) {
-      videoEl.innerHTML = `<iframe src="${PSH.escapeHtml(embedUrl)}" title="${PSH.escapeHtml(p.name || '')}" allowfullscreen loading="lazy"></iframe>`;
+      videoEl.innerHTML = `<iframe src="${escapeHtml(embedUrl)}" title="${escapeHtml(p.name || '')}" allowfullscreen loading="lazy"></iframe>`;
       videoEl.style.display = 'block';
+    } else {
       videoEl.innerHTML = '';
       videoEl.style.display = 'none';
+    }
+  }
 
   window.pshopImgFail = function (img) {
     const wrap = img.parentElement;
@@ -99,11 +111,13 @@
     span.textContent = name;
     tile.appendChild(span);
     wrap.replaceWith(tile);
+  };
 
   function matchesQuery(p, q) {
     if (!q) return true;
     const hay = (p.name + ' ' + p.brand + ' ' + p.specs).toLowerCase();
     return hay.includes(q.toLowerCase());
+  }
 
   // productCategoryIds — Sprint 13 (Product Management V2: Category
   // Assignment). 1 sản phẩm có thể thuộc NHIỀU danh mục (categoryIds) —
@@ -112,19 +126,21 @@
   function productCategoryIds(p) {
     if (Array.isArray(p.categoryIds) && p.categoryIds.length) return p.categoryIds;
     return p.category ? [p.category] : [];
+  }
 
   function getFiltered() {
     return allProducts.filter(p =>
       (state.category === 'all' || productCategoryIds(p).includes(state.category)) &&
       matchesQuery(p, state.query)
     );
+  }
 
   function cardHtml(p) {
     const imgHtml = p.image
-      ? `<div class="prod-img-wrap"><img src="${PSH.escapeHtml(p.image)}" alt="${PSH.escapeHtml(p.altText || p.name)}" loading="lazy" onerror="window.pshopImgFail(this)"></div>`
-      : `<div class="prod-noimg-tile"><span class="tile-name">${PSH.escapeHtml(p.name)}</span></div>`;
+      ? `<div class="prod-img-wrap"><img src="${escapeHtml(p.image)}" alt="${escapeHtml(p.altText || p.name)}" loading="lazy" onerror="window.pshopImgFail(this)"></div>`
+      : `<div class="prod-noimg-tile"><span class="tile-name">${escapeHtml(p.name)}</span></div>`;
     const priceHtml = p.price
-      ? `<div class="prod-price">${p.oldPrice ? `<span class="prod-price-old">${PSH.escapeHtml(p.oldPrice)}</span> ` : ''}${PSH.escapeHtml(p.price)}</div>`
+      ? `<div class="prod-price">${p.oldPrice ? `<span class="prod-price-old">${escapeHtml(p.oldPrice)}</span> ` : ''}${escapeHtml(p.price)}</div>`
       : '';
     const badgeClass = p.status === 'Used' ? 'badge-used' : 'badge-new';
     const outOfStock = p.stockStatus === 'outofstock';
@@ -132,12 +148,13 @@
       <div class="product-card${outOfStock ? ' out-of-stock' : ''}" data-id="${p.id}">
         ${imgHtml}
         ${outOfStock ? '<span class="prod-oos-badge">HẾT HÀNG</span>' : ''}
-        <div class="prod-name">${PSH.escapeHtml(p.name)}</div>
-        <div class="prod-brand">${PSH.escapeHtml(p.specs)}</div>
+        <div class="prod-name">${escapeHtml(p.name)}</div>
+        <div class="prod-brand">${escapeHtml(p.specs)}</div>
         ${priceHtml}
-        <span class="prod-badge ${badgeClass}">${PSH.escapeHtml(p.badgeText || (p.status === 'Used' ? 'Used' : 'New'))}</span>
+        <span class="prod-badge ${badgeClass}">${escapeHtml(p.badgeText || (p.status === 'Used' ? 'Used' : 'New'))}</span>
         <div class="prod-contact">${p.price ? 'Liên hệ đặt hàng' : 'Liên hệ báo giá'} · <a href="tel:${CONTACT.phone}" style="color:var(--gold)">${CONTACT.phoneDisplay}</a></div>
       </div>`;
+  }
 
   function render() {
     const filtered = getFiltered();
@@ -145,27 +162,34 @@
 
     if (visible.length === 0) {
       grid.innerHTML = '<div class="empty-state">Không tìm thấy sản phẩm phù hợp. Thử từ khóa khác hoặc chọn danh mục khác.</div>';
+    } else {
       grid.innerHTML = visible.map(cardHtml).join('');
       grid.querySelectorAll('.product-card').forEach(card => {
         card.addEventListener('click', () => {
           const p = allProducts.find(x => x.id === card.dataset.id);
           if (p) openModal(p);
+        });
+      });
+    }
 
     resultCount.textContent = filtered.length + ' sản phẩm';
     loadMoreWrap.style.display = filtered.length > state.visibleCount ? 'block' : 'none';
+  }
 
   function findFilterBtn(cat) {
     return document.querySelector(`.filter-btn[data-cat="${cat}"]`);
+  }
 
   function renderFilterBar(categories) {
     const bar = document.querySelector('.filter-bar');
     if (!bar || !categories.length) return;
     const buttons = [{ code: 'all', label: 'Tất cả' }].concat(categories.map(c => ({ code: c.code, label: c.label })));
     bar.innerHTML = buttons.map(b =>
-      `<button class="filter-btn" data-cat="${b.code}" onclick="filterP('${b.code}',this)">${PSH.escapeHtml(b.label)}</button>`
+      `<button class="filter-btn" data-cat="${b.code}" onclick="filterP('${b.code}',this)">${escapeHtml(b.label)}</button>`
     ).join('');
     const activeBtn = findFilterBtn(state.category) || bar.querySelector('.filter-btn');
     if (activeBtn) activeBtn.classList.add('active');
+  }
 
   function loadCategories() {
     if (typeof CategoryDB === 'undefined') return;
@@ -178,6 +202,8 @@
       VALID_CATEGORIES = active.map(c => c.code);
       renderFilterBar(active);
       updateCategoryHeader(state.category);
+    }).catch(err => console.error('Không tải được danh mục, dùng danh mục mặc định:', err));
+  }
 
   function pushCategoryUrl(cat) {
     const params = new URLSearchParams(location.search);
@@ -186,6 +212,7 @@
     const newUrl = location.pathname + (qs ? '?' + qs : '');
     if (location.pathname + location.search === newUrl) return;
     history.pushState({ cat: cat }, '', newUrl);
+  }
 
   function updateCategoryHeader(cat) {
     const header = document.getElementById('categoryHeader');
@@ -216,6 +243,7 @@
     if (header) {
       header.style.setProperty('--cover-blur', (catObj && catObj.coverBlur ? catObj.coverBlur : 0) + 'px');
       header.style.setProperty('--cover-overlay', (catObj && typeof catObj.coverOverlay === 'number' ? catObj.coverOverlay : 100) / 100);
+    }
     if (productImg) {
       const coverImg = catObj && catObj.coverProductImage;
       if (coverImg) {
@@ -224,10 +252,15 @@
         productImg.setAttribute('data-cover-position', (catObj && catObj.coverPosition) || 'center-right');
         productImg.style.setProperty('--cover-zoom', ((catObj && catObj.coverZoom ? catObj.coverZoom : 100) / 100));
         productImg.style.setProperty('--cover-opacity', ((catObj && typeof catObj.coverOpacity === 'number' ? catObj.coverOpacity : 100) / 100));
+      } else {
         productImg.style.display = 'none';
+      }
+    }
     if (logoImg) {
       const logo = catObj && catObj.coverLogo;
       if (logo) { logoImg.src = logo; logoImg.style.display = 'block'; } else { logoImg.style.display = 'none'; }
+    }
+  }
 
   window.filterP = function (cat, btn, opts) {
     state.category = cat;
@@ -237,12 +270,14 @@
     render();
     updateCategoryHeader(cat);
     if (!opts || !opts.skipUrlUpdate) pushCategoryUrl(cat);
+  };
 
   window.addEventListener('popstate', () => {
     const cat = new URLSearchParams(location.search).get('cat') || 'all';
     const target = VALID_CATEGORIES.includes(cat) ? cat : 'all';
     const btn = findFilterBtn(target) || document.querySelector('.filter-btn');
     filterP(target, btn, { skipUrlUpdate: true });
+  });
 
   function openModal(p) {
     const imgSide = document.getElementById('modalImgSide');
@@ -255,17 +290,20 @@
     const bannerCaption = document.getElementById('modalBannerCaption');
     if (p.bgImage) {
       imgSide.classList.add('has-bg-banner');
-      imgSide.style.backgroundImage = `url('${PSH.escapeHtml(p.bgImage)}')`;
+      imgSide.style.backgroundImage = `url('${escapeHtml(p.bgImage)}')`;
       if (bannerCaption) bannerCaption.textContent = p.name;
+    } else {
       imgSide.classList.remove('has-bg-banner');
       imgSide.style.backgroundImage = '';
       if (bannerCaption) bannerCaption.textContent = '';
+    }
 
     const images = Array.isArray(p.images) && p.images.length ? p.images : (p.image ? [p.image] : []);
     noImg.textContent = p.name;
 
     if (images.length === 0) {
       noImg.style.display = 'block';
+    } else {
       noImg.style.display = 'none';
       let current = 0;
 
@@ -279,6 +317,8 @@
         img.src = images[current];
         if (dotsWrap) {
           Array.from(dotsWrap.children).forEach((d, idx) => d.classList.toggle('active', idx === current));
+        }
+      }
 
       let dotsWrap = null;
       if (images.length > 1) {
@@ -301,12 +341,15 @@
           if (idx === 0) dot.classList.add('active');
           dot.onclick = () => showImage(idx);
           dotsWrap.appendChild(dot);
+        });
 
         imgSide.appendChild(prevBtn);
         imgSide.appendChild(nextBtn);
         imgSide.appendChild(dotsWrap);
+      }
 
       showImage(0);
+    }
 
     document.getElementById('modalCat').textContent = p.categoryLabel || '';
     document.getElementById('modalName').textContent = p.name;
@@ -316,8 +359,9 @@
 
     const priceEl = document.getElementById('modalPrice');
     if (p.price) {
-      priceEl.innerHTML = (p.oldPrice ? `<span class="prod-price-old">${PSH.escapeHtml(p.oldPrice)}</span> ` : '') + PSH.escapeHtml(p.price);
+      priceEl.innerHTML = (p.oldPrice ? `<span class="prod-price-old">${escapeHtml(p.oldPrice)}</span> ` : '') + escapeHtml(p.price);
       priceEl.style.display = 'block';
+    } else priceEl.style.display = 'none';
 
     const b = document.getElementById('modalBadge');
     b.textContent = p.badgeText || (p.status === 'Used' ? 'Used' : 'New');
@@ -330,17 +374,21 @@
     if (productCategoryIds(p).includes('phukien')) {
       btn2.href = CONTACT.shopee;
       btn2.textContent = 'XEM TRÊN SHOPEE →';
+    } else {
       btn2.href = CONTACT.facebook;
       btn2.textContent = 'NHẮN TIN FACEBOOK →';
+    }
 
     document.getElementById('modalZalo').href = CONTACT.zalo;
 
     document.getElementById('modal').classList.add('open');
     document.body.style.overflow = 'hidden';
+  }
 
   window.closeModal = function () {
     document.getElementById('modal').classList.remove('open');
     document.body.style.overflow = '';
+  };
 
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
@@ -349,6 +397,8 @@
     const toggle = document.querySelector('.nav-toggle');
     if (nav && nav.classList.contains('open') && !nav.contains(e.target) && !toggle.contains(e.target)) {
       nav.classList.remove('open');
+    }
+  });
 
   if (searchInput) {
     let debounce;
@@ -358,22 +408,29 @@
         state.query = e.target.value.trim();
         state.visibleCount = PAGE_SIZE;
         render();
+      }, 150);
+    });
+  }
 
   const loadMoreBtn = document.getElementById('loadMoreBtn');
   if (loadMoreBtn) {
     loadMoreBtn.addEventListener('click', () => {
       state.visibleCount += PAGE_SIZE;
       render();
+    });
+  }
 
   function withTimeout(promise, ms) {
     return Promise.race([
       promise,
       new Promise((_, reject) => setTimeout(() => reject(new Error('Hết thời gian chờ kết nối database')), ms))
     ]);
+  }
 
   const initialCat = (() => {
     const cat = new URLSearchParams(location.search).get('cat') || 'all';
     return VALID_CATEGORIES.includes(cat) ? cat : 'all';
+  })();
   state.category = initialCat;
 
   // ?q=... — nhận từ khóa tìm kiếm gửi từ Ô tìm kiếm trang chủ (index.html),
@@ -382,6 +439,7 @@
   if (initialQuery) {
     state.query = initialQuery;
     if (searchInput) searchInput.value = initialQuery;
+  }
 
   const initialBtn = findFilterBtn(initialCat);
   if (initialBtn) initialBtn.classList.add('active');
@@ -405,9 +463,12 @@
     if (productParam) {
       const p = allProducts.find(x => x.id === productParam);
       if (p) openModal(p);
+    }
+  }).catch(err => {
     console.error('Không tải được dữ liệu sản phẩm:', err);
     grid.innerHTML = '<div class="empty-state">Không tải được dữ liệu sản phẩm. Vui lòng thử tải lại trang, hoặc liên hệ <a href="tel:0901952999" style="color:var(--gold-ink);font-weight:600">0901 952 999</a> nếu vẫn lỗi.</div>';
     resultCount.textContent = '';
+  });
 
   // Image Container (Category Card) — Founder chỉnh trong admin/settings.html
   // "KHUNG ẢNH SẢN PHẨM". Set CSS custom property trên :root để css/style.css
@@ -426,6 +487,7 @@
     if (cfg.position) root.setProperty('--pci-pos', cfg.position);
     if (typeof cfg.padding === 'number') root.setProperty('--pci-padding', cfg.padding + 'rem');
     if (typeof cfg.radius === 'number') root.setProperty('--pci-radius', cfg.radius + 'px');
+  }
 
   if (typeof SiteContentDB !== 'undefined') {
     withTimeout(SiteContentDB.get(), 10000).then(content => {
@@ -435,13 +497,19 @@
       if (typeof SiteChrome !== 'undefined') {
         SiteChrome.renderNav(content.menu, content.settings);
         SiteChrome.renderFooter(content.footer);
+      }
+    }).catch(() => {
       if (typeof SEED_SITE_CONTENT !== 'undefined') {
         categoryTiles = SEED_SITE_CONTENT.categoryTiles || [];
         updateCategoryHeader(state.category);
         applyProductCardImage(SEED_SITE_CONTENT.productCardImage);
+      }
+    });
+  }
 
   loadCategories();
 
   if (typeof SeoDB !== 'undefined' && typeof SiteChrome !== 'undefined') {
     SeoDB.get().then(SiteChrome.applySeo).catch(() => {});
+  }
 })();

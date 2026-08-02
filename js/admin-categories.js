@@ -29,7 +29,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const POSITIONS = ['top-left', 'top-center', 'top-right', 'center-left', 'center', 'center-right', 'bottom-left', 'bottom-center', 'bottom-right'];
   const POSITION_LABELS = { 'top-left': 'Trên trái', 'top-center': 'Trên giữa', 'top-right': 'Trên phải', 'center-left': 'Giữa trái', 'center': 'Chính giữa', 'center-right': 'Giữa phải', 'bottom-left': 'Dưới trái', 'bottom-center': 'Dưới giữa', 'bottom-right': 'Dưới phải' };
 
+  function escapeHtml(str) {
+    return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
 
   function load() {
     return CategoryDB.getAll().then(list => {
@@ -45,16 +49,20 @@ document.addEventListener('DOMContentLoaded', () => {
           opacity: typeof c.coverOpacity === 'number' ? c.coverOpacity : COVER_DEFAULTS.opacity,
           blur: typeof c.coverBlur === 'number' ? c.coverBlur : COVER_DEFAULTS.blur,
           overlay: typeof c.coverOverlay === 'number' ? c.coverOverlay : COVER_DEFAULTS.overlay
+        };
         if (!previewViewport[c.id]) previewViewport[c.id] = 'desktop';
+      });
       render();
+    });
+  }
 
   function render() {
     const wrap = document.getElementById('categoryList');
     wrap.innerHTML = categories.map((c, i) => `
       <div class="cms-row cat-row-expand" data-id="${c.id}">
         <div class="cms-row-fields">
-          <input type="text" value="${PSH.escapeHtml(c.code)}" placeholder="Mã (vd: dj)" data-field="code">
-          <input type="text" value="${PSH.escapeHtml(c.label)}" placeholder="Tên hiển thị" data-field="label">
+          <input type="text" value="${escapeHtml(c.code)}" placeholder="Mã (vd: dj)" data-field="code">
+          <input type="text" value="${escapeHtml(c.label)}" placeholder="Tên hiển thị" data-field="label">
           <label class="cms-toggle"><input type="checkbox" data-field="active" ${c.active !== false ? 'checked' : ''}> Hoạt động</label>
         </div>
         <div class="cat-bg-section">
@@ -70,6 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       </div>`).join('') || '<p class="small-muted">Chưa có danh mục nào.</p>';
     categories.forEach(c => { if (bgRemoverOpen[c.id]) mountBgRemover(c.id); });
+  }
 
   // ── CATEGORY COVER — markup ──────────────────────────────────────────────
   // "PRODUCT IMAGE PRESENTATION" Requirement: Background + Product Image +
@@ -95,9 +104,9 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="cat-cover-preview-inner" id="cat-cover-inner-${c.id}" style="background-image:${bgSlots[c.id] ? `url('${bgSlots[c.id]}')` : 'none'};filter:blur(${s.blur}px)">
             <div class="cat-cover-preview-overlay" id="cat-cover-overlay-${c.id}" style="opacity:${s.overlay / 100}"></div>
           </div>
-          ${coverProductSlots[c.id] ? `<img src="${PSH.escapeHtml(coverProductSlots[c.id])}" class="cat-cover-preview-product" id="cat-cover-product-${c.id}" data-cover-position="${s.position}" style="--cover-zoom:${s.zoom / 100};--cover-opacity:${s.opacity / 100}" alt="">` : `<span class="cat-cover-preview-product-empty" id="cat-cover-product-${c.id}"></span>`}
-          ${coverLogoSlots[c.id] ? `<img src="${PSH.escapeHtml(coverLogoSlots[c.id])}" class="cat-cover-preview-logo" id="cat-cover-logo-${c.id}" alt="">` : `<span id="cat-cover-logo-${c.id}"></span>`}
-          <div class="cat-cover-preview-title">${PSH.escapeHtml(c.label || 'Danh mục')}</div>
+          ${coverProductSlots[c.id] ? `<img src="${escapeHtml(coverProductSlots[c.id])}" class="cat-cover-preview-product" id="cat-cover-product-${c.id}" data-cover-position="${s.position}" style="--cover-zoom:${s.zoom / 100};--cover-opacity:${s.opacity / 100}" alt="">` : `<span class="cat-cover-preview-product-empty" id="cat-cover-product-${c.id}"></span>`}
+          ${coverLogoSlots[c.id] ? `<img src="${escapeHtml(coverLogoSlots[c.id])}" class="cat-cover-preview-logo" id="cat-cover-logo-${c.id}" alt="">` : `<span id="cat-cover-logo-${c.id}"></span>`}
+          <div class="cat-cover-preview-title">${escapeHtml(c.label || 'Danh mục')}</div>
         </div>
 
         <div class="cat-cover-grid">
@@ -131,6 +140,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <button type="button" class="link-btn" onclick="AdminCategories.internetBackgroundStub()">🌐 Ảnh nền từ Internet</button>
         </div>
       </div>`;
+  }
 
   // updateCoverPreview — cập nhật NGAY khung Live Preview mà KHÔNG render()
   // lại toàn bộ danh sách (tránh giật/mất focus slider) — "Live Preview
@@ -139,6 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateCoverPreview(id) {
     const inner = document.getElementById('cat-cover-inner-' + id);
     if (inner) inner.style.backgroundImage = bgSlots[id] ? `url('${bgSlots[id]}')` : 'none';
+  }
 
   function setCoverField(id, field, value) {
     if (!coverSettings[id]) coverSettings[id] = Object.assign({}, COVER_DEFAULTS);
@@ -153,6 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
       productImg.setAttribute('data-cover-position', s.position);
       productImg.style.setProperty('--cover-zoom', s.zoom / 100);
       productImg.style.setProperty('--cover-opacity', s.opacity / 100);
+    }
     // Cập nhật lại nút vị trí đang active mà không render() lại cả danh sách.
     if (field === 'position') {
       const frame = document.getElementById('cat-cover-frame-' + id);
@@ -160,10 +172,14 @@ document.addEventListener('DOMContentLoaded', () => {
         frame.querySelectorAll('.cat-cover-pos-btn').forEach(btn => btn.classList.remove('active'));
         const idx = POSITIONS.indexOf(value);
         if (idx !== -1 && frame.querySelectorAll('.cat-cover-pos-btn')[idx]) frame.querySelectorAll('.cat-cover-pos-btn')[idx].classList.add('active');
+      }
+    }
+  }
 
   function resetCover(id) {
     coverSettings[id] = Object.assign({}, COVER_DEFAULTS);
     render();
+  }
 
   function setPreviewViewport(id, viewport) {
     previewViewport[id] = viewport;
@@ -173,6 +189,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const toolbar = frame && frame.previousElementSibling;
     if (toolbar && toolbar.classList.contains('cat-cover-viewport-toggle')) {
       Array.from(toolbar.children).forEach(btn => btn.classList.toggle('active', btn.textContent.trim().toLowerCase() === viewport));
+    }
+  }
 
   // toggleBgRemover — "Founder uploads a Product image with a white
   // background -> Background is automatically removed" — tái dùng NGUYÊN VẸN
@@ -181,12 +199,15 @@ document.addEventListener('DOMContentLoaded', () => {
   function toggleBgRemover(id) {
     bgRemoverOpen[id] = !bgRemoverOpen[id];
     render();
+  }
 
   function mountBgRemover(id) {
     AdminBgRemover.mount('cat-cover-bgremover-' + id, {
       label: 'XÓA PHÔNG ẢNH SẢN PHẨM ĐẠI DIỆN',
       sourceImageUrl: coverProductSlots[id] || '',
       onResult: url => { coverProductSlots[id] = url; render(); }
+    });
+  }
 
   // internetBackgroundStub — "BACKGROUND SOURCE: Internet Background (future
   // provider)... Do NOT require external APIs in this Requirement. If
@@ -194,10 +215,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // đúng yêu cầu, KHÔNG giả vờ có provider thật.
   function internetBackgroundStub() {
     alert('Provider Not Configured — chưa kết nối nguồn ảnh nền Internet. Dùng "Tải lên"/"Thư viện ảnh"/"Tạo bằng AI" bên trên.');
+  }
 
   function rowValues(id) {
     const row = document.querySelector(`.cms-row[data-id="${id}"]`);
     const s = coverSettings[id] || COVER_DEFAULTS;
+    return {
       code: row.querySelector('[data-field="code"]').value.trim(),
       label: row.querySelector('[data-field="label"]').value.trim(),
       active: row.querySelector('[data-field="active"]').checked,
@@ -209,6 +232,8 @@ document.addEventListener('DOMContentLoaded', () => {
       coverOpacity: s.opacity,
       coverBlur: s.blur,
       coverOverlay: s.overlay
+    };
+  }
 
   function save(id) {
     const values = rowValues(id);
@@ -216,6 +241,8 @@ document.addEventListener('DOMContentLoaded', () => {
     CategoryDB.update(id, values).then(() => {
       showStatus('Đã lưu danh mục.');
       load();
+    });
+  }
 
   function move(id, dir) {
     const idx = categories.findIndex(c => c.id === id);
@@ -226,22 +253,26 @@ document.addEventListener('DOMContentLoaded', () => {
       CategoryDB.update(a.id, { order: b.order }),
       CategoryDB.update(b.id, { order: a.order })
     ]).then(load);
+  }
 
   function remove(id) {
     const c = categories.find(x => x.id === id);
     if (!c) return;
     if (!confirm(`Xóa danh mục "${c.label}"? Sản phẩm đã gán danh mục này sẽ không còn hiển thị trong tab lọc tương ứng.`)) return;
     CategoryDB.remove(id).then(load);
+  }
 
   function addNew() {
     const maxOrder = categories.reduce((m, c) => Math.max(m, c.order || 0), 0);
     CategoryDB.add({ code: '', label: 'Danh mục mới', order: maxOrder + 1, active: true }).then(load);
+  }
 
   function showStatus(msg) {
     const el = document.getElementById('categoryStatus');
     el.textContent = msg;
     el.style.display = 'block';
     setTimeout(() => { el.style.display = 'none'; }, 3000);
+  }
 
   document.getElementById('addCategoryBtn').addEventListener('click', addNew);
 
@@ -273,9 +304,12 @@ document.addEventListener('DOMContentLoaded', () => {
       siteContent = content;
       tiles = Array.isArray(content.categoryTiles) ? content.categoryTiles.slice() : [];
       renderTiles();
+    });
+  }
 
   function categoryOptions(selected) {
-    return categories.map(c => `<option value="${PSH.escapeHtml(c.code)}" ${c.code === selected ? 'selected' : ''}>${PSH.escapeHtml(c.label)}</option>`).join('');
+    return categories.map(c => `<option value="${escapeHtml(c.code)}" ${c.code === selected ? 'selected' : ''}>${escapeHtml(c.label)}</option>`).join('');
+  }
 
   // tileHasCover/tilePreviewClasses — ĐÚNG logic đã dùng ở js/home.js
   // (renderCategoryTiles) để Live Preview KHÔNG BAO GIỜ lệch với trang thật —
@@ -284,6 +318,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return !!(t.backgroundImage || t.logo || (t.position && t.position !== 'center') ||
       (t.zoom && t.zoom !== 100) || (t.opacity != null && t.opacity !== 100) ||
       (t.blur && t.blur > 0) || (t.overlay != null && t.overlay !== 100));
+  }
 
   function tilePreviewClasses(t) {
     const classes = ['cat-tile'];
@@ -294,20 +329,24 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!t.image && !t.backgroundImage) classes.push('no-photo');
     if (tileHasCover(t)) classes.push('has-cover');
     return classes.join(' ');
+  }
 
   function tilePreviewInnerHtml(t) {
     if (tileHasCover(t)) {
-      const bgHtml = t.backgroundImage ? `<div class="cat-tile-bg" style="background-image:url('${PSH.escapeHtml(t.backgroundImage)}');filter:blur(${t.blur || 0}px)"></div><div class="cat-tile-cover-overlay" style="opacity:${(t.overlay != null ? t.overlay : 100) / 100}"></div>` : '';
-      const prodHtml = t.image ? `<img class="cat-tile-product-img" data-cover-position="${t.position || 'center'}" style="--cover-zoom:${(t.zoom || 100) / 100};--cover-opacity:${(t.opacity != null ? t.opacity : 100) / 100}" src="${PSH.escapeHtml(t.image)}" alt="">` : '';
-      const logoHtml = t.logo ? `<img class="cat-tile-logo" src="${PSH.escapeHtml(t.logo)}" alt="">` : '';
+      const bgHtml = t.backgroundImage ? `<div class="cat-tile-bg" style="background-image:url('${escapeHtml(t.backgroundImage)}');filter:blur(${t.blur || 0}px)"></div><div class="cat-tile-cover-overlay" style="opacity:${(t.overlay != null ? t.overlay : 100) / 100}"></div>` : '';
+      const prodHtml = t.image ? `<img class="cat-tile-product-img" data-cover-position="${t.position || 'center'}" style="--cover-zoom:${(t.zoom || 100) / 100};--cover-opacity:${(t.opacity != null ? t.opacity : 100) / 100}" src="${escapeHtml(t.image)}" alt="">` : '';
+      const logoHtml = t.logo ? `<img class="cat-tile-logo" src="${escapeHtml(t.logo)}" alt="">` : '';
       return bgHtml + prodHtml + logoHtml;
-    return t.image ? `<img src="${PSH.escapeHtml(t.image)}" alt="${PSH.escapeHtml(t.label)}">` : '';
+    }
+    return t.image ? `<img src="${escapeHtml(t.image)}" alt="${escapeHtml(t.label)}">` : '';
+  }
 
   // tileRatioStyle — ĐÚNG logic customAspectRatio đã dùng ở js/home.js (kéo
   // TỰ DO chiều cao khung đen Cover Preview, ghi đè aspect-ratio mặc định
   // của size — sửa 1 nơi phải sửa nơi kia, đã ghi rõ ở cả 2 file).
   function tileRatioStyle(t) {
     return t.customAspectRatio ? ` style="aspect-ratio:${t.customAspectRatio};height:auto"` : '';
+  }
 
   // renderTilePreviewGrid — vẽ lại RIÊNG khung Live Preview TỔNG (không đụng
   // vào các field đang nhập ở tileList bên dưới) — gọi sau MỖI lần đổi field.
@@ -321,18 +360,21 @@ document.addEventListener('DOMContentLoaded', () => {
     frame.setAttribute('data-viewport', tileViewport);
     if (!tiles.length) { frame.innerHTML = '<p class="small-muted">Chưa có ô danh mục nào.</p>'; return; }
     frame.innerHTML = `<div class="cat-tile-grid">${tiles.map((t, i) =>
-      `<div class="${tilePreviewClasses(t)}"${tileRatioStyle(t)}>${tilePreviewInnerHtml(t)}<span class="cat-tile-label">${PSH.escapeHtml(t.label)}</span><span class="cat-tile-resize-handle" title="Kéo để đổi Kích cỡ Ô" onpointerdown="AdminCategories.startTileSizeDrag(event,${i})"></span></div>`
+      `<div class="${tilePreviewClasses(t)}"${tileRatioStyle(t)}>${tilePreviewInnerHtml(t)}<span class="cat-tile-label">${escapeHtml(t.label)}</span><span class="cat-tile-resize-handle" title="Kéo để đổi Kích cỡ Ô" onpointerdown="AdminCategories.startTileSizeDrag(event,${i})"></span></div>`
     ).join('')}</div>`;
+  }
 
   function setTileViewport(v) {
     tileViewport = v;
     const toolbar = document.getElementById('tileViewportToggle');
     if (toolbar) Array.from(toolbar.children).forEach(btn => btn.classList.toggle('active', btn.getAttribute('data-vp') === v));
     renderTilePreviewGrid();
+  }
 
   function setTileSize(i, size) {
     tiles[i].size = size;
     renderTiles();
+  }
 
   // startTileSizeDrag — kéo góc Ô trong Live Preview TỔNG bằng Pointer Events
   // (cùng kỹ thuật kéo tiêu đề Hero Slideshow đã làm) — CHỈ đổi className tại
@@ -367,19 +409,24 @@ document.addEventListener('DOMContentLoaded', () => {
       if (colsSpanned >= 1.6) return 'large';
       if (height / colWidth < 0.8) return 'small';
       return 'normal';
+    }
 
     function move(ev) {
       const size = nearestSize(ev.clientX, ev.clientY);
       if (size !== lastSize) {
         lastSize = size;
         tileEl.className = tilePreviewClasses(Object.assign({}, tiles[i], { size })) + ' resizing';
+      }
+    }
     function up() {
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
       if (tileEl.classList) tileEl.classList.remove('resizing');
       setTileSize(i, lastSize);
+    }
     document.addEventListener('pointermove', move);
     document.addEventListener('pointerup', up);
+  }
 
   // startTileFrameHeightDrag — kéo TỰ DO cạnh dưới khung Cover Preview (khung
   // đen) để đổi CHIỀU CAO/tỷ lệ khung — KHÔNG snap về mức nào, khác hẳn
@@ -407,18 +454,22 @@ document.addEventListener('DOMContentLoaded', () => {
       lastRatio = ratio;
       frame.style.aspectRatio = String(ratio);
       frame.style.height = 'auto';
+    }
     function up() {
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
       frame.classList.remove('resizing-height');
       tiles[i].customAspectRatio = Math.round(lastRatio * 100) / 100;
       renderTiles();
+    }
     document.addEventListener('pointermove', move);
     document.addEventListener('pointerup', up);
+  }
 
   function resetTileFrameHeight(i) {
     delete tiles[i].customAspectRatio;
     renderTiles();
+  }
 
   // ── TILE COVER — NGUYÊN VẸN Category Cover, tái dùng ĐÚNG class CSS
   // `.cat-cover-*` đã có (0 CSS mới), chỉ đổi id/onclick nhắm theo index `i`
@@ -430,6 +481,7 @@ document.addEventListener('DOMContentLoaded', () => {
       opacity: typeof t.opacity === 'number' ? t.opacity : TILE_COVER_DEFAULTS.opacity,
       blur: typeof t.blur === 'number' ? t.blur : TILE_COVER_DEFAULTS.blur,
       overlay: typeof t.overlay === 'number' ? t.overlay : TILE_COVER_DEFAULTS.overlay
+    };
     const viewport = tilePreviewViewport[i] || 'desktop';
     const posButtons = POSITIONS.map(p => `<button type="button" class="cat-cover-pos-btn${s.position === p ? ' active' : ''}" title="${POSITION_LABELS[p]}" onclick="AdminCategories.setTileCoverField(${i},'position','${p}')"></button>`).join('');
     return `
@@ -442,12 +494,12 @@ document.addEventListener('DOMContentLoaded', () => {
           <button type="button" class="btn-secondary${viewport === 'mobile' ? ' active' : ''}" onclick="AdminCategories.setTileCoverViewport(${i},'mobile')">Mobile</button>
         </div>
         <div class="cat-cover-preview-frame cat-tile-cover-frame" data-viewport="${viewport}" data-tile-size="${t.size || 'normal'}" id="tile-cover-frame-${i}"${t.customAspectRatio ? ` style="aspect-ratio:${t.customAspectRatio};height:auto"` : ''}>
-          <div class="cat-cover-preview-inner" id="tile-cover-inner-${i}" style="background-image:${t.backgroundImage ? `url('${PSH.escapeHtml(t.backgroundImage)}')` : 'none'};filter:blur(${s.blur}px)">
+          <div class="cat-cover-preview-inner" id="tile-cover-inner-${i}" style="background-image:${t.backgroundImage ? `url('${escapeHtml(t.backgroundImage)}')` : 'none'};filter:blur(${s.blur}px)">
             <div class="cat-cover-preview-overlay" id="tile-cover-overlay-${i}" style="opacity:${s.overlay / 100}"></div>
           </div>
-          ${t.image ? `<img src="${PSH.escapeHtml(t.image)}" class="cat-cover-preview-product cat-tile-cover-draggable" id="tile-cover-product-${i}" data-cover-position="${s.position}" style="--cover-zoom:${s.zoom / 100};--cover-opacity:${s.opacity / 100}" alt="" title="Kéo để di chuyển" onpointerdown="AdminCategories.startTileProductDrag(event,${i})">` : `<span class="cat-cover-preview-product-empty" id="tile-cover-product-${i}"></span>`}
-          ${t.logo ? `<img src="${PSH.escapeHtml(t.logo)}" class="cat-cover-preview-logo" id="tile-cover-logo-${i}" alt="">` : `<span id="tile-cover-logo-${i}"></span>`}
-          <div class="cat-cover-preview-title">${PSH.escapeHtml(t.label || 'Danh mục')}</div>
+          ${t.image ? `<img src="${escapeHtml(t.image)}" class="cat-cover-preview-product cat-tile-cover-draggable" id="tile-cover-product-${i}" data-cover-position="${s.position}" style="--cover-zoom:${s.zoom / 100};--cover-opacity:${s.opacity / 100}" alt="" title="Kéo để di chuyển" onpointerdown="AdminCategories.startTileProductDrag(event,${i})">` : `<span class="cat-cover-preview-product-empty" id="tile-cover-product-${i}"></span>`}
+          ${t.logo ? `<img src="${escapeHtml(t.logo)}" class="cat-cover-preview-logo" id="tile-cover-logo-${i}" alt="">` : `<span id="tile-cover-logo-${i}"></span>`}
+          <div class="cat-cover-preview-title">${escapeHtml(t.label || 'Danh mục')}</div>
           <span class="cat-tile-frame-resize-handle" title="Kéo để đổi CHIỀU CAO khung tự do" onpointerdown="AdminCategories.startTileFrameHeightDrag(event,${i})"></span>
         </div>
 
@@ -487,12 +539,14 @@ document.addEventListener('DOMContentLoaded', () => {
           <button type="button" class="link-btn" onclick="AdminCategories.internetBackgroundStub()">🌐 Ảnh nền từ Internet</button>
         </div>
       </div>`;
+  }
 
   // updateTileCoverPreview — cập nhật NGAY khung Cover Preview RIÊNG (không
   // render() lại toàn bộ, tránh giật/mất focus) khi đổi Ảnh nền qua picker.
   function updateTileCoverPreview(i) {
     const inner = document.getElementById('tile-cover-inner-' + i);
     if (inner) inner.style.backgroundImage = tiles[i].backgroundImage ? `url('${tiles[i].backgroundImage}')` : 'none';
+  }
 
   function setTileCoverField(i, field, value) {
     tiles[i][field] = (field === 'position') ? value : Number(value);
@@ -506,13 +560,17 @@ document.addEventListener('DOMContentLoaded', () => {
       productImg.setAttribute('data-cover-position', t.position || TILE_COVER_DEFAULTS.position);
       productImg.style.setProperty('--cover-zoom', (t.zoom || 100) / 100);
       productImg.style.setProperty('--cover-opacity', (t.opacity != null ? t.opacity : 100) / 100);
+    }
     if (field === 'position') {
       const frame = document.getElementById('tile-cover-frame-' + i);
       if (frame) {
         frame.querySelectorAll('.cat-cover-pos-btn').forEach(btn => btn.classList.remove('active'));
         const idx = POSITIONS.indexOf(value);
         if (idx !== -1 && frame.querySelectorAll('.cat-cover-pos-btn')[idx]) frame.querySelectorAll('.cat-cover-pos-btn')[idx].classList.add('active');
+      }
+    }
     renderTilePreviewGrid();
+  }
 
   // startTileProductDrag — kéo TRỰC TIẾP ảnh sản phẩm trong khung Cover
   // Preview để di chuyển (thay bấm 9 nút vị trí), cùng kỹ thuật Pointer
@@ -536,6 +594,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const col = Math.min(2, Math.floor((x / rect.width) * 3));
       const row = Math.min(2, Math.floor((y / rect.height) * 3));
       return POSITIONS[row * 3 + col];
+    }
 
     function move(ev) {
       const code = nearestCode(ev.clientX, ev.clientY);
@@ -546,17 +605,22 @@ document.addEventListener('DOMContentLoaded', () => {
         btns.forEach(btn => btn.classList.remove('active'));
         const idx = POSITIONS.indexOf(code);
         if (idx !== -1 && btns[idx]) btns[idx].classList.add('active');
+      }
+    }
     function up() {
       document.removeEventListener('pointermove', move);
       document.removeEventListener('pointerup', up);
       imgEl.classList.remove('dragging');
       setTileCoverField(i, 'position', lastCode);
+    }
     document.addEventListener('pointermove', move);
     document.addEventListener('pointerup', up);
+  }
 
   function resetTileCover(i) {
     Object.assign(tiles[i], TILE_COVER_DEFAULTS);
     renderTiles();
+  }
 
   function setTileCoverViewport(i, viewport) {
     tilePreviewViewport[i] = viewport;
@@ -565,16 +629,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const toolbar = frame && frame.previousElementSibling;
     if (toolbar && toolbar.classList.contains('cat-cover-viewport-toggle')) {
       Array.from(toolbar.children).forEach(btn => btn.classList.toggle('active', btn.textContent.trim().toLowerCase() === viewport));
+    }
+  }
 
   function toggleTileBgRemover(i) {
     tileBgRemoverOpen[i] = !tileBgRemoverOpen[i];
     renderTiles();
+  }
 
   function mountTileBgRemover(i) {
     AdminBgRemover.mount('tile-cover-bgremover-' + i, {
       label: 'XÓA PHÔNG ẢNH SẢN PHẨM ĐẠI DIỆN',
       sourceImageUrl: tiles[i].image || '',
       onResult: url => { tiles[i].image = url; renderTiles(); }
+    });
+  }
 
   function renderTiles() {
     const wrap = document.getElementById('tileList');
@@ -582,7 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="cms-row cat-row-expand" data-idx="${i}">
         <div class="cms-row-fields">
           <select data-field="category" onchange="AdminCategories.setTileField(${i},'category',this.value)">${categoryOptions(t.category)}</select>
-          <input type="text" value="${PSH.escapeHtml(t.label)}" placeholder="Tên hiển thị" oninput="AdminCategories.setTileField(${i},'label',this.value)">
+          <input type="text" value="${escapeHtml(t.label)}" placeholder="Tên hiển thị" oninput="AdminCategories.setTileField(${i},'label',this.value)">
           <select data-field="skin" onchange="AdminCategories.setTileField(${i},'skin',this.value)">
             <option value="dark" ${t.skin !== 'light' ? 'selected' : ''}>Nền tối</option>
             <option value="light" ${t.skin === 'light' ? 'selected' : ''}>Nền sáng</option>
@@ -606,6 +675,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>`).join('') || '<p class="small-muted">Chưa có ô danh mục nào.</p>';
     tiles.forEach((t, i) => { if (tileBgRemoverOpen[i]) mountTileBgRemover(i); });
     renderTilePreviewGrid();
+  }
 
   function setTileField(i, field, value) {
     tiles[i][field] = value;
@@ -621,7 +691,9 @@ document.addEventListener('DOMContentLoaded', () => {
       delete tiles[i].customAspectRatio;
       renderTiles();
       return;
+    }
     renderTilePreviewGrid();
+  }
 
   // resetTileUiState — tilePreviewViewport/tileBgRemoverOpen khoá theo INDEX,
   // không có id ổn định để bám theo khi thứ tự Ô đổi — xoá sạch 2 trạng thái
@@ -630,6 +702,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function resetTileUiState() {
     Object.keys(tilePreviewViewport).forEach(k => delete tilePreviewViewport[k]);
     Object.keys(tileBgRemoverOpen).forEach(k => delete tileBgRemoverOpen[k]);
+  }
 
   function moveTile(i, dir) {
     const j = i + dir;
@@ -637,28 +710,34 @@ document.addEventListener('DOMContentLoaded', () => {
     [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
     resetTileUiState();
     renderTiles();
+  }
 
   function removeTile(i) {
     if (!confirm('Xóa ô danh mục này?')) return;
     tiles.splice(i, 1);
     resetTileUiState();
     renderTiles();
+  }
 
   function addTile() {
     tiles.push({ category: categories[0] ? categories[0].code : '', label: 'Danh mục mới', image: '', size: 'normal', skin: 'dark' });
     renderTiles();
+  }
 
   function saveTiles() {
     const content = Object.assign({}, siteContent, { categoryTiles: tiles });
     SiteContentDB.save(content).then(() => {
       siteContent = content;
       showTileStatus('Đã lưu ô danh mục trang chủ.');
+    });
+  }
 
   function showTileStatus(msg) {
     const el = document.getElementById('tileStatus');
     el.textContent = msg;
     el.style.display = 'block';
     setTimeout(() => { el.style.display = 'none'; }, 3000);
+  }
 
   document.getElementById('addTileBtn').addEventListener('click', addTile);
   document.getElementById('saveTilesBtn').addEventListener('click', saveTiles);
@@ -669,4 +748,5 @@ document.addEventListener('DOMContentLoaded', () => {
     setTileCoverField, resetTileCover, setTileCoverViewport, toggleTileBgRemover, startTileProductDrag,
     startTileFrameHeightDrag, resetTileFrameHeight,
     setCoverField, resetCover, setPreviewViewport, toggleBgRemover, internetBackgroundStub
+  };
 });

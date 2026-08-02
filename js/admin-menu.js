@@ -8,21 +8,27 @@ document.addEventListener('DOMContentLoaded', () => {
   let siteContent = null;
   let items = [];
 
+  function escapeHtml(str) {
+    return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
 
   function load() {
     SiteContentDB.get().then(content => {
       siteContent = content;
       items = (content.menu && Array.isArray(content.menu.items)) ? content.menu.items.slice() : [];
       render();
+    });
+  }
 
   function render() {
     const wrap = document.getElementById('menuList');
     wrap.innerHTML = items.map((it, i) => `
       <div class="cms-row" data-idx="${i}">
         <div class="cms-row-fields">
-          <input type="text" value="${PSH.escapeHtml(it.label)}" placeholder="Tên hiển thị" oninput="AdminMenu.setField(${i},'label',this.value)">
-          <input type="text" value="${PSH.escapeHtml(it.link)}" placeholder="Link (vd: index.html#services)" oninput="AdminMenu.setField(${i},'link',this.value)">
+          <input type="text" value="${escapeHtml(it.label)}" placeholder="Tên hiển thị" oninput="AdminMenu.setField(${i},'label',this.value)">
+          <input type="text" value="${escapeHtml(it.link)}" placeholder="Link (vd: index.html#services)" oninput="AdminMenu.setField(${i},'link',this.value)">
           <label class="cms-toggle"><input type="checkbox" ${it.target === '_blank' ? 'checked' : ''} onchange="AdminMenu.setField(${i},'target',this.checked?'_blank':'_self')"> Mở tab mới</label>
         </div>
         <div class="cms-row-actions">
@@ -31,6 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <button class="btn-danger" onclick="AdminMenu.remove(${i})">Xóa</button>
         </div>
       </div>`).join('') || '<p class="small-muted">Chưa có mục menu nào.</p>';
+  }
 
   function setField(i, field, value) { items[i][field] = value; }
 
@@ -39,15 +46,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (j < 0 || j >= items.length) return;
     [items[i], items[j]] = [items[j], items[i]];
     render();
+  }
 
   function remove(i) {
     if (!confirm('Xóa mục menu này?')) return;
     items.splice(i, 1);
     render();
+  }
 
   function addItem() {
     items.push({ label: 'Mục mới', link: '#', order: items.length + 1, target: '_self' });
     render();
+  }
 
   function save() {
     items.forEach((it, i) => { it.order = i + 1; });
@@ -55,12 +65,15 @@ document.addEventListener('DOMContentLoaded', () => {
     SiteContentDB.save(content).then(() => {
       siteContent = content;
       showStatus('Đã lưu menu — có hiệu lực ngay trên mọi trang.');
+    });
+  }
 
   function showStatus(msg) {
     const el = document.getElementById('menuStatus');
     el.textContent = msg;
     el.style.display = 'block';
     setTimeout(() => { el.style.display = 'none'; }, 3000);
+  }
 
   document.getElementById('addMenuItemBtn').addEventListener('click', addItem);
   document.getElementById('saveMenuBtn').addEventListener('click', save);
