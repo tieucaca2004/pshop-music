@@ -117,7 +117,7 @@ var WorkspaceAuth = (function () {
   // workspace-files.js (Task 2.6/2.7); both now call this instead, and the
   // Dashboard's "Storage Used" card reuses it too, so there is exactly one
   // implementation of this formatting rule.
-  function PSH.formatBytes(n) {
+  function formatBytes(n) {
     if (!n) return '';
     if (n < 1024) return n + ' B';
     if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
