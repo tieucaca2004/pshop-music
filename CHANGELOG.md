@@ -2,6 +2,18 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Bug Fix — Toàn bộ CMS Admin không dùng được (36 trang thiếu `auth-context.js`) — CHỜ DEPLOY
+
+**Root cause**: commit `b8d44d1` ("js/auth-context.js — centralized auth/tenant context module") thêm `AuthContext.init()` vào `js/admin-auth.js`, nhưng KHÔNG thêm thẻ `<script src="js/auth-context.js">` vào bất kỳ trang `admin/*.html`/`admin/ai/*.html` nào đang dùng `admin-auth.js`. Kết quả: ngay khi `AdminAuth.init()` chạy, gặp `ReferenceError: AuthContext is not defined` — dừng toàn bộ script tại đó, trước khi kịp gọi `load()`/vẽ danh sách/gắn nút bấm. Khung trang (sidebar/topbar) vẫn hiện vì phần đó không đụng `AuthContext`, nên nhìn giống "danh sách trống" chứ không giống crash rõ ràng — nhưng thực chất MỌI danh sách, nút Lưu, nút Thêm trên MỌI trang Admin đều không hoạt động.
+
+**Cách phát hiện**: Founder báo trang "Quản lý danh mục" trống + nút "Thêm ô"/"Lưu ô" không bấm được, đã Ctrl+Shift+R vẫn vậy → xác nhận riêng `CategoryDB.getAll()` vẫn đọc được 9 danh mục thật (không phải mất dữ liệu) → xác nhận `js/admin-categories.js` trên server không lỗi cú pháp → đọc `js/admin-auth.js`, thấy phụ thuộc `AuthContext.init()` → grep toàn bộ `admin/*.html` xem file nào thiếu `<script src=".../js/auth-context.js">` → 36/36 trang dùng `admin-auth.js` đều thiếu.
+
+**Sửa**: thêm đúng 1 dòng `<script src="../js/auth-context.js?v=c4ebba8">` (hoặc `../../js/` cho `admin/ai/*.html`) ngay sau `firebase-config.js`, trước `admin-auth.js`, ở cả 36 file — đúng thứ tự đã dùng đúng ở `platform/workspace/business-settings.html`.
+
+**Kiểm thử**: đã xác nhận cả 36 file giờ có đủ thẻ script, đúng vị trí, không lặp. **CHƯA kiểm thử qua UI có đăng nhập thật** (không có tài khoản Founder, không được dùng mật khẩu Founder cung cấp) — cần Founder tự đăng nhập lại và xác nhận danh sách/nút bấm hoạt động trên từng trang Admin đã sửa.
+
+**Deploy**: đã commit (`ba621e2`) + push lên `feature/cms-ai-sprint2`. **CHƯA lên Production** — Netlify báo hết credits, mọi deploy mới bị "Skipped due to account credit usage exceeded" kể từ commit trước đó (`3ba5e17`). Cần Founder xử lý credits Netlify trước khi bản sửa này lên được trang thật.
+
 ## Bug Fix — Production Down: trang chủ + trang danh mục trắng trơn — CHỜ DEPLOY
 
 **Root cause**: commit `d3f3f79` ("refactor: consolidate escapeHtml/formatBytes/formatDate/initials into PSH.shared") đã làm hỏng cú pháp JS ở TẤT CẢ 37 file nó đụng vào — không chỉ xoá phần khai báo hàm helper cũ như dự định, mà còn xoá nhầm dấu `}` đóng của các hàm khác, xoá nhầm nhánh `else`, và ở `js/media-library-picker.js` một commit "fix" sau đó (`2a4177b`) còn sinh ra cú pháp không hợp lệ `function PSH.PSH.formatBytes(n)`. Mọi file bị đụng đều lệch số dấu `{`/`}` — nghĩa là toàn bộ script không parse được, hỏng cả trang chủ (`home.js`), trang danh mục (`category.js`), header/footer (`site-chrome.js`), và toàn bộ admin CMS.
