@@ -15,14 +15,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
   var categories = [];
 
-
   function load() {
     var container = document.getElementById('categoryList');
     WorkspaceAuth.renderLoading(container);
     return CategoryDB.getAll().then(function (list) {
       categories = list;
       render();
+    }).catch(function (e) {
       WorkspaceAuth.renderErrorState(container, 'Failed to load categories: ' + e.message);
+    });
+  }
 
   function render() {
     var wrap = document.getElementById('categoryList');
@@ -41,13 +43,18 @@ document.addEventListener('DOMContentLoaded', function () {
           '<button class="link-btn" onclick="WorkspaceCategories.save(\'' + c.id + '\')">Save</button>' +
           '<button class="btn-danger" onclick="WorkspaceCategories.remove(\'' + c.id + '\')">Delete</button>' +
         '</div></div>';
+    }).join('');
+  }
 
   function rowValues(id) {
     var row = document.querySelector('.cms-row[data-id="' + id + '"]');
+    return {
       code: row.querySelector('[data-field="code"]').value.trim(),
       label: row.querySelector('[data-field="label"]').value.trim(),
       description: row.querySelector('[data-field="description"]').value.trim(),
       status: row.querySelector('[data-field="active"]').checked ? 'active' : 'inactive'
+    };
+  }
 
   function save(id) {
     var values = rowValues(id);
@@ -55,6 +62,8 @@ document.addEventListener('DOMContentLoaded', function () {
     CategoryDB.update(id, values).then(function () {
       showStatus('Category saved.');
       load();
+    });
+  }
 
   function move(id, dir) {
     var idx = categories.findIndex(function (c) { return c.id === id; });
@@ -65,22 +74,26 @@ document.addEventListener('DOMContentLoaded', function () {
       CategoryDB.update(a.id, { order: b.order || 0 }),
       CategoryDB.update(b.id, { order: a.order || 0 })
     ]).then(load);
+  }
 
   function remove(id) {
     var c = categories.find(function (x) { return x.id === id; });
     if (!c) return;
     if (!confirm('Delete category "' + c.label + '"?')) return;
     CategoryDB.remove(id).then(load);
+  }
 
   function addNew() {
     var maxOrder = categories.reduce(function (m, c) { return Math.max(m, c.order || 0); }, 0);
     CategoryDB.add({ code: '', label: 'New Category', description: '', order: maxOrder + 1, status: 'active' }).then(load);
+  }
 
   function showStatus(msg) {
     var el = document.getElementById('categoryStatus');
     el.textContent = msg;
     el.style.display = 'block';
     setTimeout(function () { el.style.display = 'none'; }, 3000);
+  }
 
   document.getElementById('addCategoryBtn').addEventListener('click', addNew);
 
