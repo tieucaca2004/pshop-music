@@ -1,5 +1,9 @@
 # Roadmap — chỉ ghi nhận, KHÔNG tự ý triển khai
 
+## Ý tưởng phát sinh — Redo PSH.shared consolidation đúng cách
+
+Phát hiện khi điều tra bug "trang chủ mất hết sản phẩm" (xem `CHANGELOG.md` mục "Bug Fix — Production Down"): commit `d3f3f79` cố gắng gộp `escapeHtml`/`formatBytes`/`formatDate`/`initials` thành `PSH.shared` dùng chung, nhưng làm hỏng cú pháp ở toàn bộ 37 file — đã revert hết về bản dùng hàm cục bộ như cũ. Ý tưởng gộp vẫn hợp lý (giảm lặp code) nhưng cần làm lại như 1 Requirement riêng, có kiểm tra brace-balance từng file trước khi commit — không tự ý làm cùng lúc với việc khác.
+
 ## Sprint 15 — Async AI Generation + Agent RBAC Foundation — ✅ DEPLOYED (Cloud Functions), ⏳ NETLIFY PENDING
 
 Async generation workflow hoàn tất: `queueGeneration()` → `aiGenerateWorker` (RTDB trigger) → `runGeneration()`. Agent RBAC Foundation cho role `agent`. Code committed `1b2a59c`, pushed, Cloud Functions (`apiGateway` + `aiGenerateWorker`) deployed. Chờ Netlify deploy frontend để hoàn tất Sprint 15.

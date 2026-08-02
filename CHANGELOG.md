@@ -2,6 +2,20 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Bug Fix — Production Down: trang chủ + trang danh mục trắng trơn — CHỜ DEPLOY
+
+**Root cause**: commit `d3f3f79` ("refactor: consolidate escapeHtml/formatBytes/formatDate/initials into PSH.shared") đã làm hỏng cú pháp JS ở TẤT CẢ 37 file nó đụng vào — không chỉ xoá phần khai báo hàm helper cũ như dự định, mà còn xoá nhầm dấu `}` đóng của các hàm khác, xoá nhầm nhánh `else`, và ở `js/media-library-picker.js` một commit "fix" sau đó (`2a4177b`) còn sinh ra cú pháp không hợp lệ `function PSH.PSH.formatBytes(n)`. Mọi file bị đụng đều lệch số dấu `{`/`}` — nghĩa là toàn bộ script không parse được, hỏng cả trang chủ (`home.js`), trang danh mục (`category.js`), header/footer (`site-chrome.js`), và toàn bộ admin CMS.
+
+**Cách phát hiện**: Founder báo "trang chủ mất hết sản phẩm" → mở Production thật, xác nhận lưới danh mục/sản phẩm không hiển thị dù không có lỗi console → đọc trực tiếp `js/home.js`, phát hiện thân hàm thiếu `}` → đếm số `{`/`}` toàn bộ 41 file có dùng `PSH.escapeHtml`/`PSH.shared`, xác nhận 37/41 file lệch.
+
+**Sửa**: revert nội dung 37 file về đúng bản trước `d3f3f79` (giữ nguyên hàm `escapeHtml`/`formatBytes`/... cục bộ như cũ). Loại trừ `js/workspace-categories.js` (đã sửa riêng ở `f9e50aa` — vẫn giữ bản dùng `PSH.escapeHtml` vì đã sửa đúng), và `js/workspace-auth.js`/`js/workspace-dashboard.js`/`js/shared.js` (không bị lỗi, không đụng tới).
+
+**Kiểm thử**: đã xác nhận lại số `{`/`}` cân bằng ở cả 41 file liên quan. **CHƯA test được qua UI/browser thật** (môi trường làm việc không có Node/npm/Netlify CLI để chạy dev server hoặc deploy draft) — cần Founder tự xác nhận trên Production sau khi deploy.
+
+**Việc phát sinh, chưa làm trong lượt này** (ghi lại, không tự mở rộng phạm vi): việc consolidate `escapeHtml`/`formatBytes`/`formatDate`/`initials` vào `PSH.shared` vẫn là ý tưởng hợp lý — cần làm lại đúng cách, có kiểm thử brace-balance sau mỗi file, như 1 Requirement riêng — xem `ROADMAP.md`.
+
+**Deploy**: code đã commit (`906083e`) + push lên `feature/cms-ai-sprint2`. **CHƯA deploy Production** — môi trường hiện tại không có Netlify CLI, cần Founder tự chạy hoặc cung cấp đường dẫn Node/Netlify CLI đã cài.
+
 ## Sprint 15 — Async AI Generation + Agent RBAC Foundation — ĐANG CHỜ FRONTEND DEPLOY
 
 - **Async AI Generation**: `queueGeneration()` tạo job trong `apiAsyncJobs`, `aiGenerateWorker` (RTDB trigger `onValueCreated`) xử lý bất đồng bộ, `runGeneration()` thực thi AI generation (loadContext → buildPrompt → OpenAI → mapToDraftContent → DraftDB.add). Job transition: `queued → running → completed`.
