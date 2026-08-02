@@ -470,5 +470,39 @@
 <script src="js/db.js?v=c4ebba8" defer></script>
 <script src="js/cms-db.js?v=c4ebba8" defer></script>
 <script src="js/site-chrome.js?v=c4ebba8" defer></script>
+<script>
+// PRODUCT SEO RENDER — Task PRODUCT-SEO-01: render SEO từ product DB (id=41),
+// không dùng Website/Global SEO. Reuse DB.get() (db.js).
+document.addEventListener('DOMContentLoaded', function () {
+  DB.get('41').then(function (p) {
+    if (!p) return;
+    var title = (p.seoTitle || p.name || '').trim();
+    var desc = (p.metaDescription || p.shortDescription || p.description || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    var img = p.image || p.backgroundImage || '';
+    var url = 'https://pshopmusic.com/product-lexar-p30-128gb.html';
+    function setMeta(attr, name, content) {
+      if (!content) return;
+      var el = document.querySelector(attr + '[name="' + name + '"]') || document.querySelector(attr + '[property="' + name + '"]');
+      if (el) { el.content = content; return; }
+      // tạo nếu chưa có
+      var m = document.createElement('meta');
+      if (attr === 'meta') { m.name = name; } else { m.setAttribute('property', name); }
+      var exists = document.querySelector(attr + '[name="' + name + '"]') || document.querySelector(attr + '[property="' + name + '"]');
+      if (exists) { exists.content = content; return; }
+      m.content = content;
+      document.head.appendChild(m);
+    }
+    if (title) { document.title = title + ' - Pshop Music'; setMeta('meta', 'title', title); }
+    setMeta('meta', 'description', desc);
+    setMeta('meta', 'keywords', Array.isArray(p.seoKeywords) ? p.seoKeywords.join(', ') : (p.seoKeywords || ''));
+    setMeta('meta', 'og:title', title || document.title);
+    setMeta('meta', 'og:description', desc);
+    if (img) { setMeta('meta', 'og:image', img); setMeta('meta', 'og:image:secure_url', img); }
+    setMeta('meta', 'og:url', url);
+    var can = document.querySelector('link[rel="canonical"]');
+    if (can) can.href = url;
+  }).catch(function () {});
+});
+</script>
 </body>
 </html>
