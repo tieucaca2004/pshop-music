@@ -378,7 +378,9 @@
       renderHeroGlobalText(content);
       renderHeroSlides(content.heroSlides);
       renderCategoriesIntro(content);
+      console.log('DEBUG categoryTiles', JSON.stringify(content.categoryTiles), 'gridExists', !!document.getElementById('catTileGrid'));
       renderCategoryTiles(content.categoryTiles);
+      console.log('DEBUG after render childCount', document.getElementById('catTileGrid') ? document.getElementById('catTileGrid').children.length : 'no-grid');
       renderServices(content);
       renderSettings(content.settings);
       if (typeof SiteChrome !== 'undefined') {
