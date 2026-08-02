@@ -1,5 +1,9 @@
 # Roadmap — chỉ ghi nhận, KHÔNG tự ý triển khai
 
+## Ý tưởng phát sinh — workspace-categories.js chưa có trang HTML nào trỏ tới
+
+Phát hiện khi rà toàn bộ CMS sau sự cố `d3f3f79`: `js/workspace-categories.js` (Customer Workspace — quản lý danh mục theo từng tenant) đã code xong, gọi `PSH.escapeHtml` đúng cú pháp, nhưng KHÔNG có file `platform/workspace/*.html` nào nạp nó — trang này hiện không thể truy cập được từ UI. Khi ai đó nối trang này vào (thêm `platform/workspace/categories.html` hoặc tương tự), cần thêm cả `<script src="js/shared.js">` (định nghĩa `PSH`) vào trang đó — hiện `shared.js` chưa được nạp ở BẤT KỲ trang nào trong dự án.
+
 ## Ý tưởng phát sinh — Redo PSH.shared consolidation đúng cách
 
 Phát hiện khi điều tra bug "trang chủ mất hết sản phẩm" (xem `CHANGELOG.md` mục "Bug Fix — Production Down"): commit `d3f3f79` cố gắng gộp `escapeHtml`/`formatBytes`/`formatDate`/`initials` thành `PSH.shared` dùng chung, nhưng làm hỏng cú pháp ở toàn bộ 37 file — đã revert hết về bản dùng hàm cục bộ như cũ. Ý tưởng gộp vẫn hợp lý (giảm lặp code) nhưng cần làm lại như 1 Requirement riêng, có kiểm tra brace-balance từng file trước khi commit — không tự ý làm cùng lúc với việc khác.
