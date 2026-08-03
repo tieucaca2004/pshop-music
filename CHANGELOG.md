@@ -28,6 +28,18 @@
 
 **Deploy**: code đã commit (`906083e`) + push lên `feature/cms-ai-sprint2`. **CHƯA deploy Production** — môi trường hiện tại không có Netlify CLI, cần Founder tự chạy hoặc cung cấp đường dẫn Node/Netlify CLI đã cài.
 
+## 2026-08-03 — Host Agent Design (directive 14:26/14:28 APPROVED)
+
+- **HOST AGENT ARCHITECTURE — APPROVED**: Thiết kế kiến trúc Host Agent hoàn chỉnh (23 mục) — OpenClaw (container) = Orchestrator, Ubuntu Host = Executor (deploy/git push/netlify/npm/systemctl). Credentials (GitHub SSH, Netlify token, Docker) chỉ trên Host. HTTP REST + callback, Node.js, SQLite job queue (FIFO 1 worker). Files: `docs/host-agent/HOST_AGENT_ARCHITECTURE.md`, `docs/host-agent/HOST_AGENT_API.md`, `docs/host-agent/OPERATIONS.md`, ADR-009 trong `docs/decision-records/ADRs.md`.
+- **Runtime Evidence deploy block**: container OpenClaw không có ssh (exit 127), không netlify CLI, không NETLIFY token/`~/.netlify`, không `~/.ssh`, không docker.sock; push GitHub qua PAT 403 `Permission denied`. → Deploy/Push chuyển sang Host Agent.
+
+## 2026-08-03 — Knowledge Sync + PRODUCT-SEO-01 (Runtime Trace / Release Verify)
+
+- **PROJECT KNOWLEDGE SYNC**: đồng bộ toàn bộ tri thức dự án để GitHub thành Single Source of Truth — thêm `docs/product-runtime/` (7 file: PRODUCT_RUNTIME_ARCHITECTURE, PRODUCT_RUNTIME_TRACE_RESULT, PRODUCT_ROOT_CAUSE_ANALYSIS, PRODUCT_RUNTIME_MIGRATION_PLAN, PRODUCT_SEO_ARCHITECTURE, RELEASE_VERIFICATION_REPORT), `docs/decision-records/ADRs.md`, `docs/TODO.md`.
+- **PRODUCT-SEO-01 (Phases 1-6)**: thêm 6 field SEO (`seoTitle/metaDescription/seoKeywords/canonical/ogImage/slug`) vào `js/admin-products.js` + `admin/products.html`, load trong `editProduct()`/save trong `saveProduct()`/reset trong `resetForm()`; renderer trong `product-lexar-p30-128gb.html` đọc DB qua `DB.get('41')` ghi `<title>`/meta/canonical/og:*.
+- **Runtime Trace (Runtime Evidence 2026-08-03)**: Website Product Detail render SEO từ HTML hardcode + `js/products-seed.js` (static) — KHÔNG đọc Database qua API (`products-seed.js` không chứa field SEO). RELEASE VERIFICATION STEP 10: FAIL — Database ↔ Website Runtime HTML không khớp (seoTitle/metaDescription/og:title/og:image khác; canonical khớp). Root cause + Migration Plan ghi tại `docs/product-runtime/`.
+- **Build Recovery**: hoàn tác sửa build cho `js/admin-products.js` về commit `40b0166` (giữ SEO, sạch build-recovery edits). Xác minh `node --check` KHÔNG thuộc Release Pipeline (Netlify static `command="" publish="."`).
+
 ## Sprint 15 — Async AI Generation + Agent RBAC Foundation — ĐANG CHỜ FRONTEND DEPLOY
 
 - **Async AI Generation**: `queueGeneration()` tạo job trong `apiAsyncJobs`, `aiGenerateWorker` (RTDB trigger `onValueCreated`) xử lý bất đồng bộ, `runGeneration()` thực thi AI generation (loadContext → buildPrompt → OpenAI → mapToDraftContent → DraftDB.add). Job transition: `queued → running → completed`.

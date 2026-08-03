@@ -49,42 +49,16 @@ const listResource = require('./listResource');
 const asyncJob = require('./asyncJob');
 const eventBus = require('./eventBus');
 const { MODULES, parseJsonResponse } = require('./aiModules');
+const providerRouter = require('./providerRouter');
 
-const OPENAI_API_KEY = defineSecret('OPENAI_API_KEY');
-const IMAGE_SIZE_MAP = { '1:1': '1024x1024', '4:5': '1024x1792', '16:9': '1792x1024' };
-
+// callOpenAiText / callOpenAiImage — Wrapper giữ signature/export cũ (backward-compat),
+// logic thực tế ĐÃ chuyển sang openaiProvider (Provider Abstraction) — không duplicate.
 async function callOpenAiText(prompt) {
-  const r = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + OPENAI_API_KEY.value() },
-    body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], temperature: 0.7 })
-  });
-  const data = await r.json();
-  if (!r.ok) throw new Error((data.error && data.error.message) || 'OpenAI API lỗi.');
-  const text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-  return { text: (text || '').trim(), raw: data };
+  return providerRouter.route({ type: 'text', prompt: prompt });
 }
 
-// callOpenAiImage — CÙNG hành vi action "generate_image" của openaiProxy
-// (functions/index.js) — tải ảnh b64 tạm thời về, lưu vĩnh viễn vào Firebase
-// Storage (Admin SDK) trước khi trả URL, vì ảnh OpenAI trả về sẽ hết hạn.
 async function callOpenAiImage(prompt, size) {
-  const openAiSize = IMAGE_SIZE_MAP[size] || '1024x1024';
-  const r = await fetch('https://api.openai.com/v1/images/generations', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + OPENAI_API_KEY.value() },
-    body: JSON.stringify({ model: 'dall-e-3', prompt, size: openAiSize, n: 1, response_format: 'b64_json' })
-  });
-  const data = await r.json();
-  if (!r.ok) throw new Error((data.error && data.error.message) || 'OpenAI Images API lỗi.');
-  const item = data.data && data.data[0];
-  if (!item || !item.b64_json) throw new Error('OpenAI không trả về ảnh.');
-  const buffer = Buffer.from(item.b64_json, 'base64');
-  const path = `ai-generated/${Date.now()}-${Math.random().toString(36).slice(2)}.png`;
-  const bucket = admin.storage().bucket();
-  const token = require('crypto').randomUUID();
-  await bucket.file(path).save(buffer, { metadata: { contentType: 'image/png', metadata: { firebaseStorageDownloadTokens: token } } });
-  return { imageUrl: `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(path)}?alt=media&token=${token}` };
+  return providerRouter.route({ type: 'image', prompt: prompt, size: size });
 }
 
 // runGeneration — logic thật (KHÔNG đổi 1 dòng nào so với thân
@@ -102,14 +76,14 @@ async function runGeneration(jobId, moduleId, inputParams, uid) {
     const context = await module.loadContext(inputParams);
     const prompt = module.buildPrompt(inputParams, context);
     const providerOutput = module.isImageGen
-      ? await callOpenAiImage(prompt, inputParams.size)
-      : await callOpenAiText(prompt);
+      ? await providerRouter.route({ type: 'image', prompt: prompt, size: inputParams.size, providerId: inputParams.providerId })
+      : await providerRouter.route({ type: 'text', prompt: prompt, inputParams: inputParams, providerId: inputParams.providerId });
     const content = module.mapToDraftContent(providerOutput, inputParams, context);
 
     const draft = await listResource.add('aiDrafts', {
       moduleId, targetCollection: module.targetCollection,
       targetId: inputParams.targetId || inputParams.productId || inputParams.postId || null,
-      inputParams, content, status: 'draft', providerUsed: 'openai', createdBy: uid
+      inputParams, content, status: 'draft', providerUsed: inputParams.providerId || 'openai', createdBy: uid
     });
 
     await asyncJob.updateJobStatus(jobId, 'completed', { draftId: draft.id });
@@ -141,4 +115,4 @@ async function queueGeneration(moduleId, inputParams, uid) {
   return asyncJob.createJob({ uid, type: 'ai-generate:' + moduleId, payload: { inputParams, moduleId, async: true } });
 }
 
-module.exports = { generateForModule, queueGeneration, runGeneration, callOpenAiText, callOpenAiImage, OPENAI_API_KEY };
+module.exports = { generateForModule, queueGeneration, runGeneration, callOpenAiText, callOpenAiImage };
