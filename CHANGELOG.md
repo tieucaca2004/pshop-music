@@ -6,9 +6,9 @@
 
 - **WORKFLOW-01 Auto Trigger**: Khi Product được Publish (`pubStatus === 'published'`) → tự khởi chạy chuỗi WorkflowEngine: **Product → AI Content → Blog → Facebook → Banner**.
 - **Client**: `js/psh-workflow-auto.js` (module mới) — `window.PSHWorkflowAuto.trigger(productId, data)` ghi job `workflow:auto` vào queue `apiAsyncJobs`; hook trong `js/admin-products.js` (`saveProduct`) + nối script trong `admin/products.html`.
-- **Backend**: `workflowAutoWorker` (functions/index.js, RTDB `onValueCreated` `/apiAsyncJobs/{jobId}`) — chạy từng step qua `runGeneration()` (tái sử dụng `functions/shared/aiGenerate.js`), tạo draft `aiDrafts`, KHÔNG tự publish; ghi tiến độ step xuống queue (event chaining).
-- **Chỉ tái sử dụng** `WorkflowEngine.run` / `queueGeneration` / `aiGenerateWorker` pattern / `asyncJob` — không tạo kiến trúc mới, không cron/polling/scheduler/webhook ngoài, không refactor, không sửa AI_RULES.
-- Pending deploy: `firebase deploy --only functions:workflowAutoWorker` (worker chỉ chạy thật sau khi deploy).
+- **Backend**: **gộp vào `aiGenerateWorker`** (functions/index.js, RTDB `onValueCreated` `/apiAsyncJobs/{jobId}`) — mở rộng filter type nhận `workflow:auto` + xử lý từng step qua `runGeneration()` (tái sử dụng `functions/shared/aiGenerate.js`), tạo draft `aiDrafts`, KHÔNG tự publish; ghi tiến độ step xuống queue (event chaining). Xóa worker riêng `workflowAutoWorker` (không giữ worker dư — đúng nguyên tắc REUSE, tránh 2 Cloud Function cùng trigger 1 node).
+- **Chỉ tái sử dụng** `WorkflowEngine.run` / `queueGeneration` / `aiGenerateWorker` pattern / `asyncJob` — không tạo kiến trúc mới, không cron/polling/scheduler/webhook ngoài, không refactor logic, không sửa AI_RULES.
+- Pending deploy: `firebase deploy --only functions:aiGenerateWorker` (worker chỉ chạy thật sau khi deploy).
 
 ## Bug Fix — Toàn bộ CMS Admin không dùng được (36 trang thiếu `auth-context.js`) — CHỜ DEPLOY
 
