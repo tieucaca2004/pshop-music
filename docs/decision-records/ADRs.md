@@ -55,6 +55,14 @@
 - **Quyết định:** Release Verification chạy như State Machine Atomic Transaction, chỉ xác minh Runtime — không retry/recover/audit/build/refactor.
 - **Hệ quả:** Chỉ ghi PASS/FAIL dựa trên Runtime Evidence, dừng đúng bước FAIL.
 
+## ADR-009 — Host Agent (OpenClaw Orchestrator ↔ Ubuntu Executor)
+
+- **Trạng thái:** ACCEPTED (directive 14:28, 2026-08-03)
+- **Quyết định:** Deploy Production / Git Push / Netlify Deploy chuyển sang **Host Agent** chạy trên Ubuntu Host; OpenClaw container chỉ phát triển + **Orchestrator** (gửi Job qua HTTP REST + callback).
+- **Lý do (Runtime Evidence):** Container OpenClaw không có ssh (`exit 127`), không có Netlify CLI (`netlify: not found`), không `NETLIFY_AUTH_TOKEN`/`~/.netlify`, không `~/.ssh` key, không docker.sock; push GitHub qua PAT (HTTP) bị 403 `Permission denied to tieucaca2004`. → Không thể deploy/push trong container.
+- **Thiết kế:** Node.js Host Agent service (systemd) — Job Queue (SQLite, FIFO 1 worker) — Executor allowlist (git pull/push, netlify deploy --prod, npm install/test/build, systemctl restart). Credentials (GitHub SSH, Netlify token, Docker) CHỈ nằm trên Host, không copy vào container. Chi tiết: `docs/host-agent/HOST_AGENT_ARCHITECTURE.md`, `docs/host-agent/HOST_AGENT_API.md`, `docs/host-agent/OPERATIONS.md`.
+- **Hệ quả:** Deploy Production hoàn toàn tự động; GitHub = Single Source of Truth; Telegraph chỉ nói chuyện với OpenClaw (điều phối), Host Agent thực thi.
+
 ## Liên quan
 
 - `PROJECT_ARCHITECTURE.md` / `docs/ARCHITECTURE.md`
