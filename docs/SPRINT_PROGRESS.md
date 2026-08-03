@@ -6,11 +6,12 @@ Nhật ký tiến độ Sprint gần nhất. Mới nhất ở trên. Xem thêm `
 
 | Công việc | Trạng thái |
 |---|---|
-| Client trigger (`js/psh-workflow-auto.js` + hook `js/admin-products.js` + nối `admin/products.html`) | ✅ Code xong |
-| Backend `workflowAutoWorker` (functions/index.js, RTDB onValueCreated `/apiAsyncJobs/{jobId}`), chạy từng step qua `runGeneration` | ✅ Code xong |
+| Client trigger inline trong `js/admin-products.js` (khi pubStatus='published' ghi job `workflow:auto` vào `apiAsyncJobs`) — cleanup xóa module `psh-workflow-auto.js` + `window.PSHWorkflowAuto` (chỉ 1 nơi dùng) | ✅ Code xong |
+| Backend `aiGenerateWorker` (functions/index.js, RTDB onValueCreated `/apiAsyncJobs/{jobId}`) mở rộng xử lý `workflow:auto`, chạy từng step qua `runGeneration` | ✅ Code xong |
 | Chuỗi: Product → AI Content → Blog → Facebook → Banner | ✅ |
 | node --check 3 file JS | ✅ PASS |
-| Deploy worker (`firebase deploy --only functions:workflowAutoWorker`) | ⏳ Chờ (thuộc Ubuntu Server) |
+| Cleanup architecture: xóa worker dư `workflowAutoWorker` + module dư `psh-workflow-auto.js` (REUSE) | ✅ Xong |
+| Deploy worker (`firebase deploy --only functions:aiGenerateWorker`) | ⏳ Chờ (thuộc Ubuntu Server) |
 | Knowledge (CHANGELOG/SPRINT_PROGRESS) + commit + push | ⏳ Đang hoàn tất |
 
 ## 2026-08-03 — PRODUCT-SEO-01 / RELEASE (đã hoàn thành)
