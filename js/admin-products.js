@@ -372,7 +372,8 @@ const AdminApp = (function () {
       canonical: document.getElementById('pCanonical').value.trim(),
       ogImage: document.getElementById('pOgImage').value.trim(),
       slug: document.getElementById('pSlug').value.trim()
-    }; = editingId ? DB.update(editingId, data) : DB.add(data);
+    };
+    const action = editingId ? DB.update(editingId, data) : DB.add(data);
     action.then(() => {
       showStatus(editingId ? 'Đã cập nhật sản phẩm.' : 'Đã thêm sản phẩm mới.');
       resetForm();

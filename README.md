@@ -44,6 +44,19 @@ npx serve .
 ```
 (Mở `index.html` trực tiếp bằng file:// cũng chạy được, nhưng nên dùng server tĩnh ở trên để tránh vài quirk của trình duyệt.)
 
+## Docs / Architecture (GitHub = Source of Truth)
+
+- **Product Runtime** (`docs/product-runtime/`): `PRODUCT_RUNTIME_ARCHITECTURE.md`, `PRODUCT_RUNTIME_TRACE_RESULT.md`, `PRODUCT_ROOT_CAUSE_ANALYSIS.md`, `PRODUCT_RUNTIME_MIGRATION_PLAN.md`, `PRODUCT_SEO_ARCHITECTURE.md`, `RELEASE_VERIFICATION_REPORT.md`
+- **Host Agent** (`docs/host-agent/`): `HOST_AGENT_ARCHITECTURE.md`, `HOST_AGENT_API.md`, `OPERATIONS.md` — OpenClaw (container) = Orchestrator, Ubuntu Host = Executor (deploy/push/netlify).
+- **ADR** (`docs/decision-records/ADRs.md`)
+- **TODO/Backlog** (`docs/TODO.md`)
+- **Kiến trúc** (`docs/ARCHITECTURE.md`, `PROJECT_ARCHITECTURE.md`) · **API** (`docs/API_CONTRACT.md`, `docs/API_LIST.md`) · **DB Schema** (`docs/DATABASE_STRUCTURE.md`)
+- **Roadmap** (`ROADMAP.md`, `PSH_PRODUCTION_ROADMAP.md`) · **Changelog** (`CHANGELOG.md`) · **AI Rules** (`AI_RULES.md`)
+
+## Product Runtime Migration
+
+Website Product Detail (`product-*.html`) đang chuyển sang đọc **Product Database** qua `js/product-runtime-render.js` (SEO + display từ `DB.get(id)`), bỏ phụ thuộc `products-seed.js`. Xem `docs/product-runtime/PRODUCT_RUNTIME_MIGRATION_PLAN.md`.
+
 ## CMS Admin — `/admin/`
 
 | Trang | Vai trò yêu cầu | Chức năng |
