@@ -975,6 +975,55 @@ exports.aiGenerateWorker = onValueCreated({ ref: '/apiAsyncJobs/{jobId}', region
   }
 });
 
+/**
+ * workflowAutoWorker — WORKFLOW-01 (Sprint WORKFLOW). RTDB trigger
+ * (`onValueCreated`) trên `apiAsyncJobs/{jobId}` cho job `workflow:auto`
+ * (client ghi khi Product publish). Tự chạy chuỗi Plugin theo thứ tự:
+ *   Product → AI Content → Blog → Facebook → Banner
+ * Mỗi step chạy qua `runGeneration()` (tái sử dụng, functions/shared/aiGenerate.js),
+ * tạo draft (`aiDrafts`) như mọi generate khác — KHÔNG tự publish.
+ * Chỉ tái sử dụng queue apiAsyncJobs + runGeneration — không cron/polling/
+ * scheduler/webhook ngoài. Deploy: firebase deploy --only functions.
+ */
+exports.workflowAutoWorker = onValueCreated({ ref: '/apiAsyncJobs/{jobId}', region: 'asia-southeast1', secrets: [OPENAI_API_KEY] }, async (event) => {
+  const job = event.data.val();
+  if (!job || job.status !== 'queued') return;
+  if (!job.type || job.type !== 'workflow:auto') return;
+  if (!job.payload || job.payload.async !== true) return;
+
+  const steps = (job.payload.steps && job.payload.steps.length)
+    ? job.payload.steps
+    : [
+        { type: 'generation', moduleId: 'product-content' },
+        { type: 'generation', moduleId: 'blog-post' },
+        { type: 'generation', moduleId: 'facebook-post' },
+        { type: 'generation', moduleId: 'banner' }
+      ];
+  const productId = job.payload.productId || null;
+  const baseParams = { productId: productId };
+
+  try {
+    await asyncJob.updateJobStatus(event.params.jobId, 'running');
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+      if (!step || !step.moduleId) continue;
+      const stepJobId = event.params.jobId + ':step' + i;
+      try {
+        await runGeneration(stepJobId, step.moduleId, Object.assign({}, baseParams, step.inputParams || {}), job.uid);
+        // Ghi tiến độ step xuống queue (event chaining) để bước kế tiếp đọc
+        await asyncJob.updateJobStatus(event.params.jobId, 'running', { stepIndex: i, stepModule: step.moduleId, stepStatus: 'completed' });
+      } catch (e) {
+        await asyncJob.updateJobStatus(event.params.jobId, 'failed', { stepIndex: i, stepModule: step.moduleId, stepStatus: 'failed', error: String(e && e.message || e) });
+        return; // dừng chuỗi tại step lỗi — không tự retry (giống ai-generate)
+      }
+    }
+    await asyncJob.updateJobStatus(event.params.jobId, 'completed', { totalSteps: steps.length });
+  } catch (err) {
+    // nuốt lỗi ngoài cùng để tránh RTDB trigger tự retry
+    try { await asyncJob.updateJobStatus(event.params.jobId, 'failed', { error: String(err && err.message || err) }); } catch (_) {/* noop */}
+  }
+});
+
 
 
 

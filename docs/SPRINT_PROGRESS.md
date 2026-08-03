@@ -2,6 +2,22 @@
 
 Nhật ký tiến độ Sprint gần nhất. Mới nhất ở trên. Xem thêm `CHANGELOG.md`.
 
+## 2026-08-03 — Sprint WORKFLOW: WORKFLOW-01 Auto Trigger (đang chạy)
+
+| Công việc | Trạng thái |
+|---|---|
+| Client trigger (`js/psh-workflow-auto.js` + hook `js/admin-products.js` + nối `admin/products.html`) | ✅ Code xong |
+| Backend `workflowAutoWorker` (functions/index.js, RTDB onValueCreated `/apiAsyncJobs/{jobId}`), chạy từng step qua `runGeneration` | ✅ Code xong |
+| Chuỗi: Product → AI Content → Blog → Facebook → Banner | ✅ |
+| node --check 3 file JS | ✅ PASS |
+| Deploy worker (`firebase deploy --only functions:workflowAutoWorker`) | ⏳ Chờ (thuộc Ubuntu Server) |
+| Knowledge (CHANGELOG/SPRINT_PROGRESS) + commit + push | ⏳ Đang hoàn tất |
+
+## 2026-08-03 — PRODUCT-SEO-01 / RELEASE (đã hoàn thành)
+
+- FINAL RELEASE COMPLETE: Product SEO Runtime Migration + knowledge sync lên GitHub (`d1dd20d`).
+
+
 ## 2026-08-03 — PRODUCT-SEO-01 / RELEASE (đang chạy)
 
 **Trạng thái:** RELEASE + Knowledge Sync.

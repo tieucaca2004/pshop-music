@@ -378,6 +378,17 @@ const AdminApp = (function () {
       showStatus(editingId ? 'Đã cập nhật sản phẩm.' : 'Đã thêm sản phẩm mới.');
       resetForm();
       loadProducts(document.getElementById('adminSearch').value);
+
+      // WORKFLOW-01 Auto Trigger: khi Product được Publish (hoặc bật Auto
+      // Workflow), tự bắt đầu chuỗi WorkflowEngine
+      // Product → AI Content → Blog → Facebook → Banner.
+      // Chỉ tái sử dụng queue apiAsyncJobs (pattern aiGenerateWorker), không
+      // cron/polling/scheduler/webhook ngoài, không hệ thống mới.
+      if (data.pubStatus === 'published' && typeof firebase !== 'undefined' &&
+          typeof window !== 'undefined' && window.PSHWorkflowAuto) {
+        const productId = editingId || (data && data.id) || null;
+        window.PSHWorkflowAuto.trigger(productId || 'product', data);
+      }
     });
   }
 

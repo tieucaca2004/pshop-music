@@ -2,6 +2,14 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint WORKFLOW — WORKFLOW-01: Auto Trigger (2026-08-03)
+
+- **WORKFLOW-01 Auto Trigger**: Khi Product được Publish (`pubStatus === 'published'`) → tự khởi chạy chuỗi WorkflowEngine: **Product → AI Content → Blog → Facebook → Banner**.
+- **Client**: `js/psh-workflow-auto.js` (module mới) — `window.PSHWorkflowAuto.trigger(productId, data)` ghi job `workflow:auto` vào queue `apiAsyncJobs`; hook trong `js/admin-products.js` (`saveProduct`) + nối script trong `admin/products.html`.
+- **Backend**: `workflowAutoWorker` (functions/index.js, RTDB `onValueCreated` `/apiAsyncJobs/{jobId}`) — chạy từng step qua `runGeneration()` (tái sử dụng `functions/shared/aiGenerate.js`), tạo draft `aiDrafts`, KHÔNG tự publish; ghi tiến độ step xuống queue (event chaining).
+- **Chỉ tái sử dụng** `WorkflowEngine.run` / `queueGeneration` / `aiGenerateWorker` pattern / `asyncJob` — không tạo kiến trúc mới, không cron/polling/scheduler/webhook ngoài, không refactor, không sửa AI_RULES.
+- Pending deploy: `firebase deploy --only functions:workflowAutoWorker` (worker chỉ chạy thật sau khi deploy).
+
 ## Bug Fix — Toàn bộ CMS Admin không dùng được (36 trang thiếu `auth-context.js`) — CHỜ DEPLOY
 
 **Root cause**: commit `b8d44d1` ("js/auth-context.js — centralized auth/tenant context module") thêm `AuthContext.init()` vào `js/admin-auth.js`, nhưng KHÔNG thêm thẻ `<script src="js/auth-context.js">` vào bất kỳ trang `admin/*.html`/`admin/ai/*.html` nào đang dùng `admin-auth.js`. Kết quả: ngay khi `AdminAuth.init()` chạy, gặp `ReferenceError: AuthContext is not defined` — dừng toàn bộ script tại đó, trước khi kịp gọi `load()`/vẽ danh sách/gắn nút bấm. Khung trang (sidebar/topbar) vẫn hiện vì phần đó không đụng `AuthContext`, nên nhìn giống "danh sách trống" chứ không giống crash rõ ràng — nhưng thực chất MỌI danh sách, nút Lưu, nút Thêm trên MỌI trang Admin đều không hoạt động.
