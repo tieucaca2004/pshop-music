@@ -3,24 +3,6 @@
  * bootstrap flow: if the "roles" node is completely empty (first run), show
  * a "create first admin account" form instead of the login form. Once at
  * least one role exists, the bootstrap form never appears again — further
-// --- Các hàm hỗ trợ Authentication
-function handleForgotPassword() {
-  var email = document.getElementById("loginEmail").value.trim();
-  if (!email) {
-    loginError.textContent = "Nhập email trước khi yêu cầu đặt lại mật khẩu.";
-    loginError.style.display = "block";
-    return;
-  }
-  firebase.auth().sendPasswordResetEmail(email).then(function() {
-    loginError.textContent = "Đã gửi email đặt lại mật khẩu. Kiểm tra hộp thư của bạn.";
-    loginError.style.color = "#27ae60";
-    loginError.style.display = "block";
-  }).catch(function(err) {
-    loginError.textContent = "Lỗi: " + translateAuthError(err);
-    loginError.style.color = "";
-    loginError.style.display = "block";
-  });
-}
  * accounts must be created by an existing admin via admin/users.html.
  */
 document.addEventListener('DOMContentLoaded', () => {
@@ -28,6 +10,25 @@ document.addEventListener('DOMContentLoaded', () => {
   const bootstrapForm = document.getElementById('bootstrapForm');
   const loginError = document.getElementById('loginError');
   const bootstrapError = document.getElementById('bootstrapError');
+
+  // --- Các hàm hỗ trợ Authentication
+  function handleForgotPassword() {
+    const email = document.getElementById("loginEmail").value.trim();
+    if (!email) {
+      loginError.textContent = "Nhập email trước khi yêu cầu đặt lại mật khẩu.";
+      loginError.style.display = "block";
+      return;
+    }
+    firebase.auth().sendPasswordResetEmail(email).then(function() {
+      loginError.textContent = "Đã gửi email đặt lại mật khẩu. Kiểm tra hộp thư của bạn.";
+      loginError.style.color = "#27ae60";
+      loginError.style.display = "block";
+    }).catch(function(err) {
+      loginError.textContent = "Lỗi: " + translateAuthError(err);
+      loginError.style.color = "";
+      loginError.style.display = "block";
+    });
+  }
 
   if (new URLSearchParams(location.search).get('denied')) {
     loginError.textContent = 'Tài khoản này chưa được cấp quyền truy cập admin. Liên hệ Admin để được thêm quyền.';
@@ -43,14 +44,13 @@ document.addEventListener('DOMContentLoaded', () => {
       loginForm.style.display = 'block';
     }
   }).catch(err => {
-    // Most likely cause: Database Rules haven't been updated yet to allow
-    // reading "roles" — show the login form anyway with a clear warning
-    // instead of leaving a blank page.
-    console.error('Không đọc được node "roles":', err);
+    // database.rules.json: ".read": "auth != null || !data.exists()" — once
+    // any admin account exists, an unauthenticated read of "roles" is
+    // ALWAYS denied by design. That's the normal steady state for a site
+    // that already has admins (i.e. every real visit), not a sign of
+    // missing/broken rules — so just show the login form, no scary warning.
     loginForm.style.display = 'block';
     bootstrapForm.style.display = 'none';
-    const warning = document.getElementById('rulesWarning');
-    if (warning) warning.style.display = 'block';
   });
 
   document.getElementById('loginBtn').addEventListener('click', () => {
@@ -121,5 +121,6 @@ document.addEventListener('DOMContentLoaded', () => {
   [document.getElementById('loginPassword')].forEach(el => {
     el.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('loginBtn').click(); });
   });
+
+  document.getElementById("forgotPwLink").addEventListener("click", function(e) { e.preventDefault(); handleForgotPassword(); });
 });
-document.getElementById("forgotPwLink").addEventListener("click", function(e) { e.preventDefault(); handleForgotPassword(); });
