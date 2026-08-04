@@ -2,6 +2,20 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint WORKFLOW — WORKFLOW-03: Monitoring & Observability (2026-08-04)
+
+- **WORKFLOW-03 Monitoring & Observability**: Biến `admin/ai/observability.html` + `js/admin-ai-observability.js` thành **Dashboard trung tâm** — giám sát Workflow Runtime (`apiAsyncJobs`) theo thời gian thực. REUSE FIRST: mở rộng UI hiện có, KHÔNG tạo dashboard/service/worker/queue/DB/node/cron/polling mới.
+- **Bổ sung vào `js/admin-ai-observability.js`**: Workflow Runtime Monitoring — Overview (Running/Waiting/Retrying/Failed/Completed/Cancelled + Queue Size + Success Rate/Failure Rate), Workflow Detail (state/current/prev/next step/started/updated/finished/duration/retry), Step Detail (plugin/status/duration/retry/error), Execution Timeline, Debug click 1 workflow (`openWf`), Firebase listener realtime (`limitToLast(200)`, không polling), History 30 ngày / 1000 workflow gần nhất.
+- **`admin/ai/observability.html`**: thêm container `#wfRuntimePanel`.
+- Chỉ đọc Runtime `apiAsyncJobs`/`executionLog`/`workflowState` hiện có — không lưu dữ liệu/duplicate listener.
+
+## Sprint WORKFLOW — WORKFLOW-03: Monitoring & Observability (2026-08-04)
+
+- **WORKFLOW-03 Monitoring & Observability — REUSE FIRST**: Lớp quan sát Workflow Runtime. **Không tạo** dashboard/HTML/JS mới — **mở rộng** `admin/ai/observability.html` + `js/admin-ai-observability.js` thành dashboard trung tâm, thêm panel **Workflow Runtime** (`apiAsyncJobs`).
+- **3 tầng**: Overview (Running/Waiting/Retrying/Failed/Completed/Cancelled + Queue Size/Success/Failure Rate), Workflow Detail (Workflow ID/State/Current-Prev-Next Step/Started/Updated/Finished/Duration/Retry), Step Detail (Plugin/Status/Duration/Retry/Error). + Execution Timeline + Realtime (Firebase listener, limitToLast 200) + History (30 ngày/1000 wf) + Debug 1-click (`openWf`).
+- **Chỉ đọc Runtime hiện có** — không DB/node/queue/worker/scheduler/cron/polling/namespace mới. Không file thứ ba (`workflow-dashboard.*` đã cấm theo Architecture Decision 02:01).
+- Tài liệu: `docs/workflow/WORKFLOW_03_MONITORING.md`.
+
 ## Sprint WORKFLOW — WORKFLOW-02: Orchestration & Execution (2026-08-04)
 
 - **WORKFLOW-02 Orchestration & Execution**: Biến Workflow Engine thành **Orchestrator thật sự** — một Workflow gồm nhiều Step, có Start/Pause/Resume/Retry/Skip/Cancel/Continue sau reboot. **KHÔNG chạy lại từ đầu khi Step giữa FAIL**.

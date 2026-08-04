@@ -2,17 +2,19 @@
 
 Nhật ký tiến độ Sprint gần nhất. Mới nhất ở trên. Xem thêm `CHANGELOG.md`.
 
-## 2026-08-04 — Sprint WORKFLOW: WORKFLOW-02 Orchestration & Execution (đang chạy)
+## 2026-08-04 — Sprint WORKFLOW: WORKFLOW-03 Monitoring & Observability
 
 | Công việc | Trạng thái |
 |---|---|
-| RUNTIME AUDIT (7 evidence: Workflow State/Job State/Resume/Retry/Step Status/Execution Log/Workflow Config) | ✅ Xong |
-| Mở rộng `asyncJob.js`: `updateWorkflowState` + `appendExecutionLog` + `getWorkflowConfig` | ✅ Code xong |
-| Mở rộng `aiGenerateWorker` nhánh `workflow:auto`: Resume/Retry theo step/Skip/Cancel/Pause/Execution Log/Config Firebase | ✅ Code xong |
-| node --check asyncJob.js + index.js | ✅ PASS |
-| Docs `WORKFLOW_02_ORCHESTRATION.md` + README + CHANGELOG | ✅ Xong |
+| Mở rộng `js/admin-ai-observability.js`: Workflow Runtime Monitoring (`apiAsyncJobs`) — Overview/Detail/Step/Timeline/Metrics/History/Debug, Firebase listener realtime | ✅ Code xong |
+| `admin/ai/observability.html`: thêm `#wfRuntimePanel` | ✅ |
+| REUSE FIRST: không tạo dashboard/service/worker/queue/DB/node/cron/polling mới | ✅ |
+| node --check JS | ✅ PASS |
 | Commit + push + git status CLEAN | ⏳ Đang hoàn tất |
-| Deploy worker (`firebase deploy --only functions:aiGenerateWorker`) | ⏳ Chờ (thuộc Ubuntu Server) |
+
+## 2026-08-04 — Sprint WORKFLOW: WORKFLOW-02 Orchestration & Execution (đã hoàn thành)
+
+- WORKFLOW-02 PASS: Workflow Engine thành Orchestrator (Start/Pause/Resume/Retry theo Step/Skip/Cancel/Continue sau restart; Execution Log + Workflow Config từ Firebase) → push `1cce503`. Xem `docs/workflow/WORKFLOW_02_ORCHESTRATION.md`.
 
 ## 2026-08-03 — Sprint WORKFLOW: WORKFLOW-01 Auto Trigger (đã hoàn thành + cleanup)
 
