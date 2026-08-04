@@ -2,6 +2,14 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint WORKFLOW — WORKFLOW-02: Orchestration & Execution (2026-08-04)
+
+- **WORKFLOW-02 Orchestration & Execution**: Biến Workflow Engine thành **Orchestrator thật sự** — một Workflow gồm nhiều Step, có Start/Pause/Resume/Retry/Skip/Cancel/Continue sau reboot. **KHÔNG chạy lại từ đầu khi Step giữa FAIL**.
+- **Mở rộng `functions/shared/asyncJob.js`**: thêm `updateWorkflowState` (Workflow State bền QUEUED/RUNNING/WAITING/PAUSED/RETRYING/FAILED/CANCELLED/COMPLETED), `appendExecutionLog` (Execution Log từng Step: start/finish/duration/input/output/error/retry, bền RTDB không mất khi restart), `getWorkflowConfig` (đọc config từ Firebase `workflowConfigs/{name}` — không hardcode chuỗi Step).
+- **Mở rộng `functions/index.js` (`aiGenerateWorker`, nhánh `workflow:auto`)**: Resume từ Step cuối (dựa `executionLog`, không chạy lại từ đầu sau worker/server restart), Retry theo Step (`RETRYING`, không retry toàn Workflow), Skip Step không bắt buộc (`config.required===false` → `SKIPPED`), Cancel/Pause mỗi Step, Execution Log bền, Workflow Config đọc từ Firebase.
+- Tài liệu: `docs/workflow/WORKFLOW_02_ORCHESTRATION.md`.
+- Pending deploy: `firebase deploy --only functions:aiGenerateWorker` (thuộc Ubuntu Server).
+
 ## Sprint WORKFLOW — WORKFLOW-01: Auto Trigger (2026-08-03)
 
 - **WORKFLOW-01 Auto Trigger**: Khi Product được Publish (`pubStatus === 'published'`) → tự khởi chạy chuỗi WorkflowEngine: **Product → AI Content → Blog → Facebook → Banner**.

@@ -47,6 +47,7 @@ npx serve .
 ## Docs / Architecture (GitHub = Source of Truth)
 
 - **Product Runtime** (`docs/product-runtime/`): `PRODUCT_RUNTIME_ARCHITECTURE.md`, `PRODUCT_RUNTIME_TRACE_RESULT.md`, `PRODUCT_ROOT_CAUSE_ANALYSIS.md`, `PRODUCT_RUNTIME_MIGRATION_PLAN.md`, `PRODUCT_SEO_ARCHITECTURE.md`, `RELEASE_VERIFICATION_REPORT.md`
+- **Workflow** (`docs/workflow/`): `WORKFLOW_ENGINE.md` (Sprint 7, user-triggered), `WORKFLOW_02_ORCHESTRATION.md` (WORKFLOW-02, Orchestrator: Start/Pause/Resume/Retry/Skip/Cancel/Continue sau restart)
 - **Host Agent** (`docs/host-agent/`): `HOST_AGENT_ARCHITECTURE.md`, `HOST_AGENT_API.md`, `OPERATIONS.md` — OpenClaw (container) = Orchestrator, Ubuntu Host = Executor (deploy/push/netlify).
 - **ADR** (`docs/decision-records/ADRs.md`)
 - **TODO/Backlog** (`docs/TODO.md`)

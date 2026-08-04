@@ -2,17 +2,21 @@
 
 Nhật ký tiến độ Sprint gần nhất. Mới nhất ở trên. Xem thêm `CHANGELOG.md`.
 
-## 2026-08-03 — Sprint WORKFLOW: WORKFLOW-01 Auto Trigger (đang chạy)
+## 2026-08-04 — Sprint WORKFLOW: WORKFLOW-02 Orchestration & Execution (đang chạy)
 
 | Công việc | Trạng thái |
 |---|---|
-| Client trigger inline trong `js/admin-products.js` (khi pubStatus='published' ghi job `workflow:auto` vào `apiAsyncJobs`) — cleanup xóa module `psh-workflow-auto.js` + `window.PSHWorkflowAuto` (chỉ 1 nơi dùng) | ✅ Code xong |
-| Backend `aiGenerateWorker` (functions/index.js, RTDB onValueCreated `/apiAsyncJobs/{jobId}`) mở rộng xử lý `workflow:auto`, chạy từng step qua `runGeneration` | ✅ Code xong |
-| Chuỗi: Product → AI Content → Blog → Facebook → Banner | ✅ |
-| node --check 3 file JS | ✅ PASS |
-| Cleanup architecture: xóa worker dư `workflowAutoWorker` + module dư `psh-workflow-auto.js` (REUSE) | ✅ Xong |
+| RUNTIME AUDIT (7 evidence: Workflow State/Job State/Resume/Retry/Step Status/Execution Log/Workflow Config) | ✅ Xong |
+| Mở rộng `asyncJob.js`: `updateWorkflowState` + `appendExecutionLog` + `getWorkflowConfig` | ✅ Code xong |
+| Mở rộng `aiGenerateWorker` nhánh `workflow:auto`: Resume/Retry theo step/Skip/Cancel/Pause/Execution Log/Config Firebase | ✅ Code xong |
+| node --check asyncJob.js + index.js | ✅ PASS |
+| Docs `WORKFLOW_02_ORCHESTRATION.md` + README + CHANGELOG | ✅ Xong |
+| Commit + push + git status CLEAN | ⏳ Đang hoàn tất |
 | Deploy worker (`firebase deploy --only functions:aiGenerateWorker`) | ⏳ Chờ (thuộc Ubuntu Server) |
-| Knowledge (CHANGELOG/SPRINT_PROGRESS) + commit + push | ⏳ Đang hoàn tất |
+
+## 2026-08-03 — Sprint WORKFLOW: WORKFLOW-01 Auto Trigger (đã hoàn thành + cleanup)
+
+- WORKFLOW-01 PASS + cleanup (inline trigger vào `admin-products.js`, xóa module `psh-workflow-auto.js`) → push `475c4bc`, git CLEAN.
 
 ## 2026-08-03 — PRODUCT-SEO-01 / RELEASE (đã hoàn thành)
 
