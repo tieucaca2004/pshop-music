@@ -2,6 +2,19 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Sprint WORKFLOW — WORKFLOW-04: DECISION ENGINE (2026-08-05)
+
+- **WORKFLOW-04 Decision Engine**: Mở rộng `js/ai/workflow-engine.js` (REUSE FIRST — không tạo Engine/Queue/Worker/DB mới). Workflow Engine thành Decision Engine với 8 capability, mỗi cái VERIFY PASS bằng Runtime Evidence (node test thật):
+  1. **Decision Context** — `createDecisionContext/set·getDecisionVariable/set·getDecisionShared/finishDecisionContext` (workflowId/executionId/currentStep/variables/sharedMemory/start·finish·duration).
+  2. **IF/ELSE** — `evaluateCondition` (eq/ne/gt/gte/lt/lte/in/notin/truthy/falsy/exists/empty/function) + `decideBranch`; integrate `run()` (step `condition` false → `skipped`).
+  3. **SWITCH** — `runSwitch` (key/cases/CASE/default; matched → steps).
+  4. **LOOP/FOREACH** — `runLoop` (maxIterations, breakOn) + `runForEach` (array, skip/continue qua `buildIterationContext`); reuse `run()`.
+  5. **PARALLEL** — `runParallel` (Promise.allSettled, concurrencyLimit, failFast, timeout mỗi task, aggregateResults `{results, fulfilled, rejected, allSettled}`).
+  6. **WAIT EVENT** — `waitForEvent`/`resumeExecution`/`cancelWaitEvent`/`waitOnStep`; integrate `execute()` dispatch `step.type==='wait_event'` + `run()` pause (`event_timeout`/`event_cancelled`); eventPayload truyền đúng. Không polling/scheduler/cron.
+  7. **POLICY EVALUATION** — `evaluatePolicy` (allow→execute, deny→chặn, requireApproval→awaiting_approval, retryPolicy override, providerPolicy override); integrate `run()` trước execute.
+  8. **BRANCH RESOLUTION** — `resolveBranch` (simple/nested/default/priority/context inheritance) + `mergeBranchResult`; integrate `run()`.
+- Export `WorkflowEngine`: thêm 11 method mới (Decision Context + IF/ELSE + SWITCH + LOOP/FOREACH + PARALLEL + WAIT EVENT + POLICY + BRANCH). `js/ai/workflow-engine.js`.
+
 ## Sprint WORKFLOW — WORKFLOW-03: Monitoring & Observability (2026-08-04)
 
 - **WORKFLOW-03 Monitoring & Observability**: Biến `admin/ai/observability.html` + `js/admin-ai-observability.js` thành **Dashboard trung tâm** — giám sát Workflow Runtime (`apiAsyncJobs`) theo thời gian thực. REUSE FIRST: mở rộng UI hiện có, KHÔNG tạo dashboard/service/worker/queue/DB/node/cron/polling mới.

@@ -2,15 +2,26 @@
 
 Nhật ký tiến độ Sprint gần nhất. Mới nhất ở trên. Xem thêm `CHANGELOG.md`.
 
-## 2026-08-04 — Sprint WORKFLOW: WORKFLOW-03 Monitoring & Observability
+## 2026-08-05 — Sprint WORKFLOW: WORKFLOW-04 DECISION ENGINE (đã hoàn thành)
 
 | Công việc | Trạng thái |
 |---|---|
-| Mở rộng `js/admin-ai-observability.js`: Workflow Runtime Monitoring (`apiAsyncJobs`) — Overview/Detail/Step/Timeline/Metrics/History/Debug, Firebase listener realtime | ✅ Code xong |
-| `admin/ai/observability.html`: thêm `#wfRuntimePanel` | ✅ |
-| REUSE FIRST: không tạo dashboard/service/worker/queue/DB/node/cron/polling mới | ✅ |
-| node --check JS | ✅ PASS |
-| Commit + push + git status CLEAN | ⏳ Đang hoàn tất |
+| Mở rộng `js/ai/workflow-engine.js` thành Decision Engine (REUSE FIRST, không Engine/Queue/Worker/DB mới) | ✅ |
+| Capability 1: Decision Context | ✅ VERIFY PASS |
+| Capability 2: IF/ELSE (evaluateCondition/decideBranch + integrate run) | ✅ VERIFY PASS |
+| Capability 3: SWITCH (runSwitch CASE/default) | ✅ VERIFY PASS |
+| Capability 4: LOOP/FOREACH (runLoop/runForEach, maxIterations/break/skip) | ✅ VERIFY PASS |
+| Capability 5: PARALLEL (runParallel: allSettled/concurrencyLimit/failFast/timeout/aggregate) | ✅ VERIFY PASS |
+| Capability 6: WAIT EVENT (waitForEvent/resumeExecution/cancel/waitOnStep + execute/run integrate) | ✅ VERIFY PASS |
+| Capability 7: POLICY EVALUATION (allow/deny/requireApproval/retryPolicy/providerPolicy) | ✅ VERIFY PASS |
+| Capability 8: BRANCH RESOLUTION (resolveBranch simple/nested/default/priority/inheritance + merge) | ✅ VERIFY PASS |
+| Export WorkflowEngine thêm 11 method mới | ✅ |
+| Knowledge (CHANGELOG/SPRINT_PROGRESS) + commit + push | ⏳ Đang hoàn tất |
+| Deploy worker (`firebase deploy --only functions:aiGenerateWorker`) | ⏳ Chờ (thuộc Ubuntu Server) |
+
+## 2026-08-04 — Sprint WORKFLOW: WORKFLOW-03 Monitoring & Observability (đã hoàn thành)
+
+- WORKFLOW-03 PASS: Observability dashboard trở thành trung tâm, mở rộng Workflow Runtime (`apiAsyncJobs`) — push `6b43422`. Xem `docs/workflow/WORKFLOW_03_MONITORING.md`.
 
 ## 2026-08-04 — Sprint WORKFLOW: WORKFLOW-02 Orchestration & Execution (đã hoàn thành)
 

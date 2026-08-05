@@ -47,12 +47,16 @@ npx serve .
 ## Docs / Architecture (GitHub = Source of Truth)
 
 - **Product Runtime** (`docs/product-runtime/`): `PRODUCT_RUNTIME_ARCHITECTURE.md`, `PRODUCT_RUNTIME_TRACE_RESULT.md`, `PRODUCT_ROOT_CAUSE_ANALYSIS.md`, `PRODUCT_RUNTIME_MIGRATION_PLAN.md`, `PRODUCT_SEO_ARCHITECTURE.md`, `RELEASE_VERIFICATION_REPORT.md`
-- **Workflow** (`docs/workflow/`): `WORKFLOW_ENGINE.md` (Sprint 7, user-triggered), `WORKFLOW_02_ORCHESTRATION.md` (WORKFLOW-02, Orchestrator: Start/Pause/Resume/Retry/Skip/Cancel/Continue sau restart)
+- **Workflow** (`docs/workflow/`): `WORKFLOW_ENGINE.md` (Sprint 7, user-triggered), `WORKFLOW_02_ORCHESTRATION.md` (WORKFLOW-02 Orchestrator), `WORKFLOW_03_MONITORING.md` (WORKFLOW-03 Observability), WORKFLOW-04 Decision Engine (capabilities trong `js/ai/workflow-engine.js` + CHANGELOG)
 - **Host Agent** (`docs/host-agent/`): `HOST_AGENT_ARCHITECTURE.md`, `HOST_AGENT_API.md`, `OPERATIONS.md` — OpenClaw (container) = Orchestrator, Ubuntu Host = Executor (deploy/push/netlify).
 - **ADR** (`docs/decision-records/ADRs.md`)
 - **TODO/Backlog** (`docs/TODO.md`)
 - **Kiến trúc** (`docs/ARCHITECTURE.md`, `PROJECT_ARCHITECTURE.md`) · **API** (`docs/API_CONTRACT.md`, `docs/API_LIST.md`) · **DB Schema** (`docs/DATABASE_STRUCTURE.md`)
 - **Roadmap** (`ROADMAP.md`, `PSH_PRODUCTION_ROADMAP.md`) · **Changelog** (`CHANGELOG.md`) · **AI Rules** (`AI_RULES.md`)
+
+## Workflow Decision Engine (WORKFLOW-04)
+
+`js/ai/workflow-engine.js` mở rộng thành Decision Engine (REUSE FIRST): Decision Context, IF/ELSE, SWITCH, LOOP/FOREACH, PARALLEL, WAIT EVENT, POLICY EVALUATION, BRANCH RESOLUTION — chi tiết capability + runtime evidence tại `CHANGELOG.md` mục WORKFLOW-04.
 
 ## Product Runtime Migration
 
