@@ -2,6 +2,58 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## MISSION — MODEL REGISTRY & DYNAMIC AI ROUTING (2026-08-06, backend)
+
+- **Capability 1 — Runtime Manager** (VERIFY PASS): `functions/shared/runtimeManager.js` — AI Runtime Manager (`runTask`/`capabilityEval`/`policyEval`/`loadCostStrategy`/`isReady`/`buildRuntimeMeta`; Health=runtime state, Cost=weight).
+- **Capability 2 — Model Registry** (VERIFY PASS): `functions/shared/modelRegistry.js` — metadata đầy đủ 11 model (DeepSeek 3, Anthropic 2, OpenAI 2, Gemini 2, Kimi 1, OpenRouter 1) gồm provider/family/series/version/alias/lifecycle/apiStyle/capability/contextWindow/maxOutput/supports*/cost·quality·latency·reliability weight/enabled/default/priority/fallback; API getProvider/getModel/getFallback/getDefaultModel/getCapabilityModels + validateRegistry (throw Runtime Error); REUSE resolveModel, không viết lại. Bugfix `listModels()` (0→11).
+- **Capability 3 — Provider Router** (VERIFY PASS): `functions/shared/providerRouter.js` — resolveProvider/resolveAdapter/getPriority/isEnabled/chooseFallback (đọc modelRegistry, không hard-code model/provider); RuntimeManager chỉ gọi `route()`.
+- **Capability 4 — Request Builder** (VERIFY PASS): `functions/shared/requestBuilder.js` — Single Source of Truth payload (buildRequest/buildHeaders/buildBody/normalizeMessages/normalizeTools/normalizeResponseFormat/normalizeGenerationConfig/validateRequest); build theo apiStyle (openai/anthropic/gemini), Provider Router truyền provider/model/apiStyle đã resolve (Request Builder KHÔNG đọc registry), adapter chỉ gọi buildRequest + gửi HTTP + parse + throw (không build payload).
+- Runtime Verify: node --check PASS + module load PASS + buildRequest(openai/anthropic/gemini) + normalizeMessages/Tools + validateRequest (throw) + resolveModel/resolveProvider/fallback/priority/enabled PASS (exit 0).
+- Deploy pending: `firebase deploy --only functions:aiGenerateWorker` (chạy trên Ubuntu Host).
+
+## Sprint WORKFLOW — WORKFLOW-04: DECISION ENGINE (2026-08-05)
+
+- **WORKFLOW-04 Decision Engine**: Mở rộng `js/ai/workflow-engine.js` (REUSE FIRST — không tạo Engine/Queue/Worker/DB mới). Workflow Engine thành Decision Engine với 8 capability, mỗi cái VERIFY PASS bằng Runtime Evidence (node test thật):
+  1. **Decision Context** — `createDecisionContext/set·getDecisionVariable/set·getDecisionShared/finishDecisionContext` (workflowId/executionId/currentStep/variables/sharedMemory/start·finish·duration).
+  2. **IF/ELSE** — `evaluateCondition` (eq/ne/gt/gte/lt/lte/in/notin/truthy/falsy/exists/empty/function) + `decideBranch`; integrate `run()` (step `condition` false → `skipped`).
+  3. **SWITCH** — `runSwitch` (key/cases/CASE/default; matched → steps).
+  4. **LOOP/FOREACH** — `runLoop` (maxIterations, breakOn) + `runForEach` (array, skip/continue qua `buildIterationContext`); reuse `run()`.
+  5. **PARALLEL** — `runParallel` (Promise.allSettled, concurrencyLimit, failFast, timeout mỗi task, aggregateResults `{results, fulfilled, rejected, allSettled}`).
+  6. **WAIT EVENT** — `waitForEvent`/`resumeExecution`/`cancelWaitEvent`/`waitOnStep`; integrate `execute()` dispatch `step.type==='wait_event'` + `run()` pause (`event_timeout`/`event_cancelled`); eventPayload truyền đúng. Không polling/scheduler/cron.
+  7. **POLICY EVALUATION** — `evaluatePolicy` (allow→execute, deny→chặn, requireApproval→awaiting_approval, retryPolicy override, providerPolicy override); integrate `run()` trước execute.
+  8. **BRANCH RESOLUTION** — `resolveBranch` (simple/nested/default/priority/context inheritance) + `mergeBranchResult`; integrate `run()`.
+- Export `WorkflowEngine`: thêm 11 method mới (Decision Context + IF/ELSE + SWITCH + LOOP/FOREACH + PARALLEL + WAIT EVENT + POLICY + BRANCH). `js/ai/workflow-engine.js`.
+
+## Sprint WORKFLOW — WORKFLOW-03: Monitoring & Observability (2026-08-04)
+
+- **WORKFLOW-03 Monitoring & Observability**: Biến `admin/ai/observability.html` + `js/admin-ai-observability.js` thành **Dashboard trung tâm** — giám sát Workflow Runtime (`apiAsyncJobs`) theo thời gian thực. REUSE FIRST: mở rộng UI hiện có, KHÔNG tạo dashboard/service/worker/queue/DB/node/cron/polling mới.
+- **Bổ sung vào `js/admin-ai-observability.js`**: Workflow Runtime Monitoring — Overview (Running/Waiting/Retrying/Failed/Completed/Cancelled + Queue Size + Success Rate/Failure Rate), Workflow Detail (state/current/prev/next step/started/updated/finished/duration/retry), Step Detail (plugin/status/duration/retry/error), Execution Timeline, Debug click 1 workflow (`openWf`), Firebase listener realtime (`limitToLast(200)`, không polling), History 30 ngày / 1000 workflow gần nhất.
+- **`admin/ai/observability.html`**: thêm container `#wfRuntimePanel`.
+- Chỉ đọc Runtime `apiAsyncJobs`/`executionLog`/`workflowState` hiện có — không lưu dữ liệu/duplicate listener.
+
+## Sprint WORKFLOW — WORKFLOW-03: Monitoring & Observability (2026-08-04)
+
+- **WORKFLOW-03 Monitoring & Observability — REUSE FIRST**: Lớp quan sát Workflow Runtime. **Không tạo** dashboard/HTML/JS mới — **mở rộng** `admin/ai/observability.html` + `js/admin-ai-observability.js` thành dashboard trung tâm, thêm panel **Workflow Runtime** (`apiAsyncJobs`).
+- **3 tầng**: Overview (Running/Waiting/Retrying/Failed/Completed/Cancelled + Queue Size/Success/Failure Rate), Workflow Detail (Workflow ID/State/Current-Prev-Next Step/Started/Updated/Finished/Duration/Retry), Step Detail (Plugin/Status/Duration/Retry/Error). + Execution Timeline + Realtime (Firebase listener, limitToLast 200) + History (30 ngày/1000 wf) + Debug 1-click (`openWf`).
+- **Chỉ đọc Runtime hiện có** — không DB/node/queue/worker/scheduler/cron/polling/namespace mới. Không file thứ ba (`workflow-dashboard.*` đã cấm theo Architecture Decision 02:01).
+- Tài liệu: `docs/workflow/WORKFLOW_03_MONITORING.md`.
+
+## Sprint WORKFLOW — WORKFLOW-02: Orchestration & Execution (2026-08-04)
+
+- **WORKFLOW-02 Orchestration & Execution**: Biến Workflow Engine thành **Orchestrator thật sự** — một Workflow gồm nhiều Step, có Start/Pause/Resume/Retry/Skip/Cancel/Continue sau reboot. **KHÔNG chạy lại từ đầu khi Step giữa FAIL**.
+- **Mở rộng `functions/shared/asyncJob.js`**: thêm `updateWorkflowState` (Workflow State bền QUEUED/RUNNING/WAITING/PAUSED/RETRYING/FAILED/CANCELLED/COMPLETED), `appendExecutionLog` (Execution Log từng Step: start/finish/duration/input/output/error/retry, bền RTDB không mất khi restart), `getWorkflowConfig` (đọc config từ Firebase `workflowConfigs/{name}` — không hardcode chuỗi Step).
+- **Mở rộng `functions/index.js` (`aiGenerateWorker`, nhánh `workflow:auto`)**: Resume từ Step cuối (dựa `executionLog`, không chạy lại từ đầu sau worker/server restart), Retry theo Step (`RETRYING`, không retry toàn Workflow), Skip Step không bắt buộc (`config.required===false` → `SKIPPED`), Cancel/Pause mỗi Step, Execution Log bền, Workflow Config đọc từ Firebase.
+- Tài liệu: `docs/workflow/WORKFLOW_02_ORCHESTRATION.md`.
+- Pending deploy: `firebase deploy --only functions:aiGenerateWorker` (thuộc Ubuntu Server).
+
+## Sprint WORKFLOW — WORKFLOW-01: Auto Trigger (2026-08-03)
+
+- **WORKFLOW-01 Auto Trigger**: Khi Product được Publish (`pubStatus === 'published'`) → tự khởi chạy chuỗi WorkflowEngine: **Product → AI Content → Blog → Facebook → Banner**.
+- **Client**: inline trực tiếp trong `js/admin-products.js` (`saveProduct`) — khi publish, ghi job `workflow:auto` vào queue `apiAsyncJobs` với các step Product→AI Content→Blog→Facebook→Banner. (Đã cleanup: xóa module trung gian `js/psh-workflow-auto.js` + `window.PSHWorkflowAuto` — chỉ 1 nơi dùng, không giữ abstraction dư.)
+- **Backend**: **gộp vào `aiGenerateWorker`** (functions/index.js, RTDB `onValueCreated` `/apiAsyncJobs/{jobId}`) — mở rộng filter type nhận `workflow:auto` + xử lý từng step qua `runGeneration()` (tái sử dụng `functions/shared/aiGenerate.js`), tạo draft `aiDrafts`, KHÔNG tự publish; ghi tiến độ step xuống queue (event chaining). Không worker riêng (`workflowAutoWorker` đã xóa — tránh 2 Cloud Function cùng trigger 1 node).
+- **Chỉ tái sử dụng** `WorkflowEngine.run` / `queueGeneration` / `aiGenerateWorker` pattern / `asyncJob` — không tạo kiến trúc mới, không cron/polling/scheduler/webhook ngoài, không refactor logic, không sửa AI_RULES.
+- Pending deploy: `firebase deploy --only functions:aiGenerateWorker` (worker chỉ chạy thật sau khi deploy).
+
 ## Bug Fix — Toàn bộ CMS Admin không dùng được (36 trang thiếu `auth-context.js`) — CHỜ DEPLOY
 
 **Root cause**: commit `b8d44d1` ("js/auth-context.js — centralized auth/tenant context module") thêm `AuthContext.init()` vào `js/admin-auth.js`, nhưng KHÔNG thêm thẻ `<script src="js/auth-context.js">` vào bất kỳ trang `admin/*.html`/`admin/ai/*.html` nào đang dùng `admin-auth.js`. Kết quả: ngay khi `AdminAuth.init()` chạy, gặp `ReferenceError: AuthContext is not defined` — dừng toàn bộ script tại đó, trước khi kịp gọi `load()`/vẽ danh sách/gắn nút bấm. Khung trang (sidebar/topbar) vẫn hiện vì phần đó không đụng `AuthContext`, nên nhìn giống "danh sách trống" chứ không giống crash rõ ràng — nhưng thực chất MỌI danh sách, nút Lưu, nút Thêm trên MỌI trang Admin đều không hoạt động.

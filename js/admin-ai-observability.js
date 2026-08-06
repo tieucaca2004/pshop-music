@@ -21,6 +21,8 @@ const AdminAIObservability = (function () {
     AdminAuth.init({ page: 'ai-observability', title: 'PLUGIN AI — OBSERVABILITY DASHBOARD', requiredRole: 'admin' }).then(() => {
       document.getElementById('observabilityRefreshBtn').addEventListener('click', load);
       document.getElementById('observabilityRangeFilter').addEventListener('change', load);
+      // WORKFLOW-03: realtime listener theo dõi Workflow Runtime (apiAsyncJobs)
+      startWfListener();
       load();
     });
   }
@@ -122,6 +124,184 @@ const AdminAIObservability = (function () {
       </div>`;
   }
 
+  // ─── WORKFLOW-03: Workflow Runtime Monitoring (apiAsyncJobs) ──────────────
+  // Đọc trực tiếp Runtime apiAsyncJobs qua Firebase listener (realtime, không
+  // polling/cron). REUSE FIRST: dùng trong chính AdminAIObservability — không
+  // namespace/file mới. Dashboard 3 tầng: Overview / Workflow Detail / Step Detail.
+  var wfSnapshot = {};   // jobId -> job (cache đọc runtime hiện có)
+  var wfListener = null;
+  var wfMeta = { running: 0, waiting: 0, retrying: 0, failed: 0, completed: 0, cancelled: 0 };
+  var wfHistory = [];    // gần nhất trước (cho history 30 ngày / 1000 wf)
+
+  function wfStateLabel(s) {
+    return String(s || 'QUEUED').toUpperCase();
+  }
+  function wfStateColor(s) {
+    switch (wfStateLabel(s)) {
+      case 'RUNNING': return 'var(--gold-ink)';
+      case 'FAILED': case 'CANCELLED': return '#c0392b';
+      case 'COMPLETED': return 'var(--green, #27ae60)';
+      case 'RETRYING': case 'PAUSED': case 'WAITING': return '#e67e22';
+      default: return 'var(--muted2)';
+    }
+  }
+  function dur(ms) {
+    if (!ms && ms !== 0) return '—';
+    ms = Number(ms);
+    if (ms < 1000) return ms + 'ms';
+    return (ms / 1000).toFixed(1) + 's';
+  }
+
+  function wfOverviewHtml() {
+    const m = wfMeta;
+    const total = (m.running + m.waiting + m.retrying + m.failed + m.completed + m.cancelled) || 0;
+    const successRate = total ? Math.round((m.completed / total) * 100) : 0;
+    const failRate = total ? Math.round((m.failed / total) * 100) : 0;
+    const card = (label, val, color) => `<div style="flex:1;min-width:120px;padding:.6rem;border:1px solid var(--border,#333);border-radius:8px;text-align:center">
+      <div style="font-size:1.6rem;color:${color || 'inherit'}">${val}</div><div class="small-muted">${escapeHtml(label)}</div></div>`;
+    return `<div style="display:flex;flex-wrap:wrap;gap:.5rem">
+      ${card('Running', m.running, 'var(--gold-ink)')}
+      ${card('Waiting', m.waiting)}
+      ${card('Retrying', m.retrying, '#e67e22')}
+      ${card('Failed', m.failed, '#c0392b')}
+      ${card('Completed', m.completed, 'var(--green,#27ae60)')}
+      ${card('Cancelled', m.cancelled, '#c0392b')}
+      ${card('Queue Size', total)}
+      ${card('Success Rate', successRate + '%', 'var(--green,#27ae60)')}
+      ${card('Failure Rate', failRate + '%', '#c0392b')}
+    </div>`;
+  }
+
+  function wfTimelineHtml(job) {
+    const log = (job && job.executionLog) ? job.executionLog : {};
+    const steps = (job && job.payload && job.payload.steps) || [];
+    const rows = steps.map((s, i) => {
+      const e = log[i] || {};
+      const st = e.status || 'PENDING';
+      const color = st === 'SUCCESS' ? 'var(--green,#27ae60)' : (st === 'FAILED' ? '#c0392b' : (st === 'SKIPPED' ? 'var(--muted2)' : (st === 'RUNNING' ? 'var(--gold-ink)' : '#e67e22')));
+      return `<div style="padding:.2rem 0"><span style="color:${color}">●</span> <strong>Step ${i + 1}</strong> ${escapeHtml(s.moduleId || '')} <span class="small-muted">(${st}${e.durationMs != null ? ' · ' + dur(e.durationMs) : ''}</span>${e.error ? ` · <span style="color:#c0392b">err</span>` : ''}${e.retry ? ` · retry ${e.retry}` : ''})</div>`;
+    });
+    return `<div style="font-size:.9rem">${rows.join('') || '<div class="small-muted">Chưa có step.</div>'}</div>`;
+  }
+
+  function wfDetailHtml(jobId) {
+    const job = wfSnapshot[jobId];
+    if (!job) return '<p class="small-muted">Không tìm thấy workflow.</p>';
+    const st = wfStateLabel(job.workflowState || (job.status === 'completed' ? 'COMPLETED' : job.status));
+    const curIdx = (job.currentStep != null) ? job.currentStep : 0;
+    const steps = (job.payload && job.payload.steps) || [];
+    const prev = curIdx > 0 ? steps[curIdx - 1] : null;
+    const next = curIdx < steps.length ? steps[curIdx] : null;
+    const startedAt = job.startedAt || job.createdAt || null;
+    const finishedAt = job.finishedAt || null;
+    const duration = (finishedAt && startedAt) ? (finishedAt - startedAt) : (startedAt ? (Date.now() - startedAt) : null);
+    const retryCount = (job.executionLog) ? Object.values(job.executionLog).reduce((a, e) => a + (Number(e.retry) || 0), 0) : (job.retryCount || 0);
+    const row = (l, v) => `<tr><td style="color:var(--muted2);width:40%">${escapeHtml(l)}</td><td>${v}</td></tr>`;
+    return `<div class="panel">
+      <h3 style="margin-top:0">Workflow ${escapeHtml(jobId)} <span style="color:${wfStateColor(st)}">(${st})</span></h3>
+      <table class="admin-table">
+        ${row('Workflow Name', (job.payload && job.payload.workflowName) || (job.payload && job.payload.productName) || 'product-auto')}
+        ${row('Workflow State', `<span style="color:${wfStateColor(st)}">${st}</span>`)}
+        ${row('Current Step', curIdx + ' / ' + (steps.length || 0))}
+        ${row('Previous Step', prev ? escapeHtml(prev.moduleId) : '—')}
+        ${row('Next Step', next ? escapeHtml(next.moduleId) : '—')}
+        ${row('Started', startedAt ? new Date(startedAt).toLocaleString('vi-VN') : '—')}
+        ${row('Updated', job.updatedAt ? new Date(job.updatedAt).toLocaleString('vi-VN') : '—')}
+        ${row('Finished', finishedAt ? new Date(finishedAt).toLocaleString('vi-VN') : '—')}
+        ${row('Duration', dur(duration))}
+        ${row('Retry Count', retryCount)}
+      </table>
+      <h4>Execution Timeline</h4>${wfTimelineHtml(job)}
+      <h4>Step Detail</h4>${wfStepsHtml(job)}
+    </div>`;
+  }
+
+  function wfStepsHtml(job) {
+    const log = (job && job.executionLog) ? job.executionLog : {};
+    const steps = (job && job.payload && job.payload.steps) || [];
+    if (!steps.length) return '<p class="small-muted">Không có step trong workflow config.</p>';
+    return `<table class="admin-table"><thead><tr><th>#</th><th>Plugin</th><th>Status</th><th>Duration</th><th>Retry</th><th>Error</th></tr></thead><tbody>
+      ${steps.map((s, i) => {
+        const e = log[i] || {};
+        const st = e.status || 'PENDING';
+        const color = st === 'SUCCESS' ? 'var(--green,#27ae60)' : (st === 'FAILED' ? '#c0392b' : (st === 'RUNNING' ? 'var(--gold-ink)' : '#e67e22'));
+        return `<tr><td>${i + 1}</td><td>${escapeHtml(s.moduleId || '')}</td><td style="color:${color}">${st}</td><td>${e.durationMs != null ? dur(e.durationMs) : '—'}</td><td>${e.retry || 0}</td><td style="color:#c0392b;max-width:220px;word-break:break-word">${escapeHtml(e.error || '')}</td></tr>`;
+      }).join('')}
+    </tbody></table>`;
+  }
+
+  function wfListHtml() {
+    const ids = Object.keys(wfSnapshot);
+    if (!ids.length) return '<p class="small-muted">Chưa có workflow nào trong Runtime.</p>';
+    ids.sort().reverse();
+    const rows = ids.slice(0, 50).map(id => {
+      const job = wfSnapshot[id];
+      const st = wfStateLabel(job.workflowState || (job.status === 'completed' ? 'COMPLETED' : job.status));
+      const steps = (job.payload && job.payload.steps) || [];
+      const cur = (job.currentStep != null) ? job.currentStep : 0;
+      const pct = steps.length ? Math.round((cur / steps.length) * 100) : 0;
+      const name = (job.payload && (job.payload.workflowName || job.payload.productName)) || 'product-auto';
+      return `<tr style="cursor:pointer" onclick="AdminAIObservability && AdminAIObservability.openWf('${id}')">
+        <td><code>${escapeHtml(id.slice(0, 18))}</code></td>
+        <td>${escapeHtml(name)}</td>
+        <td style="color:${wfStateColor(st)}">${st}</td>
+        <td>${cur} / ${steps.length} (${pct}%)</td>
+        <td>${dur((job.startedAt || job.createdAt) ? (((job.finishedAt || Date.now()) - (job.startedAt || job.createdAt))) : null)}</td>
+      </tr>`;
+    }).join('');
+    return `<table class="admin-table"><thead><tr><th>Workflow ID</th><th>Workflow</th><th>State</th><th>Progress</th><th>Duration</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  function wfRender() {
+    const root = document.getElementById('wfRuntimePanel');
+    if (!root) return;
+    root.innerHTML = `
+      <div class="panel"><h3 style="margin-top:0">Workflow Runtime — Overview</h3>${wfOverviewHtml()}
+        <p class="small-muted" style="margin:.75rem 0 0">Realtime (Firebase listener, không polling). Nhấn 1 Workflow để mở Detail + Step + Timeline.</p></div>
+      <div class="panel"><h3 style="margin-top:0">Workflow List (Runtime)</h3>${wfListHtml()}</div>
+      <div id="wfDetailTarget"></div>
+    `;
+  }
+
+  function startWfListener() {
+    if (typeof firebase === 'undefined' || !firebase.database) return;
+    if (wfListener) return;
+    const ref = firebase.database().ref('apiAsyncJobs');
+    wfListener = ref.limitToLast(200).on('value', snap => {
+      wfSnapshot = {};
+      wfMeta = { running: 0, waiting: 0, retrying: 0, failed: 0, completed: 0, cancelled: 0 };
+      const now = Date.now();
+      wfHistory = [];
+      snap.forEach(child => {
+        const job = child.val();
+        if (!job) return;
+        job._id = child.key;
+        wfSnapshot[child.key] = job;
+        const st = wfStateLabel(job.workflowState || (job.status === 'completed' ? 'COMPLETED' : job.status));
+        if (wfMeta[st.toLowerCase()] != null) wfMeta[st.toLowerCase()]++;
+        const start = job.startedAt || job.createdAt || now;
+        const end = job.finishedAt || now;
+        if (job.completedAt || job.updatedAt) wfHistory.push({ id: child.key, state: st, startedAt: start, finishedAt: end, duration: end - start });
+      });
+      // history: giữ 1000 gần nhất / 30 ngày (reuse runtime, không DB mới)
+      const cutoff = now - 30 * 24 * 3600 * 1000;
+      wfHistory = wfHistory.filter(h => !h.finishedAt || h.finishedAt >= cutoff).slice(-1000);
+      wfRender();
+    });
+  }
+
+  function stopWfListener() {
+    if (typeof firebase === 'undefined' || !firebase.database || !wfListener) return;
+    firebase.database().ref('apiAsyncJobs').off('value', wfListener);
+    wfListener = null;
+  }
+
+  // Public: mở detail 1 workflow khi click
+  function openWf(jobId) {
+    const target = document.getElementById('wfDetailTarget');
+    if (target) target.innerHTML = wfDetailHtml(jobId);
+  }
+
   function load() {
     const rangeKey = document.getElementById('observabilityRangeFilter').value;
     const root = document.getElementById('observabilityResult');
@@ -144,5 +324,5 @@ const AdminAIObservability = (function () {
     });
   }
 
-  return { init };
+  return { init, openWf };
 })();

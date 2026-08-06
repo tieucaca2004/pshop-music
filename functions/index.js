@@ -764,7 +764,7 @@ const { checkAndIncrement } = require('./shared/rateLimit');
 const { ALLOWED_ORIGINS } = require('./shared/corsConfig');
 const auditLog = require('./shared/auditLog');
 const { sendWebhook, WEBHOOK_SIGNING_SECRET } = require('./shared/webhook');
-const { createJob, getJob, updateJobStatus } = require('./shared/asyncJob');
+const { createJob, getJob, updateJobStatus, updateWorkflowState, appendExecutionLog, getWorkflowConfig } = require('./shared/asyncJob');
 const { onValueCreated } = require('firebase-functions/v2/database');
 const { runGeneration } = require('./shared/aiGenerate');
 const { withRetry } = require('./shared/retry');
@@ -965,8 +965,100 @@ exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRE
 exports.aiGenerateWorker = onValueCreated({ ref: '/apiAsyncJobs/{jobId}', region: 'asia-southeast1', secrets: [OPENAI_API_KEY] }, async (event) => {
   const job = event.data.val();
   if (!job || job.status !== 'queued') return;
-  if (!job.type || job.type.indexOf('ai-generate:') !== 0) return;
+  if (!job.type || (job.type.indexOf('ai-generate:') !== 0 && job.type !== 'workflow:auto')) return;
   if (!job.payload || job.payload.async !== true) return;
+
+  // WORKFLOW-02 Orchestration & Execution (directive 17:06): Workflow Engine
+  // thành Orchestrator thật sự — job `workflow:auto` tự chạy chuỗi Plugin
+  // (Product → AI Content → Blog → Facebook → Banner) với:
+  //   - Workflow State bền (QUEUED/RUNNING/.../COMPLETED) lưu RTDB
+  //   - Resume từ Step cuối sau worker/server restart (không chạy lại từ đầu)
+  //   - Retry theo Step (không retry toàn Workflow) + Skip Step
+  //   - Cancel/Pause qua cập nhật workflowState
+  //   - Execution Log bền từng step (start/finish/duration/input/output/error)
+  //   - Workflow Config đọc từ Firebase (workflowConfigs) — không hardcode
+  // Reuse WorkflowEngine + aiGenerateWorker + queueGeneration + asyncJob.
+  if (job.type === 'workflow:auto') {
+    const wfName = (job.payload && job.payload.workflowName) || 'product-auto';
+    try {
+      const cfg = await getWorkflowConfig(wfName);
+      const steps = (cfg && cfg.steps && cfg.steps.length)
+        ? cfg.steps
+        : (job.payload.steps && job.payload.steps.length ? job.payload.steps : []);
+      if (!steps.length) {
+        await updateWorkflowState(event.params.jobId, 'FAILED', { error: 'Workflow config empty' });
+        return;
+      }
+      const productId = job.payload.productId || null;
+      const baseParams = { productId: productId };
+
+      // Resume: bắt đầu từ Step chưa hoàn thành (dựa executionLog/stepIndex)
+      const cur = (await getJob(event.params.jobId));
+      const logMap = (cur && cur.executionLog) || {};
+      let startIndex = 0;
+      for (let i = 0; i < steps.length; i++) {
+        const e = logMap[i];
+        if (e && (e.status === 'SUCCESS' || e.status === 'SKIPPED')) { startIndex = i + 1; /* tiếp tục sau step đã xong */ }
+      }
+      // Bỏ qua các step trước startIndex mà chưa có log (đánh SKIPPED) — không chạy lại
+
+      await updateWorkflowState(event.params.jobId, 'RUNNING', { currentStep: startIndex, totalSteps: steps.length });
+      for (let i = startIndex; i < steps.length; i++) {
+        const step = steps[i];
+        if (!step || !step.moduleId) continue;
+        // Cancel/Pause check mỗi step (worker đọc state mới)
+        const fresh = await getJob(event.params.jobId);
+        if (fresh && fresh.workflowState === 'CANCELLED') {
+          await appendExecutionLog(event.params.jobId, { stepIndex: i, moduleId: step.moduleId, status: 'SKIPPED', finishedAt: Date.now(), error: 'CANCELLED' });
+          return;
+        }
+        if (fresh && fresh.workflowState === 'PAUSED') {
+          await appendExecutionLog(event.params.jobId, { stepIndex: i, moduleId: step.moduleId, status: 'PENDING', finishedAt: Date.now(), note: 'PAUSED — sẽ resume từ step này' });
+          return; // dừng, workflow sẽ resume từ step này khi unpause (instance giữ currentStep)
+        }
+        const stepJobId = event.params.jobId + ':step' + i;
+        const t0 = Date.now();
+        await appendExecutionLog(event.params.jobId, { stepIndex: i, moduleId: step.moduleId, status: 'RUNNING', startedAt: t0 });
+        let stepErr = null;
+        let attempts = 0;
+        const maxRetry = (step.config && step.config.retryCount) || 0;
+        // Retry theo STEP (không retry toàn workflow)
+        while (attempts <= maxRetry) {
+          try {
+            if (attempts > 0) await updateWorkflowState(event.params.jobId, 'RETRYING', { stepIndex: i, retryCount: attempts });
+            await runGeneration(stepJobId, step.moduleId, Object.assign({}, baseParams, step.inputParams || {}, (step.config && step.config._skipFallback) ? {} : {}), job.uid);
+            stepErr = null;
+            break;
+          } catch (e) {
+            stepErr = e;
+            attempts++;
+            if (attempts <= maxRetry) {
+              const d = (step.config && step.config.retryDelayMs) || (attempts * 2000);
+              await new Promise(r => setTimeout(r, d));
+            }
+          }
+        }
+        if (stepErr) {
+          await appendExecutionLog(event.params.jobId, { stepIndex: i, moduleId: step.moduleId, status: 'FAILED', finishedAt: Date.now(), durationMs: Date.now() - t0, error: String(stepErr && stepErr.message || stepErr), retry: attempts });
+          // Skip Step nếu not required — config.step.required === false → đánh SKIPPED, tiếp tục
+          if (step.config && step.config.required === false) {
+            await appendExecutionLog(event.params.jobId, { stepIndex: i, moduleId: step.moduleId, status: 'SKIPPED', finishedAt: Date.now(), error: 'step-failed-skipped' });
+            continue;
+          }
+          await updateWorkflowState(event.params.jobId, 'FAILED', { stepIndex: i, stepModule: step.moduleId, stepStatus: 'FAILED', error: String(stepErr && stepErr.message || stepErr), retryCount: attempts });
+          return; // dừng chuỗi tại step fail
+        } else {
+          await appendExecutionLog(event.params.jobId, { stepIndex: i, moduleId: step.moduleId, status: 'SUCCESS', finishedAt: Date.now(), durationMs: Date.now() - t0, retry: attempts });
+        }
+        await updateWorkflowState(event.params.jobId, 'RUNNING', { currentStep: i + 1 });
+      }
+      await updateWorkflowState(event.params.jobId, 'COMPLETED', { currentStep: steps.length, totalSteps: steps.length });
+    } catch (err) {
+      try { await updateWorkflowState(event.params.jobId, 'FAILED', { error: String(err && err.message || err) }); } catch (_) {/* noop */}
+    }
+    return;
+  }
+
   try {
     await runGeneration(event.params.jobId, job.payload.moduleId, job.payload.inputParams, job.uid);
   } catch (err) {

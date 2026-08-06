@@ -37,4 +37,58 @@ async function updateJobStatus(jobId, status, resultOrError) {
   return getJob(jobId);
 }
 
-module.exports = { createJob, getJob, updateJobStatus };
+module.exports = { createJob, getJob, updateJobStatus, updateWorkflowState, appendExecutionLog, getWorkflowConfig };
+
+/**
+ * WORKFLOW-02 Orchestration & Execution (directive 17:06).
+ * Mở rộng khung asyncJob để Workflow Engine thành Orchestrator thật sự:
+ *   - Workflow State bền (QUEUED/RUNNING/WAITING/PAUSED/RETRYING/FAILED/CANCELLED/COMPLETED)
+ *   - Execution Log bền từng step (start/finish/duration/input/output/error/retry)
+ *   - Resume từ step cuối sau worker/server restart (không chạy lại từ đầu)
+ *   - Workflow Config đọc từ Firebase (không hardcode)
+ * Tất cả lưu trong node apiAsyncJobs/{jobId} (worker RTDB onValueCreated đã lắng nghe) —
+ * không tạo hệ thống/engine mới.
+ */
+
+// Workflow State & Step State (enum — tài liệu trạng thái hợp lệ)
+async function updateWorkflowState(jobId, state, extra) {
+  const patch = Object.assign({
+    workflowState: state,
+    updatedAt: admin.database.ServerValue.TIMESTAMP
+  }, extra || {});
+  await admin.database().ref('apiAsyncJobs/' + jobId).update(patch);
+  return getJob(jobId);
+}
+
+/**
+ * appendExecutionLog(jobId, entry) — ghi 1 dòng log cho 1 step.
+ * entry = { stepIndex, moduleId, status, startedAt, finishedAt, durationMs, input, output, error, retry }
+ * Không mất log khi restart (lưu RTDB).
+ */
+async function appendExecutionLog(jobId, entry) {
+  const patch = {};
+  patch['executionLog/' + (entry.stepIndex || 0)] = Object.assign({ timestamp: admin.database.ServerValue.TIMESTAMP }, entry);
+  await admin.database().ref('apiAsyncJobs/' + jobId).update(patch);
+  return getJob(jobId);
+}
+
+/**
+ * getWorkflowConfig(name) — đọc workflow definition từ Firebase node
+ * `workflowConfigs/{name}`. Nếu chưa có, trả default (vẫn tương thích cũ).
+ * Founder đổi workflow bằng cách ghi node này mà không cần sửa code.
+ */
+async function getWorkflowConfig(name) {
+  const snap = await admin.database().ref('workflowConfigs/' + name).once('value');
+  if (snap.exists()) return snap.val();
+  // Default: chuỗi cũ (tương thích) — README/knowledge sẽ hướng dẫn ghi config
+  return {
+    id: 'product-auto',
+    description: 'Product publish → Auto content workflow',
+    steps: [
+      { type: 'generation', moduleId: 'product-content' },
+      { type: 'generation', moduleId: 'blog-post' },
+      { type: 'generation', moduleId: 'facebook-post' },
+      { type: 'generation', moduleId: 'banner' }
+    ]
+  };
+}

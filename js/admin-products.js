@@ -378,6 +378,36 @@ const AdminApp = (function () {
       showStatus(editingId ? 'Đã cập nhật sản phẩm.' : 'Đã thêm sản phẩm mới.');
       resetForm();
       loadProducts(document.getElementById('adminSearch').value);
+
+      // WORKFLOW-01 Auto Trigger: khi Product được Publish (pubStatus ===
+      // 'published'), tự bắt đầu chuỗi WorkflowEngine
+      // Product → AI Content → Blog → Facebook → Banner.
+      // Chỉ tái sử dụng queue apiAsyncJobs (pattern aiGenerateWorker) — không
+      // cron/polling/scheduler/webhook ngoài, không hệ thống mới.
+      // (Đã inline từ js/psh-workflow-auto.js — cleanup, không abstraction dư.)
+      if (data.pubStatus === 'published' &&
+          typeof firebase !== 'undefined' && firebase.database) {
+        var productId = editingId || (data && data.id) || null;
+        var steps = [
+          { type: 'generation', moduleId: 'product-content' },
+          { type: 'generation', moduleId: 'blog-post' },
+          { type: 'generation', moduleId: 'facebook-post' },
+          { type: 'generation', moduleId: 'banner' }
+        ];
+        var wfRef = firebase.database().ref('apiAsyncJobs').push();
+        wfRef.set({
+          type: 'workflow:auto',
+          status: 'queued',
+          createdAt: Date.now(),
+          uid: (firebase.auth && firebase.auth().currentUser) ? firebase.auth().currentUser.uid : 'system',
+          payload: {
+            async: true,
+            productId: productId,
+            productName: data.name || '',
+            steps: steps.map(function (s) { return { type: s.type, moduleId: s.moduleId }; })
+          }
+        }).catch(function (err) { console.error('[workflow:auto] trigger failed', err); });
+      }
     });
   }
 
