@@ -216,7 +216,25 @@ function normalizeResult(result) {
  * REUSE runTask/execute; không build payload/routing trong manager.
  */
 function runChat(task, policy, opts) {
-  opts = Object.assign({}, opts, { type: 'text', capability: (task && task.capability) || 'chat' });
+  // CAPABILITY 9C: forward runtime fields từ task vào opts (messages/system/tools/...)
+  task = task || {};
+  opts = Object.assign({}, opts || {}, {
+    type: 'text',
+    capability: task.capability || 'chat',
+    messages: opts && opts.messages !== undefined ? opts.messages : task.messages,
+    system: opts && opts.system !== undefined ? opts.system : task.system,
+    tools: opts && opts.tools !== undefined ? opts.tools : task.tools,
+    tool_choice: opts && opts.tool_choice !== undefined ? opts.tool_choice : task.tool_choice,
+    response_format: opts && opts.response_format !== undefined ? opts.response_format : task.response_format,
+    stream: opts && opts.stream !== undefined ? opts.stream : task.stream,
+    temperature: opts && opts.temperature !== undefined ? opts.temperature : task.temperature,
+    top_p: opts && opts.top_p !== undefined ? opts.top_p : task.top_p,
+    max_tokens: opts && opts.max_tokens !== undefined ? opts.max_tokens : task.max_tokens,
+    stop: opts && opts.stop !== undefined ? opts.stop : task.stop,
+    seed: opts && opts.seed !== undefined ? opts.seed : task.seed,
+    provider: task.provider !== undefined ? task.provider : (opts && opts.provider),
+    model: opts && opts.model !== undefined ? opts.model : task.model
+  });
   return runTask(task, policy, opts);
 }
 

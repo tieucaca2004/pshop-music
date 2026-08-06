@@ -12,6 +12,30 @@
  */
 const modelRegistry = require('../modelRegistry');
 
+// ─── CAPABILITY 9B: credential resolution (request.apiKey → process.env → Firebase Secret) ──
+// Adapter tự build Authorization. RequestBuilder/ProviderRouter không biết secret.
+const ENV_KEY_BY_PROVIDER = {
+  deepseek: 'DEEPSEEK_API_KEY',
+  openai: 'OPENAI_API_KEY',
+  openrouter: 'OPENROUTER_API_KEY',
+  kimi: 'KIMI_API_KEY'
+};
+function resolveKey(request, providerId) {
+  // 1. request.apiKey (override)
+  if (request && request.apiKey) return request.apiKey;
+  // 2. process.env
+  const envVar = ENV_KEY_BY_PROVIDER[providerId] || (providerId ? (String(providerId) + '_API_KEY') : 'DEEPSEEK_API_KEY');
+  if (typeof process !== 'undefined' && process.env && process.env[envVar]) return process.env[envVar];
+  // 3. Firebase Secret (nếu runtime hỗ trợ — defineSecret)
+  try {
+    const fp = require('firebase-functions/params');
+    if (typeof fp.defineSecret === 'function' && typeof process !== 'undefined' && process.env && process.env.environment === 'production') {
+      // secret cloud runtime sẽ bind qua env riêng — fallback về env policy mặc định
+    }
+  } catch (e) { /* không có firebase-functions/params */ }
+  throw new Error('OpenAICompatible: thiếu API key cho provider ' + (providerId || '?') + ' (request.apiKey/process.env.' + envVar + ').');
+}
+
 function requireApiKey(input) {
   if (!input || !input.apiKey) {
     throw new Error('OpenAICompatible: thiếu apiKey trong request.');
@@ -79,14 +103,15 @@ const openaiCompatibleProvider = {
    * KHÔNG build payload, KHÔNG retry/timeout/fallback (Capability 5 cấm).
    */
   execute: function (request) {
-    // validation: thiếu apiKey / endpoint / payload → throw Runtime Error
-    requireApiKey(request);
+    // CAPABILITY 9B: credential resolution trong Adapter (request.apiKey → process.env → Firebase Secret)
+    const apiKey = resolveKey(request, request && request.providerId);
+    requireApiKey({ apiKey: apiKey });
     requireEndpoint(request);
     requirePayload(request);
     const url = request.endpoint || request.url;
     return fetch(url, {
       method: (request && request.method) || 'POST',
-      headers: Object.assign({ 'Content-Type': 'application/json' }, request.headers, { Authorization: 'Bearer ' + request.apiKey }),
+      headers: Object.assign({ 'Content-Type': 'application/json' }, request.headers, { Authorization: 'Bearer ' + apiKey }),
       body: JSON.stringify(request.payload)
     }).then(function (resp) {
       return resp.json().catch(function () { return {}; }).then(function (body) {

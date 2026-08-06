@@ -19,14 +19,11 @@ const DEFAULT_RETRY = { attempts: 3, backoffMs: function (i) { return 500 * Math
  * Không hard-code header trong adapter.
  */
 function buildHeaders(apiStyle, apiKey, extra) {
+  // CAPABILITY 9B: RequestBuilder MUST NOT build Authorization — chỉ Content-Type
+  // + provider-independent headers. Adapter tự build Authorization.
   const headers = Object.assign({ 'Content-Type': 'application/json' }, extra || {});
-  if (apiKey) {
-    if (apiStyle === 'anthropic-messages') {
-      headers['x-api-key'] = apiKey;
-      headers['anthropic-version'] = '2023-06-01';
-    } else {
-      headers['Authorization'] = 'Bearer ' + apiKey;
-    }
+  if (apiStyle === 'anthropic-messages') {
+    headers['anthropic-version'] = '2023-06-01';
   }
   return headers;
 }
