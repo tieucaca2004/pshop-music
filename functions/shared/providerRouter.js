@@ -55,4 +55,58 @@ function availableProviders() {
   return Object.keys(registry);
 }
 
-module.exports = { route, availableProviders, DEFAULT_PROVIDER_ID };
+// ─── CAPABILITY 3: bổ sung API (đọc duy nhất từ modelRegistry, không hard-code) ──
+
+/**
+ * resolveProvider(task, policy) — resolve provider từ modelRegistry (không hard-code).
+ */
+function resolveProvider(task, policy) {
+  const res = modelRegistry.resolveModel(task, policy);
+  return { providerId: (res && res.provider) || DEFAULT_PROVIDER_ID, model: res && res.model, meta: res };
+}
+
+/**
+ * resolveAdapter(providerId) — trả adapter tương ứng (theo API style map), fallback DEFAULT.
+ */
+function resolveAdapter(providerId) {
+  return registry[providerId] || registry[DEFAULT_PROVIDER_ID];
+}
+
+/**
+ * getPriority(providerId) — priority từ modelRegistry (không hard-code).
+ */
+function getPriority(providerId) {
+  const p = modelRegistry.getProvider ? modelRegistry.getProvider(providerId) : null;
+  return p ? (p.priority || 0) : null;
+}
+
+/**
+ * isEnabled(providerId) — enabled từ modelRegistry (không hard-code).
+ */
+function isEnabled(providerId) {
+  const p = modelRegistry.getProvider ? modelRegistry.getProvider(providerId) : null;
+  return p ? p.enabled !== false : false;
+}
+
+/**
+ * chooseFallback(providerId) — fallback provider/model từ modelRegistry (không hard-code).
+ */
+function chooseFallback(providerId, modelId) {
+  const target = modelId || providerId;
+  const fb = modelRegistry.getFallback ? modelRegistry.getFallback(target) : null;
+  if (fb && fb.provider) {
+    return { providerId: fb.provider, model: fb.model, adapter: registry[fb.provider] || registry[DEFAULT_PROVIDER_ID] };
+  }
+  return { providerId: DEFAULT_PROVIDER_ID, model: null, adapter: registry[DEFAULT_PROVIDER_ID] };
+}
+
+module.exports = {
+  route,
+  availableProviders,
+  resolveProvider,
+  resolveAdapter,
+  getPriority,
+  isEnabled,
+  chooseFallback,
+  DEFAULT_PROVIDER_ID
+};
