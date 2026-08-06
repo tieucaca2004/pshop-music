@@ -14,6 +14,7 @@ const openaiCompatibleProvider = require('./providers/openaiCompatibleProvider')
 const claudeProvider = require('./providers/claudeProvider');
 const geminiProvider = require('./providers/geminiProvider');
 const modelRegistry = require('./modelRegistry');
+const requestBuilder = require('./requestBuilder');
 
 // Registry provider (backend) — REUSE FIRST: map theo API STYLE, không 1 adapter/provider.
 // openai-completions → openaiCompatibleProvider (OpenAI, DeepSeek, Kimi, OpenRouter)
@@ -42,11 +43,37 @@ function route(opts) {
     const provider = registry[providerId] || registry[DEFAULT_PROVIDER_ID];
     if (!provider) return Promise.reject(new Error('Provider not available: ' + providerId));
 
-    const type = opts && opts.type;
-    if (type === 'image') {
-      return provider.image(opts.prompt, opts.size);
+    // provider metadata từ modelRegistry (apiStyle/baseUrl) — không hard-code
+    const meta = modelRegistry.getProvider ? modelRegistry.getProvider(providerId) : null;
+    const apiStyle = (meta && meta.api) || 'openai-completions';
+    const baseUrl = (meta && meta.baseUrl) || (opts && opts.baseUrl);
+    const model = (opts && opts.model) || (res && res.model);
+
+    // Build payload qua RequestBuilder (adapter không tự build body) + gọi adapter.execute()
+    const req = {
+      apiStyle: apiStyle,
+      model: model,
+      baseUrl: baseUrl,
+      apiKey: opts && opts.apiKey,
+      providerId: providerId,
+      messages: opts && opts.messages,
+      system: opts && opts.system,
+      temperature: opts && opts.temperature,
+      max_tokens: (opts && opts.max_tokens) || (opts && opts.maxTokens)
+    };
+    try {
+      const built = requestBuilder.buildRequest(req);
+      return provider.execute({
+        endpoint: built.url,
+        headers: built.headers,
+        payload: built.body,
+        apiKey: opts && opts.apiKey,
+        providerId: providerId,
+        model: model
+      });
+    } catch (err) {
+      return Promise.reject(err);
     }
-    return provider.text(opts.prompt, Object.assign({}, opts, { model: (opts && opts.model) || (res && res.model) }));
   });
 }
 
