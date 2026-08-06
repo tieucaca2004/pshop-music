@@ -1,6 +1,6 @@
 rules_version = '2';
 
-// Firebase Storage Security Rules — Multi-Tenant (Phase 1, Task 6.1)
+// Firebase Storage Security Rules - Multi-Tenant (Phase 1, Task 6.1)
 //
 // Legacy catch-all no longer overrides tenant isolation for EITHER read or
 // write. The write rule already excluded /businesses/{businessId}/ paths;
@@ -17,11 +17,18 @@ rules_version = '2';
 //   This is set via Firebase Auth custom claims by POST /v1/users/custom-claims.
 //   Super admins have platform-wide read/write access to ALL storage paths,
 //   including all tenant paths under /businesses/{businessId}/.
-//   This is INTENTIONAL — super admins manage the platform infrastructure.
+//   This is INTENTIONAL - super admins manage the platform infrastructure.
+//
+// ASCII-ONLY: this file is routinely copy-pasted into the Firebase Console
+// Rules editor by the Chief Architect (rules deploys are manual). Non-ASCII
+// characters (em dashes, box-drawing characters, Vietnamese text) survived
+// in comments here previously and came through the clipboard mangled,
+// producing "token recognition error" on publish. Keep every character in
+// this file plain ASCII.
 service firebase.storage {
   match /b/{bucket}/o {
 
-    // ─── Root prefix listing ───
+    // --- Root prefix listing ---
     // MediaLibrary.list() (js/media-library.js) walks the bucket from the
     // ROOT for legacy/pshop-music CMS sessions, because existing images
     // predate per-tenant folders and live scattered at products/, banners/,
@@ -30,8 +37,8 @@ service firebase.storage {
     // The catch-all `match /{allPaths=**}` block below does NOT reliably
     // cover a root listing (there is no path segment for allPaths to bind),
     // so a root listAll() fell through to deny-by-default and the whole
-    // Media Library failed with storage/unauthorized on path "" — breaking
-    // every "CHỌN ẢNH" picker across the CMS (Category/Product/Banner/
+    // Media Library failed with storage/unauthorized on path "" - breaking
+    // every "CHON ANH" picker across the CMS (Category/Product/Banner/
     // Slider/Blog), reported live by the Founder.
     //
     // Listing a prefix only returns names, never file contents; per-object
@@ -40,7 +47,7 @@ service firebase.storage {
     // is unchanged.
     allow list: if request.auth != null;
 
-    // ─── Tenant-Isolated Paths ───
+    // --- Tenant-Isolated Paths ---
     // Each business stores assets under /businesses/{businessId}/
     // Access: businessId-matched users + super admins
     match /businesses/{businessId}/{allPaths=**} {
@@ -52,8 +59,8 @@ service firebase.storage {
             || request.auth.token.roles.super_admin == true);
     }
 
-    // ─── Legacy Paths (backward compatible) ───
-    // Existing PSH content at root — unchanged read/list behavior.
+    // --- Legacy Paths (backward compatible) ---
+    // Existing PSH content at root - unchanged read/list behavior.
     // GET/LIST/WRITE: all EXCLUDE /businesses/ paths, so this catch-all
     // never overrides the tenant-isolated block above in either direction.
     match /{allPaths=**} {
