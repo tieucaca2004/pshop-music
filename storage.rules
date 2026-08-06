@@ -21,6 +21,25 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
 
+    // ─── Root prefix listing ───
+    // MediaLibrary.list() (js/media-library.js) walks the bucket from the
+    // ROOT for legacy/pshop-music CMS sessions, because existing images
+    // predate per-tenant folders and live scattered at products/, banners/,
+    // sliders/, category-tiles/, blog/, uploads/.
+    //
+    // The catch-all `match /{allPaths=**}` block below does NOT reliably
+    // cover a root listing (there is no path segment for allPaths to bind),
+    // so a root listAll() fell through to deny-by-default and the whole
+    // Media Library failed with storage/unauthorized on path "" — breaking
+    // every "CHỌN ẢNH" picker across the CMS (Category/Product/Banner/
+    // Slider/Blog), reported live by the Founder.
+    //
+    // Listing a prefix only returns names, never file contents; per-object
+    // reads still go through the get/read rules below, and the recursive
+    // walk skips the businesses/ subtree client-side, so tenant isolation
+    // is unchanged.
+    allow list: if request.auth != null;
+
     // ─── Tenant-Isolated Paths ───
     // Each business stores assets under /businesses/{businessId}/
     // Access: businessId-matched users + super admins

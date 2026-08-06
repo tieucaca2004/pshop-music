@@ -59,7 +59,12 @@ const MediaLibrary = (function () {
   function listAllRecursive(ref) {
     return ref.listAll().then(res => {
       const filesPromise = Promise.all(res.items.map(toMediaItem));
-      const subfoldersPromise = Promise.all(res.prefixes.map(listAllRecursive));
+      // Bỏ qua nhánh businesses/ khi duyệt từ gốc: đó là dữ liệu riêng của
+      // từng tenant, Storage Rules luôn từ chối cho phiên legacy/CMS này —
+      // đệ quy vào sẽ làm reject cả danh sách thay vì chỉ thiếu nhánh đó.
+      const subfoldersPromise = Promise.all(
+        res.prefixes.filter(p => p.name !== 'businesses').map(listAllRecursive)
+      );
       return Promise.all([filesPromise, subfoldersPromise]).then(([files, nestedLists]) => {
         return files.concat.apply(files, nestedLists);
       });
