@@ -131,9 +131,25 @@ function listProviders() {
  */
 function listModels(providerId) {
   const reg = loadRegistry();
+  // Không có providerId → trả toàn bộ model mọi provider (enabled)
+  if (!providerId) {
+    const all = [];
+    Object.keys(reg.providers).forEach((pid) => {
+      const p = reg.providers[pid];
+      if (!p || p.enabled === false) return;
+      Object.keys(p.models || {}).forEach((mid) => {
+        const m = p.models[mid];
+        if (m.enabled === false) return;
+        all.push(Object.assign({ id: mid, provider: pid }, m));
+      });
+    });
+    return all;
+  }
   const p = reg.providers[providerId];
   if (!p || p.enabled === false) return [];
-  return Object.keys(p.models || {}).map((id) => Object.assign({ id, provider: providerId }, p.models[id]));
+  return Object.keys(p.models || {})
+    .filter((mid) => (p.models[mid].enabled !== false))
+    .map((id) => Object.assign({ id, provider: providerId }, p.models[id]));
 }
 
 /**
@@ -226,3 +242,109 @@ module.exports = {
   findModel,
   providerDefaultModel
 };
+
+// ─── CAPABILITY 2: bổ sung API + Validation (không sửa resolveModel) ──────
+
+/**
+ * getProvider(providerId) — trả metadata 1 provider (gồm baseUrl/api/enabled/priority/models).
+ */
+function getProvider(providerId) {
+  const reg = loadRegistry();
+  const p = reg.providers[providerId];
+  return p ? Object.assign({ id: providerId }, p) : null;
+}
+
+/**
+ * getModel(modelId, providerId?) — trả metadata đầy đủ 1 model (cả provider).
+ */
+function getModel(modelId, providerId) {
+  const reg = loadRegistry();
+  if (providerId) {
+    const p = reg.providers[providerId];
+    const m = p && p.models && p.models[modelId];
+    return m ? Object.assign({ id: modelId, provider: providerId }, m) : null;
+  }
+  // không provider → tìm trong mọi provider
+  const found = findModel(modelId);
+  return found;
+}
+
+/**
+ * getFallback(modelOrProvider) — trả model fallback của 1 model/provider.
+ */
+function getFallback(modelIdOrProvider) {
+  const reg = loadRegistry();
+  // model id
+  const m = findModel(modelIdOrProvider);
+  if (m && m.fallback) return findModel(m.fallback) || { provider: null, model: m.fallback };
+  // provider id → fallback provider
+  const provider = getProvider(modelIdOrProvider);
+  if (provider && provider.fallback) return { provider: provider.fallback, model: null };
+  if (reg.defaults && reg.defaults.fallbackProvider) return { provider: reg.defaults.fallbackProvider, model: null };
+  return null;
+}
+
+/**
+ * getDefaultModel(providerId?) — model default (1 provider hoặc toàn registry).
+ */
+function getDefaultModel(providerId) {
+  const reg = loadRegistry();
+  if (providerId) return providerDefaultModel(providerId);
+  const all = listProviders();
+  for (const pid of all) {
+    const d = providerDefaultModel(pid);
+    if (d) return d;
+  }
+  return { provider: reg.defaults.provider, model: reg.defaults.model };
+}
+
+/**
+ * getCapabilityModels(capability) — danh sách model khớp capability (mọi provider enabled).
+ */
+function getCapabilityModels(capability) {
+  const reg = loadRegistry();
+  const out = [];
+  Object.keys(reg.providers).forEach((pid) => {
+    const p = reg.providers[pid];
+    if (!p || p.enabled === false) return;
+    Object.keys(p.models || {}).forEach((mid) => {
+      const m = p.models[mid];
+      if (m.enabled === false) return;
+      if (m.capability === capability || m.capability === 'any' || capability === 'any') {
+        out.push(Object.assign({ id: mid, provider: pid }, m));
+      }
+    });
+  });
+  return out;
+}
+
+/**
+ * validateRegistry() — validate cấu trúc registry; throw Error (Runtime Error) nếu sai format.
+ */
+function validateRegistry() {
+  const reg = loadRegistry();
+  if (!reg || typeof reg !== 'object' || !reg.providers || typeof reg.providers !== 'object') {
+    throw new Error('ModelRegistry invalid: thiếu providers object.');
+  }
+  const ids = Object.keys(reg.providers);
+  if (!ids.length) throw new Error('ModelRegistry invalid: không có provider nào.');
+  ids.forEach((pid) => {
+    const p = reg.providers[pid];
+    if (!p || typeof p !== 'object') throw new Error('ModelRegistry invalid: provider ' + pid + ' không phải object.');
+    if (!p.models || typeof p.models !== 'object') throw new Error('ModelRegistry invalid: provider ' + pid + ' thiếu models object.');
+    Object.keys(p.models).forEach((mid) => {
+      const m = p.models[mid];
+      if (!m || typeof m !== 'object') throw new Error('ModelRegistry invalid: model ' + pid + '/' + mid + ' không phải object.');
+      if (!m.capability) throw new Error('ModelRegistry invalid: model ' + pid + '/' + mid + ' thiếu capability.');
+    });
+  });
+  return true;
+}
+
+module.exports.getProvider = getProvider;
+module.exports.getModel = getModel;
+module.exports.getFallback = getFallback;
+module.exports.getDefaultModel = getDefaultModel;
+module.exports.getCapabilityModels = getCapabilityModels;
+module.exports.validateRegistry = validateRegistry;
+
