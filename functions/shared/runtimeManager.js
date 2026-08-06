@@ -190,3 +190,71 @@ function runTask(task, policy, opts) {
 module.exports.runTask = runTask;
 module.exports.buildRuntimeMeta = buildRuntimeMeta;
 
+// ─── CAPABILITY 8: bổ sung API orchestration (REUSE execute/runTask, không sửa architecture) ──
+
+/**
+ * normalizeResult(result) — chuẩn hóa response từ adapter về shape nhất quán.
+ * Nhận { text | imageUrl, raw, usage, provider, model } → chuẩn hóa.
+ */
+function normalizeResult(result) {
+  if (!result || typeof result !== 'object') return { ok: false, error: 'runtimeManager.normalizeResult: kết quả không hợp lệ.' };
+  const out = {
+    ok: true,
+    text: (result.text !== undefined && result.text !== null) ? String(result.text) : null,
+    imageUrl: result.imageUrl || null,
+    raw: result.raw || null,
+    usage: result.usage || null,
+    provider: result.provider || null,
+    model: result.model || null
+  };
+  if (!out.text && !out.imageUrl) out.ok = false;
+  return out;
+}
+
+/**
+ * runChat(task, policy, opts) — orchestration chat: resolve → route → execute → normalize.
+ * REUSE runTask/execute; không build payload/routing trong manager.
+ */
+function runChat(task, policy, opts) {
+  // CAPABILITY 9C: forward runtime fields từ task vào opts (messages/system/tools/...)
+  task = task || {};
+  opts = Object.assign({}, opts || {}, {
+    type: 'text',
+    capability: task.capability || 'chat',
+    messages: opts && opts.messages !== undefined ? opts.messages : task.messages,
+    system: opts && opts.system !== undefined ? opts.system : task.system,
+    tools: opts && opts.tools !== undefined ? opts.tools : task.tools,
+    tool_choice: opts && opts.tool_choice !== undefined ? opts.tool_choice : task.tool_choice,
+    response_format: opts && opts.response_format !== undefined ? opts.response_format : task.response_format,
+    stream: opts && opts.stream !== undefined ? opts.stream : task.stream,
+    temperature: opts && opts.temperature !== undefined ? opts.temperature : task.temperature,
+    top_p: opts && opts.top_p !== undefined ? opts.top_p : task.top_p,
+    max_tokens: opts && opts.max_tokens !== undefined ? opts.max_tokens : task.max_tokens,
+    stop: opts && opts.stop !== undefined ? opts.stop : task.stop,
+    seed: opts && opts.seed !== undefined ? opts.seed : task.seed,
+    provider: task.provider !== undefined ? task.provider : (opts && opts.provider),
+    model: opts && opts.model !== undefined ? opts.model : task.model
+  });
+  return runTask(task, policy, opts);
+}
+
+/**
+ * runImage(task, policy, opts) — orchestration image: resolve → route (image) → execute → normalize.
+ */
+function runImage(task, policy, opts) {
+  opts = Object.assign({}, opts, { type: 'image', capability: (task && task.capability) || 'image' });
+  return runTask(task, policy, opts);
+}
+
+/**
+ * runEmbedding(task, policy, opts) — STUB (chưa hỗ trợ). Trả kết quả stub rõ ràng.
+ */
+function runEmbedding(task, policy, opts) {
+  return Promise.resolve({ ok: false, error: 'runtimeManager.runEmbedding: chưa hỗ trợ (stub).', stub: true });
+}
+
+module.exports.runChat = runChat;
+module.exports.runImage = runImage;
+module.exports.runEmbedding = runEmbedding;
+module.exports.normalizeResult = normalizeResult;
+

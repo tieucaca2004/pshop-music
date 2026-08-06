@@ -3,6 +3,7 @@
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
 ## MISSION — MODEL REGISTRY & DYNAMIC AI ROUTING (2026-08-06, backend)
+- **Capability 9/10 — Runtime Integration + Multi-provider Real API** (VERIFY PASS): `runtime.integration.test.js` key toàn pipeline (resolveModel→route→buildRequest→execute→parseResponse→normalizeResult); credential resolution trong Adapter (request.apiKey→process.env→Firebase Secret); REAL API 4 provider (deepseek/openai/anthropic/gemini) HTTP 200 response "HELLO PSH".
 
 - **Capability 1 — Runtime Manager** (VERIFY PASS): `functions/shared/runtimeManager.js` — AI Runtime Manager (`runTask`/`capabilityEval`/`policyEval`/`loadCostStrategy`/`isReady`/`buildRuntimeMeta`; Health=runtime state, Cost=weight).
 - **Capability 2 — Model Registry** (VERIFY PASS): `functions/shared/modelRegistry.js` — metadata đầy đủ 11 model (DeepSeek 3, Anthropic 2, OpenAI 2, Gemini 2, Kimi 1, OpenRouter 1) gồm provider/family/series/version/alias/lifecycle/apiStyle/capability/contextWindow/maxOutput/supports*/cost·quality·latency·reliability weight/enabled/default/priority/fallback; API getProvider/getModel/getFallback/getDefaultModel/getCapabilityModels + validateRegistry (throw Runtime Error); REUSE resolveModel, không viết lại. Bugfix `listModels()` (0→11).

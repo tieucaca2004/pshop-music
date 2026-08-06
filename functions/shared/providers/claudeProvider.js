@@ -21,6 +21,20 @@ function requirePayload(input) {
 }
 function isValid(input) { requireApiKey(input); requireEndpoint(input); requirePayload(input); return true; }
 
+// ─── CAPABILITY 9B: credential resolution (request.apiKey → process.env → Firebase Secret) ──
+function resolveKey(request) {
+  // 1. request.apiKey (override)
+  if (request && request.apiKey) return request.apiKey;
+  // 2. process.env.ANTHROPIC_API_KEY
+  if (typeof process !== 'undefined' && process.env && process.env.ANTHROPIC_API_KEY) return process.env.ANTHROPIC_API_KEY;
+  // 3. Firebase Secret (nếu runtime hỗ trợ — defineSecret sẽ bind env)
+  try {
+    const fp = require('firebase-functions/params');
+    if (typeof fp.defineSecret === 'function') { /* secret cloud runtime bind qua env khi deploy */ }
+  } catch (e) { /* không có firebase-functions/params */ }
+  throw new Error('ClaudeAdapter: thiếu API key (request.apiKey / process.env.ANTHROPIC_API_KEY).');
+}
+
 /**
  * parseResponse(body) — trích text từ response Anthropic (content[].text).
  */
