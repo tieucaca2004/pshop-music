@@ -23,9 +23,9 @@ const DEFAULT_MODEL_REGISTRY = {
       enabled: true,
       priority: 1,
       models: {
-        'deepseek-chat':    { label: 'DeepSeek Chat',    capability: 'chat',   default: true },
-        'deepseek-reasoner':{ label: 'DeepSeek Reason',  capability: 'reasoning' },
-        'deepseek-coder':   { label: 'DeepSeek Coder',   capability: 'coder' }
+        'deepseek-chat':    { provider: 'deepseek', family: 'deepseek', series: 'chat', model: 'deepseek-chat', version: '1', alias: 'deepseek-chat', lifecycle: 'stable', apiStyle: 'openai-completions', capability: 'chat', contextWindow: 64000, maxOutput: 8192, supportsVision: false, supportsImage: false, supportsAudio: false, supportsEmbedding: false, supportsReasoning: false, supportsStreaming: true, supportsToolCalling: true, costWeight: 0.2, qualityWeight: 0.5, latencyWeight: 0.6, reliabilityWeight: 0.8, enabled: true, default: true, priority: 1, fallback: 'gpt-4o-mini' },
+        'deepseek-reasoner':{ provider: 'deepseek', family: 'deepseek', series: 'reasoner', model: 'deepseek-reasoner', version: '1', alias: 'deepseek-reasoner', lifecycle: 'preview', apiStyle: 'openai-completions', capability: 'reasoning', contextWindow: 64000, maxOutput: 8192, supportsVision: false, supportsImage: false, supportsAudio: false, supportsEmbedding: false, supportsReasoning: true, supportsStreaming: true, supportsToolCalling: false, costWeight: 0.3, qualityWeight: 0.7, latencyWeight: 0.4, reliabilityWeight: 0.7, enabled: true, default: false, priority: 1, fallback: 'claude-opus-5' },
+        'deepseek-coder':   { provider: 'deepseek', family: 'deepseek', series: 'coder', model: 'deepseek-coder', version: '1', alias: 'deepseek-coder', lifecycle: 'stable', apiStyle: 'openai-completions', capability: 'coder', contextWindow: 64000, maxOutput: 8192, supportsVision: false, supportsImage: false, supportsAudio: false, supportsEmbedding: false, supportsReasoning: true, supportsStreaming: true, supportsToolCalling: true, costWeight: 0.25, qualityWeight: 0.6, latencyWeight: 0.5, reliabilityWeight: 0.75, enabled: true, default: false, priority: 1, fallback: 'gpt-4o-mini' }
       }
     },
     anthropic: {
@@ -34,8 +34,8 @@ const DEFAULT_MODEL_REGISTRY = {
       enabled: true,
       priority: 2,
       models: {
-        'claude-sonnet-5':  { label: 'Claude Sonnet', capability: 'chat', default: true },
-        'claude-opus-5':    { label: 'Claude Opus',   capability: 'reasoning' }
+        'claude-sonnet-5':  { provider: 'anthropic', family: 'claude', series: 'sonnet', model: 'claude-sonnet-5', version: '5', alias: 'claude-sonnet', lifecycle: 'stable', apiStyle: 'anthropic-messages', capability: 'chat', contextWindow: 200000, maxOutput: 64000, supportsVision: true, supportsImage: false, supportsAudio: false, supportsEmbedding: false, supportsReasoning: false, supportsStreaming: true, supportsToolCalling: true, costWeight: 0.5, qualityWeight: 0.9, latencyWeight: 0.5, reliabilityWeight: 0.9, enabled: true, default: true, priority: 2, fallback: 'gemini-pro' },
+        'claude-opus-5':    { provider: 'anthropic', family: 'claude', series: 'opus', model: 'claude-opus-5', version: '5', alias: 'claude-opus', lifecycle: 'preview', apiStyle: 'anthropic-messages', capability: 'reasoning', contextWindow: 200000, maxOutput: 64000, supportsVision: true, supportsImage: false, supportsAudio: false, supportsEmbedding: false, supportsReasoning: true, supportsStreaming: true, supportsToolCalling: true, costWeight: 0.8, qualityWeight: 1.0, latencyWeight: 0.3, reliabilityWeight: 0.95, enabled: true, default: false, priority: 2, fallback: 'deepseek-reasoner' }
       }
     },
     openai: {
@@ -44,8 +44,8 @@ const DEFAULT_MODEL_REGISTRY = {
       enabled: true,
       priority: 3,
       models: {
-        'gpt-5.6': { label: 'ChatGPT GPT-5.6', capability: 'chat', default: true },
-        'gpt-4o-mini': { label: 'GPT-4o Mini', capability: 'chat' }
+        'gpt-5.6': { provider: 'openai', family: 'gpt', series: 'gpt-5', model: 'gpt-5.6', version: '5.6', alias: 'gpt', lifecycle: 'latest', apiStyle: 'openai-completions', capability: 'chat', contextWindow: 128000, maxOutput: 32768, supportsVision: true, supportsImage: false, supportsAudio: false, supportsEmbedding: false, supportsReasoning: false, supportsStreaming: true, supportsToolCalling: true, costWeight: 0.6, qualityWeight: 0.85, latencyWeight: 0.5, reliabilityWeight: 0.8, enabled: true, default: true, priority: 3, fallback: 'deepseek-chat' },
+        'gpt-4o-mini': { provider: 'openai', family: 'gpt', series: 'gpt-4o', model: 'gpt-4o-mini', version: '4o-mini', alias: 'gpt-4o-mini', lifecycle: 'deprecated', apiStyle: 'openai-completions', capability: 'chat', contextWindow: 128000, maxOutput: 16384, supportsVision: true, supportsImage: false, supportsAudio: false, supportsEmbedding: false, supportsReasoning: false, supportsStreaming: true, supportsToolCalling: true, costWeight: 0.1, qualityWeight: 0.6, latencyWeight: 0.7, reliabilityWeight: 0.7, enabled: true, default: false, priority: 3, fallback: 'gpt-5.6' }
       }
     },
     gemini: {
@@ -54,8 +54,8 @@ const DEFAULT_MODEL_REGISTRY = {
       enabled: true,
       priority: 4,
       models: {
-        'gemini-pro':   { label: 'Gemini Pro',   capability: 'reasoning', default: true },
-        'gemini-flash': { label: 'Gemini Flash', capability: 'chat' }
+        'gemini-pro':   { provider: 'gemini', family: 'gemini', series: 'pro', model: 'gemini-pro', version: '1', alias: 'gemini-pro', lifecycle: 'stable', apiStyle: 'google-generative-ai', capability: 'reasoning', contextWindow: 1048576, maxOutput: 8192, supportsVision: true, supportsImage: true, supportsAudio: true, supportsEmbedding: true, supportsReasoning: true, supportsStreaming: true, supportsToolCalling: true, costWeight: 0.3, qualityWeight: 0.75, latencyWeight: 0.5, reliabilityWeight: 0.8, enabled: true, default: true, priority: 4, fallback: 'claude-opus-5' },
+        'gemini-flash': { provider: 'gemini', family: 'gemini', series: 'flash', model: 'gemini-flash', version: '1', alias: 'gemini-flash', lifecycle: 'latest', apiStyle: 'google-generative-ai', capability: 'chat', contextWindow: 1048576, maxOutput: 8192, supportsVision: true, supportsImage: true, supportsAudio: true, supportsEmbedding: true, supportsReasoning: false, supportsStreaming: true, supportsToolCalling: true, costWeight: 0.1, qualityWeight: 0.7, latencyWeight: 0.8, reliabilityWeight: 0.75, enabled: true, default: false, priority: 4, fallback: 'deepseek-chat' }
       }
     },
     kimi: {
@@ -64,7 +64,7 @@ const DEFAULT_MODEL_REGISTRY = {
       enabled: true,
       priority: 5,
       models: {
-        'kimi-k2.6': { label: 'Kimi 2.6', capability: 'chat', default: true }
+        'kimi-k2.6': { provider: 'kimi', family: 'kimi', series: 'k2', model: 'kimi-k2.6', version: '2.6', alias: 'kimi', lifecycle: 'stable', apiStyle: 'openai-completions', capability: 'chat', contextWindow: 128000, maxOutput: 8192, supportsVision: false, supportsImage: false, supportsAudio: false, supportsEmbedding: false, supportsReasoning: true, supportsStreaming: true, supportsToolCalling: true, costWeight: 0.15, qualityWeight: 0.65, latencyWeight: 0.7, reliabilityWeight: 0.7, enabled: true, default: true, priority: 5, fallback: 'deepseek-chat' }
       }
     },
     openrouter: {
@@ -73,7 +73,7 @@ const DEFAULT_MODEL_REGISTRY = {
       enabled: true,
       priority: 6,
       models: {
-        '*': { label: 'OpenRouter (dynamic pass-through)', capability: 'any', default: true }
+        '*': { provider: 'openrouter', family: 'openrouter', series: 'passthrough', model: '*', version: '*', alias: 'openrouter', lifecycle: 'latest', apiStyle: 'openai-completions', capability: 'any', contextWindow: 128000, maxOutput: 8192, supportsVision: true, supportsImage: true, supportsAudio: false, supportsEmbedding: true, supportsReasoning: true, supportsStreaming: true, supportsToolCalling: true, costWeight: 0.5, qualityWeight: 0.5, latencyWeight: 0.5, reliabilityWeight: 0.5, enabled: true, default: true, priority: 6, fallback: 'deepseek-chat' }
       }
     }
   },
