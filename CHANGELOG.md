@@ -4,14 +4,12 @@
 
 ## MISSION — MODEL REGISTRY & DYNAMIC AI ROUTING (2026-08-06, backend)
 
-- **AI Operating System — Backend Layer** (Capability 1 Runtime Manager VERIFY PASS):
-  - `functions/shared/modelRegistry.js` — Dynamic Model Registry, 6 default provider (DeepSeek/Anthropic/OpenAI/Gemini/Kimi/OpenRouter) + `resolveModel(task, policy)` (task→capability→policy→model, không if/else theo tên), config qua env `MODEL_REGISTRY_JSON` (thêm/đổi provider-model-default không sửa code).
-  - `functions/shared/providerRouter.js` — Provider→Adapter (REUSE FIRST: map theo API style).
-  - `functions/shared/requestBuilder.js` — Request Builder dùng chung (buildHeaders/postJSON/retry/timeout; adapter không tự dựng HTTP header).
-  - `functions/shared/runtimeManager.js` — AI Runtime Manager (`runTask`/`capabilityEval`/`policyEval`/`loadCostStrategy`/`isReady`/`buildRuntimeMeta`; Health = runtime state, Cost=weight, không hard-code).
-  - Adapter gộp theo API style: `openaiCompatibleProvider` (OpenAI/DeepSeek/Kimi/OpenRouter), `claudeProvider` (Anthropic), `geminiProvider` (Google) — REUSE FIRST, xóa provider riêng (openaiProvider/deepseek/kimi/openrouter cũ).
-- Runtime Verify Capability 1 PASS: node --check 7/7, module load OK, dependency chain OK (firebase-functions/admin cài), runtime execution exit 0 (resolveModel deepseek-chat/claude-opus-5, resolveProvider gemini-pro, requestBuilder buildHeaders Bearer, runTask).
-- Deploy pending: `firebase deploy --only functions:aiGenerateWorker` (backbone worker — chạy trên Ubuntu Host).
+- **Capability 1 — Runtime Manager** (VERIFY PASS): `functions/shared/runtimeManager.js` — AI Runtime Manager (`runTask`/`capabilityEval`/`policyEval`/`loadCostStrategy`/`isReady`/`buildRuntimeMeta`; Health=runtime state, Cost=weight).
+- **Capability 2 — Model Registry** (VERIFY PASS): `functions/shared/modelRegistry.js` — metadata đầy đủ 11 model (DeepSeek 3, Anthropic 2, OpenAI 2, Gemini 2, Kimi 1, OpenRouter 1) gồm provider/family/series/version/alias/lifecycle/apiStyle/capability/contextWindow/maxOutput/supports*/cost·quality·latency·reliability weight/enabled/default/priority/fallback; API getProvider/getModel/getFallback/getDefaultModel/getCapabilityModels + validateRegistry (throw Runtime Error); REUSE resolveModel, không viết lại. Bugfix `listModels()` (0→11).
+- **Capability 3 — Provider Router** (VERIFY PASS): `functions/shared/providerRouter.js` — resolveProvider/resolveAdapter/getPriority/isEnabled/chooseFallback (đọc modelRegistry, không hard-code model/provider); RuntimeManager chỉ gọi `route()`.
+- **Capability 4 — Request Builder** (VERIFY PASS): `functions/shared/requestBuilder.js` — Single Source of Truth payload (buildRequest/buildHeaders/buildBody/normalizeMessages/normalizeTools/normalizeResponseFormat/normalizeGenerationConfig/validateRequest); build theo apiStyle (openai/anthropic/gemini), Provider Router truyền provider/model/apiStyle đã resolve (Request Builder KHÔNG đọc registry), adapter chỉ gọi buildRequest + gửi HTTP + parse + throw (không build payload).
+- Runtime Verify: node --check PASS + module load PASS + buildRequest(openai/anthropic/gemini) + normalizeMessages/Tools + validateRequest (throw) + resolveModel/resolveProvider/fallback/priority/enabled PASS (exit 0).
+- Deploy pending: `firebase deploy --only functions:aiGenerateWorker` (chạy trên Ubuntu Host).
 
 ## Sprint WORKFLOW — WORKFLOW-04: DECISION ENGINE (2026-08-05)
 
