@@ -190,3 +190,53 @@ function runTask(task, policy, opts) {
 module.exports.runTask = runTask;
 module.exports.buildRuntimeMeta = buildRuntimeMeta;
 
+// ─── CAPABILITY 8: bổ sung API orchestration (REUSE execute/runTask, không sửa architecture) ──
+
+/**
+ * normalizeResult(result) — chuẩn hóa response từ adapter về shape nhất quán.
+ * Nhận { text | imageUrl, raw, usage, provider, model } → chuẩn hóa.
+ */
+function normalizeResult(result) {
+  if (!result || typeof result !== 'object') return { ok: false, error: 'runtimeManager.normalizeResult: kết quả không hợp lệ.' };
+  const out = {
+    ok: true,
+    text: (result.text !== undefined && result.text !== null) ? String(result.text) : null,
+    imageUrl: result.imageUrl || null,
+    raw: result.raw || null,
+    usage: result.usage || null,
+    provider: result.provider || null,
+    model: result.model || null
+  };
+  if (!out.text && !out.imageUrl) out.ok = false;
+  return out;
+}
+
+/**
+ * runChat(task, policy, opts) — orchestration chat: resolve → route → execute → normalize.
+ * REUSE runTask/execute; không build payload/routing trong manager.
+ */
+function runChat(task, policy, opts) {
+  opts = Object.assign({}, opts, { type: 'text', capability: (task && task.capability) || 'chat' });
+  return runTask(task, policy, opts);
+}
+
+/**
+ * runImage(task, policy, opts) — orchestration image: resolve → route (image) → execute → normalize.
+ */
+function runImage(task, policy, opts) {
+  opts = Object.assign({}, opts, { type: 'image', capability: (task && task.capability) || 'image' });
+  return runTask(task, policy, opts);
+}
+
+/**
+ * runEmbedding(task, policy, opts) — STUB (chưa hỗ trợ). Trả kết quả stub rõ ràng.
+ */
+function runEmbedding(task, policy, opts) {
+  return Promise.resolve({ ok: false, error: 'runtimeManager.runEmbedding: chưa hỗ trợ (stub).', stub: true });
+}
+
+module.exports.runChat = runChat;
+module.exports.runImage = runImage;
+module.exports.runEmbedding = runEmbedding;
+module.exports.normalizeResult = normalizeResult;
+
