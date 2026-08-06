@@ -71,6 +71,36 @@ const MediaLibrary = (function () {
     });
   }
 
+  // Thư mục ảnh đã biết, dùng LÀM DỰ PHÒNG khi quét từ gốc bị Storage Rules
+  // từ chối. Quét từ gốc (`ref().listAll()` trên path "") đòi quyền `list` ở
+  // ĐÚNG path rỗng — một trường hợp riêng mà Rules rất dễ bỏ sót, và khi
+  // thiếu thì TOÀN BỘ Thư viện ảnh chết với storage/unauthorized (Founder
+  // báo lỗi này ở mọi nút "CHỌN ẢNH" trong CMS). Quét từng thư mục con thì
+  // chỉ cần quyền `list` trên chính thư mục đó — luôn khớp block
+  // `match /{allPaths=**}` thông thường, không phụ thuộc dòng rules đặc biệt
+  // cho path rỗng.
+  //
+  // Đây là DỰ PHÒNG, không thay thế: quét gốc vẫn được thử TRƯỚC (tự phủ cả
+  // thư mục mới phát sinh sau này mà không cần sửa danh sách dưới đây), chỉ
+  // khi bị từ chối mới lùi về danh sách này.
+  const KNOWN_MEDIA_FOLDERS = [
+    'media', 'products', 'banners', 'sliders', 'category-tiles', 'blog', 'uploads'
+  ];
+
+  // listFromRoot() -> Promise<MediaItem[]> — quét gốc, có dự phòng như trên.
+  // Thư mục dự phòng nào không tồn tại/không đọc được chỉ trả về mảng rỗng,
+  // không làm hỏng cả danh sách.
+  function listFromRoot() {
+    const root = storageRoot();
+    return listAllRecursive(root).catch(err => {
+      const code = err && err.code;
+      if (code !== 'storage/unauthorized') throw err;
+      return Promise.all(
+        KNOWN_MEDIA_FOLDERS.map(folder => listAllRecursive(root.child(folder)).catch(() => []))
+      ).then(lists => [].concat.apply([], lists));
+    });
+  }
+
   // kindOf(item) -> 'image' | 'video' | 'document' — single shared
   // classification (Task 2.7, Customer Workspace Files/Documents) so every
   // caller that needs to tell media types apart (Media Library UI, Files UI,
@@ -100,7 +130,7 @@ const MediaLibrary = (function () {
   function list(searchTerm, opts) {
     const allTypes = !!(opts && opts.allTypes);
     const documentsOnly = !!(opts && opts.kind === 'documents');
-    return listAllRecursive(storageRoot())
+    return listFromRoot()
       .then(items => {
         if (documentsOnly) return items.filter(it => kindOf(it) === 'document');
         return allTypes ? items : items.filter(it => !it.contentType || it.contentType.indexOf('image/') === 0);
