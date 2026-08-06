@@ -10,36 +10,44 @@
  * Backward-compat: OpenAI là DEFAULT provider — khi không có providerId,
  * hành vi giữ NGUYÊN như trước khi có Abstraction (gpt-4o-mini/dall-e-3).
  */
-const openaiProvider = require('./providers/openaiProvider');
+const openaiCompatibleProvider = require('./providers/openaiCompatibleProvider');
+const claudeProvider = require('./providers/claudeProvider');
+const geminiProvider = require('./providers/geminiProvider');
+const modelRegistry = require('./modelRegistry');
 
-// Registry provider — thêm provider mới tại đây (mỗi provider 1 file riêng).
+// Registry provider (backend) — REUSE FIRST: map theo API STYLE, không 1 adapter/provider.
+// openai-completions → openaiCompatibleProvider (OpenAI, DeepSeek, Kimi, OpenRouter)
+// anthropic-messages → claudeProvider (Anthropic)
+// google-generative-ai → geminiProvider (Google)
 const registry = {
-  openai: openaiProvider,
-  // claude: require('./providers/claudeProvider'),
-  // gemini: require('./providers/geminiProvider'),
-  // deepseek: require('./providers/deepseekProvider'),
-  // openrouter: require('./providers/openrouterProvider'),
+  openai: openaiCompatibleProvider,
+  deepseek: openaiCompatibleProvider,
+  kimi: openaiCompatibleProvider,
+  openrouter: openaiCompatibleProvider,
+  anthropic: claudeProvider,
+  gemini: geminiProvider
 };
 
 const DEFAULT_PROVIDER_ID = 'openai';
 
 /**
- * route({ type, prompt, size, providerId, model }) — quyết định provider.
- * - type: 'text' | 'image'
- * - providerId (optional): tên provider; rơi về DEFAULT (openai) khi thiếu/không có.
- * - model (optional): truyền xuống provider (mỗi provider đọc model riêng).
- * Trả Promise<result> — shape do provider quyết (text: {text,..}, image: {imageUrl,..}).
+ * route(opts) — DYNAMIC ROUTING (MISSION MODEL REGISTRY):
+ * nhận { type, prompt, size, providerId, model, capability, task, policy }
+ * → resolve provider+model qua modelRegistry (không hard-code) → gọi adapter.
  */
 function route(opts) {
-  const providerId = (opts && opts.providerId) || DEFAULT_PROVIDER_ID;
-  const provider = registry[providerId] || registry[DEFAULT_PROVIDER_ID];
-  if (!provider) return Promise.reject(new Error('Provider not available: ' + providerId));
+  return Promise.resolve().then(function () {
+    const res = modelRegistry.resolveModel({ capability: opts && opts.capability, provider: opts && opts.providerId }, opts && opts.policy);
+    const providerId = (opts && opts.providerId) || (res && res.provider) || DEFAULT_PROVIDER_ID;
+    const provider = registry[providerId] || registry[DEFAULT_PROVIDER_ID];
+    if (!provider) return Promise.reject(new Error('Provider not available: ' + providerId));
 
-  const type = opts && opts.type;
-  if (type === 'image') {
-    return provider.image(opts.prompt, opts.size);
-  }
-  return provider.text(opts.prompt, opts);
+    const type = opts && opts.type;
+    if (type === 'image') {
+      return provider.image(opts.prompt, opts.size);
+    }
+    return provider.text(opts.prompt, Object.assign({}, opts, { model: (opts && opts.model) || (res && res.model) }));
+  });
 }
 
 // Expose registry cho aiGenerate/tools inspect (nếu cần liệt kê provider).

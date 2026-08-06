@@ -2,6 +2,17 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## MISSION — MODEL REGISTRY & DYNAMIC AI ROUTING (2026-08-06, backend)
+
+- **AI Operating System — Backend Layer** (Capability 1 Runtime Manager VERIFY PASS):
+  - `functions/shared/modelRegistry.js` — Dynamic Model Registry, 6 default provider (DeepSeek/Anthropic/OpenAI/Gemini/Kimi/OpenRouter) + `resolveModel(task, policy)` (task→capability→policy→model, không if/else theo tên), config qua env `MODEL_REGISTRY_JSON` (thêm/đổi provider-model-default không sửa code).
+  - `functions/shared/providerRouter.js` — Provider→Adapter (REUSE FIRST: map theo API style).
+  - `functions/shared/requestBuilder.js` — Request Builder dùng chung (buildHeaders/postJSON/retry/timeout; adapter không tự dựng HTTP header).
+  - `functions/shared/runtimeManager.js` — AI Runtime Manager (`runTask`/`capabilityEval`/`policyEval`/`loadCostStrategy`/`isReady`/`buildRuntimeMeta`; Health = runtime state, Cost=weight, không hard-code).
+  - Adapter gộp theo API style: `openaiCompatibleProvider` (OpenAI/DeepSeek/Kimi/OpenRouter), `claudeProvider` (Anthropic), `geminiProvider` (Google) — REUSE FIRST, xóa provider riêng (openaiProvider/deepseek/kimi/openrouter cũ).
+- Runtime Verify Capability 1 PASS: node --check 7/7, module load OK, dependency chain OK (firebase-functions/admin cài), runtime execution exit 0 (resolveModel deepseek-chat/claude-opus-5, resolveProvider gemini-pro, requestBuilder buildHeaders Bearer, runTask).
+- Deploy pending: `firebase deploy --only functions:aiGenerateWorker` (backbone worker — chạy trên Ubuntu Host).
+
 ## Sprint WORKFLOW — WORKFLOW-04: DECISION ENGINE (2026-08-05)
 
 - **WORKFLOW-04 Decision Engine**: Mở rộng `js/ai/workflow-engine.js` (REUSE FIRST — không tạo Engine/Queue/Worker/DB mới). Workflow Engine thành Decision Engine với 8 capability, mỗi cái VERIFY PASS bằng Runtime Evidence (node test thật):
