@@ -30,22 +30,28 @@
   "description": "Tai nghe over-ear Sol Republic V10 với âm bass mạnh mẽ, thiết kế gập gọn, đệm tai êm ái. Phù hợp cho DJ sử dụng Rekordbox, Serato và các thiết bị Pioneer, AlphaTheta.",
   "brand": { "@type": "Brand", "name": "Sol Republic" },
   "category": "Tai nghe DJ",
-  "offers": [
-    {
-      "@type": "Offer",
-      "name": "Sol Republic V10 - Mới",
-      "priceCurrency": "VND",
-      "availability": "https://schema.org/InStock",
-      "itemCondition": "https://schema.org/NewCondition"
-    },
-    {
-      "@type": "Offer",
-      "name": "Sol Republic V10 - Đã qua sử dụng",
-      "priceCurrency": "VND",
-      "availability": "https://schema.org/InStock",
-      "itemCondition": "https://schema.org/UsedCondition"
-    }
-  ],
+  "offers": {
+    "@type": "OfferCatalog",
+    "name": "Sol Republic V10 - New & Used",
+    "itemListElement": [
+      {
+        "@type": "Offer",
+        "name": "Sol Republic V10 - Mới",
+        "availability": "https://schema.org/InStock",
+        "itemCondition": "https://schema.org/NewCondition",
+        "url": "https://pshopmusic.com/#contact",
+        "priceCurrency": "VND"
+      },
+      {
+        "@type": "Offer",
+        "name": "Sol Republic V10 - Đã qua sử dụng",
+        "availability": "https://schema.org/InStock",
+        "itemCondition": "https://schema.org/UsedCondition",
+        "url": "https://pshopmusic.com/#contact",
+        "priceCurrency": "VND"
+      }
+    ]
+  },
   "additionalProperty": [
     {"@type": "PropertyValue", "name": "Loại", "value": "Over-ear, Closed-back"},
     {"@type": "PropertyValue", "name": "Đường kính driver", "value": "40mm"},
