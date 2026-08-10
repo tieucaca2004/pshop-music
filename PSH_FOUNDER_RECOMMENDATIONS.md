@@ -1,3 +1,5 @@
+> ⚠️ **STALE — lệch pha code hiện tại.** Tài liệu này snapshot trạng thái ~20/07 (single-tenant). Kiến trúc hiện tại đã multi-tenant (Sprint A.1–18). **Nguồn sự thật mới: `PROJECT_STATUS.md`** (cập nhật 2026-08-10). Xem code trước khi tái dùng nội dung doc này.
+
 # PSH FOUNDER RECOMMENDATIONS
 
 Plain recommendations, ranked. Each item: Current Status / Why Needed / Estimated Complexity / Dependencies / Recommended Order. Complexity is relative (S/M/L/XL), sized against this repo's own past sprints — not a time estimate, since actual velocity depends on how you and Claude Code work together, which I don't want to guess at.

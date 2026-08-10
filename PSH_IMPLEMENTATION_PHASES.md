@@ -1,3 +1,5 @@
+> ⚠️ **STALE — lệch pha code hiện tại.** Tài liệu này snapshot trạng thái ~20/07 (single-tenant). Kiến trúc hiện tại đã multi-tenant (Sprint A.1–18). **Nguồn sự thật mới: `PROJECT_STATUS.md`** (cập nhật 2026-08-10). Xem code trước khi tái dùng nội dung doc này.
+
 # PSH IMPLEMENTATION PHASES
 
 Detailed breakdown of `PSH_PRODUCTION_ROADMAP.md`'s tiers into phases with Objectives / Tasks / Risks / Dependencies / Acceptance Criteria — same format this repo already uses for its own sprints (see `SPRINT14_API_ARCHITECTURE_FINAL.md`, `SPRINT15_MASTER_PLAN.md`). **Planning only — no phase below is authorized to start without separate Founder Approval per phase**, consistent with this repo's own Requirement Lifecycle (`CLAUDE.md` §3).

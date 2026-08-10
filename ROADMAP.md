@@ -1,3 +1,5 @@
+> ⚠️ **STALE — lệch pha code hiện tại.** Tài liệu này snapshot trạng thái ~20/07 (single-tenant). Kiến trúc hiện tại đã multi-tenant (Sprint A.1–18). **Nguồn sự thật mới: `PROJECT_STATUS.md`** (cập nhật 2026-08-10). Xem code trước khi tái dùng nội dung doc này.
+
 # Roadmap — chỉ ghi nhận, KHÔNG tự ý triển khai
 
 ## Ý tưởng phát sinh — workspace-categories.js chưa có trang HTML nào trỏ tới

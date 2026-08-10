@@ -1,7 +1,7 @@
 # PROJECT_STATUS.md — PSH Business Platform
 
 **Ngày sinh báo cáo:** 2026-08-01
-**Branch:** `feature/cms-ai-sprint2` (HEAD `48ceaa7` — "Sprint 18: Business Settings", 2026-07-31)
+**Branch:** `feature/cms-ai-sprint2` (HEAD `e3d91c5` — "Fix broken refs in PSH shell", 2026-08-10)
 **Repo local:** `/home/node/.openclaw/workspace/repo`
 **Repo nguồn:** `https://github.com/tieucaca2004/pshop-music.git`
 **Phương pháp:** Đọc toàn bộ source + chạy thật. Mọi kết luận kèm bằng chứng file/dòng hoặc kết quả chạy. KHÔNG sửa code, không commit, không merge.
@@ -85,9 +85,9 @@ PSH (trước là Pshop Music e-commerce) là một platform **đã trưởng th
 - **3 route Media AI (video/voice/subtitle) trả 503** — cố ý stub, không có provider. Nếu UI trỏ tới → lỗi người dùng thấy.
 - **OpenClaw "Agent couldn't generate a response"** trước đây — do context phình ~1.2M token (ghi MEMORY.md) — là vấn đề runtime OpenClaw, không phải bug PSH. Hiện session này chạy bình thường.
 - **Playwright MCP**: không khởi động được trong sandbox (thiếu `libglib-2.0.so.0` + 20 lib khác; không `ssh-keygen`/`sudo` cài apt được). Đây là ràng buộc sandbox, không phải lỗi repo.
-- **PSH shell load 2 file KHÔNG tồn tại** → `psh/index.html:68,74` reference `js/business-context.js` + `js/subscription-middleware.js`, mà `ls` xác nhận **không có file** → console 404/JS error khi mở `/psh/`.
-- **Nav PSH trỏ tới trang không tồn tại**: `psh/index.html:51,344` link `/admin/billing.html` nhưng **file không tồn tại** (`ls admin/billing.html` → No such file).
-- **`admin/ai/content.html` rỗng + broken script**: page này (`admin/ai/content.html:75`) load `../../js/admin-chrome.js` — **file không tồn tại** (`ls js/admin-chrome.js` → No such file); page không có nội dung ngoài chrome.
+- **PSH shell load 2 file KHÔNG tồn tại** → `psh/index.html:68,74` reference `js/business-context.js` + `js/subscription-middleware.js`, mà `ls` xác nhận **không có file** → console 404/JS error khi mở `/psh/`. **✅ ĐÃ FIX** (2026-08-10, commit `e3d91c5`): 2 file được thêm vào `repo/js/` (tái dùng từ `psh/js/` workspace), Netlify deploy HTTP 200.
+- **Nav PSH trỏ tới trang không tồn tại**: `psh/index.html:51,344` link `/admin/billing.html` nhưng **file không tồn tại** (`ls admin/billing.html` → No such file). **✅ ĐÃ FIX** (2026-08-10, commit `e3d91c5`): `admin/billing.html` được tạo theo pattern admin-auth guard + `window.Subscription` UI, deploy HTTP 200.
+- **`admin/ai/content.html` rỗng + broken script**: page này (`admin/ai/content.html:75`) load `../../js/admin-chrome.js` — **file không tồn tại** (`ls js/admin-chrome.js` → No such file); page không có nội dung ngoài chrome. **✅ ĐÃ FIX** (2026-08-10, commit `e3d91c5`): gỡ thẻ script `admin-chrome.js` khỏi `content.html` + `history.html` (admin-auth.js đã là guard chuẩn), deploy HTTP 200.
 
 ---
 
