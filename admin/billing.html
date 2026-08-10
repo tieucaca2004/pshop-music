@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Billing - Pshop Music Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600;700&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="adminSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-wrap">
+
+      <div class="panel">
+        <div class="panel-header">
+          <h3>BILLING &amp; SUBSCRIPTION</h3>
+          <p>Quản lý gói, hạn dùng và trạng thái tài khoản doanh nghiệp.</p>
+        </div>
+        <div id="subStatusBox" class="form-group" style="margin-bottom:1rem"></div>
+      </div>
+
+      <div class="panel">
+        <h3>THÔNG TIN GÓI (PLAN)</h3>
+        <div class="field-grid" id="subPlanInfo"></div>
+      </div>
+
+      <div class="panel">
+        <h3>ĐỔI GÓI</h3>
+        <div class="field-grid">
+          <div class="form-group">
+            <label>GÓI MỚI</label>
+            <select id="planSelect">
+              <option value="trial">Trial</option>
+              <option value="starter">Starter</option>
+              <option value="pro">Pro</option>
+              <option value="enterprise">Enterprise</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>TRẠNG THÁI</label>
+            <select id="statusSelect">
+              <option value="active">Active</option>
+              <option value="trial">Trial</option>
+              <option value="suspended">Suspended</option>
+              <option value="cancelled">Cancelled</option>
+              <option value="expired">Expired</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <button class="btn-primary" id="btnChangePlan" style="margin-top:.5rem">CẬP NHẬT GÓI</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>GIỚI HẠN TÍNH NĂNG</h3>
+        <table class="table" id="limitsTable" style="width:100%;border-collapse:collapse">
+          <thead><tr><th style="text-align:left;padding:.5rem">Tính năng</th><th style="text-align:left;padding:.5rem">Giới hạn</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../js/firebase-config.js?v=97cf378"></script>
+<script src="../js/auth-context.js?v=97cf378"></script>
+<script src="../js/business-context.js?v=97cf378"></script>
+<script src="../js/subscription-middleware.js?v=97cf378"></script>
+<script src="../js/admin-auth.js?v=97cf378"></script>
+<script>
+(function () {
+  function fmtDate(ts) {
+    if (!ts) return '—';
+    return new Date(ts).toLocaleDateString('vi-VN');
+  }
+  function fmtLimit(n) {
+    return n === -1 ? 'Không giới hạn' : (n === undefined ? 'Không giới hạn' : n);
+  }
+  function load() {
+    var bid = (typeof BusinessContext !== 'undefined' && BusinessContext.getCurrentBusinessId) ? BusinessContext.getCurrentBusinessId() : null;
+    if (!bid) { document.getElementById('subStatusBox').innerHTML = '<p>Không xác định được doanh nghiệp.</p>'; return; }
+    if (typeof Subscription === 'undefined' || !Subscription.get) { document.getElementById('subStatusBox').innerHTML = '<p>Subscription middleware chưa được nạp.</p>'; return; }
+    Subscription.get(bid).then(function (sub) {
+      var box = document.getElementById('subStatusBox');
+      if (!sub) {
+        box.innerHTML = '<p>Chưa có subscription — tạo Trial ngay.</p><button class="btn-primary" id="btnCreateTrial">TẠO TRIAL</button>';
+        document.getElementById('btnCreateTrial').onclick = function () {
+          Subscription.createTrial(bid).then(function () { location.reload(); });
+        };
+        return;
+      }
+      var st = Subscription.getStatus(sub);
+      var days = Subscription.getDaysRemaining(sub);
+      box.innerHTML =
+        '<p><strong>Kế hoạch:</strong> ' + Subscription.getPlanLabel(sub.plan) +
+        ' &nbsp;·&nbsp; <strong>Trạng thái:</strong> <span class="' + Subscription.getStatusClass(st.status) + '">' + Subscription.getStatusLabel(st.status) + '</span>' +
+        (st.status === 'trial' && days !== null ? ' &nbsp;·&nbsp; <strong>Còn lại:</strong> ' + days + ' ngày' : '') +
+        '</p>';
+      document.getElementById('subPlanInfo').innerHTML =
+        '<div class="form-group"><label>PLAN</label><div>' + (sub.plan || '—') + '</div></div>' +
+        '<div class="form-group"><label>STATUS</label><div>' + (sub.status || '—') + '</div></div>' +
+        '<div class="form-group"><label>TRIAL START</label><div>' + fmtDate(sub.trialStart) + '</div></div>' +
+        '<div class="form-group"><label>TRIAL END</label><div>' + fmtDate(sub.trialEnd) + '</div></div>';
+      document.getElementById('planSelect').value = sub.plan || 'trial';
+      document.getElementById('statusSelect').value = sub.status || 'active';
+      var limits = Subscription.getFeatureLimits(sub);
+      var tbody = document.querySelector('#limitsTable tbody');
+      tbody.innerHTML = '';
+      Object.keys(limits).forEach(function (k) {
+        var tr = document.createElement('tr');
+        tr.innerHTML = '<td style="padding:.5rem">' + k + '</td><td style="padding:.5rem">' + fmtLimit(limits[k]) + '</td>';
+        tbody.appendChild(tr);
+      });
+    });
+  }
+  document.getElementById('btnChangePlan').onclick = function () {
+    var bid = BusinessContext.getCurrentBusinessId();
+    if (!bid) return alert('Không xác định được doanh nghiệp.');
+    var plan = document.getElementById('planSelect').value;
+    var status = document.getElementById('statusSelect').value;
+    Subscription.changePlan(bid, plan, status).then(function () { alert('Đã cập nhật gói thành công.'); });
+  };
+  AdminAuth.init({ page: 'billing', title: 'BILLING' }).then(function () {
+    // Subscription auto-inits; tải lại data sau khi chrome sẵn sàng
+    setTimeout(load, 500);
+  });
+})();
+</script>
+</body>
+</html>
