@@ -163,7 +163,7 @@ async function editImageWithOpenAI({ inputUrl, prompt, size, transparentBackgrou
   return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
 }
 
-exports.openaiProxy = onRequest({ secrets: [OPENAI_API_KEY], cors: true }, async (req, res) => {
+exports.openaiProxy = onRequest({ secrets: [OPENAI_API_KEY], cors: true, timeoutSeconds: 120 }, async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Chỉ hỗ trợ POST.' });
     return;
