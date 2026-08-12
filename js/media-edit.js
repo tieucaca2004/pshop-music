@@ -212,8 +212,12 @@ const MediaEdit = (function () {
     setStatus('Đang thực hiện: ' + p.label + ' (Ảnh nguồn được giữ nguyên, chỉ xử lý phông/ánh sáng)...');
     var body = { imageUrl: activeSource.url, prompt: prompt, size: size };
     if (p.transparent) body.transparent = true;
+    var hist = { sourceAsset: activeSource.name, operation: 'EDIT', provider: 'OpenAI', model: 'gpt-image-2', quality: (($('meQuality') && $('meQuality').value) || suggestedQuality('edit', ($('meGenType') && $('meGenType').value), true)), status: 'PROCESSING' };
+    recordHistory(hist);
     return proxyCall('edit_image', body).then(function (res) {
       if (res.data.imageUrl) {
+        hist.outputAsset = res.data.imageUrl; hist.status = 'COMPLETED'; hist.cost = null; // N/A cho tới khi provider trả cost chính xác
+        recordHistory(hist); renderHistory();
         setStatus('✅ ' + p.label + ' xong. Xem DRAFT bên dưới — Approve để lưu (không ghi đè nguồn).');
         setPreview(res.data.imageUrl, 'DRAFT: ' + p.label);
         $('meApproveBtn') && ($('meApproveBtn').disabled = false);
@@ -230,15 +234,19 @@ const MediaEdit = (function () {
   function removeBg() {
     if (!activeSource) { setStatus('Chọn ảnh nguồn trước.', true); return; }
     setStatus('AI Edit · Remove Background — giữ nguyên sản phẩm...');
+    var hist = { sourceAsset: activeSource.name, operation: 'REMOVE_BACKGROUND', provider: 'OpenAI', model: 'gpt-image-2', quality: 'MEDIUM', status: 'PROCESSING' };
+    recordHistory(hist);
     proxyCall('remove_background', { imageUrl: activeSource.url }).then(function (res) {
       if (res.data.imageUrl) {
+        hist.outputAsset = res.data.imageUrl; hist.status = 'COMPLETED'; recordHistory(hist);
         setStatus('✅ Remove Background xong. Xem DRAFT — Approve để lưu.');
         setPreview(res.data.imageUrl, 'DRAFT: Remove Background');
         $('meApproveBtn') && ($('meApproveBtn').disabled = false);
         $('meDiscardBtn') && ($('meDiscardBtn').disabled = false);
         $('meOpsLabel') && ($('meOpsLabel').textContent = 'AI Edit');
-      } else setStatus('Remove background thất bại: ' + JSON.stringify(res.data), true);
-    }).catch(function (e) { setStatus('Lỗi: ' + e.message, true); });
+        renderHistory();
+      } else { hist.status = 'FAILED'; hist.error = JSON.stringify(res.data); recordHistory(hist); renderHistory(); setStatus('Remove background thất bại: ' + JSON.stringify(res.data), true); }
+    }).catch(function (e) { hist.status = 'FAILED'; hist.error = e.message; recordHistory(hist); renderHistory(); setStatus('Lỗi: ' + e.message, true); });
   }
 
   // approve: export URL thành asset trong media library (tái dùng MediaLibrary nếu có), không ghi đè nguồn.
@@ -296,6 +304,9 @@ const MediaEdit = (function () {
         else if (id === 'imgSize') el.value = params.size;
       });
       AdminImageAI.runGeneration(params);
+      var hist = { sourceAsset: p || (prompt ? 'prompt:' + prompt.slice(0, 30) : 'new'), operation: 'GENERATE', provider: 'OpenAI', model: 'gpt-image-2', quality: (($('meQuality') && $('meQuality').value) || suggestedQuality('generate', ($('meGenType') && $('meGenType').value), false)), status: 'PROCESSING' };
+      recordHistory(hist);
+      renderHistory();
     } else {
       // fallback: gọi openaiProxy generate_image trực tiếp
       setStatus('Generate từ-scratch được xử lý tại tab Image Studio chính.');
@@ -391,6 +402,127 @@ const MediaEdit = (function () {
     }).catch(function (e) { setStatus('FREE convert lỗi: ' + e.message, true); });
   }
 
+  /* ================= PROMPT OPTIMIZER (rule-based, FREE — không gọi AI) ================= */
+  // Chuyển câu tự nhiên thành instruction có cấu trúc. KHÔNG gọi OpenAI.
+  const STYLE_TAGS = {
+    'white': 'white background', 'trắng': 'white background', 'nền trắng': 'white background',
+    'studio': 'studio lighting', 'studio đẹp': 'studio lighting', 'ánh sáng studio': 'studio lighting',
+    'premium': 'premium look', 'cao cấp': 'premium look',
+    'lifestyle': 'lifestyle scene', 'đời thực': 'lifestyle scene',
+    'hero': 'product hero shot',
+    'social': 'social ad', 'quảng cáo': 'social ad',
+    'shadow': 'soft shadow', 'đổ bóng': 'soft shadow', 'bóng': 'soft shadow'
+  };
+  function detect(prompt) {
+    var t = (prompt || '').toLowerCase();
+    var tags = [];
+    if (/nền trắng|nên trắng|background.*white|white.*background|bỏ nền/.test(t)) tags.push('background:white');
+    else if (/nền bàn|background/.test(t)) tags.push('background:clean');
+    if (/studio|ánh sáng|lighting|đẹp/.test(t)) tags.push('lighting:studio');
+    if (/cao cấp|premium|sang/.test(t)) tags.push('style:premium');
+    if (/lifestyle|đời thực|scene/.test(t)) tags.push('composition:lifestyle');
+    if (/bóng|shadow/.test(t)) tags.push('lighting:soft-shadow');
+    if (/hero/.test(t)) tags.push('composition:hero');
+    if (/quảng cáo|social|ad/.test(t)) tags.push('composition:social-ad');
+    if (/giữ nguyên|keep.*product|same|không.*vẽ/.test(t)) tags.push('constraint:keep-product-identical');
+    if (/clean|sạch|lau/.test(t)) tags.push('operation:clean');
+    return tags;
+  }
+  function optimizePrompt(raw) {
+    var subject = '';
+    if (activeSource) subject = 'SOURCE IMAGE (giữ nguyên sản phẩm/SOURCE): ' + (activeSource.name || 'source');
+    else subject = 'SUBJECT: sản phẩm (mô tả bên dưới)';
+    var tags = detect(raw);
+    var structured = [
+      subject,
+      'OPERATION: ' + (tags.some(function (x) { return x.indexOf('operation:') === 0; }) ? 'làm sạch/nâng cấp ảnh' : 'edit ảnh sản phẩm'),
+      'BACKGROUND: ' + (tags.some(function (x) { return x === 'background:white'; }) ? 'trắng tinh, studio' : (tags.some(function (x) { return x === 'background:clean'; }) ? 'sạch, không lộn xộn' : 'giữ nguyên nền hiện tại hoặc nền sạch')),
+      'LIGHTING: ' + (tags.some(function (x) { return x.indexOf('lighting') === 0; }) ? 'studio mềm đều' : 'tự nhiên'),
+      'COMPOSITION: ' + (tags.some(function (x) { return x === 'composition:hero'; }) ? 'hero, sản phẩm nổi bật' : (tags.some(function (x) { return x === 'composition:lifestyle'; }) ? 'lifestyle, ngữ cảnh sử dụng' : (tags.some(function (x) { return x === 'composition:social-ad'; }) ? 'layout quảng cáo social' : 'trung tâm khung hình'))),
+      'STYLE: ' + (tags.some(function (x) { return x === 'style:premium'; }) ? 'cao cấp, chuyên nghiệp' : 'chân thực, thương mại'),
+      'OUTPUT: 1 ảnh PNG rõ nét, sản phẩm sắc nét',
+      'CONSTRAINTS: ' + (tags.some(function (x) { return x === 'constraint:keep-product-identical'; }) ? 'GIỮ NGUYÊN sản phẩm (model/logo/chữ/màu/nút/cổng/chi tiết) — KHÔNG vẽ lại.' : 'GIỮ NGUYÊN sản phẩm (model/logo/chữ/màu/chi tiết) — KHÔNG redraw.')
+    ];
+    return structured.join('\n');
+  }
+
+  /* ================= VOICE INPUT (Web Speech API, FREE — không gọi backend) ================= */
+  let recognition = null;
+  let listening = false;
+  function toggleVoice(targetInputId) {
+    var wsr = (window.SpeechRecognition || window.webkitSpeechRecognition);
+    if (!wsr) { setStatus('Trình duyệt không hỗ trợ nhận dạng giọng nói — gõ tay.', true); return; }
+    if (listening) { if (recognition) recognition.stop(); listening = false; setStatus('Đã dừng nghe.'); return; }
+    try {
+      recognition = new wsr();
+      recognition.lang = 'vi-VN';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      var inp = $(targetInputId);
+      recognition.onstart = function () { listening = true; setStatus('🎙 Đang nghe... nói ý tưởng, xong bấm lại để dừng.'); };
+      recognition.onresult = function (e) {
+        var t = '';
+        for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+        if (inp) {
+          inp.value = t.trim();
+          var ev = document.createEvent('Event'); ev.initEvent('change', true, true); inp.dispatchEvent(ev);
+        }
+        setStatus('✅ Đã chuyển giọng nói thành text (FREE, browser local). Bấm OPTIMIZE hoặc chỉnh sửa.');
+      };
+      recognition.onerror = function () { listening = false; setStatus('Lỗi nhận dạng giọng nói: ' + (e && e.error || 'unknown'), true); };
+      recognition.onend = function () { listening = false; };
+      recognition.start();
+    } catch (err) { setStatus('Không khởi động được mic: ' + err.message, true); }
+  }
+
+  /* ================= QUALITY PRESETS ================= */
+  function suggestedQuality(operation, imageType, sourceHas) {
+    if (imageType && /hero|banner|important|social/i.test(imageType)) return 'HIGH';
+    if ((operation === 'generate' && !sourceHas) || /draft|test/i.test(operation)) return 'LOW';
+    return 'MEDIUM'; // product/e-commerce mặc định medium
+  }
+
+  /* ================= AI HISTORY (localStorage + trong-memory, FREE đọc) ================= */
+  const HISTORY_KEY = 'psh_media_center_history';
+  function loadHistory() {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function saveHistory(arr) { try { localStorage.setItem(HISTORY_KEY, JSON.stringify(arr.slice(0, 100))); } catch (e) {} }
+  function recordHistory(rec) {
+    var arr = loadHistory();
+    arr.unshift(Object.assign({ ts: Date.now() }, rec));
+    saveHistory(arr);
+  }
+  function renderHistory() {
+    var el = $('meHistoryList');
+    if (!el) return;
+    var arr = loadHistory();
+    if (!arr.length) { el.innerHTML = '<p class="mc-note">Chưa có hoạt động AI nào.</p>'; return; }
+    el.innerHTML = arr.map(function (h, i) {
+      var time = new Date(h.ts).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      var statusColor = h.status === 'COMPLETED' ? '#059669' : (h.status === 'FAILED' ? '#b3261e' : '#c2410c');
+      var cost = h.actualCost ? (h.actualCost + ' USD') : 'N/A';
+      return '<div class="me-hist" style="border:1px solid #e6e8ec;border-radius:8px;padding:.5rem .7rem;margin-bottom:.4rem;display:flex;gap:.6rem;align-items:center;flex-wrap:wrap">' +
+        '<div style="flex:1;min-width:180px"><strong>' + esc(h.sourceAsset || '—') + '</strong><br>' +
+        '<span class="small-muted">' + esc(h.operation || '') + ' · ' + esc(h.model || '') + ' · ' + esc(h.quality || '') + ' · ' + time + '</span></div>' +
+        '<span style="color:' + statusColor + ';font-weight:700">' + esc(h.status || '') + '</span>' +
+        '<span class="small-muted">Cost: ' + cost + '</span>' +
+        '<span>' + (h.outputAsset ? '<button class="mc-btn ghost" data-use="/me-hist-use-\'' + i + '\'">USE</button>' : '') +
+        '<button class="mc-btn ghost" data-discard-index="' + i + '">DISCARD</button></span>' +
+        '<p class="small-muted" style="width:100%;margin:0">' + esc(h.error || '') + '</p></div>';
+    }).join('');
+    el.querySelectorAll('[data-discard-index]').forEach(function (b) {
+      b.addEventListener('click', function () { discardHistory(parseInt(b.getAttribute('data-discard-index'), 10)); });
+    });
+    el.querySelectorAll('[data-use]').forEach(function (b) {
+      b.addEventListener('click', function () { var hRec = loadHistory()[parseInt(b.getAttribute('data-use').replace(/\D/g, ''), 10)]; if (hRec && hRec.outputAsset) { setPreview(hRec.outputAsset, 'Kết quả đã dùng trước: ' + hRec.operation); setStatus('Đã nạp ảnh từ History — Approve để lưu.'); activeDraft = { url: hRec.outputAsset, op: hRec.operation, source: hRec.sourceAsset }; $('meApproveBtn') && ($('meApproveBtn').disabled = false); $('meDiscardBtn') && ($('meDiscardBtn').disabled = false); } });
+    });
+  }
+  function discardHistory(idx) {
+    var arr = loadHistory();
+    if (arr[idx]) { arr[idx].status = 'DISCARDED'; arr[idx].error = 'Discarded by user'; saveHistory(arr); renderHistory(); setStatus('Đã đánh dấu DISCARDED — không gọi AI.'); }
+  }
+
   function init() {
     // Bắt sự kiện upload file
     var up = $('meFileInput');
@@ -423,6 +555,39 @@ const MediaEdit = (function () {
 
     var gen = $('meGenerateBtn'); if (gen) gen.addEventListener('click', generateNew);
 
+    // Voice + optimize
+    var mic = $('meMicBtn'); if (mic) mic.addEventListener('click', function () { toggleVoice('meGenPrompt'); });
+    var opt = $('meOptimizeBtn'); if (opt) opt.addEventListener('click', function () {
+      var raw = ($('meGenPrompt') && $('meGenPrompt').value) || '';
+      if (!raw.trim()) { setStatus('Nhập ý tưởng hoặc nói trước khi Optimize.', true); return; }
+      var out = optimizePrompt(raw);
+      if ($('meGenPrompt')) $('meGenPrompt').value = out;
+      var pv = $('mePromptPreview');
+      if (pv) { pv.style.display = 'block'; pv.textContent = 'OPTIMIZED PROMPT (FREE — rule-based, không gọi AI):\n' + out; }
+      setStatus('✅ Prompt đã tối ưu (FREE). Bạn có thể sửa trước khi bấm EDIT/GENERATE.');
+    });
+
+    // Quality override
+    var qs = document.querySelectorAll('.me-q');
+    var setQ = function (q) {
+      qs.forEach(function (x) { x.classList.remove('active'); });
+      qs.forEach(function (x) { if (x.getAttribute('data-q') === q) x.classList.add('active'); });
+      var hidden = $('meQuality'); if (hidden) hidden.value = q;
+    };
+    qs.forEach(function (b) {
+      b.addEventListener('click', function () { setQ(b.getAttribute('data-q')); });
+    });
+    // PART 2.1 — tự chọn quality theo loại ảnh (product=MEDIUM, hero/banner=HIGH, draft=test=LOW)
+    var genType = $('meGenType');
+    var syncQuality = function () {
+      var t = (genType && genType.value) || '';
+      var q = suggestedQuality('generate', t, !!activeSource);
+      setQ(q);
+      if ($('meQualityHint')) $('meQualityHint').textContent = 'Tự đề xuất: ' + q + ' (Override được). Product→MEDIUM · Hero/Banner→HIGH · Draft/Test→LOW.';
+    };
+    if (genType) genType.addEventListener('change', syncQuality);
+    syncQuality();
+
     // FREE ops — canvas cục bộ, KHÔNG gọi OpenAI
     var bRot = $('meFreeRotate'); if (bRot) bRot.addEventListener('click', freeRotate);
     var bRes = $('meFreeResize'); if (bRes) bRes.addEventListener('click', freeResize);
@@ -433,6 +598,7 @@ const MediaEdit = (function () {
 
     loadLibrary();
     loadGenProducts();
+    renderHistory(); // hiển thị AI History dựa trên localStorage (xem KHÔNG gọi AI)
   }
 
   return { init: init, loadLibrary: loadLibrary, runGeneration: generateNew };

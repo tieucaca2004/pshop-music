@@ -142,11 +142,32 @@ body{font-family:Inter,system-ui,sans-serif;color:#13161c;background:#f5f6f8;hei
       <div id="meTabGenPanel" style="display:none">
         <div class="mc-field"><label>LOẠI</label><select id="meGenType"><option>Product Hero Image</option><option>Product Background Image</option><option>Facebook Post Image</option><option>Banner Image</option><option>Blog Cover Image</option></select></div>
         <div class="mc-field"><label>SẢN PHẨM (context)</label><select id="meGenProduct"><option value="">(không chọn)</option></select></div>
-        <div class="mc-field"><label>PROMPT TỪ-SCRATCH</label><input type="text" id="meGenPrompt" placeholder="VD: tai nghe trên nền studio sạch"></div>
+        <div class="mc-field"><label>PROMPT / Ý TƯỞNG <span class="me-cost">FREE</span> (gõ hoặc 🎙 nói)</label>
+          <div style="display:flex;gap:.4rem">
+            <input type="text" id="meGenPrompt" placeholder="VD: Lấy USB Lexar này, bỏ nền bàn, cho nền trắng, ánh sáng studio đẹp, giữ nguyên sản phẩm" style="flex:1">
+            <button type="button" class="mc-btn ghost" id="meMicBtn" title="Nhận dạng giọng nói (browser, FREE)">🎙</button>
+          </div>
+        </div>
+        <button type="button" class="mc-btn ghost" id="meOptimizeBtn">✨ OPTIMIZE PROMPT <span class="me-cost">FREE</span></button>
+        <pre id="mePromptPreview" class="mc-note" style="display:none;white-space:pre-wrap;background:#f5f6f8;padding:.6rem;border-radius:6px"></pre>
+        <div class="mc-field"><label>QUALITY</label>
+          <input type="hidden" id="meQuality" value="MEDIUM">
+          <div style="display:flex;gap:.4rem">
+            <button type="button" class="mc-btn ghost me-q" data-q="LOW">LOW</button>
+            <button type="button" class="mc-btn ghost me-q active" data-q="MEDIUM">MEDIUM</button>
+            <button type="button" class="mc-btn ghost me-q" data-q="HIGH">HIGH</button>
+          </div>
+          <p class="mc-note" id="meQualityHint"></p>
+        </div>
         <div class="mc-field"><label>KÍCH THƯỚC</label><select id="meGenSize"><option value="1:1">1:1</option><option value="16:9">16:9</option></select></div>
-        <button type="button" class="mc-btn" id="meGenerateBtn">✨ GENERATE NEW IMAGE</button>
+        <button type="button" class="mc-btn" id="meGenerateBtn">✨ GENERATE NEW IMAGE <span class="me-cost">AI GENERATE · Có phí API</span></button>
         <p class="mc-note" style="color:#c2410c">⚠ Generate New creates a new image and consumes an image generation request. Chỉ bấm khi cần ảnh hoàn toàn mới.</p>
       </div>
+
+      <hr style="margin:1.4rem 0;border:none;border-top:1px solid #e6e8ec">
+      <h3 style="margin-top:.4rem">🗂 AI HISTORY <span class="me-cost" style="background:#eef2ff;color:#4F46E5;border-color:#c7d2fe">xem miễn phí</span></h3>
+      <p class="sub">Mỗi thao tác AI (EDIT/GENERATE/REMOVE_BACKGROUND) được ghi lại: source, operation, provider, model, quality, timestamp, status, cost(nếu có). Xem History KHÔNG gọi AI.</p>
+      <div id="meHistoryList"></div>
 
       <hr style="margin:1.4rem 0;border:none;border-top:1px solid #e6e8ec">
       <h3 style="margin-top:.4rem">📦 Generate Studio <span class="mc-note" style="font-weight:400">(từ-scratch, qua engine AdminImageAI)</span></h3>
