@@ -96,33 +96,46 @@ body{font-family:Inter,system-ui,sans-serif;color:#13161c;background:#f5f6f8;hei
       <!-- Tab 2: EDIT -->
       <div id="meTabEditPanel" style="display:none">
         <div class="mc-field"><label>NGUỒN</label><span class="me-srcname" id="meSourceName">(chưa chọn)</span></div>
-        <div class="mc-field"><label>THAO TÁC EDIT — <span class="me-cost">AI Edit</span> (giữ nguyên sản phẩm)</label>
-          <select id="mePreset" class="mc-pe">
-            <option value="remove-background">Remove Background</option>
-            <option value="replace-background" selected>Replace Background (trắng)</option>
-            <option value="clean">Clean Product Photo</option>
-            <option value="lighting">Improve Lighting</option>
-            <option value="shadow">Add Soft Shadow</option>
-            <option value="hero">Product Hero</option>
-            <option value="lifestyle">Lifestyle Scene</option>
-            <option value="social">Social Ad</option>
-            <option value="custom">Custom Edit</option>
+        <div class="mc-field"><label>THAO TÁC EDIT <span class="me-cost">AI EDIT · Có phí API</span></label>
+          <select id="mePreset">
+            <option value="remove-background">Remove Background — AI EDIT</option>
+            <option value="replace-background" selected>Replace Background (trắng) — AI EDIT</option>
+            <option value="clean">Clean Product Photo — AI EDIT</option>
+            <option value="lighting">Improve Lighting — AI EDIT</option>
+            <option value="shadow">Add Soft Shadow — AI EDIT</option>
+            <option value="hero">Product Hero — AI EDIT</option>
+            <option value="lifestyle">Lifestyle Scene — AI EDIT</option>
+            <option value="social">Social Ad — AI EDIT</option>
+            <option value="custom">Custom Edit — AI EDIT</option>
           </select>
         </div>
         <div class="mc-field" id="meCustomWrap" style="display:none"><label>PROMPT CHỈNH SỬA (giữ sản phẩm)</label><input type="text" id="meCustomPrompt" placeholder="VD: nền gradient xanh, thêm phản chiếu nhẹ"></div>
         <div class="mc-field"><label>KÍCH THƯỚC</label><select id="meEditSize"><option value="1:1">1:1 (vuông)</option><option value="16:9">16:9 (ngang)</option></select></div>
-        <button type="button" class="mc-btn" id="meEditBtn" disabled>🖌 EDIT IMAGE</button>
-        <button type="button" class="mc-btn green" id="meRemoveBgBtn" disabled>✂ Remove Background</button>
+        <button type="button" class="mc-btn" id="meEditBtn" disabled>🖌 EDIT IMAGE <span class="me-cost">AI EDIT · Có phí API</span></button>
+        <button type="button" class="mc-btn green" id="meRemoveBgBtn" disabled>✂ Remove Background <span class="me-cost">AI EDIT · Có phí API</span></button>
+
+        <div class="mc-field" style="margin-top:1rem"><label>THAO TÁC FREE — KHÔNG gọi AI (xử lý cục bộ canvas)</label>
+          <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+            <button type="button" class="mc-btn ghost" id="meFreeRotate">↻ Rotate 90° <span class="me-cost">FREE</span></button>
+            <button type="button" class="mc-btn ghost" id="meFreeResize">↕ Resize 1/2 <span class="me-cost">FREE</span></button>
+            <button type="button" class="mc-btn ghost" id="meFreeCrop">✂ Crop vuông <span class="me-cost">FREE</span></button>
+            <button type="button" class="mc-btn ghost" id="meFreeCompress">⬇ Compress <span class="me-cost">FREE</span></button>
+            <button type="button" class="mc-btn ghost" id="meFreeConvertPng">🔁 Convert PNG <span class="me-cost">FREE</span></button>
+            <button type="button" class="mc-btn ghost" id="meFreeConvertWebp">🔁 Convert WebP <span class="me-cost">FREE</span></button>
+          </div>
+          <p class="mc-note">Các thao tác này chạy hoàn toàn trên máy bạn (canvas), KHÔNG gọi OpenAI — miễn phí.</p>
+        </div>
+
         <div id="meStatus" class="mc-status" style="display:none"></div>
         <div class="me-preview-wrap">
           <div class="me-preview-box"><img id="mePreviewImg" style="display:none" alt="preview"></div>
         </div>
         <p class="mc-note" id="mePreviewInfo"></p>
         <div style="display:flex;gap:.5rem;margin-top:.6rem">
-          <button type="button" class="mc-btn green" id="meApproveBtn" disabled>✅ Approve &amp; Save</button>
-          <button type="button" class="mc-btn ghost" id="meDiscardBtn" disabled>↩️ Edit Again / Discard</button>
+          <button type="button" class="mc-btn green" id="meApproveBtn" disabled>✅ Approve &amp; Save <span class="me-cost">FREE</span></button>
+          <button type="button" class="mc-btn ghost" id="meDiscardBtn" disabled>↩️ Edit Again / Discard <span class="me-cost">FREE</span></button>
         </div>
-        <p class="mc-note">Approve &amp; Save chỉ ghi vào Media Library — KHÔNG ghi đè ảnh gốc. Luôn SOURCE → DRAFT → APPROVE.</p>
+        <p class="mc-note">Approve &amp; Save chỉ ghi vào Media Library — KHÔNG ghi đè ảnh gốc, KHÔNG gọi AI. Luôn SOURCE → DRAFT → APPROVE.</p>
       </div>
 
       <!-- Tab 3: GENERATE NEW (action riêng, cảnh báo cost) -->

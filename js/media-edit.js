@@ -22,6 +22,11 @@ const MediaEdit = (function () {
 
   const OPENAI_PROXY = 'https://us-central1-pshop-music.cloudfunctions.net/openaiProxy';
 
+  // Cost transparency (spec Founder 2026-08-12): đừng gọi AI nếu action là FREE.
+  const FREE_LABEL = 'FREE';
+  const AI_EDIT_LABEL = 'AI EDIT · Có phí API';
+  const AI_GEN_LABEL = 'AI GENERATE · Có phí API';
+
   // Preset EDIT: prompt giữ sản phẩm, chỉ xử lý phông/ánh sáng/khung cảnh.
   const PRESETS = {
     'remove-background': {
@@ -73,7 +78,10 @@ const MediaEdit = (function () {
   };
 
   function $(id) { return document.getElementById(id); }
-  function esc(s) { return String(s || '').replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function escapeHtml(str) {
+    return String(str || '').replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
+  }
+  function esc(s) { return escapeHtml(s); }
 
   function getToken() {
     // Lấy Firebase ID token hiện tại từ auth-context (đã init trong page)
@@ -306,6 +314,83 @@ const MediaEdit = (function () {
     }
   }
 
+  /* ================= FREE operations (canvas, KHÔNG gọi OpenAI) ================= */
+  // Tất cả đều xử lý ảnh nguồn cục bộ, tạo DRAFT mới (dataURI) — không gọi API, miễn phí.
+  function loadImageEl(src) {
+    return new Promise(function (resolve, reject) {
+      var im = new Image();
+      im.onload = function () { resolve(im); };
+      im.onerror = function () { reject(new Error('Không đọc được ảnh nguồn.')); };
+      im.crossOrigin = 'anonymous';
+      im.src = src;
+    });
+  }
+
+  function canvasToDraft(canvas, mime, quality) {
+    var dataUrl = canvas.toDataURL(mime || 'image/png', quality == null ? 0.9 : quality);
+    activeDraft = { url: dataUrl, op: 'FREE', source: (activeSource && activeSource.name) || 'source', free: true };
+    setPreview(dataUrl, 'DRAFT (FREE — không gọi AI)');
+    setStatus('✅ Thao tác FREE đã xong (canvas cục bộ, KHÔNG gọi OpenAI). Approve để lưu.');
+    if ($('meApproveBtn')) $('meApproveBtn').disabled = false;
+    if ($('meDiscardBtn')) $('meDiscardBtn').disabled = false;
+    return dataUrl;
+  }
+
+  function freeRotate() {
+    if (!activeSource) { setStatus('Chọn ảnh nguồn trước — FREE.', true); return; }
+    return loadImageEl(activeSource.url).then(function (im) {
+      var c = document.createElement('canvas');
+      c.width = im.naturalHeight; c.height = im.naturalWidth;
+      var ctx = c.getContext('2d');
+      ctx.translate(c.width / 2, c.height / 2); ctx.rotate(Math.PI / 2); ctx.drawImage(im, -im.naturalWidth / 2, -im.naturalHeight / 2);
+      canvasToDraft(c, 'image/png');
+    }).catch(function (e) { setStatus('FREE rotate lỗi: ' + e.message, true); });
+  }
+
+  function freeResize() {
+    if (!activeSource) { setStatus('Chọn ảnh nguồn trước — FREE.', true); return; }
+    return loadImageEl(activeSource.url).then(function (im) {
+      var c = document.createElement('canvas');
+      c.width = Math.round(im.naturalWidth / 2); c.height = Math.round(im.naturalHeight / 2);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      canvasToDraft(c, 'image/png');
+    }).catch(function (e) { setStatus('FREE resize lỗi: ' + e.message, true); });
+  }
+
+  function freeCropSquare() {
+    if (!activeSource) { setStatus('Chọn ảnh nguồn trước — FREE.', true); return; }
+    return loadImageEl(activeSource.url).then(function (im) {
+      var s = Math.min(im.naturalWidth, im.naturalHeight);
+      var c = document.createElement('canvas');
+      c.width = s; c.height = s;
+      c.getContext('2d').drawImage(im, (im.naturalWidth - s) / 2, (im.naturalHeight - s) / 2, s, s, 0, 0, s, s);
+      canvasToDraft(c, 'image/png');
+    }).catch(function (e) { setStatus('FREE crop lỗi: ' + e.message, true); });
+  }
+
+  function freeCompress() {
+    if (!activeSource) { setStatus('Chọn ảnh nguồn trước — FREE.', true); return; }
+    return loadImageEl(activeSource.url).then(function (im) {
+      var max = 1000;
+      var w = im.naturalWidth, h = im.naturalHeight;
+      if (Math.max(w, h) > max) { var k = max / Math.max(w, h); w = Math.round(w * k); h = Math.round(h * k); }
+      var c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(im, 0, 0, w, h);
+      canvasToDraft(c, 'image/jpeg', 0.7);
+    }).catch(function (e) { setStatus('FREE compress lỗi: ' + e.message, true); });
+  }
+
+  function freeConvert(mime) {
+    if (!activeSource) { setStatus('Chọn ảnh nguồn trước — FREE.', true); return; }
+    return loadImageEl(activeSource.url).then(function (im) {
+      var c = document.createElement('canvas');
+      c.width = im.naturalWidth; c.height = im.naturalHeight;
+      c.getContext('2d').drawImage(im, 0, 0);
+      canvasToDraft(c, mime);
+    }).catch(function (e) { setStatus('FREE convert lỗi: ' + e.message, true); });
+  }
+
   function init() {
     // Bắt sự kiện upload file
     var up = $('meFileInput');
@@ -337,6 +422,14 @@ const MediaEdit = (function () {
     var dc = $('meDiscardBtn'); if (dc) dc.addEventListener('click', discardDraft);
 
     var gen = $('meGenerateBtn'); if (gen) gen.addEventListener('click', generateNew);
+
+    // FREE ops — canvas cục bộ, KHÔNG gọi OpenAI
+    var bRot = $('meFreeRotate'); if (bRot) bRot.addEventListener('click', freeRotate);
+    var bRes = $('meFreeResize'); if (bRes) bRes.addEventListener('click', freeResize);
+    var bCrop = $('meFreeCrop'); if (bCrop) bCrop.addEventListener('click', freeCropSquare);
+    var bCmp = $('meFreeCompress'); if (bCmp) bCmp.addEventListener('click', freeCompress);
+    var bPng = $('meFreeConvertPng'); if (bPng) bPng.addEventListener('click', function () { freeConvert('image/png'); });
+    var bWebp = $('meFreeConvertWebp'); if (bWebp) bWebp.addEventListener('click', function () { freeConvert('image/webp'); });
 
     loadLibrary();
     loadGenProducts();
