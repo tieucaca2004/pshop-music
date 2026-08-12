@@ -43,6 +43,16 @@
   status = 200
 
 [[redirects]]
+  from = "/psh/platform/*"
+  to = "/psh/platform/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/psh/platform"
+  to = "/psh/platform/index.html"
+  status = 200
+
+[[redirects]]
   from = "/psh/*"
   to = "/psh/index.html"
   status = 200
