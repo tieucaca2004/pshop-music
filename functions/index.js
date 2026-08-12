@@ -250,11 +250,10 @@ exports.openaiProxy = onRequest({ secrets: [OPENAI_API_KEY], cors: true }, async
           Authorization: 'Bearer ' + OPENAI_API_KEY.value()
         },
         body: JSON.stringify({
-          model: 'dall-e-3',
+          model: 'gpt-image-2',
           prompt,
           size: openAiSize,
-          n: 1,
-          response_format: 'b64_json'
+          n: 1
         })
       });
       const data = await r.json();

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PSH Media Center</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="/css/admin.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;color:#13161c;background:#f5f6f8;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+.mc-top{display:flex;align-items:center;gap:1rem;padding:.7rem 1.2rem;background:#fff;border-bottom:1px solid #e6e8ec;flex-shrink:0}
+.mc-top .back{color:#4F46E5;text-decoration:none;font-size:.8rem;font-weight:600}
+.mc-top .title{font-weight:700;font-size:1rem}
+.mc-body{flex:1;display:flex;overflow:hidden}
+.mc-left{width:180px;background:#fff;border-right:1px solid #e6e8ec;padding:.7rem .5rem;flex-shrink:0;overflow-y:auto}
+.mc-type{display:block;width:100%;text-align:left;padding:.55rem .7rem;border-radius:6px;border:none;background:transparent;font-size:.82rem;font-weight:500;color:#4b5563;cursor:pointer;margin-bottom:2px}
+.mc-type:hover{background:#f5f6f8}
+.mc-type.active{background:#eef2ff;color:#4F46E5;font-weight:600}
+.mc-main{flex:1;display:flex;flex-direction:column;overflow:auto}
+.mc-panel{background:#fff;border:1px solid #e6e8ec;border-radius:12px;padding:1.2rem 1.4rem;margin:1rem}
+.mc-panel h3{font-size:.9rem;font-weight:700;color:#13161c;margin-bottom:.2rem}
+.mc-panel .sub{font-size:.74rem;color:#6b7280;margin-bottom:1rem}
+.mc-field{margin-bottom:.8rem}
+.mc-field label{font-size:.72rem;font-weight:600;color:#4b5563;display:block;margin-bottom:.25rem}
+.mc-field select,.mc-field input,.mc-field textarea{width:100%;padding:.5rem .6rem;border:1px solid #d1d5db;border-radius:6px;font-size:.82rem;font-family:inherit}
+.mc-field textarea{min-height:64px;resize:vertical}
+.mc-btn{padding:.6rem 1.2rem;border:none;border-radius:7px;font-size:.85rem;font-weight:600;cursor:pointer;background:linear-gradient(135deg,#4F46E5,#8b5cf6);color:#fff}
+.mc-btn:disabled{opacity:.5;cursor:not-allowed}
+.mc-btn.green{background:#059669}
+.mc-btn.ghost{background:#fff;color:#4F46E5;border:1px solid #4F46E5}
+.mc-note{font-size:.72rem;color:#9ca3af;margin-top:.5rem;line-height:1.4}
+.mc-status{margin-top:.7rem;padding:.55rem .7rem;border-radius:6px;background:#f5f6f8;font-size:.8rem;color:#374151}
+#imgDraftsGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;margin-top:1rem}
+.mc-lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.8rem;margin-top:.8rem}
+.mc-lib-item{border:1px solid #e6e8ec;border-radius:8px;overflow:hidden;background:#fafafa}
+.mc-lib-item img{width:100%;height:100px;object-fit:cover;display:block}
+.mc-lib-item .n{font-size:.64rem;padding:.3rem .4rem;color:#4b5563;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+</style>
+</head>
+<body>
+
+<div class="mc-top">
+  <a class="back" href="/psh/platform">← PSH Platform</a>
+  <span class="title">🎬 Media Center</span>
+</div>
+
+<div class="mc-body">
+  <div class="mc-left">
+    <button class="mc-type active" data-type="image">🖼️ Image</button>
+    <button class="mc-type" data-type="video">🎬 Video</button>
+    <button class="mc-type" data-type="voice">🎙️ Voice</button>
+    <button class="mc-type" data-type="content">📝 Content</button>
+    <button class="mc-type" data-type="library">🗂️ Library</button>
+  </div>
+
+  <div class="mc-main">
+    <!-- IMAGE STUDIO (reuse AdminImageAI engine DOM ids) -->
+    <div id="mcPanelImage" class="mc-panel">
+      <h3>Image Studio</h3>
+      <p class="sub">Chọn sản phẩm thật (giữ nguyên logo/model/màu) hoặc prompt → Generate → Preview → Save. Ảnh dừng ở Nháp, không tự dùng vào đâu cho tới khi bạn chọn.</p>
+      <div class="mc-field">
+        <label>LOẠI ẢNH</label>
+        <select id="imgType">
+          <option value="Product Hero Image">Product Hero Image</option>
+          <option value="Product Background Image">Product Background Image</option>
+          <option value="Facebook Post Image">Facebook Post Image</option>
+          <option value="Banner Image">Banner Image</option>
+          <option value="Blog Cover Image">Blog Cover Image</option>
+        </select>
+      </div>
+      <div class="mc-field">
+        <label>KÍCH THƯỚC</label>
+        <select id="imgSize"><option value="1:1">1:1 (vuông)</option><option value="16:9">16:9 (ngang)</option></select>
+      </div>
+      <div class="mc-field">
+        <label>SẢN PHẨM (nguồn thật)</label>
+        <select id="imgProduct"><option value="">(không chọn)</option></select>
+      </div>
+      <div class="mc-field">
+        <label>HOẶC PROMPT TỰ DO</label>
+        <input type="text" id="imgCustomPrompt" placeholder="VD: ảnh tai nghe trên nền studio sạch">
+      </div>
+      <input type="hidden" id="imgPromotion" value="">
+      <input type="hidden" id="imgBlogPost" value="">
+      <button type="button" class="mc-btn" id="imgGenerateBtn">✨ TẠO ẢNH</button>
+      <div id="imgStatusBox" style="display:none;margin-top:.8rem"></div>
+      <h3 style="margin-top:1.6rem">ẢNH ĐÃ TẠO (<span id="imgDraftTotal">0</span>)</h3>
+      <div id="imgDraftsGrid"></div>
+    </div>
+
+    <!-- VIDEO -->
+    <div id="mcPanelVideo" class="mc-panel" style="display:none">
+      <h3>Video Studio</h3>
+      <p class="sub">Video backend đang ở dạng STUB (chưa tích hợp provider thật). Không tạo video giả.</p>
+      <p class="mc-note">Blocker: chưa có video provider (route /v1/ai/video/generate trả 501). Cần tích hợp video provider trước khi dùng.</p>
+    </div>
+
+    <!-- VOICE -->
+    <div id="mcPanelVoice" class="mc-panel" style="display:none">
+      <h3>Voice Studio</h3>
+      <p class="sub">Voice provider chưa được tích hợp. Không tạo fake audio.</p>
+      <p class="mc-note">Blocker: chưa có voice provider.</p>
+    </div>
+
+    <!-- CONTENT -->
+    <div id="mcPanelContent" class="mc-panel" style="display:none">
+      <h3>Content Studio</h3>
+      <p class="sub">Tạo nội dung AI thật từ sản phẩm (blog/product/SEO). Vào <a href="/admin/ai/index.html" style="color:#4F46E5">AI Assistant</a> để dùng toàn bộ module.</p>
+    </div>
+
+    <!-- LIBRARY -->
+    <div id="mcPanelLibrary" class="mc-panel" style="display:none">
+      <h3>Media Library</h3>
+      <p class="sub">Toàn bộ media đã tạo/lưu hiện quản lý tại <a href="/admin/media-library.html" style="color:#4F46E5">Media Library</a> (Firebase Storage workflow hiện có).</p>
+      <div class="mc-lib-grid" id="mcLibGrid"></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<script src="/js/firebase-config.js?v=97cf378"></script>
+<script src="/js/auth-context.js?v=97cf378"></script>
+<script src="/js/products-seed.js?v=97cf378"></script>
+<script src="/js/site-content-seed.js?v=97cf378"></script>
+<script src="/js/db.js?v=97cf378"></script>
+<script src="/js/cms-db.js?v=97cf378"></script>
+<script src="/js/admin-auth.js?v=97cf378"></script>
+<script src="/js/storage-upload.js?v=97cf378"></script>
+<script src="/js/media-library.js?v=97cf378"></script>
+
+<script src="/js/ai/provider-interface.js?v=97cf378"></script>
+<script src="/js/ai/provider-registry.js?v=97cf378"></script>
+<script src="/js/ai/ai-db.js?v=97cf378"></script>
+<script src="/js/ai/plugin-db.js?v=97cf378"></script>
+<script src="/js/ai/providers/openai.js?v=97cf378"></script>
+<script src="/js/ai/providers/claude.js?v=97cf378"></script>
+<script src="/js/ai/providers/gemini.js?v=97cf378"></script>
+<script src="/js/ai/providers/deepseek.js?v=97cf378"></script>
+<script src="/js/ai/data-provider.js?v=97cf378"></script>
+<script src="/js/ai/module-registry.js?v=97cf378"></script>
+<script src="/js/ai/modules-core.js?v=97cf378"></script>
+<script src="/js/ai/modules/blog-writer.js?v=97cf378"></script>
+<script src="/js/ai/modules/product-description-writer.js?v=97cf378"></script>
+<script src="/js/ai/modules/seo-generator.js?v=97cf378"></script>
+<script src="/js/ai/modules/faq-generator.js?v=97cf378"></script>
+<script src="/js/ai/modules/facebook-post-generator.js?v=97cf378"></script>
+<script src="/js/ai/modules/image-prompt-generator.js?v=97cf378"></script>
+<script src="/js/ai/modules/image-generator.js?v=97cf378"></script>
+<script src="/js/ai/modules/slider-generator.js?v=97cf378"></script>
+<script src="/js/ai/modules/banner-generator.js?v=97cf378"></script>
+<script src="/js/ai/job-queue.js?v=97cf378"></script>
+<script src="/js/ai/plugin-manager.js?v=97cf378"></script>
+<script src="/js/ai/permission-service.js?v=97cf378"></script>
+<script src="/js/admin-ai.js?v=97cf378"></script>
+<script src="/js/admin-image-ai.js?v=97cf378"></script>
+
+<script>
+(function () {
+  'use strict';
+  // Auth guard — chỉ admin/editor/super_admin
+  AuthContext.init().then(function () {
+    var user = AuthContext.getCurrentUser();
+    var role = AuthContext.getCurrentRole();
+    if (!user) { window.location.href = '/psh-console/auth.html'; return; }
+    if (role !== 'admin' && role !== 'editor' && role !== 'super_admin') {
+      window.location.href = '/psh-console/auth.html?denied=1'; return;
+    }
+  });
+
+  var panels = { image: 'mcPanelImage', video: 'mcPanelVideo', voice: 'mcPanelVoice', content: 'mcPanelContent', library: 'mcPanelLibrary' };
+  function showPanel(type) {
+    Object.keys(panels).forEach(function (k) {
+      var el = document.getElementById(panels[k]);
+      if (el) el.style.display = (k === type) ? 'block' : 'none';
+    });
+    document.querySelectorAll('.mc-type').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-type') === type);
+    });
+  }
+
+  document.querySelectorAll('.mc-type').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var type = btn.getAttribute('data-type');
+      showPanel(type);
+      if (type === 'library') loadLibraryAssets();
+    });
+  });
+
+  // Image Studio — khởi động engine AdminImageAI thật (dùng DOM ids đúng)
+  // AdminImageAI.init() cần AdminAuth.init với page/title; bọc qua try để không vỡ nếu thiếu.
+  function startImageStudio() {
+    if (typeof AdminImageAI === 'undefined') { return; }
+    try {
+      if (typeof AdminImageAI.init === 'function') {
+        // init() gọi AdminAuth.init rồi load product/blog + drafts — tái dụng nguyên vẹn
+        AdminImageAI.init();
+      }
+    } catch (e) { console.error('AdminImageAI.init err', e); }
+    // Fallback: nếu init không load product select, tự load
+    setTimeout(function () {
+      var sel = document.getElementById('imgProduct');
+      if (sel && sel.options.length <= 1 && typeof DB !== 'undefined') {
+        DB.getAll().then(function (list) {
+          sel.innerHTML = '<option value="">(không chọn)</option>' + list.map(function (p) {
+            return '<option value="' + p.id + '">' + (p.name || p.id) + '</option>';
+          }).join('');
+        }).catch(function () {});
+      }
+    }, 800);
+  }
+
+  function loadLibraryAssets() {
+    var grid = document.getElementById('mcLibGrid');
+    if (!grid) return;
+    if (typeof MediaLibrary === 'undefined') { grid.innerHTML = '<p class="mc-note">Media Library engine chưa sẵn sàng.</p>'; return; }
+    grid.innerHTML = '<p class="mc-note">Đang quét Media Library...</p>';
+    try {
+      MediaLibrary.listFiles().then(function (items) {
+        var list = (items || []).slice(0, 40);
+        if (!list.length) { grid.innerHTML = '<p class="mc-note">Chưa có media.</p>'; return; }
+        grid.innerHTML = list.map(function (it) {
+          var url = it.url || it.downloadURL || '';
+          return '<div class="mc-lib-item"><img src="' + url + '" onerror="this.style.display=\'none\'"><div class="n">' + (it.name || '') + '</div></div>';
+        }).join('');
+      }).catch(function (e) {
+        grid.innerHTML = '<p class="mc-note">Tải media lỗi: ' + e.message + '</p>';
+      });
+    } catch (e) {
+      grid.innerHTML = '<p class="mc-note">Không quét được: ' + e.message + '</p>';
+    }
+  }
+
+  showPanel('image');
+  startImageStudio();
+})();
+</script>
+</body>
+</html>
