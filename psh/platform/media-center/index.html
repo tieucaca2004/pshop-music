@@ -36,6 +36,20 @@ body{font-family:Inter,system-ui,sans-serif;color:#13161c;background:#f5f6f8;hei
 .mc-status{margin-top:.7rem;padding:.55rem .7rem;border-radius:6px;background:#f5f6f8;font-size:.8rem;color:#374151}
 #imgDraftsGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;margin-top:1rem}
 .mc-lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.8rem;margin-top:.8rem}
+.me-lib-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:.6rem;margin-top:.6rem}
+.me-lib-item{border:1px solid #e6e8ec;border-radius:8px;overflow:hidden;background:#fafafa;cursor:pointer}
+.me-lib-item:hover{border-color:#4F46E5}
+.me-lib-item img{width:100%;height:80px;object-fit:cover;display:block}
+.me-lib-item .n{font-size:.6rem;padding:.25rem .3rem;color:#4b5563;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.me-presets{display:flex;flex-wrap:wrap;gap:.4rem;margin:.4rem 0}
+.me-chip{border:1px solid #d1d5db;background:#fff;color:#374151;border-radius:999px;padding:.35rem .8rem;font-size:.74rem;cursor:pointer;font-weight:500}
+.me-chip:hover{border-color:#4F46E5;color:#4F46E5}
+.me-chip.active{background:#eef2ff;border-color:#4F46E5;color:#4F46E5}
+.me-cost{display:inline-block;font-size:.68rem;font-weight:700;background:#fff7ed;color:#c2410c;border:1px solid #fdba74;border-radius:4px;padding:.15rem .45rem;margin-left:.4rem}
+.me-preview-wrap{display:flex;gap:1rem;align-items:flex-start;margin-top:.8rem}
+.me-preview-box{flex:1;border:1px solid #e6e8ec;border-radius:10px;background:#fafafa;overflow:hidden;min-height:200px;display:flex;align-items:center;justify-content:center}
+.me-preview-box img{max-width:100%;max-height:340px;object-fit:contain}
+.me-srcname{font-size:.72rem;color:#374151;font-weight:600}
 .mc-lib-item{border:1px solid #e6e8ec;border-radius:8px;overflow:hidden;background:#fafafa}
 .mc-lib-item img{width:100%;height:100px;object-fit:cover;display:block}
 .mc-lib-item .n{font-size:.64rem;padding:.3rem .4rem;color:#4b5563;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -58,9 +72,71 @@ body{font-family:Inter,system-ui,sans-serif;color:#13161c;background:#f5f6f8;hei
   </div>
 
   <div class="mc-main">
-    <!-- IMAGE STUDIO (reuse AdminImageAI engine DOM ids) -->
+    <!-- IMAGE STUDIO — EDIT-FIRST (primary) -->
     <div id="mcPanelImage" class="mc-panel">
-      <h3>Image Studio</h3>
+      <h3>🖼️ Image Studio <span class="me-cost" id="meOpsLabel">AI Edit</span></h3>
+      <p class="sub">EDIT-FIRST: chọn ảnh nguồn thật → Edit (giữ nguyên sản phẩm) → Preview → Approve → Save. Không ghi đè ảnh gốc. Generate New là action riêng.</p>
+
+      <div style="display:flex;gap:.8rem;flex-wrap:wrap;margin-bottom:.6rem">
+        <button type="button" class="mc-btn ghost" id="meTabSource">① Nguồn ảnh</button>
+        <button type="button" class="mc-btn ghost" id="meTabEdit" disabled>② Chỉnh sửa</button>
+        <button type="button" class="mc-btn ghost" id="meTabGen">✦ Generate New</button>
+      </div>
+
+      <!-- Tab 1: SOURCE -->
+      <div id="meTabSourcePanel">
+        <div class="mc-field"><label>CHỌN ẢNH TỪ MEDIA LIBRARY</label><div class="me-lib-grid" id="meLibraryGrid"></div></div>
+        <div class="mc-field"><label>HOẶC UPLOAD ẢNH SẢN PHẨM THẬT</label><input type="file" id="meFileInput" accept="image/*"></div>
+        <div class="mc-field"><label>HOẶC NHẬP URL ẢNH THAM CHIẾU (INTERNET)</label>
+          <div style="display:flex;gap:.4rem"><input type="text" id="meSourceUrl" placeholder="https://.../anh-san-pham.jpg" style="flex:1"><button type="button" class="mc-btn ghost" id="meUrlBtn">Thêm</button></div>
+        </div>
+        <p class="mc-note">Media Center KHÔNG mặc định "vẽ lại sản phẩm". Ảnh nguồn là thật; AI chỉ xử lý phông/ánh sáng/khung cảnh, giữ nguyên model/logo/chữ/màu/chi tiết sản phẩm.</p>
+      </div>
+
+      <!-- Tab 2: EDIT -->
+      <div id="meTabEditPanel" style="display:none">
+        <div class="mc-field"><label>NGUỒN</label><span class="me-srcname" id="meSourceName">(chưa chọn)</span></div>
+        <div class="mc-field"><label>THAO TÁC EDIT — <span class="me-cost">AI Edit</span> (giữ nguyên sản phẩm)</label>
+          <select id="mePreset" class="mc-pe">
+            <option value="remove-background">Remove Background</option>
+            <option value="replace-background" selected>Replace Background (trắng)</option>
+            <option value="clean">Clean Product Photo</option>
+            <option value="lighting">Improve Lighting</option>
+            <option value="shadow">Add Soft Shadow</option>
+            <option value="hero">Product Hero</option>
+            <option value="lifestyle">Lifestyle Scene</option>
+            <option value="social">Social Ad</option>
+            <option value="custom">Custom Edit</option>
+          </select>
+        </div>
+        <div class="mc-field" id="meCustomWrap" style="display:none"><label>PROMPT CHỈNH SỬA (giữ sản phẩm)</label><input type="text" id="meCustomPrompt" placeholder="VD: nền gradient xanh, thêm phản chiếu nhẹ"></div>
+        <div class="mc-field"><label>KÍCH THƯỚC</label><select id="meEditSize"><option value="1:1">1:1 (vuông)</option><option value="16:9">16:9 (ngang)</option></select></div>
+        <button type="button" class="mc-btn" id="meEditBtn" disabled>🖌 EDIT IMAGE</button>
+        <button type="button" class="mc-btn green" id="meRemoveBgBtn" disabled>✂ Remove Background</button>
+        <div id="meStatus" class="mc-status" style="display:none"></div>
+        <div class="me-preview-wrap">
+          <div class="me-preview-box"><img id="mePreviewImg" style="display:none" alt="preview"></div>
+        </div>
+        <p class="mc-note" id="mePreviewInfo"></p>
+        <div style="display:flex;gap:.5rem;margin-top:.6rem">
+          <button type="button" class="mc-btn green" id="meApproveBtn" disabled>✅ Approve &amp; Save</button>
+          <button type="button" class="mc-btn ghost" id="meDiscardBtn" disabled>↩️ Edit Again / Discard</button>
+        </div>
+        <p class="mc-note">Approve &amp; Save chỉ ghi vào Media Library — KHÔNG ghi đè ảnh gốc. Luôn SOURCE → DRAFT → APPROVE.</p>
+      </div>
+
+      <!-- Tab 3: GENERATE NEW (action riêng, cảnh báo cost) -->
+      <div id="meTabGenPanel" style="display:none">
+        <div class="mc-field"><label>LOẠI</label><select id="meGenType"><option>Product Hero Image</option><option>Product Background Image</option><option>Facebook Post Image</option><option>Banner Image</option><option>Blog Cover Image</option></select></div>
+        <div class="mc-field"><label>SẢN PHẨM (context)</label><select id="meGenProduct"><option value="">(không chọn)</option></select></div>
+        <div class="mc-field"><label>PROMPT TỪ-SCRATCH</label><input type="text" id="meGenPrompt" placeholder="VD: tai nghe trên nền studio sạch"></div>
+        <div class="mc-field"><label>KÍCH THƯỚC</label><select id="meGenSize"><option value="1:1">1:1</option><option value="16:9">16:9</option></select></div>
+        <button type="button" class="mc-btn" id="meGenerateBtn">✨ GENERATE NEW IMAGE</button>
+        <p class="mc-note" style="color:#c2410c">⚠ Generate New creates a new image and consumes an image generation request. Chỉ bấm khi cần ảnh hoàn toàn mới.</p>
+      </div>
+
+      <hr style="margin:1.4rem 0;border:none;border-top:1px solid #e6e8ec">
+      <h3 style="margin-top:.4rem">📦 Generate Studio <span class="mc-note" style="font-weight:400">(từ-scratch, qua engine AdminImageAI)</span></h3>
       <p class="sub">Chọn sản phẩm thật (giữ nguyên logo/model/màu) hoặc prompt → Generate → Preview → Save. Ảnh dừng ở Nháp, không tự dùng vào đâu cho tới khi bạn chọn.</p>
       <div class="mc-field">
         <label>LOẠI ẢNH</label>
@@ -161,6 +237,7 @@ body{font-family:Inter,system-ui,sans-serif;color:#13161c;background:#f5f6f8;hei
 <script src="/js/ai/permission-service.js?v=97cf378"></script>
 <script src="/js/admin-ai.js?v=97cf378"></script>
 <script src="/js/admin-image-ai.js?v=97cf378"></script>
+<script src="/js/media-edit.js?v=97cf378"></script>
 
 <script>
 (function () {
@@ -240,6 +317,28 @@ body{font-family:Inter,system-ui,sans-serif;color:#13161c;background:#f5f6f8;hei
 
   showPanel('image');
   startImageStudio();
+
+  // EDIT-FIRST tabs wiring
+  var meTabs = [
+    { btn: 'meTabSource', panel: 'meTabSourcePanel' },
+    { btn: 'meTabEdit', panel: 'meTabEditPanel' },
+    { btn: 'meTabGen', panel: 'meTabGenPanel' }
+  ];
+  function switchMeTab(key) {
+    meTabs.forEach(function (t) {
+      var el = document.getElementById(t.btn);
+      var p = document.getElementById(t.panel);
+      if (el) el.disabled = (key !== t.btn);
+      if (p) p.style.display = (key === t.btn) ? 'block' : 'none';
+    });
+  }
+  meTabs.forEach(function (t) {
+    var el = document.getElementById(t.btn);
+    if (el) el.addEventListener('click', function () { switchMeTab(t.btn); });
+  });
+  if (typeof MediaEdit !== 'undefined' && typeof MediaEdit.init === 'function') {
+    try { MediaEdit.init(); } catch (e) { console.error('MediaEdit.init err', e); }
+  }
 })();
 </script>
 </body>

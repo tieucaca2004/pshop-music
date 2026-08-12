@@ -30,7 +30,7 @@ const facebookGraphApi = require('./facebook-graph-api');
 // in until now. Used ONLY inside "remove_background" below, per Founder
 // scope — does not touch editImageWithOpenAI() or "edit_image" (Product
 // Banner), which stay exactly as they were.
-const { validateImageUrlOrigin } = require('./shared/validation');
+const { validateImageUrlOrigin, validateContentType, resolveAndValidateIps } = require('./shared/validation');
 const { getApps } = require('firebase-admin/app');
 const { getDatabase, ServerValue } = require('firebase-admin/database');
 const { getAuth } = require('firebase-admin/auth');
@@ -136,7 +136,7 @@ async function editImageWithOpenAI({ inputUrl, prompt, size, transparentBackgrou
   const openAiSize = SIZE_MAP[size] || 'auto';
 
   const form = new FormData();
-  form.append('model', 'gpt-image-1');
+  form.append('model', 'gpt-image-2');
   form.append('image', new Blob([imgBuf], { type: mimeType }), 'source.png');
   form.append('prompt', prompt);
   form.append('size', openAiSize);
