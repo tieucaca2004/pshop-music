@@ -157,41 +157,85 @@ const AdminAuth = (function () {
 
   function init(options) {
     options = options || {};
-    return AuthContext.init().then(function() {
-      var user = AuthContext.getCurrentUser();
-      var role = AuthContext.getCurrentRole();
 
-      if (!user) {
-        location.href = '/admin/login.html';
-        return;
-      }
+    // Phân biệt AUTH_LOADING / AUTH_ERROR / AUTHENTICATED / UNAUTHORIZED:
+    // - Trong lúc Firebase Auth chưa READY hoặc gặp lỗi tạm thời (rate-limit,
+    //   network, getIdTokenResult fail): GIỮ NGUYÊN trang + hiển thị trạng thái
+    //   "Đang xác thực...", KHÔNG signOut, KHÔNG redirect về Dashboard.
+    // - Chỉ redirect login khi xác nhận chắc chắn user chưa đăng nhập.
+    // - Chỉ ACCESS DENIED khi user đã authenticated nhưng role thực sự thiếu
+    //   quyền — role=null KHÔNG đồng nghĩa với unauthorized.
+    function renderAuthLoading() {
+      var sb = document.getElementById('adminSidebar');
+      if (sb) sb.innerHTML = '<div class="admin-brand">P<span>·</span>SHOP <span>ADMIN</span></div><nav class="admin-nav"><p style="padding:1rem;color:#6b7280;font-size:0.82rem">Đang xác thực...</p></nav>';
+      var tb = document.getElementById('adminTopbar');
+      if (tb) tb.innerHTML = '<div class="admin-topbar-title">' + (options.title || '') + '</div><div class="admin-topbar-actions"><span class="admin-user" style="color:#374151">Đang xác thực...</span></div>';
+    }
 
-      // AuthContext resolves role from custom claims, then legacy /roles/{uid}
-      if (!role) {
-        firebase.auth().signOut().then(function() { location.href = '/admin/login.html?denied=1'; });
-        return;
-      }
+    var AUTH_RETRY_MS = 4000;
+    var authAttempts = 0;
+    function attemptInit() {
+      return AuthContext.init().then(function (result) {
+        var user = AuthContext.getCurrentUser();
+        var role = AuthContext.getCurrentRole();
+        var authError = typeof AuthContext.getAuthError === 'function' ? AuthContext.getAuthError() : false;
 
-      currentUser = user;
-      currentRole = role;
-
-      // Read name from legacy /roles/{uid} for backward compatibility
-      return firebase.database().ref('roles/' + user.uid).once('value').then(function(snap) {
-        if (snap.exists()) {
-          currentName = snap.val().name || '';
-        } else {
-          currentName = user.displayName || '';
-        }
-
-        if (options.requiredRole && options.requiredRole !== currentRole && currentRole !== 'admin' && currentRole !== 'super_admin') {
-          alert('B\u1EA1n kh\u00F4ng c\u00F3 quy\u1EC1n truy c\u1EADp trang n\u00E0y.');
-          location.href = '/admin/index.html';
+        // 1) Thật sự chưa đăng nhập → redirect login (xác nhận chắc chắn)
+        if (!user) {
+          location.href = '/admin/login.html';
           return;
         }
-        renderShell(options.page, options.title);
-        return { user: user, role: currentRole, name: currentName };
+
+        // 2) Có user nhưng role chưa resolve được (đang loading hoặc gặp lỗi tạm thời).
+        //    KHÔNG signOut, KHÔNG coi là unauthorized. Giữ trang, hiển thị trạng thái,
+        //    retry có giới hạn (chống vòng lặp vô hạn, chống bắn request liên tục).
+        if (!role) {
+          if (authError || result && result.authError) {
+            // Lỗi Firebase Auth/DB tạm thời (rate-limit, network, token) → giữ trang +
+            // thông báo, KHÔNG đá về login/dashboard. Không retry vô hạn: chờ 1 lần
+            // rồi giữ thông báo (AuthContext đã resolve; role null do lỗi tạm thời).
+            renderAuthLoading();
+            authAttempts++;
+            if (authAttempts >= 4) {
+              var sbE = document.getElementById('adminSidebar');
+              if (sbE) sbE.innerHTML = '<div class="admin-brand">P<span>·</span>SHOP <span>ADMIN</span></div><nav class="admin-nav"><p style="padding:1rem;color:#b3261e;font-size:0.82rem">Xác thực tạm lỗi (Auth bị giới hạn/network). Thử lại sau vài giây.</p></nav>';
+            }
+            return;
+          }
+          // Không phải lỗi rõ ràng — vẫn đang loading. Giữ trang, retry có giới hạn.
+          renderAuthLoading();
+          if (authAttempts < 3) {
+            authAttempts++;
+            setTimeout(attemptInit, AUTH_RETRY_MS);
+          }
+          return;
+        }
+
+        // 3) AUTHENTICATED + role resolve → render bình thường
+        currentUser = user;
+        currentRole = role;
+
+        // Đọc name từ legacy /roles/{uid} (backward compat)
+        return firebase.database().ref('roles/' + user.uid).once('value').then(function (snap) {
+          if (snap.exists()) {
+            currentName = snap.val().name || '';
+          } else {
+            currentName = user.displayName || '';
+          }
+
+          // 4) ACCESS DENIED chỉ khi authenticated nhưng role thực sự thiếu quyền yêu cầu
+          if (options.requiredRole && options.requiredRole !== currentRole && currentRole !== 'admin' && currentRole !== 'super_admin') {
+            alert('B\u1EA1n kh\u00F4ng c\u00F3 quy\u1EC1n truy c\u1EADp trang n\u00E0y.');
+            location.href = '/admin/index.html';
+            return;
+          }
+          renderShell(options.page, options.title);
+          return { user: user, role: currentRole, name: currentName };
+        });
       });
-    });
+    }
+
+    return attemptInit();
   }
 
   function logout() {

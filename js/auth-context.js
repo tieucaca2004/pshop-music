@@ -39,6 +39,7 @@ var AuthContext = (function () {
     businessId: null,
     isSuperAdmin: false,
     isBusinessUser: false,
+    authError: false, // true khi Firebase Auth/DB gặp lỗi tạm thời (rate-limit, network, token fail)
     dataVersionCache: {}
   };
 
@@ -111,14 +112,17 @@ var AuthContext = (function () {
             state.ready = true;
             resolve({ authenticated: true, role: state.role, businessId: state.businessId });
           }).catch(function () {
-            // If /roles/{uid} read fails, still resolve with what we have
+            // /roles/{uid} read failed (network/rate-limit/persmission) — KHÔNG coi là unauthorized.
+            // Đánh dấu authError để tầng guard giữ nguyên trang thay vì signOut/redirect.
+            state.authError = true;
             state.ready = true;
-            resolve({ authenticated: true, role: state.role, businessId: state.businessId });
+            resolve({ authenticated: true, role: state.role, businessId: state.businessId, authError: true });
           });
         }).catch(function () {
-          // If getIdTokenResult fails, role is null
+          // getIdTokenResult failed (rate-limit/network/transient) — KHÔNG logout, không unauthorized.
+          state.authError = true;
           state.ready = true;
-          resolve({ authenticated: true, role: null, businessId: null });
+          resolve({ authenticated: true, role: null, businessId: null, authError: true });
         });
       });
     });
@@ -187,6 +191,10 @@ var AuthContext = (function () {
     });
   }
 
+  function getAuthError() {
+    return state.authError;
+  }
+
   // ─── Public API ─────────────────────────────────────────────────────
   return {
     init: init,
@@ -197,6 +205,7 @@ var AuthContext = (function () {
     isBusinessUser: isBusinessUser,
     getEffectiveBusinessId: getEffectiveBusinessId,
     getDataVersion: getDataVersion,
+    getAuthError: getAuthError,
     LEGACY_BUSINESS_ID: LEGACY_BUSINESS_ID
   };
 })();
