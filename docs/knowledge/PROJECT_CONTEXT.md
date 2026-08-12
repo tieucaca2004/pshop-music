@@ -33,3 +33,10 @@
 - Verified real: HTTP 200, image/png, size 1024x1024. Dùng token từ metadata.firebaseStorageDownloadTokens.
 - IAM cần: secretmanager.secretAccessor + viewer + secretVersionAdder (add secret version), iam.serviceAccountUser trên compute SA `241363789627-compute@...` (deploy openaiProxy Gen2).
 - Page: /psh/platform/media-center/ (wired AdminImageAI.runGeneration + job/poll/draft). Video/voice = stub.
+
+## PSH Media Center — full upgrade (Voice + Optimizer + Quality + History) 2026-08-12
+- Edit-First + FREE/AI cost labels + Voice (Web Speech API, browser local, FREE) + Prompt Optimizer (rule-based FREE) + Quality presets (Product→MEDIUM/Hero→HIGH/Draft→LOW, override) + AI History (localStorage: sourceAsset/outputAsset/operation/provider/model/quality/ts/status/error/cost=N/A nếu không có thật).
+- Backend KHÔNG đổi: openaiProxy gpt-image-2 (/v1/images/generations + /v1/images/edits) + remove_background.
+- **QUAN TRỌNG — openaiProxy timeout:** default CF Gen2 timeout=60s; gpt-image-2 /v1/images/edits vượt 60s → 504 "upstream request timeout". Đã fix `timeoutSeconds: 120` (dòng 166, giống apiGateway). Không đổi engine/model/provider.
+- Test thật đã PASS: generate (200+url), edit_image (200+url HTTP 200 sau fix timeout), remove_background (200). FREE ops xác nhận không gọi AI (proxyCall chỉ ở doEdit/removeBg).
+- Branch feature/cms-ai-sprint2. Commits: cd0d68f→f7064ab(generate PASS)→70ef5ed(EDIT-FIRST)→5392d31(FREE/AI labels)→45793de(Voice/Optimizer/Quality/History)→eed269d(timeout fix).
