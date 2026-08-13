@@ -49,6 +49,22 @@ function route(opts) {
     const baseUrl = (meta && meta.baseUrl) || (opts && opts.baseUrl);
     const model = (opts && opts.model) || (res && res.model);
 
+    // FIX: route() được document nhận cả { prompt } (xem JSDoc phía trên,
+    // và mọi caller thật — aiGenerate.js runGeneration/callOpenAiText,
+    // runtimeManager.execute()/runChat's underlying runTask — đều truyền
+    // opts.prompt, KHÔNG phải opts.messages), nhưng req.messages trước đây
+    // chỉ forward thẳng opts.messages, không bao giờ chuyển prompt→messages.
+    // RequestBuilder.validateRequest() bắt buộc messages (mảng khác rỗng)
+    // nên MỌI lời gọi kiểu prompt-string đều throw "thiếu messages" trước
+    // khi tới bất kỳ HTTP request nào — không phân biệt provider (DeepSeek/
+    // Claude/Kimi/OpenAI/Gemini), không phân biệt module AI nào.
+    // Chuyển đổi ĐÚNG 1 chỗ ở boundary chung này — không đụng aiGenerate.js/
+    // runtimeManager.js/từng AI module — giữ nguyên các caller đã tự truyền
+    // opts.messages hợp lệ (opts.messages ưu tiên, không bị ghi đè).
+    const messages = (Array.isArray(opts && opts.messages) && opts.messages.length)
+      ? opts.messages
+      : ((opts && opts.prompt) ? [{ role: 'user', content: opts.prompt }] : (opts && opts.messages));
+
     // Build payload qua RequestBuilder (adapter không tự build body) + gọi adapter.execute()
     const req = {
       apiStyle: apiStyle,
@@ -56,7 +72,7 @@ function route(opts) {
       baseUrl: baseUrl,
       apiKey: opts && opts.apiKey,
       providerId: providerId,
-      messages: opts && opts.messages,
+      messages: messages,
       system: opts && opts.system,
       temperature: opts && opts.temperature,
       max_tokens: (opts && opts.max_tokens) || (opts && opts.maxTokens)
