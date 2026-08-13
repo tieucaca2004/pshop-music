@@ -54,18 +54,26 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.getElementById('loginBtn').addEventListener('click', () => {
+    const loginBtn = document.getElementById('loginBtn');
+    if (loginBtn.disabled) return; // chặn double-submit (double-click / giữ Enter) tạo nhiều request auth cùng lúc
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value;
     loginError.style.display = 'none';
+    loginBtn.disabled = true;
+    loginBtn.textContent = 'Đang đăng nhập...';
     firebase.auth().signInWithEmailAndPassword(email, password)
       .then(() => { location.href = 'index.html'; })
       .catch(err => {
         loginError.textContent = 'Đăng nhập thất bại: ' + translateAuthError(err);
         loginError.style.display = 'block';
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'ĐĂNG NHẬP';
       });
   });
 
   document.getElementById('bootstrapBtn').addEventListener('click', () => {
+    const bootstrapBtn = document.getElementById('bootstrapBtn');
+    if (bootstrapBtn.disabled) return; // chặn double-submit tạo nhiều request auth cùng lúc
     const email = document.getElementById('bsEmail').value.trim();
     const password = document.getElementById('bsPassword').value;
     const name = document.getElementById('bsName').value.trim();
@@ -82,6 +90,13 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    function resetBootstrapBtn() {
+      bootstrapBtn.disabled = false;
+      bootstrapBtn.textContent = 'TẠO TÀI KHOẢN ADMIN';
+    }
+
+    bootstrapBtn.disabled = true;
+    bootstrapBtn.textContent = 'Đang tạo...';
     firebase.auth().createUserWithEmailAndPassword(email, password)
       .then(claimAdmin)
       .then(() => { location.href = 'index.html'; })
@@ -97,11 +112,13 @@ document.addEventListener('DOMContentLoaded', () => {
             .catch(err2 => {
               bootstrapError.textContent = 'Không tạo được tài khoản: ' + translateAuthError(err2);
               bootstrapError.style.display = 'block';
+              resetBootstrapBtn();
             });
           return;
         }
         bootstrapError.textContent = 'Không tạo được tài khoản: ' + translateAuthError(err);
         bootstrapError.style.display = 'block';
+        resetBootstrapBtn();
       });
   });
 
