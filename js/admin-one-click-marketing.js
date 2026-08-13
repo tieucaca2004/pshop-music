@@ -79,7 +79,7 @@ const AdminOneClickMarketing = (function () {
   }
 
   function saveDraft() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ state, currentStep })); } catch (e) { /* localStorage không khả dụng - bỏ qua, không phải lỗi nghiêm trọng */ }
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ state, currentStep, packageResult })); } catch (e) { /* localStorage không khả dụng - bỏ qua, không phải lỗi nghiêm trọng */ }
   }
 
   function loadDraft() {
@@ -216,6 +216,14 @@ const AdminOneClickMarketing = (function () {
         if (draft && draft.state) {
           state = draft.state;
           currentStep = draft.currentStep || 0;
+          packageResult = draft.packageResult || null;
+          // FIX (Founder 2026-08-13): draft cũ (trước khi lưu packageResult)
+          // không có packageResult nhưng ở bước 5 -> tự build lại từ state
+          // để nút GENERATE (AI thật) hiển thị được, không kẹt ở "CHƯA gọi
+          // AI thật".
+          if (currentStep === STEP_LABELS.length - 1 && !packageResult) {
+            packageResult = OneClickMarketing.buildMarketingPackage(state);
+          }
           renderResumeBanner();
         } else {
           state = defaultState();
