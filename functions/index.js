@@ -48,6 +48,15 @@ admin.auth = getAuth;
 admin.storage = getStorage;
 
 const OPENAI_API_KEY = defineSecret('OPENAI_API_KEY');
+// DEEPSEEK_API_KEY — modelRegistry's default provider (shared/modelRegistry.js
+// DEFAULT_MODEL_REGISTRY.defaults.provider) is 'deepseek', but aiGenerateWorker
+// only declared OPENAI_API_KEY in its own `secrets` array below. Cloud
+// Functions Gen2 only injects secrets a function explicitly lists as env vars
+// at runtime, so process.env.DEEPSEEK_API_KEY was undefined there even though
+// this secret already exists in Secret Manager — openaiCompatibleProvider.js's
+// resolveKey() threw "thiếu API key cho provider deepseek" for every
+// deepseek-routed call. Bind it the same way OPENAI_API_KEY already is.
+const DEEPSEEK_API_KEY = defineSecret('DEEPSEEK_API_KEY');
 
 // Sprint 12 — Facebook Integration V1. App ID KHÔNG hardcode (khác quyết
 // định tạm thời ở Facebook AI V5 trước đó) — đọc từ node Firebase
@@ -961,7 +970,7 @@ exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRE
  * deploy --only functions:aiGenerateWorker`) — không nằm trong phạm vi
  * phiên làm việc này ("No deploy" theo chỉ thị Founder).
  */
-exports.aiGenerateWorker = onValueCreated({ ref: '/apiAsyncJobs/{jobId}', region: 'asia-southeast1', secrets: [OPENAI_API_KEY] }, async (event) => {
+exports.aiGenerateWorker = onValueCreated({ ref: '/apiAsyncJobs/{jobId}', region: 'asia-southeast1', secrets: [OPENAI_API_KEY, DEEPSEEK_API_KEY] }, async (event) => {
   const job = event.data.val();
   if (!job || job.status !== 'queued') return;
   if (!job.type || (job.type.indexOf('ai-generate:') !== 0 && job.type !== 'workflow:auto')) return;
