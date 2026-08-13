@@ -74,16 +74,21 @@ service firebase.storage {
       // match -- "^businesses/" alone (no trailing .*) never actually
       // matched a real object path like "businesses/x/media/f.txt", so this
       // condition was always true and get/write silently stayed open to
-      // businesses/ paths. write happened to look correct anyway only
-      // because `resource` is null when creating a brand-new file (an
-      // unrelated reason for the same wrong expression to deny by accident);
-      // get has no such coincidence and was confirmed open to anyone,
-      // unauthenticated, until this fix. Verified live after this change.
+      // businesses/ paths.
+      //
+      // WRITE FIX (Founder-reported live 2026-08-13, storage/unauthorized on
+      // new uploads e.g. media/*.jpg): the old write rule referenced
+      // `resource.name`, but `resource` is null when creating a BRAND-NEW
+      // file, so EVERY new upload evaluated to deny -> storage/unauthorized
+      // for the whole legacy tree (Media Library upload broke).
+      // Use the match capture `allPaths[0]` (same convention as the list
+      // rule) which is available for both new and existing objects, instead
+      // of resource.name which is null on create.
       allow get: if !resource.name.matches("^businesses/.*");
       allow list: if request.auth != null
         && !(allPaths.size() > 0 && allPaths[0] == 'businesses');
       allow write: if request.auth != null
-        && !resource.name.matches("^businesses/.*");
+        && !(allPaths.size() > 0 && allPaths[0] == 'businesses');
     }
   }
 }
