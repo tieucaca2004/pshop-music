@@ -1050,6 +1050,16 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
         return step.status;
       } else {
         // Plugin thật — ĐÚNG 4 bước cũ (V1/AITaskRouter.dispatch()), không đổi.
+        // FIX (Founder báo 2 lỗi 2026-08-13, Execution Plan Image/Facebook fail):
+        //  - image-generator yêu cầu bắt buộc imageType + size (xem
+        //    js/ai/modules/image-generator.js inputFields); plan Agent thường
+        //    chỉ điền productId -> validate fail "Thiếu dữ liệu bắt buộc:
+        //    imageType, size". Cung cấp default hợp lệ nếu thiếu, KHÔNG đổi
+        //    architecture.
+        if (step.tool === 'image-generator') {
+          if (!resolvedParams.imageType) resolvedParams.imageType = 'Product Hero Image';
+          if (!resolvedParams.size) resolvedParams.size = '1:1';
+        }
         const perm = await PermissionService.checkPluginExecution(user.uid, user.email, step.tool);
         if (!perm.granted) throw new Error('Không có quyền chạy ' + (TOOL_MAP[step.tool] ? TOOL_MAP[step.tool].label : step.tool) + ': ' + perm.reason);
 
@@ -1090,7 +1100,11 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
         // dụng khi Founder RÕ RÀNG chọn đúng loại ảnh "Product Background
         // Image" + đã chọn đúng 1 Sản phẩm thật (productId) — không tự suy
         // đoán/ghi nhầm sản phẩm khác, không áp dụng cho các loại ảnh khác.
-        if (step.tool === 'image-generator' && resolvedParams.imageType === 'Product Background Image' && resolvedParams.productId && newDraft.content && newDraft.content.imageUrl) {
+        // FIX (Founder 2026-08-13): guard an toàn — resolvedParams có thể
+        // undefined/null nếu bước trước trong Plan chưa resolve xong, tránh
+        // "Cannot read properties of undefined (reading 'productId')" khi
+        // render/apply cho bước image-generator.
+        if (step.tool === 'image-generator' && resolvedParams && resolvedParams.imageType === 'Product Background Image' && resolvedParams.productId && newDraft.content && newDraft.content.imageUrl) {
           await DB.update(resolvedParams.productId, { bgImage: newDraft.content.imageUrl });
           const prod = products.find(p => p.id === resolvedParams.productId);
           if (prod) prod.bgImage = newDraft.content.imageUrl;
