@@ -139,9 +139,13 @@ const MediaEdit = (function () {
   function loadLibrary() {
     var grid = $('meLibraryGrid');
     if (!grid) return;
-    if (typeof MediaLibrary === 'undefined') { grid.innerHTML = '<p class="mc-note">Media Library engine chưa sẵn sàng.</p>'; return; }
+    if (typeof MediaLibrary === 'undefined' || typeof MediaLibrary.list !== 'function') { grid.innerHTML = '<p class="mc-note">Media Library engine chưa sẵn sàng.</p>'; return; }
     grid.innerHTML = '<p class="mc-note">Đang quét Media Library...</p>';
-    MediaLibrary.listFiles().then(function (items) {
+    // FIX (Founder 2026-08-13): MediaLibrary KHÔNG có hàm listFiles() — chỉ
+    // export { list, upload, remove, rename, kindOf }. Gọi listFiles() =
+    // "MediaLibrary.listFiles is not a function" -> kẹt "Đang quét..." mãi,
+    // không render thẻ ảnh để click chọn nguồn. Dùng đúng list().
+    MediaLibrary.list().then(function (items) {
       var list = (items || []).slice(0, 60);
       if (!list.length) { grid.innerHTML = '<p class="mc-note">Chưa có media. Upload hoặc Generate trước.</p>'; return; }
       grid.innerHTML = list.map(function (it) {
@@ -249,18 +253,17 @@ const MediaEdit = (function () {
     }).catch(function (e) { hist.status = 'FAILED'; hist.error = e.message; recordHistory(hist); renderHistory(); setStatus('Lỗi: ' + e.message, true); });
   }
 
-  // approve: export URL thành asset trong media library (tái dùng MediaLibrary nếu có), không ghi đè nguồn.
+  // approve: xác nhận ảnh đã chỉnh (edit_image/remove_background đã lưu vào Firebase
+  // Storage thật qua openaiProxy). MediaLibrary KHÔNG có addAsset() — chỉ export
+  // { list, upload, remove, rename, kindOf }. Ảnh draft đã là URL Storage công khai,
+  // Approve chỉ cần xác nhận + reload Library (ảnh nằm trong Storage là đã đủ).
+  // KHÔNG ghi đè ảnh gốc.
   function approveDraft() {
     if (!activeDraft) { setStatus('Chưa có draft để lưu.', true); return; }
     var url = activeDraft.url;
-    var saveTask;
-    if (typeof MediaLibrary !== 'undefined' && typeof MediaLibrary.addAsset === 'function') {
-      saveTask = MediaLibrary.addAsset({ url: url, name: 'edit-' + Date.now(), type: 'image' });
-    } else {
-      saveTask = Promise.resolve();
-    }
-    return saveTask.then(function () {
-      setStatus('✅ Đã lưu ảnh đã chỉnh vào Media Library — sản phẩm gốc KHÔNG bị ghi đè.');
+    var srcName = (activeDraft.sourceName || 'source');
+    return Promise.resolve().then(function () {
+      setStatus('✅ Đã Approve ảnh (' + srcName + ') — ảnh đã lưu trong Storage sản phẩm gốc KHÔNG bị ghi đè. Mở Media Library/các "CHỌN ẢNH" để dùng.');
       $('meApproveBtn') && ($('meApproveBtn').disabled = true);
       $('meDiscardBtn') && ($('meDiscardBtn').disabled = true);
       return loadLibrary();
