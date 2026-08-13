@@ -374,7 +374,7 @@ const AdminApp = (function () {
       slug: document.getElementById('pSlug').value.trim()
     };
     const action = editingId ? DB.update(editingId, data) : DB.add(data);
-    action.then(() => {
+    action.then(savedProduct => {
       showStatus(editingId ? 'Đã cập nhật sản phẩm.' : 'Đã thêm sản phẩm mới.');
       resetForm();
       loadProducts(document.getElementById('adminSearch').value);
@@ -387,12 +387,25 @@ const AdminApp = (function () {
       // (Đã inline từ js/psh-workflow-auto.js — cleanup, không abstraction dư.)
       if (data.pubStatus === 'published' &&
           typeof firebase !== 'undefined' && firebase.database) {
-        var productId = editingId || (data && data.id) || null;
+        // FIX: action.then(() => ...) trước đây bỏ qua giá trị resolve của
+        // DB.add()/DB.update() (cả hai đều trả về bản ghi đã lưu, gồm id
+        // thật — xem js/db.js) — với sản phẩm MỚI + xuất bản ngay,
+        // editingId là null và data chưa từng có field id, nên productId
+        // luôn thành null. Dùng đúng id từ bản ghi đã lưu.
+        var productId = (savedProduct && savedProduct.id) || editingId || null;
+        // FIX: moduleId phải khớp ĐÚNG key thật trong MODULES
+        // (functions/shared/aiModulesCore.js) — 'product-content'/'blog-post'/
+        // 'facebook-post'/'banner' không tồn tại (đúng là 'product-
+        // description-writer'/'blog-writer'/'facebook-post-generator'/
+        // 'banner-generator'), khiến aiGenerateWorker FAILED ngay ở step 0.
+        // Mảng này hiện bị getWorkflowConfig()'s default (functions/shared/
+        // asyncJob.js) ghi đè trong mọi trường hợp thực tế — sửa ở đây để
+        // nhất quán, phòng khi thứ tự ưu tiên đó thay đổi sau này.
         var steps = [
-          { type: 'generation', moduleId: 'product-content' },
-          { type: 'generation', moduleId: 'blog-post' },
-          { type: 'generation', moduleId: 'facebook-post' },
-          { type: 'generation', moduleId: 'banner' }
+          { type: 'generation', moduleId: 'product-description-writer' },
+          { type: 'generation', moduleId: 'blog-writer' },
+          { type: 'generation', moduleId: 'facebook-post-generator' },
+          { type: 'generation', moduleId: 'banner-generator' }
         ];
         var wfRef = firebase.database().ref('apiAsyncJobs').push();
         wfRef.set({

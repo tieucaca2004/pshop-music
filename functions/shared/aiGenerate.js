@@ -80,9 +80,22 @@ async function runGeneration(jobId, moduleId, inputParams, uid) {
       : await providerRouter.route({ type: 'text', prompt: prompt, inputParams: inputParams, providerId: inputParams.providerId });
     const content = module.mapToDraftContent(providerOutput, inputParams, context);
 
+    // FIX: targetId trước đây rơi về inputParams.productId cho MỌI module,
+    // bất kể module đó có thật sự target 'products' hay không. Với
+    // blog-writer/facebook-post-generator/banner-generator (được Auto-
+    // Trigger truyền productId chỉ để LOAD CONTEXT sản phẩm, không phải để
+    // update chính bản ghi đó), targetId bị gán nhầm = productId — Founder
+    // publish Blog draft sẽ gọi listResource.update('blogPosts', productId,
+    // ...), không tìm thấy bản ghi blogPosts nào khớp id đó, im lặng
+    // return null, bài Blog không bao giờ được tạo. productId chỉ hợp lệ làm
+    // targetId khi module thật sự update lại chính record sản phẩm
+    // (targetCollection === 'products', vd product-description-writer).
+    const targetId = inputParams.targetId
+      || (module.targetCollection === 'products' ? inputParams.productId : null)
+      || inputParams.postId || null;
     const draft = await listResource.add('aiDrafts', {
       moduleId, targetCollection: module.targetCollection,
-      targetId: inputParams.targetId || inputParams.productId || inputParams.postId || null,
+      targetId: targetId,
       inputParams, content, status: 'draft', providerUsed: inputParams.providerId || 'openai', createdBy: uid
     });
 

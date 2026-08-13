@@ -81,14 +81,21 @@ async function getWorkflowConfig(name) {
   const snap = await admin.database().ref('workflowConfigs/' + name).once('value');
   if (snap.exists()) return snap.val();
   // Default: chuỗi cũ (tương thích) — README/knowledge sẽ hướng dẫn ghi config
+  // FIX: moduleId ở đây phải khớp ĐÚNG key thật trong MODULES
+  // (shared/aiModulesCore.js) — trước đây dùng 'product-content'/'blog-post'/
+  // 'facebook-post'/'banner', không key nào tồn tại trong MODULES (thật ra
+  // là 'product-description-writer'/'blog-writer'/'facebook-post-generator'/
+  // 'banner-generator') — aiGenerateWorker ném "Không nhận diện được module
+  // AI" ngay ở step 0 và FAILED cả workflow, không bao giờ chạy tới Blog/
+  // Facebook/Banner.
   return {
     id: 'product-auto',
     description: 'Product publish → Auto content workflow',
     steps: [
-      { type: 'generation', moduleId: 'product-content' },
-      { type: 'generation', moduleId: 'blog-post' },
-      { type: 'generation', moduleId: 'facebook-post' },
-      { type: 'generation', moduleId: 'banner' }
+      { type: 'generation', moduleId: 'product-description-writer' },
+      { type: 'generation', moduleId: 'blog-writer' },
+      { type: 'generation', moduleId: 'facebook-post-generator' },
+      { type: 'generation', moduleId: 'banner-generator' }
     ]
   };
 }
