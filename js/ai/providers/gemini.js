@@ -8,7 +8,7 @@
  * Implements IAIProvider interface (3 methods: generate, validate, health).
  * Integration complete — only needs API key + deploy.
  */
-const Provider = (function() {
+const GeminiProvider = (function() {
   'use strict';
   var gemini = 'gemini';
   function generate() {
@@ -20,6 +20,6 @@ const Provider = (function() {
   function health() {
     return Promise.resolve({ healthy: false, message: gemini + ' chưa kết nối. Cần API Key.' });
   }
-  return { generate: generate, validate: validate, health: health };
+  return { id: gemini, generate: generate, validate: validate, health: health };
 })();
-if (typeof AIProviderRegistry !== 'undefined') AIProviderRegistry.register('gemini', Provider);
+if (typeof AIProviderRegistry !== 'undefined') AIProviderRegistry.register(GeminiProvider);

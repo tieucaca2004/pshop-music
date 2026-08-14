@@ -8,7 +8,7 @@
  * Implements IAIProvider interface (3 methods: generate, validate, health).
  * Integration complete — only needs API key + deploy.
  */
-const Provider = (function() {
+const DeepSeekProvider = (function() {
   'use strict';
   var deepseek = 'deepseek';
   function generate() {
@@ -20,6 +20,6 @@ const Provider = (function() {
   function health() {
     return Promise.resolve({ healthy: false, message: deepseek + ' chưa kết nối. Cần API Key.' });
   }
-  return { generate: generate, validate: validate, health: health };
+  return { id: deepseek, generate: generate, validate: validate, health: health };
 })();
-if (typeof AIProviderRegistry !== 'undefined') AIProviderRegistry.register('deepseek', Provider);
+if (typeof AIProviderRegistry !== 'undefined') AIProviderRegistry.register(DeepSeekProvider);
