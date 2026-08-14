@@ -83,8 +83,13 @@ const MediaLibrary = (function () {
   // Đây là DỰ PHÒNG, không thay thế: quét gốc vẫn được thử TRƯỚC (tự phủ cả
   // thư mục mới phát sinh sau này mà không cần sửa danh sách dưới đây), chỉ
   // khi bị từ chối mới lùi về danh sách này.
+  // 'media-center' — Media Center's own upload (js/media-edit.js pickUpload())
+  // ghi vào `media-center/source/...`, nhưng thư mục này CHƯA từng có trong
+  // danh sách dự phòng, nên khi quét gốc bị từ chối thì ảnh Founder vừa tải
+  // lên qua Media Center KHÔNG BAO GIỜ xuất hiện lại trong lưới "CHỌN ẢNH TỪ
+  // MEDIA LIBRARY" — dù upload đã thành công thật trên Storage.
   const KNOWN_MEDIA_FOLDERS = [
-    'media', 'products', 'banners', 'sliders', 'category-tiles', 'blog', 'uploads'
+    'media', 'media-center', 'products', 'banners', 'sliders', 'category-tiles', 'blog', 'uploads'
   ];
 
   // listFromRoot() -> Promise<MediaItem[]> — quét gốc, có dự phòng như trên.
@@ -99,6 +104,94 @@ const MediaLibrary = (function () {
         KNOWN_MEDIA_FOLDERS.map(folder => listAllRecursive(root.child(folder)).catch(() => []))
       ).then(lists => [].concat.apply([], lists));
     });
+  }
+
+  // ── Media Index — nguồn dự phòng khi Storage LIST không dùng được ────────
+  // Trên Production, Storage listAll() trả 403 "Permission denied." ở MỌI
+  // path (kể cả gốc) dù Rules đã cho phép và cùng token đó GET/WRITE vẫn
+  // PASS — đã xác minh bằng Rules Simulator trên đúng ruleset đang live, đang
+  // chờ Firebase Support. Không có LIST thì không cách nào biết file nào đã
+  // tồn tại, nên Thư viện luôn rỗng dù upload thật sự thành công.
+  //
+  // Index này KHÔNG phải dữ liệu giả: nó chỉ ghi lại ĐÚNG fullPath thật của
+  // file vừa upload, để sau khi tải lại trang còn biết đường hỏi Storage. URL
+  // vẫn được resolve LẠI từ Storage thật qua getDownloadURL() mỗi lần đọc.
+  //
+  // Lưu ở `siteContent/mediaAssets` — node siteContent ĐÃ được
+  // database.rules.json cho phép admin/editor ghi. KHÔNG tạo node top-level
+  // mới vì `$other` trong rules chặn hết, và Rules không nằm trong phạm vi
+  // sửa của việc này. Ghi/xóa THẲNG vào child ref, KHÔNG đi qua
+  // SiteContentDB.save() (hàm đó set() cả object, sẽ đụng dữ liệu khác).
+  const MEDIA_INDEX_PATH = 'siteContent/mediaAssets';
+
+  function indexRef() {
+    return firebase.database().ref(MEDIA_INDEX_PATH);
+  }
+
+  // pathFromDownloadURL(url) — Firebase download URL luôn có dạng
+  // `.../o/<fullPath đã URL-encode>?alt=media&token=...`, nên tách lại
+  // fullPath là xác định, không phải phỏng đoán.
+  function pathFromDownloadURL(url) {
+    const m = String(url || '').match(/\/o\/([^?]+)/);
+    return m ? decodeURIComponent(m[1]) : null;
+  }
+
+  // recordUpload(fullPath, meta) -> Promise — ghi 1 file thật vừa upload vào
+  // index. Lỗi ghi index KHÔNG được làm hỏng luồng upload (ảnh đã nằm trên
+  // Storage rồi) nên nuốt lỗi, chỉ trả null.
+  function recordUpload(fullPath, meta) {
+    if (!fullPath) return Promise.resolve(null);
+    return indexRef().push({
+      fullPath: fullPath,
+      name: fullPath.split('/').pop(),
+      contentType: (meta && meta.contentType) || null,
+      size: (meta && meta.size) || null,
+      timeCreated: Date.now()
+    }).then(() => fullPath).catch(() => null);
+  }
+
+  function removeFromIndex(fullPath) {
+    return indexRef().once('value').then(snap => {
+      const val = snap.val() || {};
+      const updates = {};
+      Object.keys(val).forEach(k => {
+        if (val[k] && val[k].fullPath === fullPath) updates[k] = null;
+      });
+      return Object.keys(updates).length ? indexRef().update(updates) : null;
+    }).catch(() => null);
+  }
+
+  // listFromIndex() -> Promise<MediaItem[]> — dựng lại danh sách từ index và
+  // resolve URL thật qua getDownloadURL() (Storage GET vẫn hoạt động bình
+  // thường). Entry trỏ tới file đã bị xóa nơi khác sẽ tự bị loại, không hiện
+  // ảnh hỏng và không cần dọn index thủ công.
+  function listFromIndex() {
+    return indexRef().once('value').then(snap => {
+      const val = snap.val() || {};
+      return Promise.all(Object.keys(val).map(k => {
+        const e = val[k];
+        if (!e || !e.fullPath) return null;
+        return firebase.storage().ref(e.fullPath).getDownloadURL()
+          .then(url => ({
+            fullPath: e.fullPath,
+            name: e.name || e.fullPath.split('/').pop(),
+            url: url,
+            size: e.size || null,
+            contentType: e.contentType || null,
+            timeCreated: e.timeCreated || null
+          }))
+          .catch(() => null);
+      })).then(items => items.filter(Boolean));
+    }).catch(() => []);
+  }
+
+  // listSource() — ƯU TIÊN Storage thật; chỉ lùi về index khi Storage không
+  // trả được gì. Khi Storage LIST được sửa, hành vi cũ tự khôi phục nguyên
+  // vẹn mà không cần đụng lại file này.
+  function listSource() {
+    return listFromRoot()
+      .then(items => (items && items.length) ? items : listFromIndex())
+      .catch(() => listFromIndex());
   }
 
   // kindOf(item) -> 'image' | 'video' | 'document' — single shared
@@ -130,7 +223,7 @@ const MediaLibrary = (function () {
   function list(searchTerm, opts) {
     const allTypes = !!(opts && opts.allTypes);
     const documentsOnly = !!(opts && opts.kind === 'documents');
-    return listFromRoot()
+    return listSource()
       .then(items => {
         if (documentsOnly) return items.filter(it => kindOf(it) === 'document');
         return allTypes ? items : items.filter(it => !it.contentType || it.contentType.indexOf('image/') === 0);
@@ -147,16 +240,30 @@ const MediaLibrary = (function () {
   // Storage). Chỉ trả về URL — sau khi tải lên xong, gọi lại list() để lấy
   // đúng MediaItem đầy đủ (fullPath/size/...) từ chính Storage, tránh tự
   // suy luận fullPath từ URL (không đáng tin cậy bằng đọc thẳng từ Storage).
+  //
+  // Sau khi tải lên xong còn ghi thêm 1 dòng vào Media Index (xem phần trên)
+  // để Thư viện còn dựng lại được danh sách khi Storage LIST không dùng được.
+  // fullPath lấy từ chính download URL Storage vừa trả về — xác định, không
+  // phỏng đoán. Ghi index lỗi cũng KHÔNG chặn upload (ảnh đã lên Storage).
   function upload(file, onProgress) {
-    return StorageUpload.uploadImage(file, uploadFolder(), onProgress);
+    return StorageUpload.uploadImage(file, uploadFolder(), onProgress).then(url => {
+      return recordUpload(pathFromDownloadURL(url), {
+        contentType: file && file.type,
+        size: file && file.size
+      }).then(() => url);
+    });
   }
 
   // remove(fullPath) -> Promise — xóa THẬT khỏi Storage. CHỈ được gọi sau
   // khi UI đã xác nhận rõ ràng với người dùng (Functional Requirement #6:
   // "không xóa Storage nếu chưa được xác nhận") — hàm này tự nó không hỏi,
   // trách nhiệm xác nhận thuộc về UI gọi nó (media-library-picker.js).
+  // Xóa xong còn gỡ luôn dòng tương ứng trong Media Index để Thư viện không
+  // còn trỏ tới file đã mất sau khi tải lại trang.
   function remove(fullPath) {
-    return firebase.storage().ref(fullPath).delete();
+    return firebase.storage().ref(fullPath).delete()
+      .then(() => removeFromIndex(fullPath))
+      .then(() => true);
   }
 
   // rename(fullPath, newName) -> Promise<string (new fullPath)> — Task 2.6.
@@ -182,5 +289,9 @@ const MediaLibrary = (function () {
       .then(() => newPath);
   }
 
-  return { list, upload, remove, rename, kindOf };
+  // recordUpload được export để các trang tự upload thẳng qua Storage SDK
+  // (js/media-edit.js — Media Center giữ nguyên path `media-center/source/`)
+  // đăng ký được file vừa tải lên vào cùng 1 Media Index, không phải tự dựng
+  // cơ chế riêng.
+  return { list, upload, remove, rename, kindOf, recordUpload };
 })();

@@ -169,8 +169,10 @@ const MediaEdit = (function () {
       var uploadFn = (typeof StorageUpload !== 'undefined' && typeof StorageUpload.uploadFile === 'function')
         ? StorageUpload.uploadFile(file, 'media-center/source')
         : firebase.storage().ref('media-center/source/' + Date.now() + '-' + file.name).put(file);
+      var uploadedRef = null;
       Promise.resolve(uploadFn).then(function (snap) {
         var ref = snap.ref || (snap && snap.ref);
+        uploadedRef = ref; // giữ lại để đăng ký fullPath thật vào Media Index
         return ref.getDownloadURL();
       }).then(function (url) {
         activeSource = { url: url, name: file.name };
@@ -183,7 +185,15 @@ const MediaEdit = (function () {
         // render 1 lần lúc init() — không refresh sau upload sẽ vẫn hiện
         // "Chưa có media" cũ, ảnh mới không click chọn lại được. Refresh
         // ngay sau khi upload xong.
-        loadLibrary();
+        //
+        // Đăng ký fullPath thật vào Media Index TRƯỚC khi refresh — Storage
+        // listAll() đang 403 trên Production nên Thư viện dựng danh sách từ
+        // index này (xem js/media-library.js); refresh trước khi ghi xong sẽ
+        // không thấy ảnh vừa tải lên.
+        var recorded = (uploadedRef && typeof MediaLibrary !== 'undefined' && MediaLibrary.recordUpload)
+          ? MediaLibrary.recordUpload(uploadedRef.fullPath, { contentType: file.type, size: file.size })
+          : Promise.resolve(null);
+        return recorded.then(function () { loadLibrary(); });
       }).catch(function (e) { setStatus('Upload lỗi: ' + e.message, true); });
     };
     reader.readAsDataURL(file);
