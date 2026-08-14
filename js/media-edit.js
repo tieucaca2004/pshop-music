@@ -266,6 +266,11 @@ const MediaEdit = (function () {
         hist.outputAsset = res.data.imageUrl; hist.status = 'COMPLETED'; recordHistory(hist);
         setStatus('✅ Remove Background xong. Xem DRAFT — Approve để lưu.');
         setPreview(res.data.imageUrl, 'DRAFT: Remove Background');
+        // doEdit() gán activeDraft trước khi enable Approve — removeBg() thiếu
+        // dòng này (Founder báo live 2026-08-14: bấm Approve báo "Chưa có
+        // draft để lưu" dù Remove Background đã chạy xong thành công) khiến
+        // Approve luôn thất bại dù nút không hề bị disable.
+        activeDraft = { url: res.data.imageUrl, op: 'AI Edit', source: activeSource.name };
         $('meApproveBtn') && ($('meApproveBtn').disabled = false);
         $('meDiscardBtn') && ($('meDiscardBtn').disabled = false);
         $('meOpsLabel') && ($('meOpsLabel').textContent = 'AI Edit');

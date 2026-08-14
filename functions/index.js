@@ -145,7 +145,12 @@ async function editImageWithOpenAI({ inputUrl, prompt, size, transparentBackgrou
   const openAiSize = SIZE_MAP[size] || 'auto';
 
   const form = new FormData();
-  form.append('model', 'gpt-image-2');
+  // gpt-image-2 KHÔNG hỗ trợ background=transparent (OpenAI trả lỗi
+  // "Transparent background is not supported for this model.", Founder báo
+  // live 2026-08-14 khi thử Remove Background) — dùng đúng model đã ghi trong
+  // comment hàm này từ đầu (gpt-image-1), model DUY NHẤT của OpenAI hỗ trợ
+  // tham số background cho endpoint /v1/images/edits.
+  form.append('model', 'gpt-image-1');
   form.append('image', new Blob([imgBuf], { type: mimeType }), 'source.png');
   form.append('prompt', prompt);
   form.append('size', openAiSize);
