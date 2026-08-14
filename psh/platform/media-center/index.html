@@ -334,7 +334,14 @@ body{font-family:Inter,system-ui,sans-serif;color:#13161c;background:#f5f6f8;hei
     if (typeof MediaLibrary === 'undefined') { grid.innerHTML = '<p class="mc-note">Media Library engine chưa sẵn sàng.</p>'; return; }
     grid.innerHTML = '<p class="mc-note">Đang quét Media Library...</p>';
     try {
-      MediaLibrary.listFiles().then(function (items) {
+      // FIX: MediaLibrary KHÔNG có hàm listFiles() — chỉ export { list,
+      // upload, remove, rename, kindOf } (js/media-library.js). Gọi
+      // listFiles() ném TypeError, .catch bên dưới hiện "Tải media lỗi:
+      // MediaLibrary.listFiles is not a function", lưới không bao giờ hiện
+      // media. Cùng nguyên nhân đã sửa ở MediaEdit.loadLibrary() (js/media-
+      // edit.js) nhưng bản sao riêng của trang này (#mcLibGrid, tab "Library"
+      // bên trái) chưa được sửa theo.
+      MediaLibrary.list().then(function (items) {
         var list = (items || []).slice(0, 40);
         if (!list.length) { grid.innerHTML = '<p class="mc-note">Chưa có media.</p>'; return; }
         grid.innerHTML = list.map(function (it) {

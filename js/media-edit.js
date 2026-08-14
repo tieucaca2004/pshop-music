@@ -179,6 +179,11 @@ const MediaEdit = (function () {
         $('meEditBtn') && ($('meEditBtn').disabled = false);
         $('meRemoveBgBtn') && ($('meRemoveBgBtn').disabled = false);
         $('meSourceName') && ($('meSourceName').textContent = file.name);
+        // Ảnh vừa upload đã nằm trong Storage nhưng lưới meLibraryGrid chỉ
+        // render 1 lần lúc init() — không refresh sau upload sẽ vẫn hiện
+        // "Chưa có media" cũ, ảnh mới không click chọn lại được. Refresh
+        // ngay sau khi upload xong.
+        loadLibrary();
       }).catch(function (e) { setStatus('Upload lỗi: ' + e.message, true); });
     };
     reader.readAsDataURL(file);
