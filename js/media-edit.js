@@ -134,6 +134,10 @@ const MediaEdit = (function () {
     $('meEditBtn') && ($('meEditBtn').disabled = false);
     $('meRemoveBgBtn') && ($('meRemoveBgBtn').disabled = false);
     $('meSourceName') && ($('meSourceName').textContent = name);
+    // Tab "② Chỉnh sửa" ship disabled trong HTML (chưa có nguồn thì chưa cho
+    // vào) nhưng không nơi nào tự mở khoá lại sau khi chọn nguồn — khoá vĩnh
+    // viễn, không click được (Founder báo lỗi live 2026-08-14).
+    $('meTabEdit') && ($('meTabEdit').disabled = false);
   }
 
   function loadLibrary() {
@@ -181,6 +185,7 @@ const MediaEdit = (function () {
         $('meEditBtn') && ($('meEditBtn').disabled = false);
         $('meRemoveBgBtn') && ($('meRemoveBgBtn').disabled = false);
         $('meSourceName') && ($('meSourceName').textContent = file.name);
+        $('meTabEdit') && ($('meTabEdit').disabled = false);
         // Ảnh vừa upload đã nằm trong Storage nhưng lưới meLibraryGrid chỉ
         // render 1 lần lúc init() — không refresh sau upload sẽ vẫn hiện
         // "Chưa có media" cũ, ảnh mới không click chọn lại được. Refresh
@@ -211,6 +216,7 @@ const MediaEdit = (function () {
       setStatus('Đã thêm ảnh nguồn từ URL. Chọn EDIT bên dưới.');
       $('meEditBtn') && ($('meEditBtn').disabled = false);
       $('meRemoveBgBtn') && ($('meRemoveBgBtn').disabled = false);
+      $('meTabEdit') && ($('meTabEdit').disabled = false);
     };
     probe.onerror = function () { setStatus('Không tải được ảnh từ URL — kiểm tra link.', true); };
     probe.src = url;
@@ -270,8 +276,13 @@ const MediaEdit = (function () {
 
   // approve: xác nhận ảnh đã chỉnh (edit_image/remove_background đã lưu vào Firebase
   // Storage thật qua openaiProxy). MediaLibrary KHÔNG có addAsset() — chỉ export
-  // { list, upload, remove, rename, kindOf }. Ảnh draft đã là URL Storage công khai,
-  // Approve chỉ cần xác nhận + reload Library (ảnh nằm trong Storage là đã đủ).
+  // { list, upload, remove, rename, kindOf, recordUpload, pathFromDownloadURL }.
+  // Ảnh draft đã là URL Storage công khai, nhưng Cloud Function ghi thẳng qua
+  // Admin SDK KHÔNG tự đăng ký vào Media Index — và Storage listAll() đang 403
+  // trên Production (xem js/media-library.js) nên Thư viện CHỈ dựng được từ
+  // Media Index. Approve mà không ghi index thì ảnh vừa lưu KHÔNG BAO GIỜ hiện
+  // lại trong Library dù đã nằm thật trong Storage (Founder báo lỗi live
+  // 2026-08-14, xác nhận qua E2E: Library vẫn còn đúng 1 item sau Approve).
   // KHÔNG ghi đè ảnh gốc.
   function approveDraft() {
     if (!activeDraft) { setStatus('Chưa có draft để lưu.', true); return; }
@@ -281,7 +292,12 @@ const MediaEdit = (function () {
       setStatus('✅ Đã Approve ảnh (' + srcName + ') — ảnh đã lưu trong Storage sản phẩm gốc KHÔNG bị ghi đè. Mở Media Library/các "CHỌN ẢNH" để dùng.');
       $('meApproveBtn') && ($('meApproveBtn').disabled = true);
       $('meDiscardBtn') && ($('meDiscardBtn').disabled = true);
-      return loadLibrary();
+      var fullPath = (typeof MediaLibrary !== 'undefined' && MediaLibrary.pathFromDownloadURL)
+        ? MediaLibrary.pathFromDownloadURL(url) : null;
+      var recorded = (fullPath && MediaLibrary.recordUpload)
+        ? MediaLibrary.recordUpload(fullPath, {})
+        : Promise.resolve(null);
+      return recorded.then(function () { return loadLibrary(); });
     }).catch(function (e) { setStatus('Lưu lỗi: ' + e.message, true); });
   }
 

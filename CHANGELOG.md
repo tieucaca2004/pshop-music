@@ -2,6 +2,22 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Bug Fix — Media Center: Edit tab khoá vĩnh viễn + Remove Background luôn lỗi + Approve không lưu vào Library (2026-08-14)
+
+**Bối cảnh**: Sau khi Media Index (`siteContent/mediaAssets`) được ship để Media Center không còn phụ thuộc Storage `listAll()` (đang 403 trên Production), Founder báo tiếp: "sau khi tải ảnh lên, khu vực Chỉnh sửa không chọn được." Audit E2E thật trên Production (tài khoản admin thật) phát hiện 3 lỗi độc lập trên cùng luồng EDIT-FIRST.
+
+**Lỗi 1 — Tab "② Chỉnh sửa" khoá vĩnh viễn**: `psh/platform/media-center/index.html` ship nút tab với `disabled` (chưa có nguồn thì chưa cho vào), nhưng không nơi nào trong `js/media-edit.js` mở khoá lại sau khi chọn nguồn — 3 hàm chọn nguồn (`pickFromLibrary`/`pickUpload`/`urlSource`) chỉ enable 2 nút hành động (`meEditBtn`/`meRemoveBgBtn`) BÊN TRONG panel, không enable chính nút TAB mở panel đó ra. Sửa: thêm `meTabEdit.disabled = false` ở cả 3 hàm.
+
+**Lỗi 2 — Remove Background luôn báo "imageUrl không hợp lệ"**: `functions/index.js` action `remove_background` có 1 pre-check SSRF dư thừa (`editImageWithOpenAI()` dùng chung đã validate đúng ở tầng trong) nhưng logic bị đảo ngược — `validateImageUrlOrigin()` trả về `null` khi URL HỢP LỆ, nhưng code kiểm tra `if (!validateImageUrlOrigin(inputUrl))`, nghĩa là mọi URL hợp lệ đều bị từ chối. Sửa: bỏ dấu `!`.
+
+**Lỗi 3 — Approve xong, ảnh AI Edit/Remove Background không hiện lại trong Library**: Cloud Function ghi thẳng ảnh kết quả vào Storage qua Admin SDK, không đăng ký vào Media Index. Vì Storage `listAll()` vẫn 403 trên Production, Library chỉ dựng được từ Media Index — ảnh vừa Approve không bao giờ xuất hiện lại dù đã lưu thật trong Storage. Sửa: export thêm `MediaLibrary.pathFromDownloadURL()` (tái dùng logic đã có, không viết lại), `approveDraft()` gọi `MediaLibrary.recordUpload()` trước khi reload Library.
+
+**Phát hiện, KHÔNG sửa trong lượt này — cần Chief Architect duyệt hạ tầng**: Thao tác FREE (Rotate/Resize/Crop/Compress/Convert — xử lý canvas cục bộ) đều lỗi "Không đọc được ảnh nguồn." Xác nhận root cause bằng `gsutil cors get gs://pshop-music.firebasestorage.app` → bucket KHÔNG có CORS config, và `fetch(url, {mode:'cors'})` thật trên URL Storage thật → `TypeError: Failed to fetch`. Đây là giới hạn trình duyệt (canvas pixel access + `crossOrigin='anonymous'` bắt buộc `Access-Control-Allow-Origin`), không phải lỗi code — không có cách sửa chỉ bằng application code. KHÔNG phải `storage.rules`/IAM/Auth/Database Rules nhưng vẫn là thay đổi hạ tầng Production — đã STOP, chưa tự chạy `gsutil cors set`, chờ Chief Architect duyệt.
+
+**Kiểm thử**: Node `--check` cả 3 file (syntax OK). `validateImageUrlOrigin()` verify bằng `node -e` gọi thẳng module thật (không mock) — URL Storage hợp lệ → không bị chặn; URL SSRF (169.254.169.254) → bị chặn đúng. E2E thật trên Production (admin thật, `js/media-edit.js`/`js/media-library.js` runtime-patched tại chỗ để mô phỏng bản vá — CHƯA deploy lúc test): Upload/Library/Select/Edit Tab/Edit Image (gọi OpenAI thật)/Save/Persistence-sau-reload-thật/Select-lại-ảnh-đã-lưu/Delete-sau-reload-thật đều PASS. Remove Background CHỈ verify local (Node), chưa verify live vì cần deploy Cloud Function. Rotate/Crop xác nhận FAIL đúng nguyên nhân CORS, chưa sửa được.
+
+**Deploy**: đang tiến hành — Netlify draft→prod cho `js/media-edit.js`/`js/media-library.js`, `firebase deploy --only functions:openaiProxy` cho `functions/index.js`.
+
 ## MISSION — MODEL REGISTRY & DYNAMIC AI ROUTING (2026-08-06, backend)
 - **Capability 9/10 — Runtime Integration + Multi-provider Real API** (VERIFY PASS): `runtime.integration.test.js` key toàn pipeline (resolveModel→route→buildRequest→execute→parseResponse→normalizeResult); credential resolution trong Adapter (request.apiKey→process.env→Firebase Secret); REAL API 4 provider (deepseek/openai/anthropic/gemini) HTTP 200 response "HELLO PSH".
 

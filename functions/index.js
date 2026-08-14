@@ -317,7 +317,7 @@ exports.openaiProxy = onRequest({ secrets: [OPENAI_API_KEY], cors: true, timeout
     // Function fetch bất kỳ URL nào. Chặn ở ĐÚNG action này theo yêu cầu
     // Founder — không sửa editImageWithOpenAI() (dùng chung với "edit_image",
     // giữ nguyên hành vi Product Banner).
-    if (!validateImageUrlOrigin(inputUrl)) {
+    if (validateImageUrlOrigin(inputUrl)) {
       res.status(400).json({ error: 'imageUrl không hợp lệ — chỉ chấp nhận ảnh từ Firebase Storage của dự án.' });
       return;
     }

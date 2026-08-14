@@ -293,5 +293,10 @@ const MediaLibrary = (function () {
   // (js/media-edit.js — Media Center giữ nguyên path `media-center/source/`)
   // đăng ký được file vừa tải lên vào cùng 1 Media Index, không phải tự dựng
   // cơ chế riêng.
-  return { list, upload, remove, rename, kindOf, recordUpload };
+  //
+  // pathFromDownloadURL được export để js/media-edit.js dùng lại ĐÚNG cách
+  // tách fullPath này khi Approve 1 draft (kết quả AI Edit/Remove Background
+  // — Cloud Function đã lưu thẳng vào Storage qua Admin SDK, KHÔNG tự đăng ký
+  // vào Media Index) thay vì tự viết lại regex parse URL ở nơi khác.
+  return { list, upload, remove, rename, kindOf, recordUpload, pathFromDownloadURL };
 })();
