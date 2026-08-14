@@ -16,7 +16,7 @@
 
 **Kiểm thử**: Node `--check` cả 3 file (syntax OK). `validateImageUrlOrigin()` verify bằng `node -e` gọi thẳng module thật (không mock) — URL Storage hợp lệ → không bị chặn; URL SSRF (169.254.169.254) → bị chặn đúng. E2E thật trên Production (admin thật, `js/media-edit.js`/`js/media-library.js` runtime-patched tại chỗ để mô phỏng bản vá — CHƯA deploy lúc test): Upload/Library/Select/Edit Tab/Edit Image (gọi OpenAI thật)/Save/Persistence-sau-reload-thật/Select-lại-ảnh-đã-lưu/Delete-sau-reload-thật đều PASS. Remove Background CHỈ verify local (Node), chưa verify live vì cần deploy Cloud Function. Rotate/Crop xác nhận FAIL đúng nguyên nhân CORS, chưa sửa được.
 
-**Deploy**: đang tiến hành — Netlify draft→prod cho `js/media-edit.js`/`js/media-library.js`, `firebase deploy --only functions:openaiProxy` cho `functions/index.js`.
+**Deploy**: hoàn tất. `firebase deploy --only functions:openaiProxy` (commit `89de024`) — deploy thành công. Netlify draft (`js/media-edit.js`/`js/media-library.js`) verify đúng nội dung commit qua byte-diff, sau đó `--prod` — Production (`pshopmusic.com`) byte-diff khớp đúng commit `89de024`. **Chờ Founder Acceptance Test thật** cho Edit Tab/Remove Background/Persistence trên Production — Remove Background chỉ mới verify local (Node), chưa gọi thật trên Production sau deploy.
 
 ## MISSION — MODEL REGISTRY & DYNAMIC AI ROUTING (2026-08-06, backend)
 - **Capability 9/10 — Runtime Integration + Multi-provider Real API** (VERIFY PASS): `runtime.integration.test.js` key toàn pipeline (resolveModel→route→buildRequest→execute→parseResponse→normalizeResult); credential resolution trong Adapter (request.apiKey→process.env→Firebase Secret); REAL API 4 provider (deepseek/openai/anthropic/gemini) HTTP 200 response "HELLO PSH".
