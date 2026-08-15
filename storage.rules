@@ -84,9 +84,21 @@ service firebase.storage {
       // Use the match capture `allPaths[0]` (same convention as the list
       // rule) which is available for both new and existing objects, instead
       // of resource.name which is null on create.
+      //
+      // LIST FIX (2026-08-14): the guard was `!(allPaths.size() > 0 &&
+      // allPaths[0] == 'businesses')`, but `allPaths` is a PATH and the
+      // Firebase Rules compiler rejects `.size()` on it ("Invalid type.
+      // Received one of [path]. Expected one of [string, bytes, list, set,
+      // map]") -- an errored condition evaluates to false, so every
+      // authenticated listAll() was denied. Verified against the real Rules
+      // compiler: `.size()` warns, `allPaths[0]` compiles CLEAN. Dropping
+      // only `.size()` keeps the SAME tenant guard: allPaths[0] is
+      // 'businesses' for both `businesses` and `businesses/<id>/...`, so
+      // tenant listing stays denied. Root listing ("" -> no segment to bind)
+      // is still granted by the bucket-level `allow list` above.
       allow get: if !resource.name.matches("^businesses/.*");
       allow list: if request.auth != null
-        && !(allPaths.size() > 0 && allPaths[0] == 'businesses');
+        && allPaths[0] != 'businesses';
       allow write: if request.auth != null
         && !(allPaths.size() > 0 && allPaths[0] == 'businesses');
     }
