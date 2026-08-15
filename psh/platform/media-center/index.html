@@ -344,10 +344,28 @@ body{font-family:Inter,system-ui,sans-serif;color:#13161c;background:#f5f6f8;hei
       MediaLibrary.list().then(function (items) {
         var list = (items || []).slice(0, 40);
         if (!list.length) { grid.innerHTML = '<p class="mc-note">Chưa có media.</p>'; return; }
-        grid.innerHTML = list.map(function (it) {
+        // Xoá trực tiếp tại đây (Founder báo live 2026-08-15: tab "Library"
+        // bên trái chỉ hiện ảnh, không xoá được — phải mở riêng
+        // /admin/media-library.html mới xoá được). Tái dùng ĐÚNG
+        // MediaLibrary.remove() (đã tự xoá khỏi Media Index) + xác nhận trước
+        // khi xoá, cùng pattern js/media-library-picker.js đang dùng.
+        grid.innerHTML = list.map(function (it, i) {
           var url = it.url || it.downloadURL || '';
-          return '<div class="mc-lib-item"><img src="' + url + '" onerror="this.style.display=\'none\'"><div class="n">' + (it.name || '') + '</div></div>';
+          return '<div class="mc-lib-item"><img src="' + url + '" onerror="this.style.display=\'none\'"><div class="n">' + (it.name || '') + '</div>' +
+            '<button type="button" class="mc-btn ghost" data-lib-del="' + i + '" style="margin-top:.4rem;color:#b3261e;border-color:#f3c6c2">Xoá</button></div>';
         }).join('');
+        grid.querySelectorAll('[data-lib-del]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var it = list[parseInt(btn.getAttribute('data-lib-del'), 10)];
+            if (!it || !it.fullPath) return;
+            if (!confirm('Xóa ảnh này khỏi Thư viện? Hành động này xóa file thật khỏi Storage và không thể hoàn tác. Nếu ảnh đang được dùng ở nơi khác (Product/Banner/...), nơi đó sẽ mất ảnh.')) return;
+            btn.disabled = true; btn.textContent = 'Đang xoá...';
+            MediaLibrary.remove(it.fullPath).then(loadLibraryAssets).catch(function (e) {
+              btn.disabled = false; btn.textContent = 'Xoá';
+              alert('Không xóa được: ' + e.message);
+            });
+          });
+        });
       }).catch(function (e) {
         grid.innerHTML = '<p class="mc-note">Tải media lỗi: ' + e.message + '</p>';
       });
