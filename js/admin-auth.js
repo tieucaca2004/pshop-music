@@ -265,10 +265,27 @@ const AdminAuth = (function () {
         document.body.prepend(b);
         document.getElementById("verifyEmailBtn").onclick = function(e) {
           e.preventDefault();
+          var btn = document.getElementById("verifyEmailBtn");
+          // Chặn bấm lặp lại trong lúc đang gửi/đã gửi — không có dòng này,
+          // bấm 2 lần liền (hoặc bấm lại sau khi đã "Đã gửi") gọi
+          // sendEmailVerification() thêm lần nữa, Firebase tự chặn cả THIẾT
+          // BỊ với auth/too-many-requests (Founder báo lỗi live 2026-08-15) —
+          // cùng nguyên nhân đã sửa ở nút Đăng nhập, chưa áp dụng cho nút này.
+          if (btn.dataset.sending === "1") return;
+          btn.dataset.sending = "1";
+          btn.style.pointerEvents = "none";
+          btn.style.opacity = "0.6";
           user.sendEmailVerification().then(function() {
-            document.getElementById("verifyEmailBtn").textContent = "Đã gửi! Kiểm tra hộp thư.";
+            btn.textContent = "Đã gửi! Kiểm tra hộp thư.";
           }).catch(function(err) {
-            alert("Lỗi: " + err.message);
+            if (err.code === "auth/too-many-requests") {
+              btn.textContent = "Đã gửi quá nhiều lần — đợi vài phút rồi tải lại trang để thử lại.";
+            } else {
+              btn.dataset.sending = "";
+              btn.style.pointerEvents = "";
+              btn.style.opacity = "";
+              alert("Lỗi: " + err.message);
+            }
           });
         };
       }
