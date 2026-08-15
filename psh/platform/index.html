@@ -65,9 +65,9 @@ body{font-family:Inter,system-ui,sans-serif;color:#13161c;background:#f5f6f8;dis
   AuthContext.init().then(function () {
     var user = AuthContext.getCurrentUser();
     var role = AuthContext.getCurrentRole();
-    if (!user) { window.location.href = '/psh-console/auth.html'; return; }
+    if (!user) { window.location.href = '/admin/login.html'; return; }
     if (role !== 'admin' && role !== 'editor' && role !== 'super_admin') {
-      window.location.href = '/psh-console/auth.html?denied=1'; return;
+      window.location.href = '/admin/login.html?denied=1'; return;
     }
   });
 

@@ -125,7 +125,7 @@ window.__PSH__ = window.__PSH__ || {};
       
       AdminAuth.logout = function() {
         firebase.auth().signOut().then(function() {
-          window.location.href = "/psh-console/auth.html";
+          window.location.href = "/platform/login/";
         });
       };
     }

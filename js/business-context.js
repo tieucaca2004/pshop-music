@@ -93,14 +93,14 @@
     // Not authenticated → redirect to login
     if (!user) {
       var returnUrl = encodeURIComponent(window.location.pathname + window.location.search);
-      window.location.href = '/psh-console/auth.html?redirect=' + returnUrl;
+      window.location.href = '/platform/login/?redirect=' + returnUrl;
       return false;
     }
 
     // No business access → redirect to create or pending
     if (!businessId) {
       // Redirect to auth page which will handle auto-creation
-      window.location.href = '/psh-console/auth.html';
+      window.location.href = '/platform/login/';
       return false;
     }
 

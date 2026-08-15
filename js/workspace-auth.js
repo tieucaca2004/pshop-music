@@ -166,9 +166,15 @@ var WorkspaceAuth = (function () {
         return;
       }
 
-      // 2. super_admin → redirect to Platform Admin
+      // 2. super_admin → Platform Admin area chưa được xây (route này 404 —
+      // Founder xác nhận live 2026-08-15: tài khoản super_admin vào bất kỳ
+      // trang Customer Workspace nào (business-settings/media-library/files)
+      // đều bị đưa thẳng tới "Page not found"). Chưa có trang Platform Admin
+      // thật để trỏ tới — không tự dựng trang mới ở đây (ngoài phạm vi sửa
+      // lỗi), tạm đưa về /admin/ (đã có, đang hoạt động) giống hệt cách xử
+      // lý "admin/editor" ngay bên dưới.
       if (AuthContext.isSuperAdmin()) {
-        window.location.href = '/platform/platform-admin/';
+        window.location.href = '/admin/';
         return;
       }
 
