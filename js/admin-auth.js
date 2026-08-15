@@ -254,6 +254,26 @@ const AdminAuth = (function () {
 
 // Verify Email banner — shows when user's email is not verified
 (function checkVerifyEmail() {
+  // recheckVerification() — Firebase KHÔNG tự đẩy cập nhật user.emailVerified
+  // khi Founder bấm link xác thực trong email thật (link đó xử lý ở phía
+  // Firebase server, tab admin đang mở không hề biết) — field này chỉ được
+  // Firebase SDK làm mới khi gọi user.reload() (hoặc đăng xuất/đăng nhập
+  // lại). Thiếu dòng này thì banner "Email chưa được xác thực" hiện VĨNH
+  // VIỄN trong cùng phiên dù đã bấm xác thực xong thật (Founder báo live
+  // 2026-08-15). Gọi lại khi tab được focus lại — đúng lúc Founder vừa xác
+  // thực xong ở tab/app khác rồi quay lại tab admin.
+  function recheckVerification() {
+    var u = firebase.auth().currentUser;
+    if (!u) return;
+    u.reload().then(function () {
+      if (firebase.auth().currentUser && firebase.auth().currentUser.emailVerified) {
+        var banner = document.getElementById("verifyEmailBanner");
+        if (banner) banner.remove();
+        window.removeEventListener("focus", recheckVerification);
+      }
+    }).catch(function () {});
+  }
+
   firebase.auth().onAuthStateChanged(function(user) {
     if (user && !user.emailVerified) {
       var b = document.getElementById("verifyEmailBanner");
@@ -263,6 +283,11 @@ const AdminAuth = (function () {
         b.style.cssText = "background:#fff3cd;padding:10px 20px;text-align:center;font-size:0.9rem";
         b.innerHTML = 'Email chưa được xác thực. <a href="#" id="verifyEmailBtn" style="color:#856404;text-decoration:underline">Gửi lại email xác thực</a>';
         document.body.prepend(b);
+        window.addEventListener("focus", recheckVerification);
+        // Cũng tự kiểm tra lại ngay khi banner vừa hiện — trang có thể vừa
+        // được tải MỚI (không chỉ focus lại tab) sau khi Founder đã xác
+        // thực xong ở phiên khác, và bản ghi user cache lúc này vẫn cũ.
+        recheckVerification();
         document.getElementById("verifyEmailBtn").onclick = function(e) {
           e.preventDefault();
           var btn = document.getElementById("verifyEmailBtn");
