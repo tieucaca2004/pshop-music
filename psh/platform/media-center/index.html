@@ -126,6 +126,17 @@ body{font-family:Inter,system-ui,sans-serif;color:#13161c;background:#f5f6f8;hei
           <p class="mc-note">Các thao tác này chạy hoàn toàn trên máy bạn (canvas), KHÔNG gọi OpenAI — miễn phí.</p>
         </div>
 
+        <div class="mc-field">
+          <label>ĐỔI NỀN (MÀU) — FREE, không gọi AI</label>
+          <div style="display:flex;gap:.4rem;align-items:center;flex-wrap:wrap">
+            <input type="color" id="meFreeBgColor" value="#ffffff" style="width:48px;height:38px;padding:2px;border:1px solid #d7dae0;border-radius:6px;cursor:pointer">
+            <button type="button" class="mc-btn ghost" id="meFreeBgWhite">Nền trắng <span class="me-cost">FREE</span></button>
+            <button type="button" class="mc-btn ghost" id="meFreeBgBlack">Nền đen <span class="me-cost">FREE</span></button>
+            <button type="button" class="mc-btn ghost" id="meFreeBgCustom">Dùng màu đã chọn <span class="me-cost">FREE</span></button>
+          </div>
+          <p class="mc-note">Vẽ đè ảnh nguồn lên nền màu đặc — CHỈ đổi màu nền thật (thấy khác) nếu ảnh nguồn đã trong suốt (vd kết quả sau "Remove Background"). Không tự tách nền khỏi ảnh chưa trong suốt — việc đó cần "Remove Background" (AI, có phí).</p>
+        </div>
+
         <div id="meStatus" class="mc-status" style="display:none"></div>
         <div class="me-preview-wrap">
           <div class="me-preview-box"><img id="mePreviewImg" style="display:none" alt="preview"></div>

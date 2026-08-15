@@ -490,6 +490,25 @@ const MediaEdit = (function () {
     }).catch(function (e) { setStatus('FREE convert lỗi: ' + e.message, true); });
   }
 
+  // freeChangeBackground(color) — FREE, xử lý canvas cục bộ, KHÔNG gọi AI.
+  // Tô 1 nền màu đặc rồi vẽ ảnh nguồn đè lên trên (giữ nguyên alpha). Chỉ THẬT
+  // SỰ đổi màu nền nhìn thấy được khi ảnh nguồn đã có vùng trong suốt (vd
+  // ảnh vừa qua "Remove Background" — AI, có phí) — với ảnh còn nền đặc (ảnh
+  // chụp sản phẩm gốc), thao tác này không tách được nền cũ ra (tách nền cần
+  // AI, đúng ranh giới FREE=canvas / AI=OpenAI của toàn bộ Media Center).
+  function freeChangeBackground(color) {
+    if (!activeSource) { setStatus('Chọn ảnh nguồn trước — FREE.', true); return; }
+    return loadImageEl(activeSource.url).then(function (im) {
+      var c = document.createElement('canvas');
+      c.width = im.naturalWidth; c.height = im.naturalHeight;
+      var ctx = c.getContext('2d');
+      ctx.fillStyle = color;
+      ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(im, 0, 0);
+      canvasToDraft(c, 'image/png');
+    }).catch(function (e) { setStatus('FREE đổi nền lỗi: ' + e.message, true); });
+  }
+
   /* ================= PROMPT OPTIMIZER (rule-based, FREE — không gọi AI) ================= */
   // Chuyển câu tự nhiên thành instruction có cấu trúc. KHÔNG gọi OpenAI.
   const STYLE_TAGS = {
@@ -693,6 +712,9 @@ const MediaEdit = (function () {
     var bCmp = $('meFreeCompress'); if (bCmp) bCmp.addEventListener('click', freeCompress);
     var bPng = $('meFreeConvertPng'); if (bPng) bPng.addEventListener('click', function () { freeConvert('image/png'); });
     var bWebp = $('meFreeConvertWebp'); if (bWebp) bWebp.addEventListener('click', function () { freeConvert('image/webp'); });
+    var bBgWhite = $('meFreeBgWhite'); if (bBgWhite) bBgWhite.addEventListener('click', function () { freeChangeBackground('#ffffff'); });
+    var bBgBlack = $('meFreeBgBlack'); if (bBgBlack) bBgBlack.addEventListener('click', function () { freeChangeBackground('#000000'); });
+    var bBgCustom = $('meFreeBgCustom'); if (bBgCustom) bBgCustom.addEventListener('click', function () { freeChangeBackground(($('meFreeBgColor') && $('meFreeBgColor').value) || '#ffffff'); });
 
     loadLibrary();
     loadGenProducts();
