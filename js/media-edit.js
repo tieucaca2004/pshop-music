@@ -217,6 +217,10 @@ const MediaEdit = (function () {
       $('meEditBtn') && ($('meEditBtn').disabled = false);
       $('meRemoveBgBtn') && ($('meRemoveBgBtn').disabled = false);
       $('meTabEdit') && ($('meTabEdit').disabled = false);
+      // pickFromLibrary()/pickUpload() cả 2 đều cập nhật nhãn "NGUỒN" trong
+      // tab Chỉnh sửa — urlSource() thiếu dòng này, nên sau khi thêm nguồn từ
+      // URL, nhãn NGUỒN vẫn hiện tên nguồn CŨ (hoặc "(chưa chọn)").
+      $('meSourceName') && ($('meSourceName').textContent = activeSource.name);
     };
     probe.onerror = function () { setStatus('Không tải được ảnh từ URL — kiểm tra link.', true); };
     probe.src = url;
