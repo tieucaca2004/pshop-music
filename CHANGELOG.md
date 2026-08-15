@@ -2,6 +2,22 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Feature — Kéo-thả tiêu đề cho Ô Danh mục Trang chủ + Cỡ chữ/Font chữ/Màu chữ tiêu đề (2026-08-15)
+
+**Bối cảnh**: Sau khi Category Cover có kéo-thả tiêu đề, Founder yêu cầu mở rộng 2 việc: (1) áp dụng kéo-thả VỊ TRÍ cho cả Ô Danh mục Trang chủ (lưới hiển thị trang chủ), không chỉ Category Cover; (2) thêm điều khiển cỡ chữ, font chữ, và vài kiểu mẫu màu chữ cho tiêu đề — xác nhận qua AskUserQuestion là áp dụng cho CẢ HAI nơi.
+
+**Kéo-thả vị trí cho Ô Danh mục Trang chủ**: `startTileTitleDrag()` (`js/admin-categories.js`) — cùng kỹ thuật `startCoverTitleDrag()`, ghi thẳng `tiles[i].titlePosX/titlePosY` (cùng cách `customAspectRatio` đã làm). Áp dụng lên trang chủ thật (`js/home.js`) CHỈ khi Ô có cả 2 field — Ô chưa từng kéo giữ nguyên 100% rendering cũ. Vị trí ghi qua inline style (không qua class CSS mới) để luôn thắng cascade `.wide`/`.has-cover`/`.no-photo` sẵn có bất kể thứ tự specificity; neo bằng `bottom` (không phải `top` như lúc kéo trong admin) vì cỡ chữ thật (1.1rem→3.4rem tùy size) lớn hơn nhiều khung xem trước admin — tránh tràn khỏi `.cat-tile` (có `overflow:hidden`).
+
+**Cỡ chữ/Font chữ/Màu chữ**: áp dụng cho cả Category Cover và Ô Danh mục Trang chủ.
+- Cỡ chữ: tay cầm góc kéo tự do (40%-300%), cùng kỹ thuật `startTextResize()` Hero Slideshow đã có — lưu `titleScale`/`coverTitleScale`.
+- Font chữ: chọn giữa 2 font đã nạp sẵn toàn site (Be Vietnam Pro/Cormorant Garamond) — không thêm font mới, tránh tải chậm.
+- Màu chữ: 3 màu theo đúng bảng màu thương hiệu (Trắng/Đen/Vàng — khớp `--gold`/`--black` CSS).
+- Trang thật áp dụng qua `calc(clamp(...) * var(--title-scale,1))` (cùng kỹ thuật `--hero-title-scale` Hero Slideshow) — mặc định `var(--title-scale,1)` = không đổi, 0 regression cho mọi Danh mục/Ô chưa từng chỉnh.
+
+**Kiểm thử**: `node --check` toàn bộ file sửa (OK), braces CSS cân bằng. Không test được qua UI thật (không có tài khoản Founder) — chỉ verify code + logic cục bộ.
+
+**Deploy**: `git push` → Netlify tự động build từ GitHub (site đã liên kết repo) → Production. Byte-diff xác nhận `js/admin-categories.js`/`js/home.js`/`js/category.js`/`css/style.css`/`css/admin.css` khớp đúng commit `1325229` trên Production thật, cache-bust `?v=` đã bump đồng bộ. **Trước đó Netlify báo lỗi "Skipped due to account credit usage exceeded" (tài khoản vượt hạn mức) — Founder đã nạp thêm hạn mức, deploy lại thành công.**
+
 ## Fix — Xóa phông SSRF allowlist chặn URL thật + Ảnh nền Internet "Provider Not Configured" + Kéo-thả vị trí tiêu đề Category Cover (2026-08-15)
 
 **Bối cảnh**: Founder báo 3 việc trong 1 lượt, kèm 2 ảnh chụp màn hình: (1) "Xóa phông ảnh sản phẩm đại diện" trong Quản lý danh mục báo lỗi khi dán link ảnh thật (krkmusic.com) — "imageUrl không hợp lệ — chỉ chấp nhận ảnh từ Firebase Storage của dự án"; (2) "Ảnh nền từ Internet" (cả Category Cover và Ô Danh mục Trang chủ) luôn báo "Provider Not Configured"; (3) yêu cầu thêm chức năng kéo-thả vị trí chữ tiêu đề.
