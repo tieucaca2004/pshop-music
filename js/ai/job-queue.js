@@ -99,8 +99,32 @@ const AIJobQueue = (function () {
       });
     }
 
+    if (!item.inputParams) {
+      item.status = 'failed';
+      item.error = 'Item thiếu inputParams — dữ liệu job bị hỏng.';
+      return logAttempt({
+        moduleId: job.moduleId, provider: 'none', jobId: job.id,
+        durationMs: 0, status: 'failed', errorMessage: item.error, userId, userEmail
+      });
+    }
+
     let providerId = 'none';
-    return Promise.resolve(module.loadContext(item.inputParams))
+    // Promise.resolve(module.loadContext(...)) KHÔNG bắt được lỗi nếu
+    // loadContext() ném lỗi ĐỒNG BỘ (throw ngay khi gọi, trước khi kịp trả
+    // về 1 Promise) — throw đồng bộ đó xảy ra TRƯỚC khi Promise.resolve()
+    // được gọi, nên .catch() bên dưới không bao giờ bắt được, lỗi thoát ra
+    // NGOÀI luôn processItem() → processSequentially() → runJob() → làm vỡ
+    // TOÀN BỘ chuỗi .reduce() trong resume() — 1 item hỏng ở BẤT KỲ job nào
+    // sẽ chặn đứng resume() cho MỌI job khác của MỌI Plugin, MỌI phiên Admin
+    // (xác nhận thật: facebook-post-generator.js's loadContext() ném lỗi
+    // đồng bộ "Cannot read properties of undefined (reading 'productId')"
+    // trên 1 job cũ bị hỏng dữ liệu, làm treo resume() vĩnh viễn cho toàn bộ
+    // CMS — phát hiện khi audit Media Center "Generate New" 2026-08-15,
+    // không liên quan gì tới Media Center, đây là lỗi ở tầng Queue dùng
+    // chung). Gọi loadContext() BÊN TRONG .then() để Promise tự chuyển throw
+    // đồng bộ thành rejected promise, .catch() bên dưới bắt được như bình
+    // thường.
+    return Promise.resolve().then(() => module.loadContext(item.inputParams))
       .then(context => {
         const prompt = module.buildPrompt(item.inputParams, context);
         // Chọn Provider qua Provider Manager (AIProviderRegistry) — Queue
