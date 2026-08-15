@@ -2,6 +2,18 @@
 
 # Roadmap — chỉ ghi nhận, KHÔNG tự ý triển khai
 
+## Ý tưởng phát sinh — Kéo-thả vị trí tiêu đề cho Ô Danh mục Trang chủ (cat-tile)
+
+Requirement "kéo-thả vị trí chữ tiêu đề" (2026-08-15) mới làm cho Category Cover (header trang danh mục) — Ô Danh mục Trang chủ (`siteContent.categoryTiles`, lưới hiển thị ở `index.html`) CHƯA làm. CSS `.cat-tile-label` phức tạp hơn nhiều Category Cover: 4 biến thể kích cỡ (`wide`/`large`/`small`/mặc định) × `has-cover`/`no-photo` × breakpoint mobile riêng (`css/style.css`) — rủi ro regression cao hơn trên 1 trang đang phục vụ khách thật (trang chủ), cần làm như 1 Requirement riêng có thời gian kiểm thử kỹ từng biến thể, không tiện tay làm cùng lúc.
+
+## Ý tưởng phát sinh — mojibake có sẵn trong functions/index.js
+
+Phát hiện tình cờ khi review diff cho SSRF fix (2026-08-15), KHÔNG liên quan tới thay đổi đang làm: `functions/index.js` có vài dòng comment + 1 chuỗi lỗi hiển thị cho user (`'Kh�ng t?i du?c ?nh t? URL cung c?p.'`) bị hỏng encoding từ trước (không phải do lượt sửa này). Cần rà lại toàn bộ file tìm ký tự `�`/`?` lạc chỗ và khôi phục đúng tiếng Việt UTF-8, xác nhận qua `node --check` + `node -e` sau khi sửa.
+
+## Ý tưởng phát sinh — hợp đồng thuê xe.pdf đang public trên Production
+
+Phát hiện tình cờ khi đối chiếu danh sách file deploy Netlify (2026-08-15): `hợp đồng thuê xe.pdf` ở gốc repo đang được serve công khai thật trên `https://pshopmusic.com/` (`curl` trả về 200). Có vẻ là file cá nhân lọt vào repo, không phải asset site — cần Chief Architect xác nhận có phải chủ đích không, nếu không thì gỡ khỏi repo (không tự ý xóa vì có thể là chủ đích chưa rõ).
+
 ## Ý tưởng phát sinh — workspace-categories.js chưa có trang HTML nào trỏ tới
 
 Phát hiện khi rà toàn bộ CMS sau sự cố `d3f3f79`: `js/workspace-categories.js` (Customer Workspace — quản lý danh mục theo từng tenant) đã code xong, gọi `PSH.escapeHtml` đúng cú pháp, nhưng KHÔNG có file `platform/workspace/*.html` nào nạp nó — trang này hiện không thể truy cập được từ UI. Khi ai đó nối trang này vào (thêm `platform/workspace/categories.html` hoặc tương tự), cần thêm cả `<script src="js/shared.js">` (định nghĩa `PSH`) vào trang đó — hiện `shared.js` chưa được nạp ở BẤT KỲ trang nào trong dự án.
