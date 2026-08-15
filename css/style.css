@@ -94,21 +94,21 @@ nav{position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop
 .cat-tile:hover img{transform:translate(-50%,-50%) scale(1.07)}
 .cat-tile-label{
   position:relative;z-index:2;margin-top:1rem;padding:0 0.8rem;text-align:center;color:#fff;
-  font-size:clamp(1.4rem,3.5vw,2.4rem);font-weight:800;letter-spacing:-0.01em;line-height:1.05;text-transform:uppercase
+  font-size:calc(clamp(1.4rem,3.5vw,2.4rem) * var(--title-scale,1));font-weight:800;letter-spacing:-0.01em;line-height:1.05;text-transform:uppercase
 }
 /* Wide banners span the full row, like the CONTROLLERS / ALL-IN-ONE rows */
 .cat-tile.wide{grid-column:1 / -1;aspect-ratio:auto;height:230px}
 .cat-tile.wide img{width:44%;height:88%;left:auto;right:6%;top:50%;transform:translateY(-50%)}
 .cat-tile.wide:hover img{transform:translateY(-50%) scale(1.06)}
-.cat-tile.wide .cat-tile-label{position:absolute;left:3rem;top:50%;transform:translateY(-50%);margin:0;text-align:left;font-size:clamp(1.8rem,4.5vw,3.4rem)}
+.cat-tile.wide .cat-tile-label{position:absolute;left:3rem;top:50%;transform:translateY(-50%);margin:0;text-align:left;font-size:calc(clamp(1.8rem,4.5vw,3.4rem) * var(--title-scale,1))}
 /* Kích cỡ ô mở rộng — "Nhỏ" (ô vuông thấp hơn) và "Lớn" (chiếm 2 cột) thêm
    vào normal (mặc định)/wide đã có, cùng lưới 3 cột (2 cột ở mobile) */
 .cat-tile.small{aspect-ratio:1/0.72}
 .cat-tile.small img{width:70%;height:52%}
-.cat-tile.small .cat-tile-label{font-size:clamp(1.1rem,2.6vw,1.7rem);margin-top:0.6rem}
+.cat-tile.small .cat-tile-label{font-size:calc(clamp(1.1rem,2.6vw,1.7rem) * var(--title-scale,1));margin-top:0.6rem}
 .cat-tile.large{grid-column:span 2;aspect-ratio:2/1.05}
 .cat-tile.large img{width:58%;height:64%}
-.cat-tile.large .cat-tile-label{font-size:clamp(1.6rem,3.8vw,2.8rem)}
+.cat-tile.large .cat-tile-label{font-size:calc(clamp(1.6rem,3.8vw,2.8rem) * var(--title-scale,1))}
 /* Ô Danh Mục Trang Chủ — Cover đầy đủ (Ảnh nền/Logo/Vị trí/Zoom/Opacity/Blur/
    Overlay), ĐÚNG cơ chế Category Cover (category-header-bg/-product-img/-logo
    ở trên) — chỉ kích hoạt khi Founder thật sự đặt 1 trong các field mới
@@ -176,7 +176,7 @@ nav{position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop
 .category-header-logo{position:absolute;z-index:3;top:1rem;right:1rem;max-width:64px;max-height:64px;object-fit:contain;pointer-events:none}
 @media(max-width:640px){.category-header-product-img{loading:lazy;max-width:34%;max-height:60%}.category-header-logo{max-width:44px;max-height:44px}}
 
-.category-header h1{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;color:#fff;letter-spacing:-0.01em}
+.category-header h1{font-size:calc(clamp(1.8rem,4vw,2.8rem) * var(--title-scale,1));font-weight:800;color:#fff;letter-spacing:-0.01em}
 /* #categoryHeaderTitle — vị trí kéo-thả tự do (admin/categories.html Category
    Cover), toạ độ % tính theo TOÀN BỘ khung .category-header — cùng hệ toạ độ
    .category-header-product-img/-logo ở trên, khớp đúng khung Live Preview

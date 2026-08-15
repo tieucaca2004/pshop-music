@@ -240,6 +240,14 @@ body{min-height:100vh;background:var(--bg-alt)}
 .cat-cover-preview-title{position:absolute;z-index:3;color:#fff;font-weight:800;font-size:1rem;letter-spacing:-0.01em;cursor:grab;user-select:none;touch-action:none;padding:2px 6px;border-radius:3px;transition:background 0.1s}
 .cat-cover-preview-title:hover{background:rgba(0,0,0,0.35)}
 .cat-cover-preview-title.dragging{cursor:grabbing;background:rgba(0,0,0,0.5)}
+.cat-cover-preview-title.resizing-text{outline:1px dashed var(--gold)}
+/* Tay cầm góc dưới-phải để kéo TỰ DO cỡ chữ tiêu đề — cùng convention
+   .hero-mini-resize-handle (js/admin-sliders.js) đã dùng cho Hero Slideshow. */
+.cat-cover-title-resize-handle{position:absolute;bottom:-4px;right:-4px;width:10px;height:10px;background:var(--gold);border:1px solid #fff;border-radius:50%;cursor:nwse-resize;touch-action:none}
+.cat-cover-color-swatches{display:flex;gap:0.4rem}
+.cat-cover-color-btn{width:22px;height:22px;padding:0;border-radius:50%;border:2px solid var(--line2);cursor:pointer}
+.cat-cover-color-btn:hover{border-color:var(--gold)}
+.cat-cover-color-btn.active{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold-soft)}
 .cat-cover-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:0.75rem}
 .cat-cover-controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.75rem;align-items:end;margin-bottom:0.6rem}
 .cat-cover-slider-label{display:flex;flex-direction:column;gap:0.3rem;font-size:0.7rem;color:var(--ink-soft)}

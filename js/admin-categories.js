@@ -29,9 +29,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // giá trị mặc định xấp xỉ đúng vị trí CSS tĩnh cũ (.cat-cover-preview-title
   // left:1rem;bottom:0.75rem trong khung cao 180px) để danh mục CHƯA từng
   // kéo tiêu đề vẫn hiện Y HỆT như trước (an toàn dữ liệu cũ).
-  const COVER_DEFAULTS = { position: 'center-right', zoom: 100, opacity: 100, blur: 0, overlay: 100, titlePosX: 4, titlePosY: 88 };
+  const COVER_DEFAULTS = { position: 'center-right', zoom: 100, opacity: 100, blur: 0, overlay: 100, titlePosX: 4, titlePosY: 88, titleScale: 100, titleFont: 'sans', titleColor: 'white' };
   const POSITIONS = ['top-left', 'top-center', 'top-right', 'center-left', 'center', 'center-right', 'bottom-left', 'bottom-center', 'bottom-right'];
   const POSITION_LABELS = { 'top-left': 'Trên trái', 'top-center': 'Trên giữa', 'top-right': 'Trên phải', 'center-left': 'Giữa trái', 'center': 'Chính giữa', 'center-right': 'Giữa phải', 'bottom-left': 'Dưới trái', 'bottom-center': 'Dưới giữa', 'bottom-right': 'Dưới phải' };
+  // TITLE_FONTS/TITLE_COLORS — 2 font đã nạp SẴN toàn site (mọi trang đều có
+  // <link> Google Fonts này, category.html/index.html không ngoại lệ — không
+  // thêm font mới, tránh tải chậm/FOUT ngoài ý muốn) + 3 màu theo đúng bảng
+  // màu thương hiệu (--gold/--black, trắng mặc định cũ).
+  const TITLE_FONTS = { sans: "'Be Vietnam Pro',sans-serif", serif: "'Cormorant Garamond',serif" };
+  const TITLE_FONT_LABELS = { sans: 'Be Vietnam Pro', serif: 'Cormorant Garamond' };
+  const TITLE_COLORS = { white: '#ffffff', black: '#111111', gold: '#b8892f' };
+  const TITLE_COLOR_LABELS = { white: 'Trắng', black: 'Đen', gold: 'Vàng' };
 
   function escapeHtml(str) {
     return String(str || '').replace(/[&<>"']/g, c => ({
@@ -54,7 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
           blur: typeof c.coverBlur === 'number' ? c.coverBlur : COVER_DEFAULTS.blur,
           overlay: typeof c.coverOverlay === 'number' ? c.coverOverlay : COVER_DEFAULTS.overlay,
           titlePosX: typeof c.coverTitlePosX === 'number' ? c.coverTitlePosX : COVER_DEFAULTS.titlePosX,
-          titlePosY: typeof c.coverTitlePosY === 'number' ? c.coverTitlePosY : COVER_DEFAULTS.titlePosY
+          titlePosY: typeof c.coverTitlePosY === 'number' ? c.coverTitlePosY : COVER_DEFAULTS.titlePosY,
+          titleScale: typeof c.coverTitleScale === 'number' ? c.coverTitleScale : COVER_DEFAULTS.titleScale,
+          titleFont: c.coverTitleFont || COVER_DEFAULTS.titleFont,
+          titleColor: c.coverTitleColor || COVER_DEFAULTS.titleColor
         };
         if (!previewViewport[c.id]) previewViewport[c.id] = 'desktop';
       });
@@ -112,7 +123,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           ${coverProductSlots[c.id] ? `<img src="${escapeHtml(coverProductSlots[c.id])}" class="cat-cover-preview-product" id="cat-cover-product-${c.id}" data-cover-position="${s.position}" style="--cover-zoom:${s.zoom / 100};--cover-opacity:${s.opacity / 100}" alt="">` : `<span class="cat-cover-preview-product-empty" id="cat-cover-product-${c.id}"></span>`}
           ${coverLogoSlots[c.id] ? `<img src="${escapeHtml(coverLogoSlots[c.id])}" class="cat-cover-preview-logo" id="cat-cover-logo-${c.id}" alt="">` : `<span id="cat-cover-logo-${c.id}"></span>`}
-          <div class="cat-cover-preview-title" style="left:${s.titlePosX}%;top:${s.titlePosY}%" onpointerdown="AdminCategories.startCoverTitleDrag(event,'${c.id}')" title="Kéo để đổi vị trí tiêu đề">${escapeHtml(c.label || 'Danh mục')}</div>
+          <div class="cat-cover-preview-title" style="left:${s.titlePosX}%;top:${s.titlePosY}%;font-size:${(s.titleScale / 100).toFixed(2)}rem;font-family:${TITLE_FONTS[s.titleFont]};color:${TITLE_COLORS[s.titleColor]}" onpointerdown="AdminCategories.startCoverTitleDrag(event,'${c.id}')" title="Kéo để đổi vị trí tiêu đề">${escapeHtml(c.label || 'Danh mục')}<span class="cat-cover-title-resize-handle" title="Kéo để đổi cỡ chữ" onpointerdown="event.stopPropagation();AdminCategories.startCoverTitleResize(event,'${c.id}')"></span></div>
         </div>
 
         <div class="cat-cover-grid">
@@ -137,6 +148,17 @@ document.addEventListener('DOMContentLoaded', () => {
           <label class="cat-cover-slider-label">Độ hiện Ảnh SP (${s.opacity}%)<input type="range" min="0" max="100" value="${s.opacity}" oninput="AdminCategories.setCoverField('${c.id}','opacity',this.value)"></label>
           <label class="cat-cover-slider-label">Làm mờ Ảnh nền — Blur (${s.blur}px)<input type="range" min="0" max="20" value="${s.blur}" oninput="AdminCategories.setCoverField('${c.id}','blur',this.value)"></label>
           <label class="cat-cover-slider-label">Độ phủ tối — Overlay (${s.overlay}%)<input type="range" min="0" max="150" value="${s.overlay}" oninput="AdminCategories.setCoverField('${c.id}','overlay',this.value)"></label>
+          <label class="cat-cover-slider-label">Font chữ tiêu đề
+            <select onchange="AdminCategories.setCoverField('${c.id}','titleFont',this.value)">
+              ${Object.keys(TITLE_FONTS).map(k => `<option value="${k}" ${s.titleFont === k ? 'selected' : ''}>${TITLE_FONT_LABELS[k]}</option>`).join('')}
+            </select>
+          </label>
+          <div>
+            <label class="cat-bg-label">MÀU CHỮ TIÊU ĐỀ</label>
+            <div class="cat-cover-color-swatches">
+              ${Object.keys(TITLE_COLORS).map(k => `<button type="button" class="cat-cover-color-btn${s.titleColor === k ? ' active' : ''}" style="background:${TITLE_COLORS[k]}" title="${TITLE_COLOR_LABELS[k]}" onclick="AdminCategories.setCoverField('${c.id}','titleColor','${k}')"></button>`).join('')}
+            </div>
+          </div>
           <button type="button" class="btn-secondary" onclick="AdminCategories.resetCover('${c.id}')">↺ ĐẶT LẠI MẶC ĐỊNH</button>
         </div>
 
@@ -159,6 +181,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function setCoverField(id, field, value) {
     if (!coverSettings[id]) coverSettings[id] = Object.assign({}, COVER_DEFAULTS);
+    // titleFont/titleColor đổi qua dropdown/click (không phải kéo liên tục
+    // như Zoom/Opacity/Blur/Overlay) — render() lại toàn hàng an toàn, không
+    // lo giật/mất focus (khác lý do các field bên dưới phải cập nhật DOM
+    // thủ công thay vì render() lại).
+    if (field === 'titleFont' || field === 'titleColor') {
+      coverSettings[id][field] = value;
+      render();
+      return;
+    }
     coverSettings[id][field] = (field === 'position') ? value : Number(value);
     const s = coverSettings[id];
     const inner = document.getElementById('cat-cover-inner-' + id);
@@ -265,6 +296,41 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('pointerup', up);
   }
 
+  // startCoverTitleResize — kéo TỰ DO tay cầm góc để đổi CỠ CHỮ tiêu đề,
+  // CÙNG kỹ thuật startTextResize() ở Hero Slideshow (js/admin-sliders.js):
+  // khoảng cách từ góc trên-trái nhãn tới điểm thả chuột so với khoảng cách
+  // ban đầu quyết định tỉ lệ phóng to/nhỏ, kẹp 40%-300%. titleScale LƯU
+  // TRỰC TIẾP làm cỡ chữ rem (100 → 1rem, khớp đúng font-size:1rem cũ của
+  // .cat-cover-preview-title trong CSS — danh mục CHƯA từng đổi cỡ chữ vẫn
+  // hiện Y HỆT như trước).
+  function startCoverTitleResize(e, id) {
+    e.preventDefault();
+    const handle = e.currentTarget;
+    const labelEl = handle.closest('.cat-cover-preview-title');
+    if (!labelEl) return;
+    if (!coverSettings[id]) coverSettings[id] = Object.assign({}, COVER_DEFAULTS);
+    const s = coverSettings[id];
+    const startRect = labelEl.getBoundingClientRect();
+    const startScale = s.titleScale;
+    const startDist = Math.max(10, Math.hypot(startRect.width, startRect.height));
+    labelEl.classList.add('resizing-text');
+    let lastScale = startScale;
+
+    function move(ev) {
+      const dist = Math.hypot(ev.clientX - startRect.left, ev.clientY - startRect.top);
+      lastScale = Math.min(300, Math.max(40, Math.round(startScale * (dist / startDist))));
+      labelEl.style.fontSize = (lastScale / 100).toFixed(2) + 'rem';
+    }
+    function up() {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      labelEl.classList.remove('resizing-text');
+      s.titleScale = lastScale;
+    }
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+  }
+
   function rowValues(id) {
     const row = document.querySelector(`.cms-row[data-id="${id}"]`);
     const s = coverSettings[id] || COVER_DEFAULTS;
@@ -281,7 +347,10 @@ document.addEventListener('DOMContentLoaded', () => {
       coverBlur: s.blur,
       coverOverlay: s.overlay,
       coverTitlePosX: s.titlePosX,
-      coverTitlePosY: s.titlePosY
+      coverTitlePosY: s.titlePosY,
+      coverTitleScale: s.titleScale,
+      coverTitleFont: s.titleFont,
+      coverTitleColor: s.titleColor
     };
   }
 
@@ -348,11 +417,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const tilePreviewViewport = {}; // index -> 'desktop'|'tablet'|'mobile' (khung Cover riêng từng Ô)
   const tileBgRemoverOpen = {};   // index -> bool
   const TILE_COVER_DEFAULTS = { position: 'center', zoom: 100, opacity: 100, blur: 0, overlay: 100 };
-  // TILE_TITLE_DEFAULT — CHỈ dùng để vẽ khung xem trước lúc CHƯA kéo lần nào
-  // (không ghi vào tiles[i], không đụng dữ liệu) — xấp xỉ vị trí mặc định cũ
-  // (chữ nằm dưới ảnh, canh giữa). Vị trí THẬT trên trang chủ CHỈ đổi khi
-  // Founder chủ động kéo (xem startTileTitleDrag() + js/home.js renderCategoryTiles()).
-  const TILE_TITLE_DEFAULT = { x: 50, y: 80 };
+  // TILE_TITLE_DEFAULT — CHỈ dùng để vẽ khung xem trước lúc CHƯA kéo/đổi lần
+  // nào (không ghi vào tiles[i], không đụng dữ liệu) — xấp xỉ vị trí/cỡ chữ/
+  // font/màu mặc định cũ. Giá trị THẬT trên trang chủ CHỈ đổi khi Founder chủ
+  // động kéo/chọn (xem startTileTitleDrag/-Resize() + js/home.js renderCategoryTiles()).
+  const TILE_TITLE_DEFAULT = { x: 50, y: 80, scale: 100, font: 'sans', color: 'white' };
 
   function loadTiles() {
     SiteContentDB.get().then(content => {
@@ -403,14 +472,19 @@ document.addEventListener('DOMContentLoaded', () => {
     return t.customAspectRatio ? ` style="aspect-ratio:${t.customAspectRatio};height:auto"` : '';
   }
 
-  // tileTitlePosStyle — ĐÚNG logic js/home.js renderCategoryTiles() dùng để
-  // vẽ chữ tiêu đề đã kéo (sửa 1 nơi phải sửa nơi kia, cùng quy ước
-  // tileHasCover/tilePreviewClasses ở trên) — để Live Preview TỔNG khớp
-  // ngay khi kéo, không cần Lưu rồi tải lại mới thấy đúng vị trí.
-  function tileTitlePosStyle(t) {
-    return (typeof t.titlePosX === 'number' && typeof t.titlePosY === 'number')
-      ? ` style="position:absolute;z-index:5;left:${t.titlePosX}%;bottom:${100 - t.titlePosY}%;max-width:80%;margin:0;text-align:left"`
-      : '';
+  // tileTitleStyle — ĐÚNG logic js/home.js renderCategoryTiles() dùng để vẽ
+  // chữ tiêu đề đã kéo vị trí/đổi cỡ chữ/font/màu (sửa 1 nơi phải sửa nơi
+  // kia, cùng quy ước tileHasCover/tilePreviewClasses ở trên) — để Live
+  // Preview TỔNG khớp ngay, không cần Lưu rồi tải lại mới thấy đúng.
+  function tileTitleStyle(t) {
+    const parts = [];
+    if (typeof t.titlePosX === 'number' && typeof t.titlePosY === 'number') {
+      parts.push('position:absolute', 'z-index:5', `left:${t.titlePosX}%`, `bottom:${100 - t.titlePosY}%`, 'max-width:80%', 'margin:0', 'text-align:left');
+    }
+    if (typeof t.titleScale === 'number') parts.push(`--title-scale:${t.titleScale / 100}`);
+    if (t.titleFont && TITLE_FONTS[t.titleFont]) parts.push(`font-family:${TITLE_FONTS[t.titleFont]}`);
+    if (t.titleColor && TITLE_COLORS[t.titleColor]) parts.push(`color:${TITLE_COLORS[t.titleColor]}`);
+    return parts.length ? ` style="${parts.join(';')}"` : '';
   }
 
   // renderTilePreviewGrid — vẽ lại RIÊNG khung Live Preview TỔNG (không đụng
@@ -425,7 +499,7 @@ document.addEventListener('DOMContentLoaded', () => {
     frame.setAttribute('data-viewport', tileViewport);
     if (!tiles.length) { frame.innerHTML = '<p class="small-muted">Chưa có ô danh mục nào.</p>'; return; }
     frame.innerHTML = `<div class="cat-tile-grid">${tiles.map((t, i) =>
-      `<div class="${tilePreviewClasses(t)}"${tileRatioStyle(t)}>${tilePreviewInnerHtml(t)}<span class="cat-tile-label"${tileTitlePosStyle(t)}>${escapeHtml(t.label)}</span><span class="cat-tile-resize-handle" title="Kéo để đổi Kích cỡ Ô" onpointerdown="AdminCategories.startTileSizeDrag(event,${i})"></span></div>`
+      `<div class="${tilePreviewClasses(t)}"${tileRatioStyle(t)}>${tilePreviewInnerHtml(t)}<span class="cat-tile-label"${tileTitleStyle(t)}>${escapeHtml(t.label)}</span><span class="cat-tile-resize-handle" title="Kéo để đổi Kích cỡ Ô" onpointerdown="AdminCategories.startTileSizeDrag(event,${i})"></span></div>`
     ).join('')}</div>`;
   }
 
@@ -569,6 +643,37 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('pointerup', up);
   }
 
+  // startTileTitleResize — kéo TỰ DO tay cầm góc để đổi CỠ CHỮ tiêu đề Ô,
+  // CÙNG kỹ thuật startCoverTitleResize() ở Category Cover / startTextResize()
+  // ở Hero Slideshow. Ghi THẲNG vào tiles[i].titleScale (cùng cách
+  // titlePosX/Y/customAspectRatio đã làm) — Ô CHƯA từng đổi cỡ chữ giữ
+  // NGUYÊN 100% cỡ chữ mặc định theo size trên trang chủ thật.
+  function startTileTitleResize(e, i) {
+    e.preventDefault();
+    const handle = e.currentTarget;
+    const labelEl = handle.closest('.cat-cover-preview-title');
+    if (!labelEl) return;
+    const startRect = labelEl.getBoundingClientRect();
+    const startScale = typeof tiles[i].titleScale === 'number' ? tiles[i].titleScale : TILE_TITLE_DEFAULT.scale;
+    const startDist = Math.max(10, Math.hypot(startRect.width, startRect.height));
+    labelEl.classList.add('resizing-text');
+    let lastScale = startScale;
+
+    function move(ev) {
+      const dist = Math.hypot(ev.clientX - startRect.left, ev.clientY - startRect.top);
+      lastScale = Math.min(300, Math.max(40, Math.round(startScale * (dist / startDist))));
+      labelEl.style.fontSize = (lastScale / 100).toFixed(2) + 'rem';
+    }
+    function up() {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      labelEl.classList.remove('resizing-text');
+      tiles[i].titleScale = lastScale;
+    }
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+  }
+
   // ── TILE COVER — NGUYÊN VẸN Category Cover, tái dùng ĐÚNG class CSS
   // `.cat-cover-*` đã có (0 CSS mới), chỉ đổi id/onclick nhắm theo index `i`
   // thay vì `c.id`. Xem chú thích đầy đủ ở categoryCoverHtml() phía trên. ─────
@@ -597,7 +702,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           ${t.image ? `<img src="${escapeHtml(t.image)}" class="cat-cover-preview-product cat-tile-cover-draggable" id="tile-cover-product-${i}" data-cover-position="${s.position}" style="--cover-zoom:${s.zoom / 100};--cover-opacity:${s.opacity / 100}" alt="" title="Kéo để di chuyển" onpointerdown="AdminCategories.startTileProductDrag(event,${i})">` : `<span class="cat-cover-preview-product-empty" id="tile-cover-product-${i}"></span>`}
           ${t.logo ? `<img src="${escapeHtml(t.logo)}" class="cat-cover-preview-logo" id="tile-cover-logo-${i}" alt="">` : `<span id="tile-cover-logo-${i}"></span>`}
-          <div class="cat-cover-preview-title" style="left:${typeof t.titlePosX === 'number' ? t.titlePosX : TILE_TITLE_DEFAULT.x}%;top:${typeof t.titlePosY === 'number' ? t.titlePosY : TILE_TITLE_DEFAULT.y}%" onpointerdown="AdminCategories.startTileTitleDrag(event,${i})" title="Kéo để đổi vị trí tiêu đề">${escapeHtml(t.label || 'Danh mục')}</div>
+          <div class="cat-cover-preview-title" style="left:${typeof t.titlePosX === 'number' ? t.titlePosX : TILE_TITLE_DEFAULT.x}%;top:${typeof t.titlePosY === 'number' ? t.titlePosY : TILE_TITLE_DEFAULT.y}%;font-size:${((typeof t.titleScale === 'number' ? t.titleScale : TILE_TITLE_DEFAULT.scale) / 100).toFixed(2)}rem;font-family:${TITLE_FONTS[t.titleFont || TILE_TITLE_DEFAULT.font]};color:${TITLE_COLORS[t.titleColor || TILE_TITLE_DEFAULT.color]}" onpointerdown="AdminCategories.startTileTitleDrag(event,${i})" title="Kéo để đổi vị trí tiêu đề">${escapeHtml(t.label || 'Danh mục')}<span class="cat-cover-title-resize-handle" title="Kéo để đổi cỡ chữ" onpointerdown="event.stopPropagation();AdminCategories.startTileTitleResize(event,${i})"></span></div>
           <span class="cat-tile-frame-resize-handle" title="Kéo để đổi CHIỀU CAO khung tự do" onpointerdown="AdminCategories.startTileFrameHeightDrag(event,${i})"></span>
         </div>
 
@@ -628,6 +733,17 @@ document.addEventListener('DOMContentLoaded', () => {
           <label class="cat-cover-slider-label">Độ hiện Ảnh SP (${s.opacity}%)<input type="range" min="0" max="100" value="${s.opacity}" oninput="AdminCategories.setTileCoverField(${i},'opacity',this.value)"></label>
           <label class="cat-cover-slider-label">Làm mờ Ảnh nền — Blur (${s.blur}px)<input type="range" min="0" max="20" value="${s.blur}" oninput="AdminCategories.setTileCoverField(${i},'blur',this.value)"></label>
           <label class="cat-cover-slider-label">Độ phủ tối — Overlay (${s.overlay}%)<input type="range" min="0" max="150" value="${s.overlay}" oninput="AdminCategories.setTileCoverField(${i},'overlay',this.value)"></label>
+          <label class="cat-cover-slider-label">Font chữ tiêu đề
+            <select onchange="AdminCategories.setTileField(${i},'titleFont',this.value)">
+              ${Object.keys(TITLE_FONTS).map(k => `<option value="${k}" ${(t.titleFont || TILE_TITLE_DEFAULT.font) === k ? 'selected' : ''}>${TITLE_FONT_LABELS[k]}</option>`).join('')}
+            </select>
+          </label>
+          <div>
+            <label class="cat-bg-label">MÀU CHỮ TIÊU ĐỀ</label>
+            <div class="cat-cover-color-swatches">
+              ${Object.keys(TITLE_COLORS).map(k => `<button type="button" class="cat-cover-color-btn${(t.titleColor || TILE_TITLE_DEFAULT.color) === k ? ' active' : ''}" style="background:${TITLE_COLORS[k]}" title="${TITLE_COLOR_LABELS[k]}" onclick="AdminCategories.setTileField(${i},'titleColor','${k}')"></button>`).join('')}
+            </div>
+          </div>
           <button type="button" class="btn-secondary" onclick="AdminCategories.resetTileCover(${i})">↺ ĐẶT LẠI MẶC ĐỊNH</button>
         </div>
 
@@ -802,6 +918,14 @@ document.addEventListener('DOMContentLoaded', () => {
       renderTiles();
       return;
     }
+    // titleFont/titleColor đổi qua dropdown/click (không phải kéo liên tục)
+    // — cần render() lại TOÀN BỘ hàng (không chỉ Live Preview TỔNG) để khung
+    // Cover Preview RIÊNG của Ô (nơi có control này) cũng vẽ lại đúng font/
+    // màu mới + nút màu đang active — cùng lý do 'size' ở trên.
+    if (field === 'titleFont' || field === 'titleColor') {
+      renderTiles();
+      return;
+    }
     renderTilePreviewGrid();
   }
 
@@ -858,6 +982,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setTileCoverField, resetTileCover, setTileCoverViewport, toggleTileBgRemover, startTileProductDrag,
     startTileFrameHeightDrag, resetTileFrameHeight, setTileBackgroundFromInternet,
     setCoverField, resetCover, setPreviewViewport, toggleBgRemover, setBackgroundFromInternet,
-    startCoverTitleDrag, startTileTitleDrag
+    startCoverTitleDrag, startTileTitleDrag, startCoverTitleResize, startTileTitleResize
   };
 });

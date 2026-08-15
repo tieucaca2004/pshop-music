@@ -11,6 +11,11 @@
   // trả về dữ liệu, hai biến này được ghi đè bằng danh sách danh mục thật.
   let CAT_LABELS = { all: 'Tất cả sản phẩm', dj: 'Máy DJ & Controller', loa: 'Loa kiểm âm', tainghe: 'Tai nghe', soundcard: 'Soundcard', phukien: 'Phụ kiện' };
   let VALID_CATEGORIES = ['dj', 'loa', 'tainghe', 'soundcard', 'phukien'];
+  // TITLE_FONTS/TITLE_COLORS — ĐÚNG bảng js/admin-categories.js dùng cho
+  // control Font chữ/Màu chữ tiêu đề Category Cover (2 font đã nạp sẵn qua
+  // <link> Google Fonts của chính category.html, không thêm font mới).
+  const TITLE_FONTS = { sans: "'Be Vietnam Pro',sans-serif", serif: "'Cormorant Garamond',serif" };
+  const TITLE_COLORS = { white: '#ffffff', black: '#111111', gold: '#b8892f' };
 
   let allProducts = [];
   let categoryTiles = [];
@@ -242,6 +247,14 @@
       const posY = catObj && typeof catObj.coverTitlePosY === 'number' ? catObj.coverTitlePosY : 88;
       titleEl.style.left = posX + '%';
       titleEl.style.bottom = (100 - posY) + '%';
+      // Cỡ chữ/Font chữ/Màu chữ tiêu đề (admin/categories.html) — CHỈ áp
+      // dụng khi Danh mục có field tương ứng (Danh mục CHƯA từng đổi giữ
+      // NGUYÊN CSS mặc định — clamp() gốc + màu #fff cũ, 0 regression).
+      // --title-scale khớp đúng css/style.css .category-header h1 (cùng kỹ
+      // thuật --hero-title-scale của Hero Slideshow).
+      titleEl.style.setProperty('--title-scale', catObj && typeof catObj.coverTitleScale === 'number' ? catObj.coverTitleScale / 100 : '');
+      titleEl.style.fontFamily = (catObj && catObj.coverTitleFont && TITLE_FONTS[catObj.coverTitleFont]) || '';
+      titleEl.style.color = (catObj && catObj.coverTitleColor && TITLE_COLORS[catObj.coverTitleColor]) || '';
     }
     const bgFromCat = catObj && catObj.backgroundImage;
     const tile = !bgFromCat && categoryTiles.find(t => t.category === cat && t.image);

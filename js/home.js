@@ -1,4 +1,10 @@
 (function () {
+  // TITLE_FONTS/TITLE_COLORS — ĐÚNG bảng js/admin-categories.js dùng cho
+  // control Font chữ/Màu chữ tiêu đề Ô Danh mục (2 font đã nạp sẵn qua
+  // <link> Google Fonts của chính index.html, không thêm font mới).
+  const TITLE_FONTS = { sans: "'Be Vietnam Pro',sans-serif", serif: "'Cormorant Garamond',serif" };
+  const TITLE_COLORS = { white: '#ffffff', black: '#111111', gold: '#b8892f' };
+
   function escapeHtml(str) {
     return String(str || '').replace(/[&<>"']/g, c => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -287,20 +293,28 @@
           ? `<img src="${escapeHtml(t.image)}" alt="${escapeHtml(t.label)}" loading="lazy" onerror="this.parentElement.classList.add('no-photo');this.remove()">`
           : '';
       }
-      // titlePosX/titlePosY — Founder kéo TỰ DO vị trí chữ tiêu đề trong khung
-      // Cover Preview admin (js/admin-categories.js startTileTitleDrag), CHỈ
-      // áp dụng khi Ô đã có CẢ 2 field (Ô CHƯA từng kéo giữ NGUYÊN 100% style
-      // .cat-tile-label mặc định theo size — 0 regression). Toàn bộ position/
-      // z-index/left/bottom ghi qua INLINE style (không qua class CSS mới) để
-      // luôn thắng chắc chắn mọi rule theo size/has-cover/no-photo đã có sẵn,
-      // không phụ thuộc thứ tự CSS specificity. Neo bằng BOTTOM (không phải
-      // TOP như lúc kéo trong admin) — cỡ chữ thật mỗi size chênh rất lớn
-      // (1.1rem→3.4rem, khác hẳn cỡ cố định trong khung xem trước) nên neo đáy
-      // để chữ luôn mọc lên trên, không tràn khỏi khung `.cat-tile` (có
-      // overflow:hidden) — cùng lý do đã áp dụng cho #categoryHeaderTitle.
-      const titlePosStyle = (typeof t.titlePosX === 'number' && typeof t.titlePosY === 'number')
-        ? ` style="position:absolute;z-index:5;left:${t.titlePosX}%;bottom:${100 - t.titlePosY}%;max-width:80%;margin:0;text-align:left"`
-        : '';
+      // titlePosX/Y/titleScale/titleFont/titleColor — Founder kéo-thả/đổi cỡ
+      // chữ/font/màu tiêu đề trong khung Cover Preview admin
+      // (js/admin-categories.js startTileTitleDrag/-Resize, cùng bảng
+      // TITLE_FONTS/TITLE_COLORS), CHỈ áp dụng field nào Ô THẬT SỰ có (Ô CHƯA
+      // từng chỉnh giữ NGUYÊN 100% style .cat-tile-label mặc định theo size —
+      // 0 regression). Toàn bộ ghi qua INLINE style (không qua class CSS
+      // mới) để luôn thắng chắc chắn mọi rule theo size/has-cover/no-photo đã
+      // có sẵn, không phụ thuộc thứ tự CSS specificity. Vị trí neo bằng
+      // BOTTOM (không phải TOP như lúc kéo trong admin) — cỡ chữ thật mỗi
+      // size chênh rất lớn (1.1rem→3.4rem, khác hẳn cỡ cố định trong khung
+      // xem trước) nên neo đáy để chữ luôn mọc lên trên, không tràn khỏi
+      // khung `.cat-tile` (có overflow:hidden) — cùng lý do đã áp dụng cho
+      // #categoryHeaderTitle. --title-scale khớp đúng css/style.css
+      // .cat-tile-label (cùng kỹ thuật --hero-title-scale của Hero Slideshow).
+      const titleStyleParts = [];
+      if (typeof t.titlePosX === 'number' && typeof t.titlePosY === 'number') {
+        titleStyleParts.push('position:absolute', 'z-index:5', `left:${t.titlePosX}%`, `bottom:${100 - t.titlePosY}%`, 'max-width:80%', 'margin:0', 'text-align:left');
+      }
+      if (typeof t.titleScale === 'number') titleStyleParts.push(`--title-scale:${t.titleScale / 100}`);
+      if (t.titleFont && TITLE_FONTS[t.titleFont]) titleStyleParts.push(`font-family:${TITLE_FONTS[t.titleFont]}`);
+      if (t.titleColor && TITLE_COLORS[t.titleColor]) titleStyleParts.push(`color:${TITLE_COLORS[t.titleColor]}`);
+      const titlePosStyle = titleStyleParts.length ? ` style="${titleStyleParts.join(';')}"` : '';
       return `<a class="${classes.join(' ')}" href="${href}"${ratioStyle}>${inner}<span class="cat-tile-label"${titlePosStyle}>${escapeHtml(t.label)}</span></a>`;
     }).join('');
   }
