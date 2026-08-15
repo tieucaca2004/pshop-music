@@ -11,9 +11,9 @@
  *  - Không ghi đè ảnh gốc: SOURCE → DRAFT(edit result) → PREVIEW → APPROVE.
  *
  * Backend thật (openaiProxy — đã PASS test):
- *  - edit_image        → /v1/images/edits model gpt-image-2, giữ sản phẩm
+ *  - edit_image        → /v1/images/edits model gpt-image-1, giữ sản phẩm
  *  - remove_background → xóa nền, giữ nguyên sản phẩm
- *  - generate_image    → /v1/images/generations model gpt-image-2 (từ-scratch)
+ *  - generate_image    → /v1/images/generations model gpt-image-1 (từ-scratch)
  */
 const MediaEdit = (function () {
   'use strict';
@@ -237,7 +237,7 @@ const MediaEdit = (function () {
     setStatus('Đang thực hiện: ' + p.label + ' (Ảnh nguồn được giữ nguyên, chỉ xử lý phông/ánh sáng)...');
     var body = { imageUrl: activeSource.url, prompt: prompt, size: size };
     if (p.transparent) body.transparent = true;
-    var hist = { sourceAsset: activeSource.name, operation: 'EDIT', provider: 'OpenAI', model: 'gpt-image-2', quality: (($('meQuality') && $('meQuality').value) || suggestedQuality('edit', ($('meGenType') && $('meGenType').value), true)), status: 'PROCESSING' };
+    var hist = { sourceAsset: activeSource.name, operation: 'EDIT', provider: 'OpenAI', model: 'gpt-image-1', quality: (($('meQuality') && $('meQuality').value) || suggestedQuality('edit', ($('meGenType') && $('meGenType').value), true)), status: 'PROCESSING' };
     recordHistory(hist);
     return proxyCall('edit_image', body).then(function (res) {
       if (res.data.imageUrl) {
@@ -259,7 +259,7 @@ const MediaEdit = (function () {
   function removeBg() {
     if (!activeSource) { setStatus('Chọn ảnh nguồn trước.', true); return; }
     setStatus('AI Edit · Remove Background — giữ nguyên sản phẩm...');
-    var hist = { sourceAsset: activeSource.name, operation: 'REMOVE_BACKGROUND', provider: 'OpenAI', model: 'gpt-image-2', quality: 'MEDIUM', status: 'PROCESSING' };
+    var hist = { sourceAsset: activeSource.name, operation: 'REMOVE_BACKGROUND', provider: 'OpenAI', model: 'gpt-image-1', quality: 'MEDIUM', status: 'PROCESSING' };
     recordHistory(hist);
     proxyCall('remove_background', { imageUrl: activeSource.url }).then(function (res) {
       if (res.data.imageUrl) {
@@ -370,7 +370,7 @@ const MediaEdit = (function () {
         else if (id === 'imgSize') el.value = params.size;
       });
       AdminImageAI.runGeneration(params);
-      var hist = { sourceAsset: p || (prompt ? 'prompt:' + prompt.slice(0, 30) : 'new'), operation: 'GENERATE', provider: 'OpenAI', model: 'gpt-image-2', quality: (($('meQuality') && $('meQuality').value) || suggestedQuality('generate', ($('meGenType') && $('meGenType').value), false)), status: 'PROCESSING' };
+      var hist = { sourceAsset: p || (prompt ? 'prompt:' + prompt.slice(0, 30) : 'new'), operation: 'GENERATE', provider: 'OpenAI', model: 'gpt-image-1', quality: (($('meQuality') && $('meQuality').value) || suggestedQuality('generate', ($('meGenType') && $('meGenType').value), false)), status: 'PROCESSING' };
       recordHistory(hist);
       renderHistory();
     } else {
@@ -576,9 +576,19 @@ const MediaEdit = (function () {
     try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); } catch (e) { return []; }
   }
   function saveHistory(arr) { try { localStorage.setItem(HISTORY_KEY, JSON.stringify(arr.slice(0, 100))); } catch (e) {} }
+  // recordHistory(rec) — mỗi thao tác gọi 2 lần: 1 lần lúc bắt đầu
+  // (status PROCESSING) và 1 lần khi xong (COMPLETED/FAILED). Trước đây luôn
+  // unshift 1 dòng MỚI, nên dòng PROCESSING đầu tiên KHÔNG BAO GIỜ được cập
+  // nhật — AI History tích tụ vĩnh viễn các dòng "PROCESSING" mồ côi bên cạnh
+  // dòng kết quả thật, nhìn như thao tác bị treo (Founder thấy trên
+  // Production). Gắn cho mỗi thao tác 1 `hid` rồi cập nhật ĐÚNG dòng đó.
+  var histSeq = 0;
   function recordHistory(rec) {
+    if (!rec.hid) rec.hid = 'h' + Date.now() + '-' + (++histSeq);
     var arr = loadHistory();
-    arr.unshift(Object.assign({ ts: Date.now() }, rec));
+    var idx = arr.findIndex(function (h) { return h && h.hid === rec.hid; });
+    if (idx >= 0) arr[idx] = Object.assign({}, arr[idx], rec);
+    else arr.unshift(Object.assign({ ts: Date.now() }, rec));
     saveHistory(arr);
   }
   function renderHistory() {
