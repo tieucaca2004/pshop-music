@@ -561,6 +561,65 @@ const MediaEdit = (function () {
       }).catch(function (e) { setStatus('FREE ghép nền lỗi: ' + e.message, true); });
   }
 
+  // freeInsertText() — FREE, canvas cục bộ, KHÔNG gọi AI. Vẽ chữ (đầy đủ dấu
+  // tiếng Việt) lên ảnh nguồn bằng 1 trong 6 font Google Fonts đã nạp sẵn
+  // trong <head> (đều có bộ ký tự tiếng Việt chuẩn, không phải font chọn đại
+  // rồi vỡ dấu — xem psh/platform/media-center/index.html).
+  //
+  // ensureFontsLoaded(): canvas.fillText() dùng font hiện có trong bộ nhớ
+  // trình duyệt TẠI THỜI ĐIỂM gọi — nếu font web vừa khai báo trong CSS
+  // nhưng CHƯA tải xong, canvas âm thầm vẽ bằng font hệ thống mặc định thay
+  // vào (không lỗi, không cảnh báo, chỉ ra SAI font). Dùng CSS Font Loading
+  // API để tải xong font trước khi vẽ, truyền đúng `text` cần vẽ để trình
+  // duyệt tải đúng phần ký tự (kể cả dấu tiếng Việt) của font đó.
+  function ensureFontsLoaded(fontFamily, text) {
+    if (!(document.fonts && document.fonts.load)) return Promise.resolve();
+    return document.fonts.load('700 48px ' + fontFamily, text).catch(function () {})
+      .then(function () { return document.fonts.ready; });
+  }
+
+  function freeInsertText() {
+    if (!activeSource) { setStatus('Chọn ảnh nguồn trước — FREE.', true); return; }
+    var text = (($('meTextContent') && $('meTextContent').value) || '').trim();
+    if (!text) { setStatus('Nhập chữ cần chèn trước.', true); return; }
+    var fontFamily = ($('meTextFont') && $('meTextFont').value) || 'Inter,sans-serif';
+    var fontSize = parseInt(($('meTextSize') && $('meTextSize').value) || '44', 10);
+    var color = ($('meTextColor') && $('meTextColor').value) || '#ffffff';
+    var pos = ($('meTextPos') && $('meTextPos').value) || 'middle-center';
+    var withShadow = !!($('meTextShadow') && $('meTextShadow').checked);
+    return ensureFontsLoaded(fontFamily, text).then(function () {
+      return loadImageEl(activeSource.url);
+    }).then(function (im) {
+      var c = document.createElement('canvas');
+      c.width = im.naturalWidth; c.height = im.naturalHeight;
+      var ctx = c.getContext('2d');
+      ctx.drawImage(im, 0, 0);
+      // Cỡ chữ trong UI là cho ảnh ~1000px chiều ngang — co giãn theo đúng
+      // kích thước ảnh nguồn thật để chữ không quá nhỏ/quá to bất thường.
+      var scaledSize = Math.max(12, Math.round(fontSize * (c.width / 1000)));
+      ctx.font = '700 ' + scaledSize + 'px ' + fontFamily;
+      ctx.fillStyle = color;
+      if (withShadow) {
+        ctx.shadowColor = 'rgba(0,0,0,.6)';
+        ctx.shadowBlur = scaledSize * 0.15;
+        ctx.shadowOffsetY = scaledSize * 0.05;
+      }
+      var pad = Math.round(c.width * 0.04);
+      var lines = text.split('\n');
+      var lineHeight = scaledSize * 1.3;
+      var vAlign = pos.indexOf('top') === 0 ? 'top' : (pos.indexOf('bottom') === 0 ? 'bottom' : 'middle');
+      var hAlign = pos.indexOf('left') >= 0 ? 'left' : (pos.indexOf('right') >= 0 ? 'right' : 'center');
+      ctx.textAlign = hAlign;
+      var x = hAlign === 'left' ? pad : (hAlign === 'right' ? c.width - pad : c.width / 2);
+      var startY;
+      if (vAlign === 'top') { ctx.textBaseline = 'top'; startY = pad; }
+      else if (vAlign === 'bottom') { ctx.textBaseline = 'bottom'; startY = c.height - pad - lineHeight * (lines.length - 1); }
+      else { ctx.textBaseline = 'middle'; startY = c.height / 2 - lineHeight * (lines.length - 1) / 2; }
+      lines.forEach(function (line, i) { ctx.fillText(line, x, startY + i * lineHeight); });
+      canvasToDraft(c, 'image/png');
+    }).catch(function (e) { setStatus('FREE chèn chữ lỗi: ' + e.message, true); });
+  }
+
   /* ================= PROMPT OPTIMIZER (rule-based, FREE — không gọi AI) ================= */
   // Chuyển câu tự nhiên thành instruction có cấu trúc. KHÔNG gọi OpenAI.
   const STYLE_TAGS = {
@@ -769,6 +828,7 @@ const MediaEdit = (function () {
     var bBgCustom = $('meFreeBgCustom'); if (bBgCustom) bBgCustom.addEventListener('click', function () { freeChangeBackground(($('meFreeBgColor') && $('meFreeBgColor').value) || '#ffffff'); });
     var bgFileInput = $('meFreeBgFileInput'); if (bgFileInput) bgFileInput.addEventListener('change', function () { pickFreeBgImage(bgFileInput.files && bgFileInput.files[0]); });
     var bgApplyBtn = $('meFreeBgApplyBtn'); if (bgApplyBtn) bgApplyBtn.addEventListener('click', freeChangeBackgroundImage);
+    var textApplyBtn = $('meTextApplyBtn'); if (textApplyBtn) textApplyBtn.addEventListener('click', freeInsertText);
 
     loadLibrary();
     loadGenProducts();

@@ -7,6 +7,11 @@
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- Font cho tính năng "Chèn chữ vào ảnh" (js/media-edit.js freeInsertText) —
+     cả 5 đều có bộ ký tự tiếng Việt đầy đủ trên Google Fonts (subset
+     "vietnamese"), không phải chọn đại rồi vỡ dấu. Be Vietnam Pro do đội
+     Việt Nam thiết kế riêng cho chữ Việt. -->
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;700;800&family=Montserrat:wght@400;700;800&family=Playfair+Display:wght@700;800&family=Roboto:wght@400;700&family=Lora:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/style.css">
 <link rel="stylesheet" href="/css/admin.css">
 <style>
@@ -144,6 +149,44 @@ body{font-family:Inter,system-ui,sans-serif;color:#13161c;background:#f5f6f8;hei
             <button type="button" class="mc-btn" id="meFreeBgApplyBtn">🖼 Ghép vào ảnh <span class="me-cost">FREE</span></button>
           </div>
           <p class="mc-note">Ảnh nền được tự động phóng/cắt vừa khung (giữ tỉ lệ, không méo — kiểu "cover"), rồi ảnh sản phẩm được canh giữa, ghép lên trên. Cũng chỉ ghép đẹp khi ảnh sản phẩm đã trong suốt (xem lưu ý ở trên).</p>
+        </div>
+
+        <div class="mc-field">
+          <label>CHÈN CHỮ VÀO ẢNH — FREE, không gọi AI</label>
+          <textarea id="meTextContent" placeholder="Nhập chữ tiếng Việt có dấu (Enter để xuống dòng)..."></textarea>
+          <div style="display:flex;gap:.4rem;flex-wrap:wrap;margin-top:.5rem">
+            <select id="meTextFont" style="flex:1;min-width:150px">
+              <option value="'Be Vietnam Pro',sans-serif">Be Vietnam Pro</option>
+              <option value="Inter,sans-serif" selected>Inter</option>
+              <option value="Montserrat,sans-serif">Montserrat</option>
+              <option value="'Playfair Display',serif">Playfair Display</option>
+              <option value="Roboto,sans-serif">Roboto</option>
+              <option value="Lora,serif">Lora</option>
+            </select>
+            <select id="meTextSize" style="width:100px">
+              <option value="28">Nhỏ</option>
+              <option value="44" selected>Vừa</option>
+              <option value="64">Lớn</option>
+              <option value="96">Rất lớn</option>
+            </select>
+            <input type="color" id="meTextColor" value="#ffffff" style="width:48px;height:38px;padding:2px;border:1px solid #d7dae0;border-radius:6px;cursor:pointer">
+          </div>
+          <div style="display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-top:.5rem">
+            <select id="meTextPos" style="flex:1;min-width:150px">
+              <option value="top-left">Trên trái</option>
+              <option value="top-center">Trên giữa</option>
+              <option value="top-right">Trên phải</option>
+              <option value="middle-left">Giữa trái</option>
+              <option value="middle-center" selected>Chính giữa</option>
+              <option value="middle-right">Giữa phải</option>
+              <option value="bottom-left">Dưới trái</option>
+              <option value="bottom-center">Dưới giữa</option>
+              <option value="bottom-right">Dưới phải</option>
+            </select>
+            <label style="display:flex;align-items:center;gap:.35rem;font-weight:400;font-size:.78rem;color:#4b5563"><input type="checkbox" id="meTextShadow" checked style="width:auto">Đổ bóng cho dễ đọc</label>
+          </div>
+          <button type="button" class="mc-btn" id="meTextApplyBtn" style="margin-top:.6rem">🔤 Chèn chữ vào ảnh <span class="me-cost">FREE</span></button>
+          <p class="mc-note">Chữ vẽ trực tiếp lên ảnh bằng canvas (KHÔNG gọi AI) — hỗ trợ đầy đủ dấu tiếng Việt, 6 font đều có bộ ký tự tiếng Việt chuẩn từ Google Fonts.</p>
         </div>
 
         <div id="meStatus" class="mc-status" style="display:none"></div>
