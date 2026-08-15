@@ -289,20 +289,47 @@ const MediaEdit = (function () {
   // lại trong Library dù đã nằm thật trong Storage (Founder báo lỗi live
   // 2026-08-14, xác nhận qua E2E: Library vẫn còn đúng 1 item sau Approve).
   // KHÔNG ghi đè ảnh gốc.
+  // dataUriToFile — draft của thao tác FREE là 1 data: URI trong bộ nhớ trình
+  // duyệt, CHƯA hề nằm trên Storage. Đổi về File để tải lên thật.
+  function dataUriToFile(dataUri, name) {
+    return fetch(dataUri).then(function (r) { return r.blob(); }).then(function (blob) {
+      return new File([blob], name, { type: blob.type || 'image/png' });
+    });
+  }
+
   function approveDraft() {
     if (!activeDraft) { setStatus('Chưa có draft để lưu.', true); return; }
     var url = activeDraft.url;
-    var srcName = (activeDraft.sourceName || 'source');
+    var srcName = (activeDraft.source || 'source');
+    setStatus('Đang lưu ảnh vào Media Library...');
     return Promise.resolve().then(function () {
-      setStatus('✅ Đã Approve ảnh (' + srcName + ') — ảnh đã lưu trong Storage sản phẩm gốc KHÔNG bị ghi đè. Mở Media Library/các "CHỌN ẢNH" để dùng.');
-      $('meApproveBtn') && ($('meApproveBtn').disabled = true);
-      $('meDiscardBtn') && ($('meDiscardBtn').disabled = true);
+      // Thao tác FREE (canvas cục bộ) tạo data: URI — chưa có gì trên Storage.
+      // Trước đây Approve chỉ đổi chữ trạng thái thành "đã lưu trong Storage"
+      // rồi reload Library: ảnh KHÔNG BAO GIỜ được lưu thật, và câu thông báo
+      // đó là báo thành công sai sự thật. Giờ tải lên thật qua đúng
+      // MediaLibrary.upload() (tự ghi Media Index luôn) rồi mới báo xong.
+      if (/^data:/.test(String(url))) {
+        var ext = (/^data:image\/(\w+)/.exec(url) || [])[1] || 'png';
+        var fname = String(srcName).replace(/\.[^.]+$/, '').replace(/[^a-zA-Z0-9._-]/g, '_') + '-edited.' + ext;
+        return dataUriToFile(url, fname).then(function (file) {
+          return MediaLibrary.upload(file);
+        });
+      }
+      // Ảnh do Cloud Function sinh ra (AI Edit/Remove Background) đã nằm thật
+      // trên Storage nhưng Admin SDK không tự đăng ký vào Media Index, mà
+      // Storage listAll() đang 403 trên Production (xem js/media-library.js)
+      // nên Thư viện CHỈ dựng được từ index — không ghi index thì ảnh vừa
+      // Approve không bao giờ hiện lại dù đã lưu thật.
       var fullPath = (typeof MediaLibrary !== 'undefined' && MediaLibrary.pathFromDownloadURL)
         ? MediaLibrary.pathFromDownloadURL(url) : null;
-      var recorded = (fullPath && MediaLibrary.recordUpload)
+      return (fullPath && MediaLibrary.recordUpload)
         ? MediaLibrary.recordUpload(fullPath, {})
-        : Promise.resolve(null);
-      return recorded.then(function () { return loadLibrary(); });
+        : null;
+    }).then(function () {
+      setStatus('✅ Đã Approve ảnh (' + srcName + ') — ảnh đã lưu vào Media Library, ảnh gốc KHÔNG bị ghi đè.');
+      $('meApproveBtn') && ($('meApproveBtn').disabled = true);
+      $('meDiscardBtn') && ($('meDiscardBtn').disabled = true);
+      return loadLibrary();
     }).catch(function (e) { setStatus('Lưu lỗi: ' + e.message, true); });
   }
 
@@ -366,13 +393,35 @@ const MediaEdit = (function () {
 
   /* ================= FREE operations (canvas, KHÔNG gọi OpenAI) ================= */
   // Tất cả đều xử lý ảnh nguồn cục bộ, tạo DRAFT mới (dataURI) — không gọi API, miễn phí.
-  function loadImageEl(src) {
+  // loadImageEl(src) -> Promise<HTMLImageElement> đọc được pixel (không bị
+  // canvas "tainted").
+  //
+  // Thử TRỰC TIẾP trước (crossOrigin='anonymous'): nhanh nhất, không tốn 1
+  // lượt gọi server, và tự khôi phục nguyên vẹn nếu sau này bucket Storage
+  // được đặt CORS thật (`gsutil cors set`) — lúc đó không cần sửa lại file này.
+  // Chỉ khi trình duyệt từ chối mới lùi về proxy bytes qua Cloud Function
+  // (action `fetch_image_data`, FREE — không gọi OpenAI); xem functions/index.js
+  // để biết vì sao Storage GET hiện không trả Access-Control-Allow-Origin.
+  function rawLoad(src, useCors) {
     return new Promise(function (resolve, reject) {
       var im = new Image();
       im.onload = function () { resolve(im); };
       im.onerror = function () { reject(new Error('Không đọc được ảnh nguồn.')); };
-      im.crossOrigin = 'anonymous';
+      if (useCors) im.crossOrigin = 'anonymous';
       im.src = src;
+    });
+  }
+
+  function loadImageEl(src) {
+    return rawLoad(src, true).catch(function () {
+      // Ảnh đã là data:/blob: mà vẫn lỗi thì proxy cũng không cứu được.
+      if (/^(data:|blob:)/.test(String(src || ''))) throw new Error('Không đọc được ảnh nguồn.');
+      return proxyCall('fetch_image_data', { imageUrl: src }).then(function (res) {
+        if (!res.data || !res.data.dataUri) {
+          throw new Error((res.data && res.data.error) || 'Không đọc được ảnh nguồn.');
+        }
+        return rawLoad(res.data.dataUri, false);
+      });
     });
   }
 

@@ -360,7 +360,47 @@ exports.openaiProxy = onRequest({ secrets: [OPENAI_API_KEY], cors: true, timeout
     return;
   }
 
-  res.status(400).json({ error: 'action không hợp lệ (chỉ hỗ trợ "generate", "generate_image", "edit_image", "remove_background", hoặc "health").' });
+  // fetch_image_data — FREE (KHÔNG gọi OpenAI, không tốn phí AI). Trả về đúng
+  // bytes của 1 ảnh Storage dưới dạng data URI để trình duyệt vẽ được lên
+  // <canvas> mà không bị "tainted".
+  //
+  // Vì sao cần: các thao tác FREE trong Media Center (Rotate/Resize/Crop/
+  // Compress/Convert — js/media-edit.js) đọc pixel qua canvas.toDataURL(), nên
+  // ảnh nguồn PHẢI được tải kèm CORS. Endpoint tải ảnh của Firebase Storage
+  // (firebasestorage.googleapis.com/v0/b/.../o/...?alt=media) trả
+  // Access-Control-Allow-Origin ở preflight OPTIONS nhưng KHÔNG trả header đó
+  // trên chính response GET — nên `img.crossOrigin='anonymous'` luôn thất bại
+  // và MỌI thao tác FREE chết với "Không đọc được ảnh nguồn" (Founder báo live
+  // 2026-08-14). Sửa triệt để ở tầng hạ tầng là đặt CORS cho bucket
+  // (`gsutil cors set`) — việc đó thuộc quyền Chief Architect, nên ở đây đi
+  // đường ứng dụng: proxy bytes qua chính Cloud Function này (đã có cors:true).
+  //
+  // TÁI SỬ DỤNG nguyên vẹn SSRF guard đã có (validateImageUrlOrigin +
+  // validateContentType) — không mở thêm bề mặt tấn công nào so với
+  // remove_background/edit_image vốn đã fetch ảnh phía server y hệt.
+  if (action === 'fetch_image_data') {
+    const { imageUrl: inputUrl } = req.body || {};
+    if (!inputUrl) { res.status(400).json({ error: 'Thiếu "imageUrl".' }); return; }
+    const urlError = validateImageUrlOrigin(inputUrl);
+    if (urlError) {
+      res.status(400).json({ error: 'imageUrl không hợp lệ — chỉ chấp nhận ảnh từ Firebase Storage của dự án.' });
+      return;
+    }
+    try {
+      const r = await fetch(inputUrl);
+      if (!r.ok) throw new Error('Không tải được ảnh từ Storage (HTTP ' + r.status + ').');
+      const mimeType = r.headers.get('content-type') || '';
+      const ctError = validateContentType(mimeType);
+      if (ctError) throw new Error(ctError);
+      const buf = Buffer.from(await r.arrayBuffer());
+      res.json({ dataUri: 'data:' + mimeType + ';base64,' + buf.toString('base64') });
+    } catch (err) {
+      res.status(502).json({ error: 'Lỗi tải ảnh nguồn: ' + err.message });
+    }
+    return;
+  }
+
+  res.status(400).json({ error: 'action không hợp lệ (chỉ hỗ trợ "generate", "generate_image", "edit_image", "remove_background", "fetch_image_data", hoặc "health").' });
 });
 
 /*
