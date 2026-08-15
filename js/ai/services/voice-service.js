@@ -39,12 +39,14 @@ const VoiceService = (function () {
         stage: 'provider_not_available'
       });
     }
-    return GenerationService.run({
-      moduleId: MODULE_ID,
-      inputParams: params,
-      userId: userId,
-      userEmail: userEmail
-    });
+    // GenerationService.run() was removed in Phase 2.7 (moved to
+    // WorkflowEngine); route through PipelineAdapter like VideoService does
+    // — same fix applied across ImageService/SubtitleService/TemplateEngine/
+    // BatchEngine (full-CMS audit 2026-08-15).
+    if (typeof PipelineAdapter === 'undefined') {
+      return Promise.reject(new Error('VoiceService: PipelineAdapter not loaded'));
+    }
+    return PipelineAdapter.generateThroughPipeline(MODULE_ID, params, userId, userEmail);
   }
 
   /**
@@ -53,7 +55,7 @@ const VoiceService = (function () {
   function getStatus() {
     return {
       service: 'VoiceService',
-      available: MODULE_ID !== null && typeof GenerationService !== 'undefined',
+      available: MODULE_ID !== null && typeof PipelineAdapter !== 'undefined',
       moduleId: MODULE_ID,
       needsModule: 'voice-generator or tts-provider',
       supportedFormats: ['mp3', 'wav', 'ogg'],

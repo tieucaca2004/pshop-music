@@ -83,17 +83,19 @@ const BatchEngine = (function () {
 
       // Process with controlled concurrency
       return processQueue(requests, concurrency, function (req, index) {
-        var request = {
-          moduleId: req.moduleId,
-          inputParams: req.inputParams || req,
-          userId: batchConfig.userId,
-          userEmail: batchConfig.userEmail,
-          skipQuality: req.skipQuality,
-          skipAsset: req.skipAsset,
-          skipHistory: req.skipHistory
-        };
-
-        return GenerationService.run(request).then(function (result) {
+        // GenerationService.run() was removed in Phase 2.7 (moved to
+        // WorkflowEngine); route through PipelineAdapter like VideoService
+        // does — same fix applied across ImageService/VoiceService/
+        // SubtitleService/TemplateEngine (full-CMS audit 2026-08-15).
+        // PipelineAdapter's result already carries a real `success` boolean
+        // (GenerationService.generate()'s raw {job, draftId} shape did not),
+        // so the `result.success` check right below now works correctly too.
+        if (typeof PipelineAdapter === 'undefined') {
+          return Promise.reject(new Error('BatchEngine: PipelineAdapter not loaded'));
+        }
+        return PipelineAdapter.generateThroughPipeline(
+          req.moduleId, req.inputParams || req, batchConfig.userId, batchConfig.userEmail
+        ).then(function (result) {
           results[index] = result;
           processed++;
           if (result.success) successCount++;

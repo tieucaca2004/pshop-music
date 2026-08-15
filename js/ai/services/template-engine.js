@@ -170,15 +170,14 @@ const TemplateEngine = (function () {
    */
   function execute(templateId, values, userId, userEmail) {
     return apply(templateId, values).then(function (result) {
-      if (!result.moduleId || typeof GenerationService === 'undefined') {
+      // GenerationService.run() was removed in Phase 2.7 (moved to
+      // WorkflowEngine); route through PipelineAdapter like VideoService
+      // does — same fix applied across ImageService/VoiceService/
+      // SubtitleService/BatchEngine (full-CMS audit 2026-08-15).
+      if (!result.moduleId || typeof PipelineAdapter === 'undefined') {
         return { success: false, error: 'Module not available for this template', templateResult: result };
       }
-      return GenerationService.run({
-        moduleId: result.moduleId,
-        inputParams: result.inputParams,
-        userId: userId,
-        userEmail: userEmail
-      }).then(function (genResult) {
+      return PipelineAdapter.generateThroughPipeline(result.moduleId, result.inputParams, userId, userEmail).then(function (genResult) {
         genResult.templateResult = result;
         return genResult;
       });

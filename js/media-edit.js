@@ -353,32 +353,30 @@ const MediaEdit = (function () {
     if (!prompt && !p) { setStatus('Chọn sản phẩm HOẶC nhập prompt để Generate.', true); return; }
     if (!confirm('Generate New creates a new image and consumes an image generation request. Tiếp tục?')) return;
     setStatus('AI Generate · đang tạo ảnh mới từ-scratch (qua engine AdminImageAI)...');
-    // tái sử dụng AdminImageAI nếu có: đặt inputParams vào form thật rồi runGeneration
-    if (typeof AdminImageAI !== 'undefined' && typeof AdminImageAI.runGeneration === 'function') {
-      var params = {
-        imageType: $('meGenType') && $('meGenType').value || 'Product Hero Image',
-        productId: p || '',
-        promotion: '',
-        blogPostId: '',
-        customPrompt: prompt,
-        size: ($('meGenSize') && $('meGenSize').value) || '1:1'
-      };
-      // AdminImageAI.runGeneration dùng form DOM ids imgType/imgProduct/... — vì vậy
-      // đồng bộ vào các field đó rồi gọi. Nếu không có, fallback trực tiếp.
-      ['imgType', 'imgProduct', 'imgCustomPrompt', 'imgSize'].forEach(function (id) {
-        var el = document.getElementById(id);
-        if (!el) return;
-        if (id === 'imgType') el.value = params.imageType;
-        else if (id === 'imgProduct') el.value = params.productId;
-        else if (id === 'imgCustomPrompt') el.value = params.customPrompt;
-        else if (id === 'imgSize') el.value = params.size;
-      });
-      AdminImageAI.runGeneration(params);
+    // AdminImageAI KHÔNG export runGeneration() (chỉ export { init, regenerate,
+    // deleteDraft, saveToProductGallery, saveAsFeatured, saveToBlogCover,
+    // insertIntoBlog, saveAsBanner }) — điều kiện `typeof AdminImageAI.runGeneration
+    // === 'function'` dưới đây LUÔN false, nên nút "GENERATE NEW IMAGE" ở tab
+    // "✦ Generate New" chưa từng thực sự tạo ảnh, chỉ hiện thông báo trỏ sang
+    // nơi khác (Founder báo live 2026-08-15). Đúng nguyên tắc Reuse: đồng bộ
+    // field vào ĐÚNG form DOM ids mà buildInputParamsFromForm() đọc rồi bấm
+    // THẬT nút #imgGenerateBtn (đã wire đúng generate()→runGeneration() nội bộ
+    // ở Generate Studio bên dưới) — không tự viết lại logic gọi AI.
+    var imgType = document.getElementById('imgType');
+    var imgProduct = document.getElementById('imgProduct');
+    var imgCustomPrompt = document.getElementById('imgCustomPrompt');
+    var imgSize = document.getElementById('imgSize');
+    var imgGenerateBtn = document.getElementById('imgGenerateBtn');
+    if (imgGenerateBtn && imgType && imgProduct && imgCustomPrompt && imgSize) {
+      imgType.value = ($('meGenType') && $('meGenType').value) || 'Product Hero Image';
+      imgProduct.value = p || '';
+      imgCustomPrompt.value = prompt || '';
+      imgSize.value = ($('meGenSize') && $('meGenSize').value) || '1:1';
       var hist = { sourceAsset: p || (prompt ? 'prompt:' + prompt.slice(0, 30) : 'new'), operation: 'GENERATE', provider: 'OpenAI', model: 'gpt-image-1', quality: (($('meQuality') && $('meQuality').value) || suggestedQuality('generate', ($('meGenType') && $('meGenType').value), false)), status: 'PROCESSING' };
       recordHistory(hist);
       renderHistory();
+      imgGenerateBtn.click();
     } else {
-      // fallback: gọi openaiProxy generate_image trực tiếp
       setStatus('Generate từ-scratch được xử lý tại tab Image Studio chính.');
     }
   }

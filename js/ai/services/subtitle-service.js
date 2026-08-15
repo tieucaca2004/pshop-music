@@ -29,12 +29,14 @@ const SubtitleService = (function () {
       // from plain text by splitting into timed chunks
       return generateBasic(params);
     }
-    return GenerationService.run({
-      moduleId: MODULE_ID,
-      inputParams: params,
-      userId: userId,
-      userEmail: userEmail
-    });
+    // GenerationService.run() was removed in Phase 2.7 (moved to
+    // WorkflowEngine); route through PipelineAdapter like VideoService does
+    // — same fix applied across ImageService/VoiceService/TemplateEngine/
+    // BatchEngine (full-CMS audit 2026-08-15).
+    if (typeof PipelineAdapter === 'undefined') {
+      return Promise.reject(new Error('SubtitleService: PipelineAdapter not loaded'));
+    }
+    return PipelineAdapter.generateThroughPipeline(MODULE_ID, params, userId, userEmail);
   }
 
   /**
