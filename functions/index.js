@@ -106,6 +106,20 @@ async function editImageWithOpenAI({ inputUrl, prompt, size, transparentBackgrou
   const urlError = validateImageUrlOrigin(inputUrl);
   if (urlError) throw new Error('SSRF guard rejected image URL: ' + urlError);
 
+  // DNS/IP validation phai chay TRUOC fetch() dau tien, khong phai chi o
+  // cuoi (nhu code cu) -- domain allowlist da duoc mo rong de nhan URL anh
+  // san pham that tu internet (vd krkmusic.com, Founder can dung 2026-08-15),
+  // nen lop bao ve DNS-thuc-te nay (chan duoc ca DNS rebinding, allowlist
+  // domain tinh khong chan noi) phai la lop bao ve CHINH, khong phai chi
+  // kiem tra SAU KHI request that da gui di roi (qua muon, mat y nghia).
+  try {
+    const initialParsed = new URL(inputUrl);
+    const initialDnsError = await resolveAndValidateIps(initialParsed.hostname);
+    if (initialDnsError) throw new Error(initialDnsError);
+  } catch (ipErr) {
+    throw new Error('DNS validation failed for "' + inputUrl + '": ' + ipErr.message);
+  }
+
   // Redirect chain validation � follow up to 5 hops, validate each one
   let currentUrl = inputUrl;
   let redirectCount = 0;
@@ -120,17 +134,15 @@ async function editImageWithOpenAI({ inputUrl, prompt, size, transparentBackgrou
     const resolved = new URL(location, currentUrl).href;
     const redirectError = validateImageUrlOrigin(resolved);
     if (redirectError) throw new Error('SSRF guard rejected redirect target: ' + redirectError);
+    // DNS that cho tung hop redirect TRUOC khi fetch tiep -- khong chi
+    // validateImageUrlOrigin (chi kiem tra text URL) roi doi den cuoi cung
+    // moi resolveAndValidateIps 1 lan (code cu) -- 1 redirect hop o giua
+    // chuoi co the tro toi 1 host bi DNS rebinding ma khong bao gio duoc
+    // kiem tra rieng.
+    const resolvedParsed = new URL(resolved);
+    const hopDnsError = await resolveAndValidateIps(resolvedParsed.hostname);
+    if (hopDnsError) throw new Error('SSRF guard rejected redirect target DNS: ' + hopDnsError);
     currentUrl = resolved;
-  }
-
-  // DNS/IP validation � resolve hostname, block private IPs
-  const finalUrl = fetchRes.url || currentUrl;
-  try {
-    const parsedUrl = new URL(finalUrl);
-    const dnsError = await resolveAndValidateIps(parsedUrl.hostname);
-    if (dnsError) throw new Error(dnsError);
-  } catch (ipErr) {
-    throw new Error('DNS validation failed for "' + finalUrl + '": ' + ipErr.message);
   }
 
   if (!fetchRes.ok) throw new Error('Kh�ng t?i du?c ?nh t? URL cung c?p.');
@@ -323,7 +335,7 @@ exports.openaiProxy = onRequest({ secrets: [OPENAI_API_KEY], cors: true, timeout
     // Founder — không sửa editImageWithOpenAI() (dùng chung với "edit_image",
     // giữ nguyên hành vi Product Banner).
     if (validateImageUrlOrigin(inputUrl)) {
-      res.status(400).json({ error: 'imageUrl không hợp lệ — chỉ chấp nhận ảnh từ Firebase Storage của dự án.' });
+      res.status(400).json({ error: 'imageUrl không hợp lệ — chỉ chấp nhận link ảnh HTTPS công khai thật (không phải địa chỉ nội bộ/private).' });
       return;
     }
     try {

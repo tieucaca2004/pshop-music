@@ -25,7 +25,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const coverSettings = {}; // { position, zoom, opacity, blur, overlay }
   const previewViewport = {}; // 'desktop'|'tablet'|'mobile' — chỉ đổi khung xem, không ghi Firebase
   const bgRemoverOpen = {};
-  const COVER_DEFAULTS = { position: 'center-right', zoom: 100, opacity: 100, blur: 0, overlay: 100 };
+  // titlePosX/titlePosY: % trong khung preview (neo góc trên-trái tiêu đề) —
+  // giá trị mặc định xấp xỉ đúng vị trí CSS tĩnh cũ (.cat-cover-preview-title
+  // left:1rem;bottom:0.75rem trong khung cao 180px) để danh mục CHƯA từng
+  // kéo tiêu đề vẫn hiện Y HỆT như trước (an toàn dữ liệu cũ).
+  const COVER_DEFAULTS = { position: 'center-right', zoom: 100, opacity: 100, blur: 0, overlay: 100, titlePosX: 4, titlePosY: 88 };
   const POSITIONS = ['top-left', 'top-center', 'top-right', 'center-left', 'center', 'center-right', 'bottom-left', 'bottom-center', 'bottom-right'];
   const POSITION_LABELS = { 'top-left': 'Trên trái', 'top-center': 'Trên giữa', 'top-right': 'Trên phải', 'center-left': 'Giữa trái', 'center': 'Chính giữa', 'center-right': 'Giữa phải', 'bottom-left': 'Dưới trái', 'bottom-center': 'Dưới giữa', 'bottom-right': 'Dưới phải' };
 
@@ -48,7 +52,9 @@ document.addEventListener('DOMContentLoaded', () => {
           zoom: typeof c.coverZoom === 'number' ? c.coverZoom : COVER_DEFAULTS.zoom,
           opacity: typeof c.coverOpacity === 'number' ? c.coverOpacity : COVER_DEFAULTS.opacity,
           blur: typeof c.coverBlur === 'number' ? c.coverBlur : COVER_DEFAULTS.blur,
-          overlay: typeof c.coverOverlay === 'number' ? c.coverOverlay : COVER_DEFAULTS.overlay
+          overlay: typeof c.coverOverlay === 'number' ? c.coverOverlay : COVER_DEFAULTS.overlay,
+          titlePosX: typeof c.coverTitlePosX === 'number' ? c.coverTitlePosX : COVER_DEFAULTS.titlePosX,
+          titlePosY: typeof c.coverTitlePosY === 'number' ? c.coverTitlePosY : COVER_DEFAULTS.titlePosY
         };
         if (!previewViewport[c.id]) previewViewport[c.id] = 'desktop';
       });
@@ -106,7 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           ${coverProductSlots[c.id] ? `<img src="${escapeHtml(coverProductSlots[c.id])}" class="cat-cover-preview-product" id="cat-cover-product-${c.id}" data-cover-position="${s.position}" style="--cover-zoom:${s.zoom / 100};--cover-opacity:${s.opacity / 100}" alt="">` : `<span class="cat-cover-preview-product-empty" id="cat-cover-product-${c.id}"></span>`}
           ${coverLogoSlots[c.id] ? `<img src="${escapeHtml(coverLogoSlots[c.id])}" class="cat-cover-preview-logo" id="cat-cover-logo-${c.id}" alt="">` : `<span id="cat-cover-logo-${c.id}"></span>`}
-          <div class="cat-cover-preview-title">${escapeHtml(c.label || 'Danh mục')}</div>
+          <div class="cat-cover-preview-title" style="left:${s.titlePosX}%;top:${s.titlePosY}%" onpointerdown="AdminCategories.startCoverTitleDrag(event,'${c.id}')" title="Kéo để đổi vị trí tiêu đề">${escapeHtml(c.label || 'Danh mục')}</div>
         </div>
 
         <div class="cat-cover-grid">
@@ -137,7 +143,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="cat-cover-source-row">
           <span class="small-muted">Nguồn Ảnh nền:</span>
           <a class="link-btn" href="/admin/ai/images.html" target="_blank">✨ Tạo bằng AI (Image AI Studio)</a>
-          <button type="button" class="link-btn" onclick="AdminCategories.internetBackgroundStub()">🌐 Ảnh nền từ Internet</button>
+          <button type="button" class="link-btn" onclick="AdminCategories.setBackgroundFromInternet('${c.id}')">🌐 Ảnh nền từ Internet</button>
         </div>
       </div>`;
   }
@@ -209,12 +215,54 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // internetBackgroundStub — "BACKGROUND SOURCE: Internet Background (future
-  // provider)... Do NOT require external APIs in this Requirement. If
-  // Internet Provider is unavailable, display 'Provider Not Configured'" —
-  // đúng yêu cầu, KHÔNG giả vờ có provider thật.
-  function internetBackgroundStub() {
-    alert('Provider Not Configured — chưa kết nối nguồn ảnh nền Internet. Dùng "Tải lên"/"Thư viện ảnh"/"Tạo bằng AI" bên trên.');
+  // setBackgroundFromInternet — trước đây luôn báo "Provider Not Configured"
+  // dù Founder chỉ cần dán 1 link ảnh nền có sẵn (không cần AI/provider tìm
+  // kiếm ảnh nào cả) — Founder báo lỗi live 2026-08-15. Ảnh nền chỉ hiển thị
+  // qua CSS background-image ở phía trình duyệt (client-side), không có
+  // request nào gửi lên server để xử lý — nên không cần "provider" thật:
+  // xác nhận link tải được (Image() probe, cùng cách js/media-edit.js
+  // urlSource() đã làm) rồi dùng thẳng làm Ảnh nền, giống hệt chọn từ Thư
+  // viện ảnh.
+  function setBackgroundFromInternet(id) {
+    const url = (prompt('Dán link ảnh nền từ Internet (https://...):') || '').trim();
+    if (!url) return;
+    if (!/^https:\/\//i.test(url)) { alert('Chỉ chấp nhận link bắt đầu bằng https://'); return; }
+    const probe = new Image();
+    probe.onload = () => { bgSlots[id] = url; updateCoverPreview(id); };
+    probe.onerror = () => alert('Không tải được ảnh từ link này — kiểm tra lại URL.');
+    probe.src = url;
+  }
+
+  // startCoverTitleDrag — kéo-thả tự do vị trí chữ tiêu đề trong khung Live
+  // Preview, CÙNG kỹ thuật startTextDrag() đã có ở js/admin-sliders.js (Hero
+  // Slideshow): %-based theo khung xem trước, chỉ commit vào coverSettings
+  // khi thả chuột (pointerup) để tránh giật/mất focus trong lúc kéo.
+  function startCoverTitleDrag(e, id) {
+    e.preventDefault();
+    const labelEl = e.currentTarget;
+    const box = labelEl.closest('.cat-cover-preview-frame');
+    if (!box) return;
+    labelEl.classList.add('dragging');
+    if (!coverSettings[id]) coverSettings[id] = Object.assign({}, COVER_DEFAULTS);
+    const s = coverSettings[id];
+    let lastX = s.titlePosX, lastY = s.titlePosY;
+
+    function move(ev) {
+      const rect = box.getBoundingClientRect();
+      lastX = Math.round(Math.min(100, Math.max(0, (ev.clientX - rect.left) / rect.width * 100)) * 10) / 10;
+      lastY = Math.round(Math.min(100, Math.max(0, (ev.clientY - rect.top) / rect.height * 100)) * 10) / 10;
+      labelEl.style.left = lastX + '%';
+      labelEl.style.top = lastY + '%';
+    }
+    function up() {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      labelEl.classList.remove('dragging');
+      s.titlePosX = lastX;
+      s.titlePosY = lastY;
+    }
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
   }
 
   function rowValues(id) {
@@ -231,7 +279,9 @@ document.addEventListener('DOMContentLoaded', () => {
       coverZoom: s.zoom,
       coverOpacity: s.opacity,
       coverBlur: s.blur,
-      coverOverlay: s.overlay
+      coverOverlay: s.overlay,
+      coverTitlePosX: s.titlePosX,
+      coverTitlePosY: s.titlePosY
     };
   }
 
@@ -536,7 +586,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="cat-cover-source-row">
           <span class="small-muted">Nguồn Ảnh nền:</span>
           <a class="link-btn" href="/admin/ai/images.html" target="_blank">✨ Tạo bằng AI (Image AI Studio)</a>
-          <button type="button" class="link-btn" onclick="AdminCategories.internetBackgroundStub()">🌐 Ảnh nền từ Internet</button>
+          <button type="button" class="link-btn" onclick="AdminCategories.setTileBackgroundFromInternet(${i})">🌐 Ảnh nền từ Internet</button>
         </div>
       </div>`;
   }
@@ -546,6 +596,18 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateTileCoverPreview(i) {
     const inner = document.getElementById('tile-cover-inner-' + i);
     if (inner) inner.style.backgroundImage = tiles[i].backgroundImage ? `url('${tiles[i].backgroundImage}')` : 'none';
+  }
+
+  // setTileBackgroundFromInternet — cùng lý do/cách làm setBackgroundFromInternet()
+  // ở Category Cover: Ảnh nền Ô chỉ cần 1 link tải được, không cần provider AI.
+  function setTileBackgroundFromInternet(i) {
+    const url = (prompt('Dán link ảnh nền từ Internet (https://...):') || '').trim();
+    if (!url) return;
+    if (!/^https:\/\//i.test(url)) { alert('Chỉ chấp nhận link bắt đầu bằng https://'); return; }
+    const probe = new Image();
+    probe.onload = () => { tiles[i].backgroundImage = url; updateTileCoverPreview(i); renderTilePreviewGrid(); };
+    probe.onerror = () => alert('Không tải được ảnh từ link này — kiểm tra lại URL.');
+    probe.src = url;
   }
 
   function setTileCoverField(i, field, value) {
@@ -746,7 +808,8 @@ document.addEventListener('DOMContentLoaded', () => {
     save, move, remove,
     setTileField, moveTile, removeTile, setTileViewport, setTileSize, startTileSizeDrag,
     setTileCoverField, resetTileCover, setTileCoverViewport, toggleTileBgRemover, startTileProductDrag,
-    startTileFrameHeightDrag, resetTileFrameHeight,
-    setCoverField, resetCover, setPreviewViewport, toggleBgRemover, internetBackgroundStub
+    startTileFrameHeightDrag, resetTileFrameHeight, setTileBackgroundFromInternet,
+    setCoverField, resetCover, setPreviewViewport, toggleBgRemover, setBackgroundFromInternet,
+    startCoverTitleDrag
   };
 });

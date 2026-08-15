@@ -229,6 +229,20 @@
     // Sprint 13: ưu tiên backgroundImage từ category thật (field mới),
     // fallback về categoryTiles.image (cũ) để backward compatible.
     const catObj = categoryData.find(c => c.code === cat);
+    // Vị trí chữ tiêu đề kéo-thả (admin/categories.html) — % theo khung
+    // .category-header, khớp đúng css/style.css #categoryHeaderTitle + Live
+    // Preview admin (js/admin-categories.js). Admin kéo-thả lưu titlePosY
+    // dạng top-left (khớp startCoverTitleDrag/deriveTitlePos kiểu Hero
+    // Slideshow) — trang thật quy đổi sang BOTTOM (100-posY) để chữ luôn mọc
+    // lên trên, không tràn xuống dưới khung .category-header (overflow:
+    // hidden) dù font-size trang thật lớn hơn nhiều khung xem trước admin.
+    // Mặc định 4%/88% xấp xỉ vị trí cũ khi Danh mục chưa từng kéo-thả.
+    if (titleEl) {
+      const posX = catObj && typeof catObj.coverTitlePosX === 'number' ? catObj.coverTitlePosX : 4;
+      const posY = catObj && typeof catObj.coverTitlePosY === 'number' ? catObj.coverTitlePosY : 88;
+      titleEl.style.left = posX + '%';
+      titleEl.style.bottom = (100 - posY) + '%';
+    }
     const bgFromCat = catObj && catObj.backgroundImage;
     const tile = !bgFromCat && categoryTiles.find(t => t.category === cat && t.image);
     const bg = bgFromCat || (tile && tile.image) || '';

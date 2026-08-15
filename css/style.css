@@ -149,6 +149,12 @@ nav{position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop
 .category-header-bg{position:absolute;inset:0;background:center/cover no-repeat;z-index:0;filter:blur(var(--cover-blur,0px));transform:scale(1.06)}
 .category-header::before{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(0deg,rgba(0,0,0,0.75) 0%,rgba(0,0,0,0.3) 60%,rgba(0,0,0,0.15) 100%);opacity:var(--cover-overlay,1)}
 .category-header .container{position:relative;z-index:3;padding-bottom:2rem}
+/* #categoryHeader riêng: chừa thêm khoảng trống dưới Breadcrumb vì Tiêu đề
+   (#categoryHeaderTitle) không còn nằm trong .container (đã tách ra để dùng
+   chung hệ toạ độ % với .category-header-product-img/-logo — xem dưới) — nếu
+   không chừa chỗ, Breadcrumb sẽ trôi xuống lấp đúng vị trí cũ của Tiêu đề. */
+#categoryHeader .container{padding-bottom:6rem}
+@media(max-width:640px){#categoryHeader .container{padding-bottom:4.5rem}}
 .category-header .breadcrumb{font-size:0.78rem;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.75);margin-bottom:0.5rem}
 .category-header .breadcrumb a:hover{color:var(--gold)}
 /* Category Cover — Product Image overlay (Sprint 13, Product Image Presentation).
@@ -171,6 +177,20 @@ nav{position:sticky;top:0;z-index:200;background:rgba(255,255,255,0.96);backdrop
 @media(max-width:640px){.category-header-product-img{loading:lazy;max-width:34%;max-height:60%}.category-header-logo{max-width:44px;max-height:44px}}
 
 .category-header h1{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;color:#fff;letter-spacing:-0.01em}
+/* #categoryHeaderTitle — vị trí kéo-thả tự do (admin/categories.html Category
+   Cover), toạ độ % tính theo TOÀN BỘ khung .category-header — cùng hệ toạ độ
+   .category-header-product-img/-logo ở trên, khớp đúng khung Live Preview
+   admin (js/admin-categories.js categoryCoverHtml/startCoverTitleDrag).
+   Neo bằng BOTTOM (không phải top) dù admin kéo-thả tính theo top-left — chữ
+   càng lớn (font-size clamp tới 2.8rem trên trang thật, khác hẳn cỡ nhỏ cố
+   định trong khung xem trước admin) càng cần neo đáy để LUÔN mọc lên trên,
+   không bao giờ tràn xuống dưới khung .category-header (có overflow:hidden).
+   category.js quy đổi titlePosY (lưu dạng top-left, cùng Category Cover
+   admin) sang bottom = 100 - titlePosY. Mặc định 4%/88% (bottom 12%) xấp xỉ
+   vị trí cũ (dưới-trái) — category.js luôn ghi đè bằng giá trị thật, quy tắc
+   ở đây chỉ là fallback trước khi JS chạy xong. */
+#categoryHeaderTitle{position:absolute;z-index:3;left:4%;bottom:12%;max-width:70%;margin:0;pointer-events:none}
+@media(max-width:640px){#categoryHeaderTitle{max-width:85%}}
 
 .section{padding:5rem 0}
 .sec-eyebrow{font-size:0.75rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold-ink);margin-bottom:0.7rem;font-weight:700}

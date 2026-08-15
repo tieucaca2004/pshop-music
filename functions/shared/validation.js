@@ -73,24 +73,25 @@ function validateImageUrlOrigin(url) {
   if (!trimmed.startsWith('https://')) return 'Only HTTPS URLs are allowed';
   // Allowlisted prefix: project Storage bucket
   if (trimmed.indexOf(ALLOWED_IMAGE_URL_PREFIX) === 0) return null;
-  // Block private/internal IP ranges
+  // Block private/internal IP ranges written directly in the URL text
   for (const pattern of PRIVATE_IP_PATTERNS) {
     if (pattern.test(trimmed)) return 'URL points to a private/internal network address';
   }
-  // Allow known external image hosts
-  const ALLOWED_HOSTS = [
-    'firebasestorage.googleapis.com',
-    'storage.googleapis.com',
-    'pshopmusic.com',
-    'atieu.com',
-    'www.pshopmusic.com',
-    'www.atieu.com'
-  ];
+  // Chấp nhận MỌI host HTTPS công khai — Founder cần dán link ảnh sản phẩm
+  // thật từ trang nhà sản xuất (vd krkmusic.com) để Xóa phông/AI Edit, không
+  // giới hạn 1 danh sách domain cố định (danh sách cũ chỉ có
+  // firebasestorage/pshopmusic/atieu.com — chặn đứng đúng use case chính của
+  // ô "DÙNG URL", Founder báo lỗi live 2026-08-15). An toàn thật KHÔNG dựa
+  // vào allowlist domain tĩnh (vừa dễ thiếu domain hợp lệ, vừa KHÔNG chặn
+  // được DNS rebinding — 1 domain "hợp lệ" vẫn có thể trỏ DNS sang IP nội bộ)
+  // mà dựa vào 2 lớp bảo vệ NGAY SAU hàm này trong editImageWithOpenAI():
+  // resolveAndValidateIps() phân giải DNS THẬT của host và chặn nếu IP thật
+  // sự là private/internal (chặn được DNS rebinding, allowlist tĩnh không
+  // chặn nổi), rồi validateContentType() chỉ nhận response thật là ảnh.
   try {
     const parsed = new URL(trimmed);
-    if (ALLOWED_HOSTS.indexOf(parsed.hostname) >= 0) return null;
-    // If not in allowlist, reject
-    return 'Image URL host is not in the approved allowlist';
+    if (!parsed.hostname) return 'Invalid URL format';
+    return null;
   } catch {
     return 'Invalid URL format';
   }
