@@ -151,7 +151,7 @@ window.__PSH__ = window.__PSH__ || {};
         return false;
       }
       if (this._modules[config.name]) {
-        console.warn("[PSH ModuleLoader] Module "" + config.name + "" already registered");
+        console.warn("[PSH ModuleLoader] Module \"" + config.name + "\" already registered");
         return false;
       }
       this._modules[config.name] = {
@@ -280,7 +280,7 @@ window.__PSH__ = window.__PSH__ || {};
     
     registerRoute: function(name, config) {
       if (!name) { console.warn("[PSH Router] registerRoute requires a name"); return false; }
-      if (this._routes[name]) { console.warn("[PSH Router] Route "" + name + "" already registered"); return false; }
+      if (this._routes[name]) { console.warn("[PSH Router] Route \"" + name + "\" already registered"); return false; }
       this._routes[name] = {
         name: name,
         path: config.path || "/admin/" + name + ".html",

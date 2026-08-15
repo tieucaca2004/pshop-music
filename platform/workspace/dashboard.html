@@ -1,10 +1,12 @@
 <!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Dashboard - PSH Workspace</title><link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin.css"></head><body><div class="admin-shell"><aside class="admin-sidebar" id="wsSidebar"><div class="admin-brand">PSH <span>WORKSPACE</span></div><nav class="admin-nav" id="wsNav"></nav></aside><div class="admin-main"><div class="admin-topbar"><div><h2 id="wsBid">Dashboard</h2></div><div><span id="wsUser"></span><button class="btn-secondary" style="margin-left:1rem" onclick="firebase.auth().signOut();window.location='/platform/login/'">Sign Out</button></div></div><div class="admin-wrap"><div class="dash-stats" id="dashStats"></div><div class="panel"><h3>QUICK ACTIONS</h3><div class="dash-quicklinks" id="dashQuicklinks"></div></div></div></div></div><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script><script src="/js/firebase-config.js?v=8aa79b2"></script><script src="/js/workspace-engine.js?v=8aa79b2"></script><script>
+(function(){
 var bid=new URLSearchParams(location.search).get('bid');
-if(!bid){var s=localStorage.getItem('psh_bid');if(s)bid=s;}
-if(!bid)window.location='/platform/login/';
+if(!bid){var s=localStorage.getItem('psh_bid');if(s&&s!=='null')bid=s;}
+if(!bid){window.location='/platform/login/';return;}
 localStorage.setItem('psh_bid',bid);
 document.getElementById('wsBid').textContent=bid.toUpperCase();
 var nav=WorkspaceEngine.getNavigation(bid);
 document.getElementById('wsNav').innerHTML=nav.sidebar.map(function(m){return'<a class="admin-nav-item'+(m.id==='dashboard'?' active':'')+'" href="'+m.route+'?bid='+bid+'"><span class="admin-nav-icon">'+m.icon+'</span>'+m.name+'</a>'}).join('');
 firebase.auth().onAuthStateChanged(function(u){if(u)document.getElementById('wsUser').textContent=u.email;});
+})();
 </script></body></html>
