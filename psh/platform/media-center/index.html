@@ -135,6 +135,15 @@ body{font-family:Inter,system-ui,sans-serif;color:#13161c;background:#f5f6f8;hei
             <button type="button" class="mc-btn ghost" id="meFreeBgCustom">Dùng màu đã chọn <span class="me-cost">FREE</span></button>
           </div>
           <p class="mc-note">Vẽ đè ảnh nguồn lên nền màu đặc — CHỈ đổi màu nền thật (thấy khác) nếu ảnh nguồn đã trong suốt (vd kết quả sau "Remove Background"). Không tự tách nền khỏi ảnh chưa trong suốt — việc đó cần "Remove Background" (AI, có phí).</p>
+
+          <label style="margin-top:.7rem;display:block">HOẶC TẢI ẢNH NỀN TỪ MÁY TÍNH</label>
+          <input type="file" id="meFreeBgFileInput" accept="image/*">
+          <div id="meFreeBgPreviewCard" style="display:none;margin-top:.5rem;border:1px solid #e6e8ec;border-radius:8px;padding:.5rem;align-items:center;gap:.6rem">
+            <img id="meFreeBgPreviewImg" style="width:64px;height:64px;object-fit:cover;border-radius:6px;background:#fafafa">
+            <span id="meFreeBgPreviewName" style="font-size:.78rem;color:#374151;flex:1"></span>
+            <button type="button" class="mc-btn" id="meFreeBgApplyBtn">🖼 Ghép vào ảnh <span class="me-cost">FREE</span></button>
+          </div>
+          <p class="mc-note">Ảnh nền được tự động phóng/cắt vừa khung (giữ tỉ lệ, không méo — kiểu "cover"), rồi ảnh sản phẩm được canh giữa, ghép lên trên. Cũng chỉ ghép đẹp khi ảnh sản phẩm đã trong suốt (xem lưu ý ở trên).</p>
         </div>
 
         <div id="meStatus" class="mc-status" style="display:none"></div>

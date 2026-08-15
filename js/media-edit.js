@@ -509,6 +509,58 @@ const MediaEdit = (function () {
     }).catch(function (e) { setStatus('FREE đổi nền lỗi: ' + e.message, true); });
   }
 
+  // drawCover(ctx, img, w, h) — vẽ img phủ kín khung w×h, giữ nguyên tỉ lệ
+  // (cắt bớt phần thừa thay vì méo hình) — cùng logic CSS background-size:cover.
+  function drawCover(ctx, img, w, h) {
+    var ir = img.naturalWidth / img.naturalHeight;
+    var cr = w / h;
+    var sw, sh, sx, sy;
+    if (ir > cr) { sh = img.naturalHeight; sw = sh * cr; sx = (img.naturalWidth - sw) / 2; sy = 0; }
+    else { sw = img.naturalWidth; sh = sw / cr; sx = 0; sy = (img.naturalHeight - sh) / 2; }
+    ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+  }
+
+  var freeBgImageFile = null;
+
+  function pickFreeBgImage(file) {
+    if (!file) return;
+    if (!/^image\//.test(file.type)) { setStatus('Chỉ chấp nhận ảnh làm nền.', true); return; }
+    freeBgImageFile = file;
+    var reader = new FileReader();
+    reader.onload = function (ev) {
+      $('meFreeBgPreviewImg') && ($('meFreeBgPreviewImg').src = ev.target.result);
+      $('meFreeBgPreviewName') && ($('meFreeBgPreviewName').textContent = file.name);
+      var card = $('meFreeBgPreviewCard');
+      if (card) card.style.display = 'flex';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  // freeChangeBackgroundImage() — FREE, canvas cục bộ, KHÔNG gọi AI. Ảnh nền
+  // tự phóng/cắt "cover" vừa khung theo đúng kích thước ảnh nguồn (không méo),
+  // ảnh sản phẩm canh giữa vẽ đè lên trên — cùng giới hạn với đổi nền màu:
+  // chỉ ghép đẹp thấy rõ khi ảnh nguồn đã trong suốt.
+  function freeChangeBackgroundImage() {
+    if (!activeSource) { setStatus('Chọn ảnh nguồn trước — FREE.', true); return; }
+    if (!freeBgImageFile) { setStatus('Chọn ảnh nền từ máy tính trước.', true); return; }
+    var reader = new FileReader();
+    var readBg = new Promise(function (resolve, reject) {
+      reader.onload = function (ev) { resolve(ev.target.result); };
+      reader.onerror = function () { reject(new Error('Không đọc được ảnh nền.')); };
+      reader.readAsDataURL(freeBgImageFile);
+    });
+    return Promise.all([loadImageEl(activeSource.url), readBg.then(loadImageEl)])
+      .then(function (imgs) {
+        var product = imgs[0], bg = imgs[1];
+        var c = document.createElement('canvas');
+        c.width = product.naturalWidth; c.height = product.naturalHeight;
+        var ctx = c.getContext('2d');
+        drawCover(ctx, bg, c.width, c.height);
+        ctx.drawImage(product, 0, 0);
+        canvasToDraft(c, 'image/png');
+      }).catch(function (e) { setStatus('FREE ghép nền lỗi: ' + e.message, true); });
+  }
+
   /* ================= PROMPT OPTIMIZER (rule-based, FREE — không gọi AI) ================= */
   // Chuyển câu tự nhiên thành instruction có cấu trúc. KHÔNG gọi OpenAI.
   const STYLE_TAGS = {
@@ -715,6 +767,8 @@ const MediaEdit = (function () {
     var bBgWhite = $('meFreeBgWhite'); if (bBgWhite) bBgWhite.addEventListener('click', function () { freeChangeBackground('#ffffff'); });
     var bBgBlack = $('meFreeBgBlack'); if (bBgBlack) bBgBlack.addEventListener('click', function () { freeChangeBackground('#000000'); });
     var bBgCustom = $('meFreeBgCustom'); if (bBgCustom) bBgCustom.addEventListener('click', function () { freeChangeBackground(($('meFreeBgColor') && $('meFreeBgColor').value) || '#ffffff'); });
+    var bgFileInput = $('meFreeBgFileInput'); if (bgFileInput) bgFileInput.addEventListener('change', function () { pickFreeBgImage(bgFileInput.files && bgFileInput.files[0]); });
+    var bgApplyBtn = $('meFreeBgApplyBtn'); if (bgApplyBtn) bgApplyBtn.addEventListener('click', freeChangeBackgroundImage);
 
     loadLibrary();
     loadGenProducts();
