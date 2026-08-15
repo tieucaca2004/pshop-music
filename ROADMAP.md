@@ -2,10 +2,6 @@
 
 # Roadmap — chỉ ghi nhận, KHÔNG tự ý triển khai
 
-## Ý tưởng phát sinh — Kéo-thả vị trí tiêu đề cho Ô Danh mục Trang chủ (cat-tile)
-
-Requirement "kéo-thả vị trí chữ tiêu đề" (2026-08-15) mới làm cho Category Cover (header trang danh mục) — Ô Danh mục Trang chủ (`siteContent.categoryTiles`, lưới hiển thị ở `index.html`) CHƯA làm. CSS `.cat-tile-label` phức tạp hơn nhiều Category Cover: 4 biến thể kích cỡ (`wide`/`large`/`small`/mặc định) × `has-cover`/`no-photo` × breakpoint mobile riêng (`css/style.css`) — rủi ro regression cao hơn trên 1 trang đang phục vụ khách thật (trang chủ), cần làm như 1 Requirement riêng có thời gian kiểm thử kỹ từng biến thể, không tiện tay làm cùng lúc.
-
 ## Ý tưởng phát sinh — mojibake có sẵn trong functions/index.js
 
 Phát hiện tình cờ khi review diff cho SSRF fix (2026-08-15), KHÔNG liên quan tới thay đổi đang làm: `functions/index.js` có vài dòng comment + 1 chuỗi lỗi hiển thị cho user (`'Kh�ng t?i du?c ?nh t? URL cung c?p.'`) bị hỏng encoding từ trước (không phải do lượt sửa này). Cần rà lại toàn bộ file tìm ký tự `�`/`?` lạc chỗ và khôi phục đúng tiếng Việt UTF-8, xác nhận qua `node --check` + `node -e` sau khi sửa.

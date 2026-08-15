@@ -12,7 +12,7 @@
  *
  * Navigation:
  *   - Unauthenticated → redirect to /platform/login.html
- *   - super_admin → redirect to /platform/platform-admin/
+ *   - super_admin → redirect to /admin/ (Platform Admin area chưa được xây)
  *   - Legacy admin (role == 'admin') → access denied with message
  *   - business_admin / business_editor / business_viewer → access granted
  *     with a filtered workspace nav (no admin-only items)

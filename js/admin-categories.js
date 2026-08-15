@@ -348,6 +348,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const tilePreviewViewport = {}; // index -> 'desktop'|'tablet'|'mobile' (khung Cover riêng từng Ô)
   const tileBgRemoverOpen = {};   // index -> bool
   const TILE_COVER_DEFAULTS = { position: 'center', zoom: 100, opacity: 100, blur: 0, overlay: 100 };
+  // TILE_TITLE_DEFAULT — CHỈ dùng để vẽ khung xem trước lúc CHƯA kéo lần nào
+  // (không ghi vào tiles[i], không đụng dữ liệu) — xấp xỉ vị trí mặc định cũ
+  // (chữ nằm dưới ảnh, canh giữa). Vị trí THẬT trên trang chủ CHỈ đổi khi
+  // Founder chủ động kéo (xem startTileTitleDrag() + js/home.js renderCategoryTiles()).
+  const TILE_TITLE_DEFAULT = { x: 50, y: 80 };
 
   function loadTiles() {
     SiteContentDB.get().then(content => {
@@ -398,6 +403,16 @@ document.addEventListener('DOMContentLoaded', () => {
     return t.customAspectRatio ? ` style="aspect-ratio:${t.customAspectRatio};height:auto"` : '';
   }
 
+  // tileTitlePosStyle — ĐÚNG logic js/home.js renderCategoryTiles() dùng để
+  // vẽ chữ tiêu đề đã kéo (sửa 1 nơi phải sửa nơi kia, cùng quy ước
+  // tileHasCover/tilePreviewClasses ở trên) — để Live Preview TỔNG khớp
+  // ngay khi kéo, không cần Lưu rồi tải lại mới thấy đúng vị trí.
+  function tileTitlePosStyle(t) {
+    return (typeof t.titlePosX === 'number' && typeof t.titlePosY === 'number')
+      ? ` style="position:absolute;z-index:5;left:${t.titlePosX}%;bottom:${100 - t.titlePosY}%;max-width:80%;margin:0;text-align:left"`
+      : '';
+  }
+
   // renderTilePreviewGrid — vẽ lại RIÊNG khung Live Preview TỔNG (không đụng
   // vào các field đang nhập ở tileList bên dưới) — gọi sau MỖI lần đổi field.
   // Mỗi Ô có thêm 1 tay cầm góc dưới-phải (.cat-tile-resize-handle) để KÉO
@@ -410,7 +425,7 @@ document.addEventListener('DOMContentLoaded', () => {
     frame.setAttribute('data-viewport', tileViewport);
     if (!tiles.length) { frame.innerHTML = '<p class="small-muted">Chưa có ô danh mục nào.</p>'; return; }
     frame.innerHTML = `<div class="cat-tile-grid">${tiles.map((t, i) =>
-      `<div class="${tilePreviewClasses(t)}"${tileRatioStyle(t)}>${tilePreviewInnerHtml(t)}<span class="cat-tile-label">${escapeHtml(t.label)}</span><span class="cat-tile-resize-handle" title="Kéo để đổi Kích cỡ Ô" onpointerdown="AdminCategories.startTileSizeDrag(event,${i})"></span></div>`
+      `<div class="${tilePreviewClasses(t)}"${tileRatioStyle(t)}>${tilePreviewInnerHtml(t)}<span class="cat-tile-label"${tileTitlePosStyle(t)}>${escapeHtml(t.label)}</span><span class="cat-tile-resize-handle" title="Kéo để đổi Kích cỡ Ô" onpointerdown="AdminCategories.startTileSizeDrag(event,${i})"></span></div>`
     ).join('')}</div>`;
   }
 
@@ -521,6 +536,39 @@ document.addEventListener('DOMContentLoaded', () => {
     renderTiles();
   }
 
+  // startTileTitleDrag — kéo-thả tự do vị trí chữ tiêu đề Ô Danh mục Trang
+  // chủ, CÙNG kỹ thuật startCoverTitleDrag() ở Category Cover. Ghi THẲNG vào
+  // tiles[i].titlePosX/titlePosY (cùng cách customAspectRatio đã làm ở trên)
+  // — Ô CHƯA từng kéo (2 field này không tồn tại) giữ NGUYÊN 100% rendering
+  // cũ trên trang chủ thật (js/home.js renderCategoryTiles() CHỈ áp dụng vị
+  // trí tự do khi cả 2 field tồn tại, xem chú thích ở đó).
+  function startTileTitleDrag(e, i) {
+    e.preventDefault();
+    const labelEl = e.currentTarget;
+    const box = labelEl.closest('.cat-cover-preview-frame');
+    if (!box) return;
+    labelEl.classList.add('dragging');
+    let lastX = typeof tiles[i].titlePosX === 'number' ? tiles[i].titlePosX : TILE_TITLE_DEFAULT.x;
+    let lastY = typeof tiles[i].titlePosY === 'number' ? tiles[i].titlePosY : TILE_TITLE_DEFAULT.y;
+
+    function move(ev) {
+      const rect = box.getBoundingClientRect();
+      lastX = Math.round(Math.min(100, Math.max(0, (ev.clientX - rect.left) / rect.width * 100)) * 10) / 10;
+      lastY = Math.round(Math.min(100, Math.max(0, (ev.clientY - rect.top) / rect.height * 100)) * 10) / 10;
+      labelEl.style.left = lastX + '%';
+      labelEl.style.top = lastY + '%';
+    }
+    function up() {
+      document.removeEventListener('pointermove', move);
+      document.removeEventListener('pointerup', up);
+      labelEl.classList.remove('dragging');
+      tiles[i].titlePosX = lastX;
+      tiles[i].titlePosY = lastY;
+    }
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+  }
+
   // ── TILE COVER — NGUYÊN VẸN Category Cover, tái dùng ĐÚNG class CSS
   // `.cat-cover-*` đã có (0 CSS mới), chỉ đổi id/onclick nhắm theo index `i`
   // thay vì `c.id`. Xem chú thích đầy đủ ở categoryCoverHtml() phía trên. ─────
@@ -549,7 +597,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           ${t.image ? `<img src="${escapeHtml(t.image)}" class="cat-cover-preview-product cat-tile-cover-draggable" id="tile-cover-product-${i}" data-cover-position="${s.position}" style="--cover-zoom:${s.zoom / 100};--cover-opacity:${s.opacity / 100}" alt="" title="Kéo để di chuyển" onpointerdown="AdminCategories.startTileProductDrag(event,${i})">` : `<span class="cat-cover-preview-product-empty" id="tile-cover-product-${i}"></span>`}
           ${t.logo ? `<img src="${escapeHtml(t.logo)}" class="cat-cover-preview-logo" id="tile-cover-logo-${i}" alt="">` : `<span id="tile-cover-logo-${i}"></span>`}
-          <div class="cat-cover-preview-title">${escapeHtml(t.label || 'Danh mục')}</div>
+          <div class="cat-cover-preview-title" style="left:${typeof t.titlePosX === 'number' ? t.titlePosX : TILE_TITLE_DEFAULT.x}%;top:${typeof t.titlePosY === 'number' ? t.titlePosY : TILE_TITLE_DEFAULT.y}%" onpointerdown="AdminCategories.startTileTitleDrag(event,${i})" title="Kéo để đổi vị trí tiêu đề">${escapeHtml(t.label || 'Danh mục')}</div>
           <span class="cat-tile-frame-resize-handle" title="Kéo để đổi CHIỀU CAO khung tự do" onpointerdown="AdminCategories.startTileFrameHeightDrag(event,${i})"></span>
         </div>
 
@@ -810,6 +858,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setTileCoverField, resetTileCover, setTileCoverViewport, toggleTileBgRemover, startTileProductDrag,
     startTileFrameHeightDrag, resetTileFrameHeight, setTileBackgroundFromInternet,
     setCoverField, resetCover, setPreviewViewport, toggleBgRemover, setBackgroundFromInternet,
-    startCoverTitleDrag
+    startCoverTitleDrag, startTileTitleDrag
   };
 });
