@@ -227,7 +227,7 @@
     const titleEl = document.getElementById('categoryHeaderTitle');
     const crumbEl = document.getElementById('breadcrumbCat');
     const label = CAT_LABELS[cat] || 'Sản phẩm';
-    if (titleEl) titleEl.textContent = label.toUpperCase();
+    if (titleEl) titleEl.textContent = label;
     if (crumbEl) crumbEl.textContent = label;
     document.getElementById('pageTitle').textContent = label + ' - Pshop Music';
 
@@ -236,17 +236,17 @@
     const catObj = categoryData.find(c => c.code === cat);
     // Vị trí chữ tiêu đề kéo-thả (admin/categories.html) — % theo khung
     // .category-header, khớp đúng css/style.css #categoryHeaderTitle + Live
-    // Preview admin (js/admin-categories.js). Admin kéo-thả lưu titlePosY
-    // dạng top-left (khớp startCoverTitleDrag/deriveTitlePos kiểu Hero
-    // Slideshow) — trang thật quy đổi sang BOTTOM (100-posY) để chữ luôn mọc
-    // lên trên, không tràn xuống dưới khung .category-header (overflow:
-    // hidden) dù font-size trang thật lớn hơn nhiều khung xem trước admin.
-    // Mặc định 4%/88% xấp xỉ vị trí cũ khi Danh mục chưa từng kéo-thả.
+    // Preview admin (js/admin-categories.js). Neo bằng TOP — ĐÚNG chiều
+    // admin kéo-thả tính (top-left, startCoverTitleDrag) — từng đổi sang
+    // bottom nhưng làm ĐẢO NGƯỢC chiều dọc so với admin, kéo giữa khung lại
+    // hiện lệch hẳn trên trang thật (Founder báo lỗi live 2026-08-15). Mặc
+    // định 70% (không phải 88%) để đủ chỗ cho chữ lớn nhất (clamp 2.8rem)
+    // không tràn khỏi khung — xem chú thích đầy đủ ở css/style.css.
     if (titleEl) {
       const posX = catObj && typeof catObj.coverTitlePosX === 'number' ? catObj.coverTitlePosX : 4;
-      const posY = catObj && typeof catObj.coverTitlePosY === 'number' ? catObj.coverTitlePosY : 88;
+      const posY = catObj && typeof catObj.coverTitlePosY === 'number' ? catObj.coverTitlePosY : 70;
       titleEl.style.left = posX + '%';
-      titleEl.style.bottom = (100 - posY) + '%';
+      titleEl.style.top = posY + '%';
       // Cỡ chữ/Font chữ/Màu chữ tiêu đề (admin/categories.html) — CHỈ áp
       // dụng khi Danh mục có field tương ứng (Danh mục CHƯA từng đổi giữ
       // NGUYÊN CSS mặc định — clamp() gốc + màu #fff cũ, 0 regression).

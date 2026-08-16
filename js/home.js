@@ -300,16 +300,19 @@
       // từng chỉnh giữ NGUYÊN 100% style .cat-tile-label mặc định theo size —
       // 0 regression). Toàn bộ ghi qua INLINE style (không qua class CSS
       // mới) để luôn thắng chắc chắn mọi rule theo size/has-cover/no-photo đã
-      // có sẵn, không phụ thuộc thứ tự CSS specificity. Vị trí neo bằng
-      // BOTTOM (không phải TOP như lúc kéo trong admin) — cỡ chữ thật mỗi
-      // size chênh rất lớn (1.1rem→3.4rem, khác hẳn cỡ cố định trong khung
-      // xem trước) nên neo đáy để chữ luôn mọc lên trên, không tràn khỏi
-      // khung `.cat-tile` (có overflow:hidden) — cùng lý do đã áp dụng cho
-      // #categoryHeaderTitle. --title-scale khớp đúng css/style.css
-      // .cat-tile-label (cùng kỹ thuật --hero-title-scale của Hero Slideshow).
+      // có sẵn, không phụ thuộc thứ tự CSS specificity. Neo bằng TOP — ĐÚNG
+      // chiều admin kéo-thả tính (top-left, startTileTitleDrag) — từng đổi
+      // sang bottom để tránh tràn đáy nhưng ĐẢO NGƯỢC chiều dọc so với admin
+      // (kéo giữa khung admin lại hiện lệch hẳn trên trang thật, Founder báo
+      // lỗi live 2026-08-15). TILE_TITLE_DEFAULT.y (admin) đã hạ xuống 68 để
+      // đủ chỗ cho biến thể "Banner ngang" (font lớn nhất) không tràn khỏi
+      // khung `.cat-tile` (overflow:hidden) khi neo top — Founder tự kéo quá
+      // gần đáy vẫn có thể tràn, thấy ngay trong khung xem trước để tự chỉnh
+      // (cùng cách Hero Slideshow chấp nhận). --title-scale khớp đúng
+      // css/style.css .cat-tile-label (cùng kỹ thuật --hero-title-scale).
       const titleStyleParts = [];
       if (typeof t.titlePosX === 'number' && typeof t.titlePosY === 'number') {
-        titleStyleParts.push('position:absolute', 'z-index:5', `left:${t.titlePosX}%`, `bottom:${100 - t.titlePosY}%`, 'max-width:80%', 'margin:0', 'text-align:left');
+        titleStyleParts.push('position:absolute', 'z-index:5', `left:${t.titlePosX}%`, `top:${t.titlePosY}%`, 'max-width:80%', 'margin:0', 'text-align:left');
       }
       if (typeof t.titleScale === 'number') titleStyleParts.push(`--title-scale:${t.titleScale / 100}`);
       if (t.titleFont && TITLE_FONTS[t.titleFont]) titleStyleParts.push(`font-family:${TITLE_FONTS[t.titleFont]}`);

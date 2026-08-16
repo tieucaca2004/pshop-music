@@ -25,11 +25,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const coverSettings = {}; // { position, zoom, opacity, blur, overlay }
   const previewViewport = {}; // 'desktop'|'tablet'|'mobile' — chỉ đổi khung xem, không ghi Firebase
   const bgRemoverOpen = {};
-  // titlePosX/titlePosY: % trong khung preview (neo góc trên-trái tiêu đề) —
-  // giá trị mặc định xấp xỉ đúng vị trí CSS tĩnh cũ (.cat-cover-preview-title
-  // left:1rem;bottom:0.75rem trong khung cao 180px) để danh mục CHƯA từng
-  // kéo tiêu đề vẫn hiện Y HỆT như trước (an toàn dữ liệu cũ).
-  const COVER_DEFAULTS = { position: 'center-right', zoom: 100, opacity: 100, blur: 0, overlay: 100, titlePosX: 4, titlePosY: 88, titleScale: 100, titleFont: 'sans', titleColor: 'white' };
+  // titlePosX/titlePosY: % trong khung preview (neo góc trên-trái tiêu đề,
+  // top:Y% — khớp ĐÚNG chiều css/style.css #categoryHeaderTitle/js/category.js
+  // dùng trên trang thật, xem chú thích ở đó). titlePosY mặc định 70 (không
+  // phải 88 — giá trị cũ tràn khỏi khung .category-header khi chữ trang thật
+  // lớn nhất, Founder báo lỗi live 2026-08-15) — vẫn đủ gần đáy để xấp xỉ vị
+  // trí CSS tĩnh cũ. Lưu ý rowValues() LUÔN ghi coverTitlePosY xuống Firebase
+  // mỗi lần Lưu (kể cả khi Founder chưa từng kéo tiêu đề) nên giá trị mặc
+  // định ở đây cũng chính là giá trị sẽ tồn tại thật trong dữ liệu.
+  const COVER_DEFAULTS = { position: 'center-right', zoom: 100, opacity: 100, blur: 0, overlay: 100, titlePosX: 4, titlePosY: 70, titleScale: 100, titleFont: 'sans', titleColor: 'white' };
   const POSITIONS = ['top-left', 'top-center', 'top-right', 'center-left', 'center', 'center-right', 'bottom-left', 'bottom-center', 'bottom-right'];
   const POSITION_LABELS = { 'top-left': 'Trên trái', 'top-center': 'Trên giữa', 'top-right': 'Trên phải', 'center-left': 'Giữa trái', 'center': 'Chính giữa', 'center-right': 'Giữa phải', 'bottom-left': 'Dưới trái', 'bottom-center': 'Dưới giữa', 'bottom-right': 'Dưới phải' };
   // TITLE_FONTS/TITLE_COLORS — 2 font đã nạp SẴN toàn site (mọi trang đều có
@@ -421,7 +425,10 @@ document.addEventListener('DOMContentLoaded', () => {
   // nào (không ghi vào tiles[i], không đụng dữ liệu) — xấp xỉ vị trí/cỡ chữ/
   // font/màu mặc định cũ. Giá trị THẬT trên trang chủ CHỈ đổi khi Founder chủ
   // động kéo/chọn (xem startTileTitleDrag/-Resize() + js/home.js renderCategoryTiles()).
-  const TILE_TITLE_DEFAULT = { x: 50, y: 80, scale: 100, font: 'sans', color: 'white' };
+  // y:68 (không phải 80) — đủ chỗ cho biến thể "Banner ngang" (font lớn nhất
+  // trong 4 biến thể, khung cố định 230px/150px) không tràn khỏi
+  // `.cat-tile` (overflow:hidden) khi neo bằng top, xem js/home.js.
+  const TILE_TITLE_DEFAULT = { x: 50, y: 68, scale: 100, font: 'sans', color: 'white' };
 
   function loadTiles() {
     SiteContentDB.get().then(content => {
@@ -478,8 +485,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // Preview TỔNG khớp ngay, không cần Lưu rồi tải lại mới thấy đúng.
   function tileTitleStyle(t) {
     const parts = [];
+    // Neo bằng TOP — ĐÚNG chiều startTileTitleDrag() tính (top-left, cùng
+    // khung xem trước Cover Preview riêng của Ô) — xem chú thích đầy đủ ở
+    // js/home.js renderCategoryTiles() (từng đổi sang bottom nhưng làm ĐẢO
+    // NGƯỢC chiều dọc so với khung kéo, Founder báo lỗi live 2026-08-15).
     if (typeof t.titlePosX === 'number' && typeof t.titlePosY === 'number') {
-      parts.push('position:absolute', 'z-index:5', `left:${t.titlePosX}%`, `bottom:${100 - t.titlePosY}%`, 'max-width:80%', 'margin:0', 'text-align:left');
+      parts.push('position:absolute', 'z-index:5', `left:${t.titlePosX}%`, `top:${t.titlePosY}%`, 'max-width:80%', 'margin:0', 'text-align:left');
     }
     if (typeof t.titleScale === 'number') parts.push(`--title-scale:${t.titleScale / 100}`);
     if (t.titleFont && TITLE_FONTS[t.titleFont]) parts.push(`font-family:${TITLE_FONTS[t.titleFont]}`);
