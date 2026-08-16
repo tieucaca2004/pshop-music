@@ -4,6 +4,14 @@
   // <link> Google Fonts của chính index.html, không thêm font mới).
   const TITLE_FONTS = { sans: "'Be Vietnam Pro',sans-serif", serif: "'Cormorant Garamond',serif" };
   const TITLE_COLORS = { white: '#ffffff', black: '#111111', gold: '#b8892f' };
+  // titleAlignTransform — ĐÚNG logic js/admin-categories.js titleAlignStyle()
+  // dùng cho Căn chữ tiêu đề: điểm neo kéo-thả (titlePosX/Y) LUÔN là 1 điểm
+  // cố định — 'center'/'right' chỉ đổi chữ nằm bên nào so với điểm đó.
+  function titleAlignTransform(align) {
+    if (align === 'center') return 'translateX(-50%)';
+    if (align === 'right') return 'translateX(-100%)';
+    return '';
+  }
 
   function escapeHtml(str) {
     return String(str || '').replace(/[&<>"']/g, c => ({
@@ -312,7 +320,10 @@
       // css/style.css .cat-tile-label (cùng kỹ thuật --hero-title-scale).
       const titleStyleParts = [];
       if (typeof t.titlePosX === 'number' && typeof t.titlePosY === 'number') {
-        titleStyleParts.push('position:absolute', 'z-index:5', `left:${t.titlePosX}%`, `top:${t.titlePosY}%`, 'max-width:80%', 'margin:0', 'text-align:left');
+        const align = t.titleAlign || 'left';
+        titleStyleParts.push('position:absolute', 'z-index:5', `left:${t.titlePosX}%`, `top:${t.titlePosY}%`, 'max-width:80%', 'margin:0', `text-align:${align}`);
+        const transform = titleAlignTransform(align);
+        if (transform) titleStyleParts.push(`transform:${transform}`);
       }
       if (typeof t.titleScale === 'number') titleStyleParts.push(`--title-scale:${t.titleScale / 100}`);
       if (t.titleFont && TITLE_FONTS[t.titleFont]) titleStyleParts.push(`font-family:${TITLE_FONTS[t.titleFont]}`);

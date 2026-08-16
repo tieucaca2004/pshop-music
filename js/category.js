@@ -16,6 +16,14 @@
   // <link> Google Fonts của chính category.html, không thêm font mới).
   const TITLE_FONTS = { sans: "'Be Vietnam Pro',sans-serif", serif: "'Cormorant Garamond',serif" };
   const TITLE_COLORS = { white: '#ffffff', black: '#111111', gold: '#b8892f' };
+  // titleAlignTransform — ĐÚNG logic js/admin-categories.js titleAlignStyle()
+  // dùng cho Căn chữ tiêu đề: điểm neo kéo-thả (coverTitlePosX/Y) LUÔN là 1
+  // điểm cố định — 'center'/'right' chỉ đổi chữ nằm bên nào so với điểm đó.
+  function titleAlignTransform(align) {
+    if (align === 'center') return 'translateX(-50%)';
+    if (align === 'right') return 'translateX(-100%)';
+    return '';
+  }
 
   let allProducts = [];
   let categoryTiles = [];
@@ -255,6 +263,11 @@
       titleEl.style.setProperty('--title-scale', catObj && typeof catObj.coverTitleScale === 'number' ? catObj.coverTitleScale / 100 : '');
       titleEl.style.fontFamily = (catObj && catObj.coverTitleFont && TITLE_FONTS[catObj.coverTitleFont]) || '';
       titleEl.style.color = (catObj && catObj.coverTitleColor && TITLE_COLORS[catObj.coverTitleColor]) || '';
+      // Căn chữ tiêu đề (Trái/Giữa/Phải) — điểm neo kéo-thả (posX/posY) luôn
+      // giữ nguyên, chỉ đổi chữ nằm bên nào so với điểm đó (transform).
+      const align = (catObj && catObj.coverTitleAlign) || 'left';
+      titleEl.style.textAlign = align;
+      titleEl.style.transform = titleAlignTransform(align);
     }
     const bgFromCat = catObj && catObj.backgroundImage;
     const tile = !bgFromCat && categoryTiles.find(t => t.category === cat && t.image);

@@ -248,6 +248,9 @@ body{min-height:100vh;background:var(--bg-alt)}
 .cat-cover-color-btn{width:22px;height:22px;padding:0;border-radius:50%;border:2px solid var(--line2);cursor:pointer}
 .cat-cover-color-btn:hover{border-color:var(--gold)}
 .cat-cover-color-btn.active{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold-soft)}
+.cat-cover-align-btns{display:flex;gap:0.4rem}
+.cat-cover-align-btns button{padding:0.4rem 0.7rem}
+.cat-cover-align-btns button.active{background:var(--gold-soft);border-color:var(--gold);color:var(--gold-ink)}
 .cat-cover-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:0.75rem}
 .cat-cover-controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.75rem;align-items:end;margin-bottom:0.6rem}
 .cat-cover-slider-label{display:flex;flex-direction:column;gap:0.3rem;font-size:0.7rem;color:var(--ink-soft)}
