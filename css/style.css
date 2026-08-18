@@ -460,5 +460,15 @@ footer{background:#0a0a0a;padding:4rem 0 1.5rem;margin-top:2rem}
   .filter-btn{white-space:nowrap;flex:0 0 auto}
   .filter-btn:hover,.filter-btn.active{background:var(--gold);border-color:var(--gold);color:#000}
 }
+/* Mobile: thu gọn vùng banner giữa slider (hero) và lưới Danh mục —
+   tránh khoảng trống quá rộng giữa ảnh slider và danh mục (Founder
+   2026-08-18). Banner-xếp-dọc full-width + margin 1.5rem sẽ đẩy danh mục
+   xuống xa trên điện thoại; giảm margin/padding + giới hạn chiều cao banner
+   để danh mục xuất hiện sát dưới ảnh slider. */
+@media(max-width:700px){
+  .banner-zone.has-banners{margin:0.5rem auto 0;padding:0 0.75rem}
+  .banner-zone .banner-item{margin-bottom:0.5rem}
+  .banner-zone .banner-item img{max-height:180px;width:100%;height:auto;object-fit:cover}
+}
 @media(max-width:400px){.container{padding:0 1.2rem}}
 
