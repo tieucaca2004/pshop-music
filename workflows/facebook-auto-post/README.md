@@ -39,7 +39,7 @@ I need you to obtain the **Page Access Token** from the Graph API Explorer:
 7. Run this command to save it:
 
 ```powershell
-$token = "EAAdf6Le4TlABR4...paste-full-token"
+$token = "<DAN_PAGE_ACCESS_TOKEN_MOI_VAO_DAY>"
 $creds = @{pageAccessToken=$token}
 $creds | ConvertTo-Json | Out-File D:\PshopMusicSite\workflows\facebook-auto-post\.facebook-credentials.json -Encoding utf8
 ```
