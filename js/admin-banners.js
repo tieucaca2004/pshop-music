@@ -85,12 +85,17 @@ document.addEventListener('DOMContentLoaded', () => {
       order: parseInt(document.getElementById('bOrder').value, 10) || 0,
       active: document.getElementById('bActive').checked
     };
+    // Chặn bấm Lưu lần 2 khi lượt trước chưa xong (trước đây tạo bản ghi trùng).
+    const saveBtn = document.getElementById('bannerSaveBtn');
+    if (saveBtn.disabled) return;
+    saveBtn.disabled = true;
     const action = editingId ? BannerDB.update(editingId, data) : BannerDB.add(data);
     action.then(() => {
       showStatus(editingId ? 'Đã cập nhật banner.' : 'Đã thêm banner mới.');
       resetForm();
       load();
-    });
+    }).catch(CmsSaveError.report)
+      .then(() => { saveBtn.disabled = false; });
   }
 
   function remove(id) {

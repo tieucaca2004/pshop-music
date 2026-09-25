@@ -112,6 +112,7 @@ const DB = (function () {
  * before this can be branched safely.
  */
 const SiteContentDB = (function () {
+  let loadedSnapshot = null; // xem saveChanged()
   function contentRef() {
     return firebase.database().ref('siteContent');
   }
@@ -140,11 +141,34 @@ const SiteContentDB = (function () {
     get() {
       return ensureSeeded()
         .then(() => contentRef().once('value'))
-        .then(snap => snap.val() || (typeof SEED_SITE_CONTENT !== 'undefined' ? SEED_SITE_CONTENT : {}));
+        .then(snap => {
+          const val = snap.val() || (typeof SEED_SITE_CONTENT !== 'undefined' ? SEED_SITE_CONTENT : {});
+          loadedSnapshot = JSON.parse(JSON.stringify(val)); // bản sao sâu — trang có thể sửa trực tiếp object con
+          return val;
+        });
     },
 
     save(content) {
       return contentRef().set(content).then(() => true);
+    },
+
+    // saveChanged(next, prev) — CHỈ ghi các key cấp 1 khác với bản trang đã
+    // đọc lúc mở (prev), bằng update() thay vì set() cả node. save() ghi đè
+    // toàn bộ siteContent bằng bản cũ trong bộ nhớ: mở trang Slider, lưu Menu
+    // ở tab khác, rồi lưu Slider → Menu vừa sửa bị hoàn nguyên (mất dữ liệu).
+    // So với bản sao SÂU chụp lúc get() (không dùng object của trang: các
+    // trang sao chép nông .slice() nên sửa item cũng sửa luôn bản gốc).
+    saveChanged(next) {
+      const base = loadedSnapshot || {};
+      const changes = {};
+      Object.keys(next || {}).forEach(k => {
+        if (JSON.stringify(next[k]) !== JSON.stringify(base[k])) changes[k] = next[k] === undefined ? null : next[k];
+      });
+      if (!Object.keys(changes).length) return Promise.resolve(true);
+      return contentRef().update(changes).then(() => {
+        loadedSnapshot = Object.assign({}, base, JSON.parse(JSON.stringify(changes)));
+        return true;
+      });
     },
 
     resetToSeed() {

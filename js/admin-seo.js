@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
       searchConsoleTag: document.getElementById('seoSearchConsoleTag').value.trim(),
       robotsExtra: document.getElementById('seoRobotsExtra').value.trim()
     };
-    SeoDB.save(settings).then(() => showStatus('Đã lưu cài đặt SEO.'));
+    SeoDB.save(settings).then(() => showStatus('Đã lưu cài đặt SEO.')).catch(CmsSaveError.report);
   }
 
   function showStatus(msg) {

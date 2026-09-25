@@ -384,7 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
     CategoryDB.update(id, values).then(() => {
       showStatus('Đã lưu danh mục.');
       load();
-    });
+    }).catch(CmsSaveError.report);
   }
 
   function move(id, dir) {
@@ -997,10 +997,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function saveTiles() {
     const content = Object.assign({}, siteContent, { categoryTiles: tiles });
-    SiteContentDB.save(content).then(() => {
+    SiteContentDB.saveChanged(content).then(() => {
       siteContent = content;
       showTileStatus('Đã lưu ô danh mục trang chủ.');
-    });
+    }).catch(CmsSaveError.report);
   }
 
   function showTileStatus(msg) {

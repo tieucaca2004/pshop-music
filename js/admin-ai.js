@@ -793,7 +793,7 @@ const AdminAI = (function () {
       return SiteContentDB.get().then(sc => {
         const heroSlides = Array.isArray(sc.heroSlides) ? sc.heroSlides.slice() : [];
         heroSlides.push(draft.content);
-        return SiteContentDB.save(Object.assign({}, sc, { heroSlides }));
+        return SiteContentDB.saveChanged(Object.assign({}, sc, { heroSlides }));
       });
     }
     return Promise.reject(new Error('Không nhận diện được targetCollection: ' + target));

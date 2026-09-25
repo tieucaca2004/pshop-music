@@ -82,12 +82,17 @@ document.addEventListener('DOMContentLoaded', () => {
       order: parseInt(document.getElementById('vOrder').value, 10) || 0,
       active: document.getElementById('vActive').checked
     };
+    // Chặn bấm Lưu lần 2 khi lượt trước chưa xong (trước đây tạo bản ghi trùng).
+    const saveBtn = document.getElementById('videoSaveBtn');
+    if (saveBtn.disabled) return;
+    saveBtn.disabled = true;
     const action = editingId ? VideoDB.update(editingId, data) : VideoDB.add(data);
     action.then(() => {
       showStatus(editingId ? 'Đã cập nhật video.' : 'Đã thêm video mới.');
       resetForm();
       load();
-    });
+    }).catch(CmsSaveError.report)
+      .then(() => { saveBtn.disabled = false; });
   }
 
   function remove(id) {

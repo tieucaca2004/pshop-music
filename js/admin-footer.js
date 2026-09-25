@@ -111,10 +111,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const content = Object.assign({}, siteContent, {
       footer: { columns, social, copyText: document.getElementById('footerCopyText').value.trim() }
     });
-    SiteContentDB.save(content).then(() => {
+    SiteContentDB.saveChanged(content).then(() => {
       siteContent = content;
       showStatus('Đã lưu footer — có hiệu lực ngay trên mọi trang.');
-    });
+    }).catch(CmsSaveError.report);
   }
 
   function showStatus(msg) {

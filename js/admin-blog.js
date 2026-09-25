@@ -117,12 +117,17 @@ document.addEventListener('DOMContentLoaded', () => {
       data.publishedAt = Date.now();
     }
 
+    // Chặn bấm Lưu lần 2 khi lượt trước chưa xong (trước đây tạo bản ghi trùng).
+    const saveBtn = document.getElementById('blogSaveBtn');
+    if (saveBtn.disabled) return;
+    saveBtn.disabled = true;
     const action = editingId ? BlogDB.update(editingId, data) : BlogDB.add(data);
     action.then(() => {
       showStatus(editingId ? 'Đã cập nhật bài viết.' : 'Đã thêm bài viết mới.');
       resetForm();
       load();
-    });
+    }).catch(CmsSaveError.report)
+      .then(() => { saveBtn.disabled = false; });
   }
 
   function remove(id) {

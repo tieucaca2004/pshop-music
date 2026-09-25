@@ -376,6 +376,10 @@ const AdminApp = (function () {
       ogImage: document.getElementById('pOgImage').value.trim(),
       slug: document.getElementById('pSlug').value.trim()
     };
+    // Chặn bấm Lưu lần 2 khi lượt trước chưa xong.
+    const saveBtn = document.getElementById('saveBtn');
+    if (saveBtn.disabled) return;
+    saveBtn.disabled = true;
     const action = editingId ? DB.update(editingId, data) : DB.add(data);
     action.then(savedProduct => {
       showStatus(editingId ? 'Đã cập nhật sản phẩm.' : 'Đã thêm sản phẩm mới.');
@@ -424,7 +428,8 @@ const AdminApp = (function () {
           }
         }).catch(function (err) { console.error('[workflow:auto] trigger failed', err); });
       }
-    });
+    }).catch(CmsSaveError.report)
+      .then(() => { saveBtn.disabled = false; });
   }
 
   function showStatus(msg) {

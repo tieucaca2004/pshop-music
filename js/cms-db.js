@@ -127,3 +127,21 @@ const SeoDB = (function () {
     }
   };
 })();
+
+// CmsSaveError — báo LƯU THẤT BẠI rõ ràng (trước đây mọi nút Lưu của CMS
+// không có .catch: Firebase từ chối ghi → UI im lặng, Founder tưởng đã lưu).
+const CmsSaveError = (function () {
+  function classify(err) {
+    const msg = String((err && (err.code || err.message)) || err || '');
+    if (/PERMISSION_DENIED|permission.denied|permission_denied/i.test(msg)) return 'Không có quyền ghi — phiên đăng nhập có thể đã hết hạn hoặc tài khoản bị đổi quyền. Tải lại trang rồi đăng nhập lại.';
+    if (/network|offline|disconnect|Failed to fetch/i.test(msg)) return 'Lỗi mạng — kiểm tra kết nối rồi bấm Lưu lại.';
+    if (/timeout/i.test(msg)) return 'Hết thời gian chờ máy chủ — bấm Lưu lại.';
+    if (/invalid|validation|undefined value|contains an invalid/i.test(msg)) return 'Dữ liệu không hợp lệ: ' + msg;
+    return 'Lỗi không xác định: ' + msg;
+  }
+  function report(err) {
+    console.error('[CMS save failed]', err);
+    alert('LƯU THẤT BẠI — dữ liệu CHƯA được lưu.\n' + classify(err));
+  }
+  return { report, classify };
+})();

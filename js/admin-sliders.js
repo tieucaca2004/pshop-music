@@ -437,10 +437,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function saveAll() {
     const content = Object.assign({}, siteContent, { heroSlides: slides });
-    SiteContentDB.save(content).then(() => {
+    SiteContentDB.saveChanged(content).then(() => {
       siteContent = content;
       showStatus('Đã lưu slider trang chủ — có hiệu lực ngay cho mọi khách truy cập.');
-    });
+    }).catch(CmsSaveError.report);
   }
 
   function showStatus(msg) {

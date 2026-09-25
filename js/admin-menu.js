@@ -62,10 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function save() {
     items.forEach((it, i) => { it.order = i + 1; });
     const content = Object.assign({}, siteContent, { menu: { items } });
-    SiteContentDB.save(content).then(() => {
+    SiteContentDB.saveChanged(content).then(() => {
       siteContent = content;
       showStatus('Đã lưu menu — có hiệu lực ngay trên mọi trang.');
-    });
+    }).catch(CmsSaveError.report);
   }
 
   function showStatus(msg) {

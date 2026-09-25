@@ -147,10 +147,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function savePci() {
     const content = Object.assign({}, siteContent, { productCardImage: Object.assign({}, pci) });
-    SiteContentDB.save(content).then(() => {
+    SiteContentDB.saveChanged(content).then(() => {
       siteContent = content;
       showStatus('pciStatus', 'Đã lưu Khung ảnh sản phẩm.');
-    });
+    }).catch(CmsSaveError.report);
   }
 
   function resetPci() {
@@ -225,10 +225,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
     const content = Object.assign({}, siteContent, { settings });
-    SiteContentDB.save(content).then(() => {
+    SiteContentDB.saveChanged(content).then(() => {
       siteContent = content;
       showStatus('settingsStatus', 'Đã lưu thông tin chung.');
-    });
+    }).catch(CmsSaveError.report);
   }
 
   function saveHeroText() {
@@ -237,10 +237,10 @@ document.addEventListener('DOMContentLoaded', () => {
       heroCtaLabel: document.getElementById('heroCtaInput').value.trim(),
       heroCta2Label: document.getElementById('heroCta2Input').value.trim()
     });
-    SiteContentDB.save(content).then(() => {
+    SiteContentDB.saveChanged(content).then(() => {
       siteContent = content;
       showStatus('heroTextStatus', 'Đã lưu chữ Hero trang chủ.');
-    });
+    }).catch(CmsSaveError.report);
   }
 
   function saveCatIntro() {
@@ -250,10 +250,10 @@ document.addEventListener('DOMContentLoaded', () => {
       categoriesTitle: document.getElementById('catIntroTitle').value.trim(),
       categoriesDesc: document.getElementById('catIntroDesc').value.trim()
     });
-    SiteContentDB.save(content).then(() => {
+    SiteContentDB.saveChanged(content).then(() => {
       siteContent = content;
       showStatus('catIntroStatus', 'Đã lưu tiêu đề khu Danh mục.');
-    });
+    }).catch(CmsSaveError.report);
   }
 
   function saveServices() {
@@ -262,10 +262,10 @@ document.addEventListener('DOMContentLoaded', () => {
       serviceItems: parsePipePairs(document.getElementById('svcItems').value, 'title', 'desc'),
       infoBoxRows: parsePipePairs(document.getElementById('svcInfoRows').value, 'label', 'value')
     });
-    SiteContentDB.save(content).then(() => {
+    SiteContentDB.saveChanged(content).then(() => {
       siteContent = content;
       showStatus('servicesStatus', 'Đã lưu nội dung Dịch vụ.');
-    });
+    }).catch(CmsSaveError.report);
   }
 
   function showStatus(id, msg) {
