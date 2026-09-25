@@ -37,8 +37,19 @@ discord-patch.json
 # Generated media uploads
 media/
 
-# Personal documents
+# Personal documents (tên cũ gõ sai "họp" nên file thật "hợp" đã lọt vào git)
 họp đồng thuê xe.pdf
+hợp đồng thuê xe.pdf
+*.pdf
+
+# n8n local data (encryptionKey + database.sqlite) — KHÔNG commit
+n8n-data/
+
+# Product DB dumps
+backups/
+
+# Claude Code local settings
+.claude/settings.local.json
 
 # Firebase Functions dependencies
 functions/node_modules/
