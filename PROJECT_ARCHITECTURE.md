@@ -1725,3 +1725,10 @@ Chi tiết đầy đủ: `CHANGELOG.md` mục "Sprint 9 — Firebase Storage Sec
 ## Lịch sử phát triển
 
 Xem `CHANGELOG.md` cho từng đợt (Sprint) và mốc thay đổi cụ thể.
+
+## Auth Guard dùng chung + Publish Safety (Master Recovery 2026-09-25)
+
+- **`AuthContext.guard({ allowedRoles, onTransient })`** (`js/auth-context.js`) — cổng quyền cho trang PSH Platform. `classifyAccess()` trả 4 trạng thái: `unauthenticated` → `/admin/login.html?next=<trang hiện tại>`; `unauthorized` → `login?denied=1&next=`; `transient` (Firebase rate-limit/network/token lỗi) → GIỮ trang, `AuthContext.retry()` backoff tối đa 3 lần, KHÔNG signIn/signOut; `ok`. `AdminAuth.init()` dùng cùng `AuthContext.retry()`. Login chỉ nhận `next` là path nội bộ.
+- **Publish Safety** (`publishToTarget()` client `js/admin-ai.js` + server `functions/shared/publishToTarget.js`, cùng logic): update bản ghi có sẵn qua `compactForUpdate()` (bỏ `_xxx`, null/undefined, chuỗi rỗng, mảng rỗng); Draft Product có `_parseError` (AI không trả JSON) bị từ chối; Draft SEO-only chỉ merge field SEO; Banner luôn `active:false`, xếp cuối.
+- **Founder Agent**: thao tác ghi ảnh (smart-background, ảnh nền AI) chỉ tạo kết quả xem trước; ghi DB khi Founder bấm ÁP DỤNG (`AdminAgent.applySmartBackground/applyBgImage`), giá trị cũ lưu trong step (snapshot localStorage) để Hoàn tác sau reload.
+- **Test**: `npm test` (Node vm) + `tests/storage-rules.test.js`, `tests/database-rules.test.js` (Firebase Emulator).
