@@ -398,7 +398,19 @@ const AdminAgent = (function () {
   // detect-category (tránh lặp lại boilerplate fetch/token 3 nơi) — vẫn ĐÚNG
   // 1 Cloud Function openaiProxy đã có, không thêm Provider/API key mới.
 
+  // Permission gate (Master Recovery P0): Planner/research/detect-category
+  // trước đây gọi openaiProxy KHÔNG qua PermissionService. Dùng lại đúng quyền
+  // của Product AI ('product-description-writer' → ai.generate.product) —
+  // cùng loại việc (suy luận thông tin sản phẩm), không thêm quyền mới vào
+  // PermissionService. Bị từ chối → throw, PermissionService tự ghi LogDB.
+  async function ensureAgentAIPermission() {
+    if (typeof PermissionService === 'undefined') throw new Error('PermissionService chưa được nạp — không thể kiểm tra quyền AI.');
+    const perm = await PermissionService.checkPluginExecution(user.uid, user.email, 'product-description-writer');
+    if (!perm.granted) throw new Error('Không có quyền dùng Founder Agent AI: ' + perm.reason);
+  }
+
   async function callOpenAI(promptText) {
+    await ensureAgentAIPermission();
     const idToken = await user.getIdToken();
     const r = await fetch(PROXY_URL, {
       method: 'POST',
@@ -865,14 +877,10 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
           } else {
             try {
               const resultUrl = await AdminBgRemover.removeBackgroundUrl(firstImage);
-              // Lưu ảnh GỐC để "Undo last step" khôi phục đúng — dữ liệu THẬT
-              // Founder tải lên, không phải AI sinh, nên phải giữ lại được.
-              step._previousImages = Array.isArray(prod.images) ? prod.images.slice() : [];
-              step._previousImage = prod.image || '';
-              const newImages = step._previousImages.length ? [resultUrl].concat(step._previousImages.slice(1)) : [resultUrl];
-              await DB.update(pid, { images: newImages, image: resultUrl });
-              Object.assign(prod, { images: newImages, image: resultUrl });
-              step.smartBackground = { applied: true, resultUrl };
+              // Master Recovery P0: KHÔNG tự ghi vào sản phẩm — Agent chỉ tạo
+              // ảnh kết quả; Founder xem trước rồi bấm "ÁP DỤNG" mới ghi
+              // (applySmartBackground()). Ảnh gốc không bao giờ bị ghi đè.
+              step.smartBackground = { applied: false, pendingApproval: true, resultUrl, sourceUrl: firstImage };
               step.status = 'completed';
             } catch (err) {
               // Xóa phông thất bại (Provider/Cloud Function lỗi) — KHÔNG chặn
@@ -1105,10 +1113,9 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
         // "Cannot read properties of undefined (reading 'productId')" khi
         // render/apply cho bước image-generator.
         if (step.tool === 'image-generator' && resolvedParams && resolvedParams.imageType === 'Product Background Image' && resolvedParams.productId && newDraft.content && newDraft.content.imageUrl) {
-          await DB.update(resolvedParams.productId, { bgImage: newDraft.content.imageUrl });
-          const prod = products.find(p => p.id === resolvedParams.productId);
-          if (prod) prod.bgImage = newDraft.content.imageUrl;
-          step.autoAppliedBgImage = { productId: resolvedParams.productId, imageUrl: newDraft.content.imageUrl };
+          // Master Recovery P0: KHÔNG tự ghi bgImage — chờ Founder bấm
+          // "ÁP DỤNG LÀM ẢNH NỀN" (applyBgImage()) sau khi xem ảnh.
+          step.pendingBgImage = { productId: resolvedParams.productId, imageUrl: newDraft.content.imageUrl };
         }
       }
     } catch (err) {
@@ -1131,6 +1138,47 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
       const p = products.find(x => x.id === productId);
       if (p) Object.assign(p, data);
     });
+  }
+
+  // APPROVE — Founder bấm duyệt mới ghi ảnh vào sản phẩm thật. Ảnh gốc/giá
+  // trị cũ được lưu vào step (step nằm trong snapshot localStorage của Resume
+  // Workflow) để Hoàn tác được cả sau khi tải lại trang; ảnh gốc còn được
+  // GIỮ trong Gallery (không mất dù snapshot bị xoá).
+  function applySmartBackground(msgId, stepIndex) {
+    const step = findStep(msgId, stepIndex);
+    if (!step || !step.smartBackground || !step.smartBackground.pendingApproval) return Promise.resolve();
+    const pid = step.productId;
+    return DB.get(pid).then(prod => {
+      if (!prod) throw new Error('Không tìm thấy sản phẩm.');
+      const prevImages = Array.isArray(prod.images) ? prod.images.slice() : (prod.image ? [prod.image] : []);
+      const resultUrl = step.smartBackground.resultUrl;
+      const newImages = [resultUrl].concat(prevImages.filter(u => u !== resultUrl));
+      step._previousImages = prevImages;
+      step._previousImage = prod.image || '';
+      return DB.update(pid, { images: newImages, image: resultUrl }).then(() => {
+        const p = products.find(x => x.id === pid);
+        if (p) Object.assign(p, { images: newImages, image: resultUrl });
+        step.smartBackground = Object.assign({}, step.smartBackground, { applied: true, pendingApproval: false });
+        renderMessages();
+      });
+    }).catch(err => { alert('Lỗi khi áp dụng ảnh: ' + err.message); });
+  }
+
+  function applyBgImage(msgId, stepIndex) {
+    const step = findStep(msgId, stepIndex);
+    if (!step || !step.pendingBgImage) return Promise.resolve();
+    const { productId, imageUrl } = step.pendingBgImage;
+    return DB.get(productId).then(prod => {
+      if (!prod) throw new Error('Không tìm thấy sản phẩm.');
+      step._previousBgImage = prod.bgImage || '';
+      return DB.update(productId, { bgImage: imageUrl }).then(() => {
+        const p = products.find(x => x.id === productId);
+        if (p) p.bgImage = imageUrl;
+        step.autoAppliedBgImage = { productId, imageUrl };
+        step.pendingBgImage = null;
+        renderMessages();
+      });
+    }).catch(err => { alert('Lỗi khi áp dụng ảnh nền: ' + err.message); });
   }
 
   // runAll — chạy tuần tự từ đầu Plan, bỏ qua bước đã Completed/Skipped.
@@ -1309,6 +1357,17 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
     if (idx === -1) { alert('Không có bước nào đã Hoàn tất để hoàn tác.'); return; }
     const step = m.steps[idx];
 
+    if (step.tool === 'image-generator' && step.autoAppliedBgImage && step._previousBgImage !== undefined) {
+      const pid = step.autoAppliedBgImage.productId;
+      DB.update(pid, { bgImage: step._previousBgImage }).then(() => {
+        const p = products.find(x => x.id === pid);
+        if (p) p.bgImage = step._previousBgImage;
+        step.autoAppliedBgImage = null;
+        const done = () => { step.status = 'pending'; step.draftId = null; renderMessages(); };
+        if (step.draftId && typeof AdminAI !== 'undefined' && AdminAI.rejectDraftById) AdminAI.rejectDraftById(step.draftId).then(done); else done();
+      });
+      return;
+    }
     if (UNDOABLE_DRAFT_TOOLS.indexOf(step.tool) !== -1) {
       if (!step.draftId || typeof AdminAI === 'undefined' || !AdminAI.rejectDraftById) {
         step.status = 'pending'; step.draftId = null;
@@ -1377,7 +1436,13 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
   function saveWorkflowSnapshot() {
     try {
       const m = messages.slice().reverse().find(x => x.role === 'agent' && x.steps && x.steps.length && !x.finished);
-      if (!m || m.steps.every(s => ['completed', 'skipped', 'failed'].indexOf(s.status) !== -1)) {
+      // Master Recovery P0: GIỮ snapshot khi còn ảnh chờ duyệt hoặc dữ liệu
+      // Hoàn tác (ảnh/Danh mục/ảnh nền CŨ) — tải lại trang vẫn duyệt/hoàn tác
+      // được; chỉ xoá khi Founder bấm Kết thúc (finishWorkflow).
+      const keepForApprovalOrUndo = m && m.steps.some(s =>
+        (s.smartBackground && s.smartBackground.pendingApproval) || s.pendingBgImage ||
+        s._previousImages !== undefined || s._previousBgImage !== undefined || s._previousCategoryIds !== undefined);
+      if (!m || (!keepForApprovalOrUndo && m.steps.every(s => ['completed', 'skipped', 'failed'].indexOf(s.status) !== -1))) {
         localStorage.removeItem(WORKFLOW_SNAPSHOT_KEY);
         return;
       }
@@ -1535,7 +1600,7 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
   // stepExtra — nội dung mở rộng riêng cho từng loại bước V4 (nghiên cứu/
   // trùng lặp/danh mục/liên quan/điểm chất lượng/báo cáo thiếu) — hiển thị
   // NGAY DƯỚI hàng trạng thái, tách biệt errorText.
-  function stepExtra(step) {
+  function stepExtra(step, m, i) {
     // Plan "Cập nhật/SEO cho sản phẩm ĐÃ CÓ" (chỉ Product AI + SEO, không có
     // bước detect-category riêng) không hề hiện Danh mục hiện tại ở đâu —
     // Founder không biết sản phẩm đang nằm trong mục nào. Hiện luôn ngay khi
@@ -1554,13 +1619,18 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
         <a href="${escHtml(url)}" target="_blank" rel="noopener" class="agent-open-draft-btn">Xem/Tải ảnh đầy đủ →</a>
       </div>`;
     }
+    if (step.tool === 'image-generator' && step.pendingBgImage) {
+      const prod = products.find(p => p.id === step.pendingBgImage.productId);
+      return `<div class="agent-step-extra">🖼 <strong>Ảnh nền AI đã tạo — CHƯA áp dụng${prod ? ' cho "' + escHtml(prod.name) + '"' : ''}.</strong><br><img src="${escHtml(step.pendingBgImage.imageUrl)}" alt="" style="max-width:220px;margin:0.4rem 0;border-radius:6px"><br><button type="button" class="agent-plan-btn" onclick="AdminAgent.applyBgImage('${m.id}',${i})">✓ ÁP DỤNG LÀM ẢNH NỀN</button></div>`;
+    }
     if (step.tool === 'image-generator' && step.autoAppliedBgImage) {
       const prod = products.find(p => p.id === step.autoAppliedBgImage.productId);
-      return `<div class="agent-step-extra">🖼 <strong>Đã tự động gắn làm Ảnh nền sản phẩm${prod ? ' cho "' + escHtml(prod.name) + '"' : ''}.</strong> Xem/chỉnh lại ở <a href="/admin/products.html?edit=${encodeURIComponent(step.autoAppliedBgImage.productId)}" class="agent-open-draft-btn">Sửa Sản phẩm →</a></div>`;
+      return `<div class="agent-step-extra">🖼 <strong>Đã áp dụng làm Ảnh nền sản phẩm${prod ? ' cho "' + escHtml(prod.name) + '"' : ''}.</strong> Xem/chỉnh lại ở <a href="/admin/products.html?edit=${encodeURIComponent(step.autoAppliedBgImage.productId)}" class="agent-open-draft-btn">Sửa Sản phẩm →</a></div>`;
     }
     if (step.tool === 'smart-background' && step.smartBackground) {
       const sb = step.smartBackground;
-      if (sb.applied) return `<div class="agent-step-extra">🎨 <strong>Đã tự động phát hiện + xóa phông nền trắng.</strong> Ảnh gốc vẫn giữ lại (gõ "hoàn tác" nếu muốn khôi phục).</div>`;
+      if (sb.pendingApproval) return `<div class="agent-step-extra">🎨 <strong>Đã xóa phông nền trắng — CHƯA áp dụng vào sản phẩm.</strong><br><img src="${escHtml(sb.resultUrl)}" alt="" style="max-width:220px;margin:0.4rem 0;border-radius:6px;background:#eee"><br><button type="button" class="agent-plan-btn" onclick="AdminAgent.applySmartBackground('${m.id}',${i})">✓ ÁP DỤNG LÀM ẢNH CHÍNH</button> <span class="small-muted">Ảnh gốc vẫn được giữ trong Gallery.</span></div>`;
+      if (sb.applied) return `<div class="agent-step-extra">🎨 <strong>Đã áp dụng ảnh xóa phông.</strong> Ảnh gốc vẫn giữ trong Gallery (bấm Hoàn tác nếu muốn khôi phục).</div>`;
       return `<div class="agent-step-extra">🎨 ${escHtml(sb.reason || 'Không có gì để xử lý.')}</div>`;
     }
     if (step.tool === 'research-product' && step.research) {
@@ -1631,7 +1701,7 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
           <span class="agent-plan-status agent-plan-status-${step.status}">${escHtml(STATUS_LABEL[step.status] || step.status)}</span>
           <span class="agent-plan-actions">${stepActions(m, step, i)}${stepLink(step)}</span>
           ${step.errorText ? `<div class="agent-plan-error">${escHtml(step.errorText)}</div>` : ''}
-          ${stepExtra(step)}
+          ${stepExtra(step, m, i)}
         </div>`;
     }).join('');
 
@@ -1730,7 +1800,7 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
     openDuplicateProduct, createDuplicateCopy, cancelDuplicatePlan,
     confirmCategorySuggestions, skipCategorySuggestions,
     attachImage, attachFileClick, handleFileSelected, removeAttachment, toggleMic,
-    continueMissingItems, finishWorkflow, undoLastStep,
+    continueMissingItems, finishWorkflow, undoLastStep, applySmartBackground, applyBgImage,
     resumeWorkflow, discardWorkflow
   };
 })();
