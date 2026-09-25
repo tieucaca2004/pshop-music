@@ -21,7 +21,7 @@ const idx = SRC.lastIndexOf('  return {');
 const patched = SRC.slice(0, idx) + HOOK + SRC.slice(idx + '  return {'.length);
 
 function boot(opts) {
-  const db = { p1: { id: 'p1', name: 'Pioneer RX3', images: ['https://cdn/goc.jpg', 'https://cdn/2.jpg'], image: 'https://cdn/goc.jpg', bgImage: 'https://cdn/bg-cu.jpg' } };
+  const db = { p1: { id: 'p1', name: 'Pioneer RX3', images: ['https://cdn/goc.jpg', 'https://cdn/2.jpg'], image: 'https://cdn/goc.jpg', backgroundImage: 'https://cdn/bg-cu.jpg' } };
   const writes = [];
   const store = {};
   let fetchCalls = 0;
@@ -91,10 +91,10 @@ async function t(name, fn) {
     s.msg.steps[0] = { tool: 'image-generator', status: 'completed', pendingBgImage: { productId: 'p1', imageUrl: 'https://cdn/bg-ai.png' } };
     assert.strictEqual(s.writes.length, 0);
     await s.A.applyBgImage('m1', 0);
-    assert.strictEqual(s.db.p1.bgImage, 'https://cdn/bg-ai.png');
+    assert.strictEqual(s.db.p1.backgroundImage, 'https://cdn/bg-ai.png');
     s.A.undoLastStep('m1');
     await new Promise(r => setTimeout(r, 10));
-    assert.strictEqual(s.db.p1.bgImage, 'https://cdn/bg-cu.jpg');
+    assert.strictEqual(s.db.p1.backgroundImage, 'https://cdn/bg-cu.jpg');
   });
   await t('Permission denied → AI helper (Planner/research) KHÔNG gọi openaiProxy', async () => {
     const s = boot({ denied: true });

@@ -1170,12 +1170,15 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
     const step = findStep(msgId, stepIndex);
     if (!step || !step.pendingBgImage) return Promise.resolve();
     const { productId, imageUrl } = step.pendingBgImage;
+    // Field thật của ô "ẢNH NỀN SẢN PHẨM" (admin-products.js pBgImage) và
+    // product-runtime-render.js là backgroundImage — trước đây ghi nhầm bgImage
+    // (field không nơi nào của sản phẩm đọc → áp dụng không có tác dụng).
     return DB.get(productId).then(prod => {
       if (!prod) throw new Error('Không tìm thấy sản phẩm.');
-      step._previousBgImage = prod.bgImage || '';
-      return DB.update(productId, { bgImage: imageUrl }).then(() => {
+      step._previousBgImage = prod.backgroundImage || '';
+      return DB.update(productId, { backgroundImage: imageUrl }).then(() => {
         const p = products.find(x => x.id === productId);
-        if (p) p.bgImage = imageUrl;
+        if (p) p.backgroundImage = imageUrl;
         step.autoAppliedBgImage = { productId, imageUrl };
         step.pendingBgImage = null;
         renderMessages();
@@ -1361,9 +1364,9 @@ Trả về DUY NHẤT JSON: {"resolvedName":"...","brand":"...","model":"...","c
 
     if (step.tool === 'image-generator' && step.autoAppliedBgImage && step._previousBgImage !== undefined) {
       const pid = step.autoAppliedBgImage.productId;
-      DB.update(pid, { bgImage: step._previousBgImage }).then(() => {
+      DB.update(pid, { backgroundImage: step._previousBgImage }).then(() => {
         const p = products.find(x => x.id === pid);
-        if (p) p.bgImage = step._previousBgImage;
+        if (p) p.backgroundImage = step._previousBgImage;
         step.autoAppliedBgImage = null;
         const done = () => { step.status = 'pending'; step.draftId = null; renderMessages(); };
         if (step.draftId && typeof AdminAI !== 'undefined' && AdminAI.rejectDraftById) AdminAI.rejectDraftById(step.draftId).then(done); else done();
