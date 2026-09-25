@@ -15,7 +15,8 @@
  * as the future AI Workspace's data source per the task brief.
  */
 document.addEventListener('DOMContentLoaded', function () {
-  WorkspaceAuth.init('media-library', 'Media Library').then(function () {
+  WorkspaceAuth.init('media-library', 'Media Library').then(function (ctx) {
+    if (!ctx) return; // Access Denied / redirect — WorkspaceAuth đã thay nội dung trang
     document.getElementById('mlSearchInput').addEventListener('input', function () {
       load(document.getElementById('mlSearchInput').value);
     });

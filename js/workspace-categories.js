@@ -9,7 +9,8 @@
  * appropriate for a per-tenant workspace, and out of this sprint's scope.
  */
 document.addEventListener('DOMContentLoaded', function () {
-  WorkspaceAuth.init('categories', 'Categories').then(function () {
+  WorkspaceAuth.init('categories', 'Categories').then(function (ctx) {
+    if (!ctx) return; // Access Denied / redirect — WorkspaceAuth đã thay nội dung trang
     load();
   });
 

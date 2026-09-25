@@ -10,7 +10,8 @@
  * schema compatibility with the existing DB shape.
  */
 document.addEventListener('DOMContentLoaded', function () {
-  WorkspaceAuth.init('products', 'Products').then(function () {
+  WorkspaceAuth.init('products', 'Products').then(function (ctx) {
+    if (!ctx) return; // Access Denied / redirect — WorkspaceAuth đã thay nội dung trang
     loadCategories().then(load);
     mountImagePicker();
   });

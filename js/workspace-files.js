@@ -17,7 +17,8 @@
  * No AI processing of any kind.
  */
 document.addEventListener('DOMContentLoaded', function () {
-  WorkspaceAuth.init('files', 'Files').then(function () {
+  WorkspaceAuth.init('files', 'Files').then(function (ctx) {
+    if (!ctx) return; // Access Denied / redirect — WorkspaceAuth đã thay nội dung trang
     document.getElementById('fSearchInput').addEventListener('input', function () {
       load(document.getElementById('fSearchInput').value);
     });
