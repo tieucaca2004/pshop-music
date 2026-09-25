@@ -468,6 +468,14 @@
   status = 404
   force = true
 
+# PSH Console: console/business-selector.html + create-business.html dẫn tới
+# /workspace/<businessId>[/<module>]; console/workspace.html đọc businessId từ
+# location.pathname. Trước đây KHÔNG có rewrite → 404.
+[[redirects]]
+  from = "/workspace/*"
+  to = "/console/workspace.html"
+  status = 200
+
 [[redirects]]
   from = "/admin"
   to = "/admin/login.html"
