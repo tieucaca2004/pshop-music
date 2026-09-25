@@ -2,6 +2,18 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Full CMS Audit (2026-09-25) — ⏳ CHỜ DEPLOY + FOUNDER ACCEPTANCE TEST
+
+**Phương pháp**: Production/Firebase/Netlify vẫn bị chặn mạng từ môi trường này → test CMS thật (site local) trên **Firebase Emulator** (Auth/Database/Storage, rules của repo) + Chromium. Bộ test: `tests/e2e/`. Không ghi gì vào Production.
+
+**Fix (mỗi fix có BEFORE/AFTER trong commit)**: `524551a` Sản phẩm — `resetForm()` thiếu 6 field SEO → sản phẩm mới bị ghi trùng slug/canonical/SEO của sản phẩm trước (đã tái hiện). `430beac` Founder Agent ghi ảnh nền vào `bgImage` (không nơi nào đọc) → `backgroundImage`. `527f6e1` 4 trang Workspace TypeError sau Access Denied. `ffe43d9` thiếu rewrite `/workspace/*` (PSH Console 404). Commit sửa `console/workspace.html` khi mở trực tiếp. `21cf3fe` bump cache-bust.
+
+**Đã test PASS trên emulator (chưa phải PASS Production)**: đăng nhập; quét 64 trang (0 lỗi JS ở toàn bộ trang admin/*, admin/ai/*, Media Center); CRUD Sản phẩm (tạo/sửa/reload/xoá bản ghi TEST, Nháp không public), Banner, Blog (public list + chi tiết), Video, Slider, Menu, Footer, SEO, Cài đặt, Users (đọc); Duyệt & Publish nháp AI (JSON lỗi bị chặn, partial không xoá field, banner AI tắt); Thư viện ảnh upload + list (Storage); RBAC editor/không role/chưa đăng nhập (không vòng lặp redirect); 0 nút onclick gọi hàm không tồn tại.
+
+**CRITICAL — CHƯA SỬA, chờ Founder duyệt**: `functions/routes/registration.js` — `POST /v1/register` (không cần đăng nhập) ghi `roles/<uid>.role='admin'` → ai cũng tự thành admin CMS pshopmusic (emulator: ghi được `products/41/price`); `POST /v1/register/verify-email` không kiểm tra quyền.
+
+**Ghi nhận, chưa sửa**: 10 node client dùng nhưng `database.rules.json` không có rule (`businessMembers`, `a-tieu`, `aiHistory`, `apiAsyncJobs`, `assetLibrary`, `templates`, `projects`, `media-center`, `atieu`, `aiBatchJobs`); "Thêm danh mục" tạo ngay tab "Danh mục mới" rỗng hiển thị công khai; AdminAuth redirect login không giữ `?next=`.
+
 ## Master Recovery — Security / Data Safety / Auth / Storage / SEO (2026-09-25) — ⏳ CHỜ DEPLOY + FOUNDER ACCEPTANCE TEST
 
 **Bối cảnh**: FOUNDER MASTER TASK "PSH PLATFORM FULL RECOVERY" dựa trên audit toàn repo. Môi trường làm việc (Claude Code cloud) BỊ CHẶN mạng tới `pshopmusic.com`, `*.firebasedatabase.app`, `gstatic.com`; không có Netlify/Firebase/GCP credential → **KHÔNG deploy, KHÔNG verify Production được**. Mọi mục dưới đây là Code Complete + Tests Passed (local), chưa phải PASS.
