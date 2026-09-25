@@ -27,6 +27,433 @@
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
+# ── Publish surface (SECURITY) ─────────────────────────────────────────
+# Site tĩnh đang publish = "." (toàn bộ thư mục gốc). Các thư mục/file dưới đây
+# KHÔNG phải asset site (dữ liệu nội bộ, backup, secret n8n, tài liệu, mã
+# Cloud Functions, scripts...) — ép trả 404 kể cả khi file có trong bản deploy.
+# force = true bắt buộc: không có nó Netlify vẫn serve file tồn tại.
+# Danh sách được kiểm tra tự động bởi tests/publish-surface.test.js.
+
+[[redirects]]
+  from = "/n8n-data/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/backups/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/functions/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/scripts/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/atieu.com/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/fb-comment-agent/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/wordpress-theme/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/restaurant-workflow/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/workflows/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/memory/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/node_modules/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/docs/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/health-center/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/templates/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/tests/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/.netlify/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/.claude/*"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/.firebaserc"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/.gitignore"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/AI_RULES.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/ARCHITECTURE_REVIEW_SPRINT3.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/CHANGELOG.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/CLAUDE.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/LEXAR_P30_SEO_ANALYSIS.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/MEMORY.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/PHASE1_IMPLEMENTATION_PLAN.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/PRODUCT_CATALOG_AUDIT.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/PROJECT_ARCHITECTURE.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/PROJECT_STATUS.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/PROJECT_STATUS_TOP20.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/PSH_FOUNDER_RECOMMENDATIONS.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/PSH_IMPLEMENTATION_PHASES.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/PSH_PRODUCTION_ARCHITECTURE.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/PSH_PRODUCTION_GAP_ANALYSIS.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/PSH_PRODUCTION_ROADMAP.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/README.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/ROADMAP.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/SOL_REPUBLIC_V10_SEO_ANALYSIS.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/SPRINT14_ACCEPTANCE_CHECKLIST.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/SPRINT14_FINAL_REPORT.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/SPRINT14_PRODUCTION_AUDIT.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/SPRINT16_SEO_FOUNDATION_REPORT.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/SPRINT18_MASTER_PLAN.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/SPRINT_10_PLANNING.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/SPRINT_11_ACCEPTANCE.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/SPRINT_11_CHECKLIST.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/SPRINT_11_FINAL_REPORT_TEMPLATE.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/SPRINT_11_PLANNING.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/SPRINT_11_TASKS.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/SPRINT_12_HANDOVER_TEMPLATE.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/SPRINT_6_PLANNING.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/SPRINT_7_PLANNING.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/SYSTEM_DISCOVERY_REPORT.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/database-rules-mt.json"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/database.rules.json"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/enrich-products.js"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/firebase.json"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/git-ssh-wrapper.js"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/hợp đồng thuê xe.pdf"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/lh-baseline.json"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/lh-category.json"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/lh-parse-postfix.js"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/lh-postfix.json"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/n8n-facebook-publisher-workflow.json"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/openapi.yaml"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/package-lock.json"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/package.json"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/sprint17-audit-summary.md"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/storage.rules"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/netlify.toml"
+  to = "/404"
+  status = 404
+  force = true
+
 [[redirects]]
   from = "/admin"
   to = "/admin/login.html"
