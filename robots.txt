@@ -4,4 +4,4 @@ Disallow: /admin/
 Disallow: /admin.html
 Allow: /
 
-Sitemap: https://psh.vn/sitemap.xml
+Sitemap: https://pshopmusic.com/sitemap.xml
