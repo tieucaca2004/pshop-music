@@ -2,6 +2,12 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Product + Content Reliability đợt 6 (2026-09-25) — ⏳ CHỜ DEPLOY + FOUNDER ACCEPTANCE TEST
+
+- `384e7ca` Nút "Sửa" (Sản phẩm/Blog/Banner/Video) nạp bản ghi từ danh sách tải lúc mở trang → bản ghi đã bị sửa ở tab khác/AI/Agent: form hiện giá trị cũ, bấm Lưu ghi đè thay đổi mới (tái hiện: price/SEO mới bị trả về cũ). Sửa: đọc lại DB trước khi điền form; deep link Agent áp giá trị sau khi form điền xong.
+- Test (emulator): 20 vòng SP/Blog 0 lỗi; 10 vòng Media 0 lỗi; cách ly field A→B→A (null/[]/thiếu field) đạt; "Lưu không sửa gì" trên 42 SP: chỉ chuẩn hoá tương đương (undefined→"", pubStatus→published, description text→HTML do Quill — trang công khai hiển thị bằng innerHTML/textOf nên đúng), không mất dữ liệu.
+- Ghi nhận, CHƯA sửa: không có cảnh báo "chưa lưu" khi rời trang (NOT IMPLEMENTED); form mở lâu rồi mới Lưu vẫn ghi đè thay đổi xảy ra SAU khi mở form (không có phát hiện xung đột — cần tính năng); giá/slug/URL không được validate ở frontend lẫn Rules; sửa bài/SP đã xuất bản thay đổi public ngay (không có bản nháp riêng cho nội dung đã xuất bản); AI category ghi `category` nhưng không ghi `categoryIds` (xem báo cáo).
+
 ## CRUD / Save Reliability Audit đợt 5 (2026-09-25) — ⏳ CHỜ DEPLOY + FOUNDER ACCEPTANCE TEST
 
 Nguyên nhân "lúc lưu được lúc không / lưu xong mất" tìm được (Firebase Emulator + Chromium, tái hiện trước khi sửa):
