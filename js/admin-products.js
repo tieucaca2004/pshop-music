@@ -303,7 +303,10 @@ const AdminApp = (function () {
   function resetForm() {
     editingId = null;
     document.getElementById('pId').value = '';
-    ['pName', 'pSku', 'pWarranty', 'pPrice', 'pOldPrice', 'pSpecs', 'pBadgeText', 'pSpecifications', 'pFeatures', 'pTags', 'pImages', 'pYoutubeUrl', 'pBgImage'].forEach(id => {
+    // + 6 field SEO (PRODUCT-SEO-01): thiếu ở đây thì slug/canonical/SEO của
+    // sản phẩm vừa lưu bị ghi sang sản phẩm MỚI tạo ngay sau đó.
+    ['pName', 'pSku', 'pWarranty', 'pPrice', 'pOldPrice', 'pSpecs', 'pBadgeText', 'pSpecifications', 'pFeatures', 'pTags', 'pImages', 'pYoutubeUrl', 'pBgImage',
+     'pSeoTitle', 'pSeoDescription', 'pSeoKeywords', 'pCanonical', 'pOgImage', 'pSlug'].forEach(id => {
       document.getElementById(id).value = '';
     });
     renderYoutubePreview();
