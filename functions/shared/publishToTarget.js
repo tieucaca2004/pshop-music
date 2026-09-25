@@ -111,7 +111,10 @@ async function publishToTarget(draft) {
   }
 
   if (target === 'banners') {
-    return listResource.add('banners', draft.content);
+    // Banner AI luôn tạo ở trạng thái TẮT, xếp cuối — Founder tự bật sau khi xem trước.
+    const banners = await listResource.getAll('banners');
+    const maxOrder = banners.reduce((m, b) => Math.max(m, Number(b.order) || 0), 0);
+    return listResource.add('banners', Object.assign({}, draft.content, { active: false, order: banners.length ? maxOrder + 1 : 0 }));
   }
 
   if (target === 'siteContent.heroSlides') {

@@ -303,18 +303,23 @@ const AdminImageAI = (function () {
     return DraftDB.get(draftId).then(d => {
       if (!d) return;
       const c = d.content;
-      return BannerDB.add({
-        image: c.imageUrl,
-        title: c.sourceProductName || '',
-        subtitle: '', cta: '', link: '',
-        zone: 'home-top', order: 0, active: true
+      // Banner mới luôn ở trạng thái TẮT + xếp cuối — không tự hiện lên trang
+      // chủ; Founder bật trong Banner Manager sau khi hoàn thiện Tiêu đề/CTA.
+      return BannerDB.getAll().then(banners => {
+        const maxOrder = banners.reduce((m, b) => Math.max(m, Number(b.order) || 0), 0);
+        return BannerDB.add({
+          image: c.imageUrl,
+          title: c.sourceProductName || '',
+          subtitle: '', cta: '', link: '',
+          zone: 'home-top', order: banners.length ? maxOrder + 1 : 0, active: false
+        });
       }).then(() => {
         return appendUsedIn(draftId, 'Banner mới').then(() => {
           // Route through PipelineAdapter
           if (typeof PipelineAdapter !== 'undefined') {
             PipelineAdapter.logGenerationEvent({ moduleId: MODULE_ID, type: 'image', title: 'New Banner from ' + (c.sourceProductName || 'image'), inputParams: d.inputParams, draftId: draftId, status: 'completed', userId: AdminAuth.getUser().uid });
           }
-          showMessage('Đã tạo Banner mới — vào Banner Manager để hoàn thiện Tiêu đề/CTA/Link.');
+          showMessage('Đã tạo Banner mới (đang TẮT) — vào Banner Manager hoàn thiện Tiêu đề/CTA/Link rồi bật hiển thị.');
           return loadImageDrafts();
         });
       });

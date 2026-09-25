@@ -781,7 +781,13 @@ const AdminAI = (function () {
       });
     }
     if (target === 'banners') {
-      return BannerDB.add(draft.content);
+      // Banner do AI tạo KHÔNG tự lên trang chủ: luôn tạo ở trạng thái TẮT
+      // (active:false) và xếp cuối danh sách — Founder tự bật trong trang
+      // Banner sau khi xem trước (module sinh sẵn active:true/order:0).
+      return BannerDB.getAll().then(banners => {
+        const maxOrder = banners.reduce((m, b) => Math.max(m, Number(b.order) || 0), 0);
+        return BannerDB.add(Object.assign({}, draft.content, { active: false, order: banners.length ? maxOrder + 1 : 0 }));
+      });
     }
     if (target === 'siteContent.heroSlides') {
       return SiteContentDB.get().then(sc => {

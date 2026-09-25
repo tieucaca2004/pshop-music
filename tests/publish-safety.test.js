@@ -138,11 +138,43 @@ async function suite(label, make) {
     assert.strictEqual(b.title, 'Bài thật'); assert.strictEqual(b.contentHtml, '<p>Nội dung thật</p>');
     assert.strictEqual(b.status, 'draft'); assert.strictEqual(b.seoTitle, 'Meta T'); assert.ok(!('_postTitle' in b));
   });
+  await t('Banner AI → tạo ở trạng thái TẮT, xếp cuối, banner cũ không đổi', async () => {
+    const db = seed(); const before = JSON.stringify(db.banners.k1);
+    const content = { title: 'AI', subtitle: 's', cta: 'c', image: 'https://x/a.webp', zone: 'home-top', order: 0, active: true };
+    await make(db)({ id: 'd3', moduleId: 'banner-generator', targetCollection: 'banners', content });
+    const created = Object.values(db.banners).find(b => b.title === 'AI');
+    assert.strictEqual(created.active, false); assert.strictEqual(created.order, 4);
+    assert.strictEqual(JSON.stringify(db.banners.k1), before);
+  });
   console.log(label); results.forEach(r => console.log(r));
+}
+
+
+// ── Image AI "Save as Banner" (js/admin-image-ai.js) ────────────────────
+async function imageAiBanner() {
+  const db = seed();
+  db.aiDrafts.img1 = { id: 'img1', moduleId: 'image-generator', content: { imageUrl: 'https://x/ai.webp', sourceProductName: 'DDJ' } };
+  const listDB = node => ({
+    getAll: () => Promise.resolve(Object.values(db[node]).map(x => Object.assign({}, x))),
+    get: id => Promise.resolve(db[node][id] ? Object.assign({}, db[node][id]) : null),
+    add: data => { const id = node + '_new'; db[node][id] = Object.assign({}, data, { id }); return Promise.resolve(db[node][id]); },
+    update: (id, ch) => { db[node][id] = Object.assign({}, db[node][id], ch); return Promise.resolve(); }
+  });
+  const ctx = { console, Promise, Object, Array, String, Number, Math, JSON, Date,
+    DB: listDB('products'), BlogDB: listDB('blogPosts'), BannerDB: listDB('banners'), DraftDB: listDB('aiDrafts'),
+    AdminAuth: { getUser: () => ({ uid: 'u' }) }, document: { getElementById: () => null } };
+  vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync(path.join(ROOT, 'js/admin-image-ai.js'), 'utf8') + '\n;this.AdminImageAI = AdminImageAI;', ctx);
+  await ctx.AdminImageAI.saveAsBanner('img1');
+  const b = db.banners.banners_new;
+  assert.ok(b, 'không tạo banner');
+  assert.strictEqual(b.active, false); assert.strictEqual(b.order, 4); assert.strictEqual(db.banners.k1.active, true);
+  console.log('IMAGE AI js/admin-image-ai.js\n  ✔ Save as Banner → banner TẮT, xếp cuối, banner cũ không đổi');
 }
 
 (async () => {
   await suite('CLIENT js/admin-ai.js', makeClient);
   await suite('SERVER functions/shared/publishToTarget.js', makeServer);
+  try { await imageAiBanner(); } catch (e) { console.log('  ✘ Image AI banner — ' + e.message); process.exitCode = 1; }
   if (process.exitCode) console.log('FAILED'); else console.log('publish-safety: OK');
 })();
