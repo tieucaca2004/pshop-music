@@ -2,6 +2,15 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Full CMS Audit đợt 3 (2026-09-25) — ⏳ CHỜ FOUNDER DUYỆT + DEPLOY
+
+- Regression (emulator): Workspace files/media-library/business-settings với tài khoản tenant thật (claims `businessId`) — render đúng, 0 lỗi JS. Users: tạo user (editor) PASS, trùng email/mật khẩu ngắn báo lỗi đúng, phiên admin giữ nguyên.
+- `d0a82fa`: panel Video (Media Center) ghi đúng mã backend 503 (trước ghi 501). Frontend Video/Voice là panel tĩnh, không gọi API → không crash.
+- Quét cuối 64 trang: chỉ còn 7 trang `permission_denied` — toàn bộ do `database.rules.json` (chờ Founder). API client ↔ route server: khớp.
+- Patch bảo mật Registration SOẠN SẴN, CHƯA ÁP DỤNG: `docs/security/registration-security.patch` (áp bằng `git apply -p0`; emulator: đăng ký 201 không còn ghi `roles/<uid>`; `verify-email` không token → 401).
+- Đính chính: `media-center` là đường dẫn Storage, không phải node DB (danh sách "node thiếu rule" còn 9 node).
+- Ghi nhận, chưa sửa (Founder duyệt): `platform/workspace/dashboard.html` chỉ lấy businessId từ `?bid`/localStorage → tenant mở Dashboard từ sidebar trên trình duyệt mới bị đưa về `/platform/login/` (1 lần, không lặp).
+
 ## Full CMS Audit (2026-09-25) — ⏳ CHỜ DEPLOY + FOUNDER ACCEPTANCE TEST
 
 **Phương pháp**: Production/Firebase/Netlify vẫn bị chặn mạng từ môi trường này → test CMS thật (site local) trên **Firebase Emulator** (Auth/Database/Storage, rules của repo) + Chromium. Bộ test: `tests/e2e/`. Không ghi gì vào Production.
