@@ -154,8 +154,19 @@ const AdminImageAI = (function () {
     if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
   }
 
+  // Chống gửi trùng (Master Recovery P1): mỗi lượt tạo ảnh là 1 request OpenAI
+  // TỐN PHÍ — bấm 2 lần liền trước đây tạo 2 request. Chỉ cho 1 lượt chạy.
+  let generating = false;
+  function setGenerating(on) {
+    generating = on;
+    const btn = document.getElementById('imgGenerateBtn');
+    if (btn) btn.disabled = on;
+  }
+
   function runGeneration(inputParams) {
+    if (generating) { showMessage('Đang tạo ảnh — đợi lượt hiện tại xong (tránh tạo trùng, tốn phí).'); return; }
     const user = AdminAuth.getUser();
+    setGenerating(true);
     showMessage('Đang gửi yêu cầu tạo ảnh...');
     PermissionService.checkPluginExecution(user.uid, user.email, MODULE_ID).then(check => {
       if (!check.granted) {
@@ -164,7 +175,7 @@ const AdminImageAI = (function () {
       }
       // Route through PipelineAdapter when possible
       if (typeof PipelineAdapter !== 'undefined' && typeof PipelineAdapter.generateThroughPipeline === 'function') {
-        PipelineAdapter.generateThroughPipeline(MODULE_ID, inputParams, user.uid, user.email).then(function(result) {
+        return PipelineAdapter.generateThroughPipeline(MODULE_ID, inputParams, user.uid, user.email).then(function(result) {
           if (result.draftId) {
             activeJobId = result.job && result.job.id;
             showMessage('Đã tạo ảnh xong (qua pipeline).');
@@ -182,7 +193,8 @@ const AdminImageAI = (function () {
           }).then(() => { pollJob(); startPolling(); });
         });
       }
-    }).catch(err => showMessage('Lỗi: ' + err.message));
+    }).catch(err => showMessage('Lỗi: ' + err.message))
+      .then(() => setGenerating(false));
   }
 
   function generate() {
