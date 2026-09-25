@@ -58,3 +58,6 @@ functions/node_modules/
 .facebook-credentials.json
 workflows/facebook-auto-post/.facebook-credentials.json
 js/openai-key.js
+
+# Facebook Page token cục bộ cho fb-comment-agent (KHÔNG commit — repo public)
+fb-comment-agent/src/fb-token.local.bat
