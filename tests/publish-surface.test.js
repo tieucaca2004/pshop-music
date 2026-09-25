@@ -34,6 +34,8 @@ function isBlocked(urlPath) {
 const files = execSync('git ls-files -z', { cwd: ROOT }).toString().split('\0').filter(Boolean);
 
 const PUBLIC_DIRS = ['css/', 'js/', 'admin/', 'psh/', 'platform/', 'console/', 'data/'];
+// Nằm trong thư mục public nhưng phải bị chặn (script seed ghi đè DB khi mở trang).
+const DENIED_IN_PUBLIC_DIRS = ['admin/a-tieu/seed.html'];
 const PUBLIC_ROOT = f => !f.includes('/') && /\.(html|xml|txt)$/.test(f);
 const SENSITIVE = [
   /^n8n-data\//, /^backups\//, /^functions\//, /^scripts\//, /^atieu\.com\//,
@@ -47,7 +49,10 @@ let checked = 0;
 const failures = [];
 for (const f of files) {
   const url = '/' + f;
-  if (PUBLIC_ROOT(f) || PUBLIC_DIRS.some(d => f.startsWith(d))) {
+  if (DENIED_IN_PUBLIC_DIRS.includes(f)) {
+    if (!isBlocked(url)) failures.push('File nội bộ KHÔNG bị chặn: ' + url);
+    checked++;
+  } else if (PUBLIC_ROOT(f) || PUBLIC_DIRS.some(d => f.startsWith(d))) {
     if (isBlocked(url)) failures.push('Asset public bị chặn nhầm: ' + url);
     checked++;
   } else if (SENSITIVE.some(re => re.test(f))) {

@@ -442,6 +442,14 @@
   status = 404
   force = true
 
+# admin/a-tieu/seed.html: script seed chạy NGAY khi mở trang, ghi đè toàn bộ
+# a-tieu/menu, KHÔNG có auth guard — không được truy cập công khai.
+[[redirects]]
+  from = "/admin/a-tieu/seed.html"
+  to = "/404"
+  status = 404
+  force = true
+
 [[redirects]]
   from = "/storage-cors.json"
   to = "/404"

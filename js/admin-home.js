@@ -15,10 +15,10 @@
  * "AI Video" trong Quick Actions hiển thị dạng "Sắp có" (disabled, không
  * href) — hệ thống CHƯA có năng lực AI Video nào (đúng Testing Constraint
  * "Không tuyên bố Publish tự động/năng lực nếu chưa tồn tại"). "AI Content"
- * và "AI Image" tạm thời cùng trỏ về Plugin Dashboard kỹ thuật
- * (admin/ai/index.html) — đây là giới hạn đã biết (vẫn còn thuật ngữ
- * Plugin), ghi rõ trong CHANGELOG.md/ROADMAP.md, không tự mở rộng thành 1
- * trang Founder-friendly riêng (ngoài phạm vi Requirement này).
+ * trỏ Plugin Dashboard (admin/ai/index.html); "AI Image" trỏ đúng trang
+ * Image AI (admin/ai/images.html) — khớp sidebar Smart Mode ở
+ * js/admin-auth.js (Master Recovery: 2 nhãn khác nhau không được trỏ cùng
+ * 1 trang).
  */
 const AdminHome = (function () {
   const RECENT_LIMIT = 5;
@@ -98,7 +98,7 @@ const AdminHome = (function () {
       quickAction('One Click Marketing', 'ai/one-click-marketing.html'),
       quickAction('Media Library', 'media-library.html'),
       quickAction('AI Content', 'ai/index.html'),
-      quickAction('AI Image', 'ai/index.html'),
+      quickAction('AI Image', 'ai/images.html'),
       quickAction('AI Video', null, true),
       quickAction('Marketing Drafts', 'ai/drafts.html')
     ].join('');
