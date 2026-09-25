@@ -49,7 +49,9 @@ const AdminAIAssistant = (function () {
   }
 
   function init() {
-    AdminAuth.init({ page: 'ai-assistant', title: 'AI ASSISTANT' }).then(({ user: u }) => {
+    AdminAuth.init({ page: 'ai-assistant', title: 'AI ASSISTANT' }).then(auth => {
+      if (!auth) return; // chưa đăng nhập/chưa có quyền/Auth lỗi tạm thời — AdminAuth đã hiển thị trạng thái
+      const u = auth.user;
       user = u;
       document.getElementById('assistantSendBtn').addEventListener('click', handleSend);
       document.getElementById('historySearchInput').addEventListener('input', renderHistoryList);

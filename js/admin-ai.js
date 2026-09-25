@@ -872,7 +872,9 @@ const AdminAI = (function () {
   /* ============== JOB QUEUE MONITOR (admin/ai/jobs.html) ============== */
 
   function initJobs() {
-    AdminAuth.init({ page: 'ai', title: 'PLUGIN AI — JOB QUEUE' }).then(({ user }) => {
+    AdminAuth.init({ page: 'ai', title: 'PLUGIN AI — JOB QUEUE' }).then(auth => {
+      if (!auth) return; // chưa đăng nhập/chưa có quyền/Auth lỗi tạm thời — AdminAuth đã hiển thị trạng thái
+      const user = auth.user;
       AIJobQueue.resume(user.uid, user.email).then(loadJobs);
       loadJobs();
       setInterval(loadJobs, 3000);

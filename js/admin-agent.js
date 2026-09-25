@@ -176,7 +176,9 @@ const AdminAgent = (function () {
     // properties of null (reading 'getIdToken')". Mở khoá lại NGAY khi user
     // đã sẵn sàng.
     setInputEnabled(false);
-    AdminAuth.init({ page: 'founder-agent', title: 'FOUNDER AGENT' }).then(({ user: u }) => {
+    AdminAuth.init({ page: 'founder-agent', title: 'FOUNDER AGENT' }).then(auth => {
+      if (!auth) return; // chưa đăng nhập/chưa có quyền/Auth lỗi tạm thời — AdminAuth đã hiển thị trạng thái
+      const u = auth.user;
       user = u;
       setInputEnabled(true);
       Promise.all([
