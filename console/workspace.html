@@ -64,7 +64,7 @@ body{font-family:'Inter',sans-serif;color:#1d1d1f;min-height:100vh;display:flex;
 <script src="/js/workspace-engine.js?v=430beac"></script>
 <script>
 (function(){
-var bid=window.location.pathname.split('/')[2];if(!bid)bid=localStorage.getItem('psh_last_biz');if(!bid){window.location='/console/business-selector.html';return;}
+var bid=window.location.pathname.split('/')[2];if(bid&&!/^[A-Za-z0-9_-]+$/.test(bid))bid='';/* mở trực tiếp /console/workspace.html → segment là 'workspace.html', không phải businessId */if(!bid)bid=localStorage.getItem('psh_last_biz');if(!bid){window.location='/console/business-selector.html';return;}
 localStorage.setItem('psh_last_biz',bid);
 var currentPage=window.location.pathname.split('/')[3]||'dashboard';
 
