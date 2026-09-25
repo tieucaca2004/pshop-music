@@ -44,6 +44,7 @@ var AuthContext = (function () {
   };
 
   var initPromise = null;
+  var unsubscribeAuth = null;
   var cacheTTL = 0; // 0 = cache forever within the same page load
 
   // ─── Role Resolution ────────────────────────────────────────────────
@@ -66,7 +67,7 @@ var AuthContext = (function () {
 
     initPromise = new Promise(function (resolve) {
       // Wait for Firebase Auth to initialize
-      firebase.auth().onAuthStateChanged(function (user) {
+      unsubscribeAuth = firebase.auth().onAuthStateChanged(function (user) {
         if (!user) {
           // Not logged in — all getters return null/false
           state.ready = true;
@@ -195,6 +196,73 @@ var AuthContext = (function () {
     return state.authError;
   }
 
+  // retry() — CHỈ dùng sau lỗi tạm thời (authError): chạy lại getIdTokenResult
+  // + đọc roles, KHÔNG signOut, KHÔNG signIn (không tạo thêm request đăng nhập
+  // → không đẩy Firebase vào auth/too-many-requests). Trước đây initPromise
+  // được cache vĩnh viễn nên mọi lần "thử lại" chỉ nhận lại đúng kết quả lỗi cũ.
+  function retry() {
+    if (!state.authError) return initPromise || init();
+    if (typeof unsubscribeAuth === 'function') unsubscribeAuth();
+    unsubscribeAuth = null;
+    initPromise = null;
+    state.ready = false;
+    state.authError = false;
+    state.role = null;
+    return init();
+  }
+
+  // classifyAccess() — phân biệt rõ 4 trạng thái (Master Recovery P0 Auth):
+  //   'unauthenticated' — chắc chắn chưa đăng nhập → về trang login.
+  //   'transient'       — đã đăng nhập nhưng Firebase Auth/DB lỗi tạm thời
+  //                        (rate-limit, network, token) → GIỮ trang, thử lại.
+  //   'unauthorized'    — đã đăng nhập, đọc được role nhưng không thuộc
+  //                        allowedRoles (kể cả không có role nào).
+  //   'ok'
+  function classifyAccess(allowedRoles) {
+    if (!state.ready) return 'transient';
+    if (!state.user) return 'unauthenticated';
+    if (state.authError && !state.role) return 'transient';
+    if (!allowedRoles || !allowedRoles.length) return state.role ? 'ok' : 'unauthorized';
+    return allowedRoles.indexOf(state.role) !== -1 ? 'ok' : 'unauthorized';
+  }
+
+  function loginUrlWithNext(extra) {
+    var next = location.pathname + location.search;
+    return '/admin/login.html?' + (extra ? extra + '&' : '') + 'next=' + encodeURIComponent(next);
+  }
+
+  // guard() — cổng kiểm tra quyền DÙNG CHUNG cho các trang PSH Platform, thay
+  // đoạn "role !== admin → login?denied=1" lặp ở từng trang. Đoạn cũ coi lỗi
+  // tạm thời là "không có quyền": đá Founder về login, Founder đăng nhập lại
+  // → thêm request auth → auth/too-many-requests → vòng lặp.
+  // options: { allowedRoles, onTransient(attempt, final), maxRetries, baseDelayMs }
+  function guard(options) {
+    options = options || {};
+    var maxRetries = options.maxRetries == null ? 3 : options.maxRetries;
+    var baseDelay = options.baseDelayMs == null ? 4000 : options.baseDelayMs;
+    var attempt = 0;
+    function check() {
+      var access = classifyAccess(options.allowedRoles);
+      if (access === 'ok') return { access: 'ok', user: state.user, role: state.role };
+      if (access === 'unauthenticated') {
+        location.href = loginUrlWithNext();
+        return { access: access };
+      }
+      if (access === 'unauthorized') {
+        location.href = loginUrlWithNext('denied=1');
+        return { access: access };
+      }
+      // transient — thử lại có giới hạn, backoff tăng dần; hết lượt thì GIỮ trang.
+      var final = attempt >= maxRetries;
+      if (typeof options.onTransient === 'function') options.onTransient(attempt, final);
+      if (final) return { access: 'transient' };
+      var delay = baseDelay * Math.pow(2, attempt);
+      attempt++;
+      return new Promise(function (r) { setTimeout(r, delay); }).then(retry).then(check);
+    }
+    return init().then(check);
+  }
+
   // ─── Public API ─────────────────────────────────────────────────────
   return {
     init: init,
@@ -206,6 +274,9 @@ var AuthContext = (function () {
     getEffectiveBusinessId: getEffectiveBusinessId,
     getDataVersion: getDataVersion,
     getAuthError: getAuthError,
+    retry: retry,
+    classifyAccess: classifyAccess,
+    guard: guard,
     LEGACY_BUSINESS_ID: LEGACY_BUSINESS_ID
   };
 })();

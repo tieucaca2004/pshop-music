@@ -30,6 +30,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Quay lại đúng trang đang dùng dở (vd Media Center) sau khi đăng nhập —
+  // chỉ nhận đường dẫn nội bộ ("/..."; chặn "//host" và URL tuyệt đối).
+  function nextUrl() {
+    const next = new URLSearchParams(location.search).get('next') || '';
+    return /^\/(?!\/)[^\\]*$/.test(next) && next.indexOf('/admin/login') !== 0 ? next : 'index.html';
+  }
+
   if (new URLSearchParams(location.search).get('denied')) {
     loginError.textContent = 'Tài khoản này chưa được cấp quyền truy cập admin. Liên hệ Admin để được thêm quyền.';
     loginError.style.display = 'block';
@@ -62,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loginBtn.disabled = true;
     loginBtn.textContent = 'Đang đăng nhập...';
     firebase.auth().signInWithEmailAndPassword(email, password)
-      .then(() => { location.href = 'index.html'; })
+      .then(() => { location.href = nextUrl(); })
       .catch(err => {
         loginError.textContent = 'Đăng nhập thất bại: ' + translateAuthError(err);
         loginError.style.display = 'block';
@@ -130,6 +137,8 @@ document.addEventListener('DOMContentLoaded', () => {
       'auth/invalid-credential': 'Email hoặc mật khẩu không đúng.',
       'auth/email-already-in-use': 'Email đã được sử dụng.',
       'auth/weak-password': 'Mật khẩu quá yếu (tối thiểu 6 ký tự).',
+      'auth/too-many-requests': 'Firebase tạm khoá do quá nhiều lần thử. Đợi vài phút rồi thử lại (đừng bấm liên tục).',
+      'auth/network-request-failed': 'Lỗi mạng — kiểm tra kết nối rồi thử lại.',
       'auth/operation-not-allowed': 'Đăng nhập Email/Mật khẩu chưa được bật trong Firebase Console (Authentication → Sign-in method).'
     };
     return map[err.code] || err.message;

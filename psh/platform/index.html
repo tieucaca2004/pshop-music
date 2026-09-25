@@ -61,14 +61,26 @@ body{font-family:Inter,system-ui,sans-serif;color:#13161c;background:#f5f6f8;dis
 <script>
 (function () {
   'use strict';
-  // Auth guard — chỉ admin/editor được truy cập PSH Platform
-  AuthContext.init().then(function () {
-    var user = AuthContext.getCurrentUser();
-    var role = AuthContext.getCurrentRole();
-    if (!user) { window.location.href = '/admin/login.html'; return; }
-    if (role !== 'admin' && role !== 'editor' && role !== 'super_admin') {
-      window.location.href = '/admin/login.html?denied=1'; return;
+  // Auth guard — chỉ admin/editor/super_admin. AuthContext.guard() phân biệt
+  // chưa đăng nhập / không có quyền / lỗi tạm thời (rate-limit, network):
+  // lỗi tạm thời → GIỮ trang + thử lại có giới hạn, không đá về login.
+  AuthContext.guard({
+    allowedRoles: ['admin', 'editor', 'super_admin'],
+    onTransient: function (attempt, final) {
+      var b = document.getElementById('pshAuthNotice');
+      if (!b) {
+        b = document.createElement('div');
+        b.id = 'pshAuthNotice';
+        b.style.cssText = 'background:#fff3cd;padding:8px 16px;text-align:center;font-size:0.85rem';
+        document.body.prepend(b);
+      }
+      b.textContent = final
+        ? 'Xác thực tạm lỗi (Firebase giới hạn/mạng). Đợi vài phút rồi tải lại trang — KHÔNG cần đăng nhập lại.'
+        : 'Đang xác thực lại...';
     }
+  }).then(function (r) {
+    var b = document.getElementById('pshAuthNotice');
+    if (r && r.access === 'ok' && b) b.remove();
   });
 
   // Sidebar nav: tải route qua iframe (đổi iframe src theo data-route)

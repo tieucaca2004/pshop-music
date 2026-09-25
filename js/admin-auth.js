@@ -192,22 +192,25 @@ const AdminAuth = (function () {
         if (!role) {
           if (authError || result && result.authError) {
             // Lỗi Firebase Auth/DB tạm thời (rate-limit, network, token) → giữ trang +
-            // thông báo, KHÔNG đá về login/dashboard. Không retry vô hạn: chờ 1 lần
-            // rồi giữ thông báo (AuthContext đã resolve; role null do lỗi tạm thời).
+            // thông báo, KHÔNG đá về login/dashboard. Thử lại THẬT qua
+            // AuthContext.retry() (trước đây init() trả lại promise lỗi đã cache
+            // nên "thử lại" không có tác dụng), backoff tăng dần, tối đa 3 lần.
             renderAuthLoading();
-            authAttempts++;
-            if (authAttempts >= 4) {
-              var sbE = document.getElementById('adminSidebar');
-              if (sbE) sbE.innerHTML = '<div class="admin-brand">P<span>·</span>SHOP <span>ADMIN</span></div><nav class="admin-nav"><p style="padding:1rem;color:#b3261e;font-size:0.82rem">Xác thực tạm lỗi (Auth bị giới hạn/network). Thử lại sau vài giây.</p></nav>';
+            if (authAttempts < 3 && typeof AuthContext.retry === 'function') {
+              var delay = AUTH_RETRY_MS * Math.pow(2, authAttempts);
+              authAttempts++;
+              return new Promise(function (r) { setTimeout(r, delay); })
+                .then(function () { return AuthContext.retry(); })
+                .then(attemptInit);
             }
+            var sbE = document.getElementById('adminSidebar');
+            if (sbE) sbE.innerHTML = '<div class="admin-brand">P<span>·</span>SHOP <span>ADMIN</span></div><nav class="admin-nav"><p style="padding:1rem;color:#b3261e;font-size:0.82rem">Xác thực tạm lỗi (Auth bị giới hạn/network). Đợi vài phút rồi tải lại trang — không cần đăng nhập lại.</p></nav>';
             return;
           }
-          // Không phải lỗi rõ ràng — vẫn đang loading. Giữ trang, retry có giới hạn.
-          renderAuthLoading();
-          if (authAttempts < 3) {
-            authAttempts++;
-            setTimeout(attemptInit, AUTH_RETRY_MS);
-          }
+          // Đã đăng nhập, đọc roles thành công nhưng KHÔNG có role → tài khoản
+          // chưa được cấp quyền CMS. Báo rõ, không signOut, không redirect lặp.
+          var sbN = document.getElementById('adminSidebar');
+          if (sbN) sbN.innerHTML = '<div class="admin-brand">P<span>·</span>SHOP <span>ADMIN</span></div><nav class="admin-nav"><p style="padding:1rem;color:#b3261e;font-size:0.82rem">Tài khoản này chưa được cấp quyền CMS. Liên hệ Admin.</p></nav>';
           return;
         }
 
