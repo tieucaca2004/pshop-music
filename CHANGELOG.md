@@ -2,6 +2,17 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## CRUD / Save Reliability Audit đợt 5 (2026-09-25) — ⏳ CHỜ DEPLOY + FOUNDER ACCEPTANCE TEST
+
+Nguyên nhân "lúc lưu được lúc không / lưu xong mất" tìm được (Firebase Emulator + Chromium, tái hiện trước khi sửa):
+- `b072f7c` DB.add không nguyên tử → 2 lượt tạo sản phẩm đồng thời GHI ĐÈ nhau (mất sản phẩm).
+- `fbb888f` Slider/Menu/Footer/Cài đặt/Ô danh mục/heroSlides lưu CẢ `siteContent` bằng bản cũ → trang mở trước ghi đè thay đổi của trang lưu sau. Mọi nút Lưu (10 module) không có `.catch` → Firebase từ chối ghi nhưng UI im lặng. Bấm Lưu nhiều lần không bị chặn.
+- `219768e` Áp dụng AI vào sản phẩm không đồng bộ 4 ô SEO → bấm Lưu ghi đè SEO/slug AI về giá trị cũ.
+
+Đã test (emulator): 10 vòng Tạo→Lưu→Reload→Sửa→Lưu→Reload cho Sản phẩm và Blog (tiếng Việt, 3000 ký tự, emoji, ký tự đặc biệt) — 0 lỗi, 0 bản ghi trùng; Banner/Video/Slider/Menu/Footer/Cài đặt/Ô danh mục sửa→lưu→reload đúng; trình chọn ảnh upload (tên tiếng Việt, ảnh 1600×1200)→chọn→Lưu→reload, URL GET 200; regression nháp AI + kế thừa SEO + xoá bản ghi TEST: đạt; `npm test` 10/10.
+Chưa test: Production; mạng chậm thật; AI thật (bị chặn mạng).
+Ghi nhận, chưa sửa: tên file tiếng Việt bị đổi thành `_` khi upload (đường dẫn an toàn, tìm theo tên có dấu không ra); AI gán `category` nhưng form sản phẩm vẫn giữ `categoryIds` cũ → Lưu sau đó hoàn nguyên danh mục AI đề xuất (cần Founder quyết định cách xử lý danh mục do AI đề xuất).
+
 ## Full CMS Audit đợt 4 (2026-09-25) — READ-ONLY + patch đề xuất, 0 thay đổi code
 
 - Registration: xác nhận lại `registration.js:286` (ghi roles admin) và `:353-358` (verify-email không auth) — vẫn FAIL CRITICAL, patch chưa áp dụng.
