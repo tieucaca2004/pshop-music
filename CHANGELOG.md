@@ -2,6 +2,13 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Full CMS Audit đợt 4 (2026-09-25) — READ-ONLY + patch đề xuất, 0 thay đổi code
+
+- Registration: xác nhận lại `registration.js:286` (ghi roles admin) và `:353-358` (verify-email không auth) — vẫn FAIL CRITICAL, patch chưa áp dụng.
+- Tenant Dashboard: patch đề xuất `docs/security/tenant-dashboard-bid.patch` (lấy businessId từ custom claim khi không có `?bid`) — kiểm trên emulator bằng áp tạm rồi hoàn nguyên: tenant trình duyệt mới → `?bid=b1`; chưa đăng nhập → login. CHƯA áp dụng.
+- Phát hiện (read-only): `js/business-context.js:36` đọc TOÀN BỘ `businessMembers` rồi lọc client-side — xung đột với rule "member chỉ đọc business của mình"; Menu/Footer/Cài đặt lưu trong `siteContent` mà Rules cho editor ghi → chặn editor chỉ ở frontend.
+- Checklist deploy + Founder Acceptance Test: `docs/security/DEPLOY_AND_ACCEPTANCE_CHECKLIST.md`.
+
 ## Full CMS Audit đợt 3 (2026-09-25) — ⏳ CHỜ FOUNDER DUYỆT + DEPLOY
 
 - Regression (emulator): Workspace files/media-library/business-settings với tài khoản tenant thật (claims `businessId`) — render đúng, 0 lỗi JS. Users: tạo user (editor) PASS, trùng email/mật khẩu ngắn báo lỗi đúng, phiên admin giữ nguyên.

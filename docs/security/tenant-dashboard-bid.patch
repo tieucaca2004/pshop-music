@@ -1,0 +1,11 @@
+--- platform/workspace/dashboard.html	2026-09-25 08:13:38.146125073 +0000
++++ platform/workspace/dashboard.html	2026-09-25 16:17:38.842779093 +0000
+@@ -2,7 +2,7 @@
+ (function(){
+ var bid=new URLSearchParams(location.search).get('bid');
+ if(!bid){var s=localStorage.getItem('psh_bid');if(s&&s!=='null')bid=s;}
+-if(!bid){window.location='/platform/login/';return;}
++if(!bid){/* Đề xuất: lấy businessId từ custom claim (đặt bởi functions/routes/registration.js/team.js) thay vì đá về login */firebase.auth().onAuthStateChanged(function(u){if(!u){window.location='/platform/login/';return;}u.getIdTokenResult().then(function(r){var c=r.claims&&r.claims.businessId;if(c&&/^[A-Za-z0-9_-]+$/.test(c)){window.location.replace('/platform/workspace/dashboard.html?bid='+encodeURIComponent(c));}else{window.location='/platform/login/';}}).catch(function(){window.location='/platform/login/';});});return;}
+ localStorage.setItem('psh_bid',bid);
+ document.getElementById('wsBid').textContent=bid.toUpperCase();
+ var nav=WorkspaceEngine.getNavigation(bid);
