@@ -194,7 +194,10 @@ Trả về DUY NHẤT 1 đối tượng JSON hợp lệ — không kèm câu gi�
           return {
             name: p.name || '', shortDescription: '', description: stripCodeFence(providerOutput.text),
             specifications: '', features: [], faq: [], seoTitle: '', metaDescription: '', seoKeywords: [],
-            slug: '', tags: [], category: '', altText: p.name || '', _productName: p.name || inputParams.productId
+            slug: '', tags: [], category: '', altText: p.name || '', _productName: p.name || inputParams.productId,
+            // AI không trả JSON hợp lệ — publishToTarget() TỪ CHỐI publish Draft
+            // có cờ này (giữ nguyên Draft), không để field rỗng đè sản phẩm thật.
+            _parseError: true
           };
         }
         return {

@@ -57,23 +57,51 @@ function slugifyForPublish(str) {
     .replace(/-+/g, '-');
 }
 
+// Giống js/admin-ai.js compactForUpdate(): khi ghi đè bản ghi đã có, bỏ field
+// nội bộ "_xxx", undefined/null, chuỗi rỗng, mảng rỗng — field AI bỏ trống
+// GIỮ NGUYÊN giá trị thật, không đè thành rỗng.
+function compactForUpdate(content) {
+  const out = {};
+  Object.keys(content || {}).forEach(k => {
+    const v = content[k];
+    if (k.charAt(0) === '_') return;
+    if (v === undefined || v === null) return;
+    if (typeof v === 'string' && !v.trim()) return;
+    if (Array.isArray(v) && !v.length) return;
+    out[k] = v;
+  });
+  return out;
+}
+
+// Draft chỉ có gói SEO (seo-generator) — không sanitize, không đổi status bài gốc.
+function isSeoOnlyBlogContent(content) {
+  return !!content && !('title' in content) && !('contentHtml' in content);
+}
+
 async function publishToTarget(draft) {
   const target = draft.targetCollection;
   if (!target) return; // Facebook Post / Image Prompt — chỉ để xem/copy, không có nơi ghi
 
   if (target === 'blogPosts') {
+    if (draft.targetId && isSeoOnlyBlogContent(draft.content)) {
+      return listResource.update('blogPosts', draft.targetId, compactForUpdate(draft.content));
+    }
     const sanitized = sanitizeBlogContentForPublish(draft.content, draft.inputParams);
     const content = Object.assign({}, sanitized, { status: 'published' });
-    if (draft.targetId) return listResource.update('blogPosts', draft.targetId, content);
+    if (draft.targetId) return listResource.update('blogPosts', draft.targetId, compactForUpdate(content));
     if (!content.slug) content.slug = slugifyForPublish(content.title);
     return listResource.add('blogPosts', content);
   }
 
   if (target === 'products') {
-    const content = Object.assign({}, draft.content, {
+    if (draft.content && draft.content._parseError) {
+      throw new Error('Nội dung AI không đúng định dạng JSON — KHÔNG publish để tránh ghi đè sản phẩm thật. Nháp vẫn được giữ lại.');
+    }
+    if (!draft.targetId) throw new Error('Nháp sản phẩm thiếu targetId — không biết ghi vào sản phẩm nào.');
+    const content = compactForUpdate(Object.assign({}, draft.content, {
       description: stripCodeFence(draft.content.description),
       specifications: stripCodeFence(draft.content.specifications)
-    });
+    }));
     const categories = await listResource.getAll('categories');
     const validCodes = categories.filter(c => c.active !== false).map(c => c.code);
     if (!content.category || validCodes.indexOf(content.category) === -1) {
@@ -96,4 +124,4 @@ async function publishToTarget(draft) {
   throw new Error('Không nhận diện được targetCollection: ' + target);
 }
 
-module.exports = { publishToTarget, stripCodeFence, sanitizeBlogContentForPublish, slugifyForPublish };
+module.exports = { publishToTarget, compactForUpdate, stripCodeFence, sanitizeBlogContentForPublish, slugifyForPublish };

@@ -714,6 +714,30 @@ const AdminAI = (function () {
     }).join('');
   }
 
+  // Chỉ giữ field có giá trị thật khi GHI ĐÈ lên bản ghi đã tồn tại (update):
+  // bỏ field nội bộ "_xxx" (vd _productName/_postTitle — chỉ để hiển thị Draft,
+  // không thuộc schema), undefined/null, chuỗi rỗng, mảng rỗng — field AI bỏ
+  // trống thì GIỮ NGUYÊN giá trị thật hiện có, không đè thành rỗng.
+  function compactForUpdate(content) {
+    const out = {};
+    Object.keys(content || {}).forEach(k => {
+      const v = content[k];
+      if (k.charAt(0) === '_') return;
+      if (v === undefined || v === null) return;
+      if (typeof v === 'string' && !v.trim()) return;
+      if (Array.isArray(v) && !v.length) return;
+      out[k] = v;
+    });
+    return out;
+  }
+
+  // Draft chỉ có gói SEO (seo-generator: không có title/contentHtml) — khi
+  // publish vào bài đã có, KHÔNG chạy sanitizeBlogContentForPublish() (hàm này
+  // tự điền title/contentHtml rỗng/suy diễn) và KHÔNG đổi status bài gốc.
+  function isSeoOnlyBlogContent(content) {
+    return !!content && !('title' in content) && !('contentHtml' in content);
+  }
+
   function publishToTarget(draft) {
     const target = draft.targetCollection;
     if (!target) return Promise.resolve(); // Facebook Post / Image Prompt — chỉ để xem/copy, không có nơi ghi
@@ -723,9 +747,12 @@ const AdminAI = (function () {
       // representation — that value must not survive into the live record, or
       // the public blog (js/cms-db.js BlogDB.getAll() filters
       // status==='published') never shows it despite the write succeeding.
+      if (draft.targetId && isSeoOnlyBlogContent(draft.content)) {
+        return BlogDB.update(draft.targetId, compactForUpdate(draft.content));
+      }
       const sanitized = sanitizeBlogContentForPublish(draft.content, draft.inputParams);
       const content = Object.assign({}, sanitized, { status: 'published' });
-      if (draft.targetId) return BlogDB.update(draft.targetId, content);
+      if (draft.targetId) return BlogDB.update(draft.targetId, compactForUpdate(content));
       if (!content.slug) content.slug = slugifyForPublish(content.title);
       return BlogDB.add(content);
     }
@@ -734,10 +761,14 @@ const AdminAI = (function () {
       // "category" do AI tự đề xuất — AI có thể trả về 1 mã không tồn tại
       // trong CategoryDB thật (hoặc bỏ trống nếu không chắc) — phải validate
       // trước khi ghi, không được để sai lệch điều hướng category.html thật.
-      const content = Object.assign({}, draft.content, {
+      if (draft.content && draft.content._parseError) {
+        return Promise.reject(new Error('Nội dung AI không đúng định dạng JSON — KHÔNG publish để tránh ghi đè sản phẩm thật. Nháp vẫn được giữ lại; hãy tạo lại nội dung.'));
+      }
+      if (!draft.targetId) return Promise.reject(new Error('Nháp sản phẩm thiếu targetId — không biết ghi vào sản phẩm nào.'));
+      const content = compactForUpdate(Object.assign({}, draft.content, {
         description: stripCodeFence(draft.content.description),
         specifications: stripCodeFence(draft.content.specifications)
-      });
+      }));
       return CategoryDB.getAll().then(categories => {
         // Cùng điều kiện "active !== false" category.html thật đang dùng
         // (js/category.js loadCategories()) — tránh gán category còn tồn tại
