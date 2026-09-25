@@ -206,6 +206,16 @@ const ProductAIAssist = (function () {
     if (featEl && Array.isArray(content.features) && content.features.length) featEl.value = content.features.join('\n');
     const tagsEl = document.getElementById('pTags');
     if (tagsEl && Array.isArray(content.tags) && content.tags.length) tagsEl.value = content.tags.join(', ');
+    // 4 ô SEO: trước đây KHÔNG đồng bộ → form giữ SEO cũ, Founder bấm "Lưu
+    // sản phẩm" sau khi áp dụng AI thì SEO/slug AI vừa ghi bị ghi đè về cũ.
+    const seoTitleEl = document.getElementById('pSeoTitle');
+    if (seoTitleEl && content.seoTitle) seoTitleEl.value = content.seoTitle;
+    const seoDescEl = document.getElementById('pSeoDescription');
+    if (seoDescEl && content.metaDescription) seoDescEl.value = content.metaDescription;
+    const seoKwEl = document.getElementById('pSeoKeywords');
+    if (seoKwEl && Array.isArray(content.seoKeywords) && content.seoKeywords.length) seoKwEl.value = content.seoKeywords.join(', ');
+    const slugEl = document.getElementById('pSlug');
+    if (slugEl && content.slug) slugEl.value = content.slug;
   }
 
   // ÁP DỤNG/PUBLISH — tái sử dụng NGUYÊN VẸN AdminAI.publishDraftById() (đã
