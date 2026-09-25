@@ -1,5 +1,7 @@
 /**
  * js/ai/providers/kimi.js — Kimi (Moonshot) AI Provider (standardized stub).
+ * TRẠNG THÁI THẬT: STUB — CHƯA có code gọi API nào; thêm API Key KHÔNG đủ để
+ * kích hoạt (cần integration thật theo mẫu openai.js khi có Requirement).
  * Implements IAIProvider interface.
  */
 const KimiProvider = (function() {

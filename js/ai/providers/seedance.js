@@ -1,6 +1,11 @@
 /*
  * Seedance Provider — Video Generation Provider
  * ===============================================
+ * TRẠNG THÁI THẬT (Master Recovery 2026-09-25): Cloud Function `seedanceProxy`
+ * KHÔNG tồn tại trong functions/index.js → mọi lượt gọi tới
+ * SEEDANCE_PROXY_URL sẽ lỗi (404). Provider này là NOT CONFIGURED/BROKEN cho
+ * tới khi có Requirement triển khai proxy thật + tài khoản Seedance.
+ *
  * Integrates Seedance AI (or any video generation API) into the AI Provider
  * Framework. Follows the EXACT IAIProvider contract (generate/validate/
  * health) — no extra methods, no architectural changes.

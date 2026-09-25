@@ -1,12 +1,13 @@
 /**
  * js/ai/providers/gemini.js — Provider stub (standardized).
  *
- * Coding Policy (Architecture Update 2026-07-25):
- * - Default coding provider: handles CRUD, small features, bugs, tests, boilerplate
- * - Requires API key to activate
+ * TRẠNG THÁI THẬT: STUB — CHƯA có code gọi API nào (không có Cloud Function
+ * proxy, không có HTTP call). generate() luôn reject "chưa được cấu hình",
+ * validate()/health() luôn false. Thêm API Key KHÔNG đủ để kích hoạt — cần
+ * viết integration thật (Cloud Function proxy + nhánh generate) theo mẫu
+ * js/ai/providers/openai.js khi có Requirement.
  *
  * Implements IAIProvider interface (3 methods: generate, validate, health).
- * Integration complete — only needs API key + deploy.
  */
 const GeminiProvider = (function() {
   'use strict';
