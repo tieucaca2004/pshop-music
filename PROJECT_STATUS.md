@@ -1,5 +1,7 @@
 # PROJECT_STATUS.md — PSH Business Platform
 
+> **Cập nhật 2026-09-25 (Master Recovery)**: bảng trạng thái đã đối chiếu mới nhất nằm ở đầu `ROADMAP.md` + `CHANGELOG.md` mục "Master Recovery". Các dòng dưới đây giữ nguyên làm lịch sử; đính chính: "Storage Rules" listAll 403 do rule list (đã sửa `32ef869`, chờ deploy); multi-tenant Rules đúng trên emulator; `database.rules.json` KHÔNG deploy được nguyên trạng (thiếu node `a-tieu`).
+
 **Ngày sinh báo cáo:** 2026-08-01
 **Branch:** `feature/cms-ai-sprint2` (HEAD `e3d91c5` — "Fix broken refs in PSH shell", 2026-08-10)
 **Repo local:** `/home/node/.openclaw/workspace/repo`

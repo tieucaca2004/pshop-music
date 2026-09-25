@@ -2,6 +2,45 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Master Recovery — Security / Data Safety / Auth / Storage / SEO (2026-09-25) — ⏳ CHỜ DEPLOY + FOUNDER ACCEPTANCE TEST
+
+**Bối cảnh**: FOUNDER MASTER TASK "PSH PLATFORM FULL RECOVERY" dựa trên audit toàn repo. Môi trường làm việc (Claude Code cloud) BỊ CHẶN mạng tới `pshopmusic.com`, `*.firebasedatabase.app`, `gstatic.com`; không có Netlify/Firebase/GCP credential → **KHÔNG deploy, KHÔNG verify Production được**. Mọi mục dưới đây là Code Complete + Tests Passed (local), chưa phải PASS.
+
+**Commit (branch `feature/cms-ai-sprint2`)**:
+- `bc57f3d` security(netlify) — 70+ rule force-404 chặn publish file nội bộ (`n8n-data/`, `backups/`, `functions/`, `scripts/`, `*.md`, PDF, `atieu.com/`, `node_modules/`...). Root cause: `publish = "."`.
+- `653249d` security(repo) — gỡ `n8n-data/`, `backups/`, `hợp đồng thuê xe.pdf`, `.claude/settings.local.json` khỏi Git tracking. Root cause: `.gitignore` gõ sai "họp" ≠ "hợp".
+- `8bde7f5`, `bf8253d` security(secret) — gỡ **Facebook Page Access Token** hardcode khỏi `fb-comment-agent/src/run-check.bat` (cùng token có trong 4 file ở commit `2a649b0`) và chuỗi EAA trong `workflows/facebook-auto-post/README.md`. **Repo GitHub đang PUBLIC** → token đã lộ, cần thu hồi.
+- `ec5a994` fix(data-safety) — publish Draft AI không còn ghi đè sản phẩm/bài viết thật bằng field rỗng; Draft không phải JSON bị từ chối publish; `_productName` không lọt vào DB; Draft SEO-only không xoá `title/contentHtml`. Sửa CẢ client (`js/admin-ai.js`) lẫn server (`functions/shared/publishToTarget.js`).
+- `77dd519` fix(banner-safety) — banner AI (publish + Image AI "Save as Banner") luôn tạo `active:false`, xếp cuối.
+- `1e1da1d` fix(founder-agent) — smart-background/ảnh nền AI chỉ ghi khi Founder bấm ÁP DỤNG (ảnh gốc giữ trong Gallery); AI helper của Agent qua `PermissionService`; dữ liệu Hoàn tác sống sót sau reload.
+- `77103ab`, `f123194` fix(auth) — lỗi xác thực tạm thời (too-many-requests/network) không còn đá về `login?denied=1` (vòng lặp đăng nhập lại → rate-limit); `AuthContext.retry()` thử lại THẬT; login quay lại đúng trang (`?next=`, chặn open redirect); 3 trang AI không còn TypeError khi chưa đăng nhập.
+- `32ef869` fix(storage-rules) — `listAll()` bị deny mọi đường dẫn (allPaths không bind cho LIST) → dùng `request.path`. Phát hiện audit "write dùng `allPaths.size()`" KHÔNG tái hiện trên emulator.
+- `2bb18c0` infra(storage-cors) — `storage-cors.json` (GET/HEAD, 2 origin thật) + hướng dẫn (chưa áp dụng lên bucket).
+- `3674334` fix(cache) — thêm `?v=` cho `css/*.css` (cache immutable 1 năm). `3f236a4` bump cache-bust toàn site → `f123194`.
+- `0067556` fix(seo) — `index.html`/`sitemap.xml`/`robots.txt` về `https://pshopmusic.com` (psh.vn lọt vào qua commit `ec128b9`); sitemap: XML hợp lệ, bỏ URL trùng/rỗng, thêm trang Tracks Air.
+- `01e3a98` fix(ai-provider) — `openai.js` báo lỗi rõ khi chưa đăng nhập/phiên hết hạn/proxy lỗi. `ad542b4` docs — stub provider không còn ghi "Integration complete".
+- `c222883` fix(routing) — Quick Action "AI Image" trỏ đúng `ai/images.html`; chặn `admin/a-tieu/seed.html` (ghi đè menu A Tiểu khi mở trang, không auth).
+- `b15ab4f` fix(image-ai) — chống tạo ảnh trùng khi bấm nhiều lần; lỗi pipeline hiện ra thay vì kẹt.
+- `b5c932a`, `d6a7777` test — `npm test` + test Rules trên emulator.
+
+**0 sửa đổi**: engine/model/provider Image AI (gpt-image), Remove Background, FREE ops, Voice/Prompt Optimizer, AI History (FREEZE); `PermissionService`, `PluginManager`, `AIJobQueue`; `database.rules.json` (chỉ thêm test).
+
+**Kiểm thử ĐÃ chạy** (local, mã nguồn thật):
+- `npm test` — 9 file test Node (vm) + `node --check` 203 file JS: TẤT CẢ PASS.
+- Storage Rules emulator (`tests/storage-rules.test.js`) 18/18; Database Rules emulator (`tests/database-rules.test.js`) 14/14.
+- Smoke Chromium 96 trang site (SDK Firebase từ npm, backend bị chặn mạng) — 0 lỗi JS.
+- Mỗi fix đều chạy test trên code CŨ để xác nhận test bắt được lỗi.
+
+**CHƯA test** (giới hạn thật): Production (`curl`/byte-diff), dữ liệu Firebase thật, đăng nhập Founder qua UI, email xác thực thật, deploy Rules/CORS/Functions. `functions/tests/apiAdapter.test.js` (mocha) lỗi sẵn từ trước (`admin.database is not a function` — test không init firebase-admin), không thuộc thay đổi này.
+
+**Đính chính tài liệu cũ** (không xoá lịch sử, chỉ ghi lại đúng trạng thái):
+- Sprint 15 "E2E Acceptance Test ✅ PASS" và các mục "VERIFY PASS" (WORKFLOW-01/02): do Claude tự ghi, trái CLAUDE.md mục 4 → trạng thái đúng: **NOT VERIFIED** cho tới khi Founder xác nhận.
+- "149 test local": không có trong repo. Thực tế có `scripts/test-suite.js` (27 test automation) + 2 file mocha `functions/tests/`. Bộ test hiện tại: `npm test`.
+- `ba621e2`, `906083e`: CODE PRESENT (là tổ tiên của HEAD). DEPLOYED/PRODUCTION VERIFIED: không xác minh được từ môi trường này.
+- Sprint 11 Req #3 "FAILED (Billing đóng)": vẫn giữ FAILED — chưa có bằng chứng Founder test lại; các lần deploy Functions sau đó chỉ cho thấy Billing có thể đã mở lại.
+- Multi-tenant: cách ly `businesses/{id}` trong Database + Storage Rules ĐÃ có và đúng (emulator); việc Rules đã deploy lên Production hay chưa: NOT VERIFIED.
+- OpenClaw: API `functions/routes/openclaw.js` có; kết nối thật: NOT CONNECTED (không có bằng chứng), role `agent` vẫn rỗng quyền.
+
 ## Feature — Kéo-thả tiêu đề cho Ô Danh mục Trang chủ + Cỡ chữ/Font chữ/Màu chữ tiêu đề (2026-08-15)
 
 **Bối cảnh**: Sau khi Category Cover có kéo-thả tiêu đề, Founder yêu cầu mở rộng 2 việc: (1) áp dụng kéo-thả VỊ TRÍ cho cả Ô Danh mục Trang chủ (lưới hiển thị trang chủ), không chỉ Category Cover; (2) thêm điều khiển cỡ chữ, font chữ, và vài kiểu mẫu màu chữ cho tiêu đề — xác nhận qua AskUserQuestion là áp dụng cho CẢ HAI nơi.

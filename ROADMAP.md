@@ -2,15 +2,52 @@
 
 # Roadmap — chỉ ghi nhận, KHÔNG tự ý triển khai
 
+## Master Recovery 2026-09-25 — trạng thái đã đối chiếu bằng code + test (không phải tuyên bố PASS)
+
+Chi tiết commit/kiểm thử: `CHANGELOG.md` mục "Master Recovery". Nhãn: CODE FIXED = đã sửa + test local pass, chờ deploy + Founder test; BLOCKED = cần Founder/hạ tầng ngoài; NOT IMPLEMENTED = chưa có code.
+
+| Hạng mục | Trạng thái |
+|---|---|
+| Publish surface Netlify / file nhạy cảm | CODE FIXED (chờ deploy) |
+| Facebook Page Token lộ trên GitHub public | BLOCKED — Founder thu hồi token + dọn history |
+| n8n-data (encryptionKey + DB owner) lộ | BLOCKED — Founder đổi mật khẩu owner n8n + dọn history |
+| Data safety publish Product/Blog SEO | CODE FIXED |
+| Banner AI tự active | CODE FIXED |
+| Founder Agent tự ghi ảnh / bypass Permission | CODE FIXED (Planner vẫn chưa qua Queue — NOT IMPLEMENTED, cần thiết kế plugin riêng) |
+| Auth loop / too-many-requests | CODE FIXED; email xác thực thật: BLOCKED (Founder lấy raw link) |
+| Storage Rules listAll 403 | CODE FIXED (emulator) — BLOCKED deploy (Chief Architect) |
+| Storage CORS | BLOCKED — Chief Architect chạy `gcloud storage buckets update` |
+| CSS cache / SEO domain / sitemap | CODE FIXED |
+| OpenAI provider lỗi rõ | CODE FIXED; Claude/Gemini/DeepSeek/Kimi = STUB; Seedance = BROKEN (không có seedanceProxy) |
+| database.rules.json deploy | BLOCKED — thiếu rule node `a-tieu` (deploy sẽ chặn menu A Tiểu, test emulator) |
+| aiGenerateWorker / WORKFLOW-01/02 | CODE PRESENT — deploy NOT VERIFIED |
+| Facebook Real Mode V4/V5 | BLOCKED — Meta App thật |
+| Video / Voice / Subtitle AI | NOT IMPLEMENTED (`functions/routes/aiGenerate.js` STUB_ROUTES) |
+| 10 trang `platform/workspace/*.html` rỗng 0 byte (có link trong sidebar Workspace) | NOT IMPLEMENTED |
+| RBAC `canAccess()` API | 4/34 route dùng canAccess; các route còn lại có kiểm tra role riêng |
+| OpenClaw | NOT CONNECTED |
+
+## Ý tưởng phát sinh (Master Recovery) — admin/atieu-menu.html chưa có auth guard
+
+Trang quản lý menu A Tiểu không nạp `admin-auth.js`/`auth-context.js`; quyền ghi phụ thuộc hoàn toàn vào Firebase Rules Production (chưa xác minh được). Ghi nhận, không sửa trong đợt này.
+
+## Ý tưởng phát sinh (Master Recovery) — user đăng nhập không role đọc được toàn bộ `roles`
+
+`database.rules.json` `roles/.read = auth != null` (xác nhận trên emulator) — lộ email/tên/role admin cho mọi tài khoản Firebase Auth. Cần Founder quyết định trước khi đổi (trang login/users đang dựa vào quyền đọc này).
+
 ## Ý tưởng phát sinh — mojibake có sẵn trong functions/index.js
 
 Phát hiện tình cờ khi review diff cho SSRF fix (2026-08-15), KHÔNG liên quan tới thay đổi đang làm: `functions/index.js` có vài dòng comment + 1 chuỗi lỗi hiển thị cho user (`'Kh�ng t?i du?c ?nh t? URL cung c?p.'`) bị hỏng encoding từ trước (không phải do lượt sửa này). Cần rà lại toàn bộ file tìm ký tự `�`/`?` lạc chỗ và khôi phục đúng tiếng Việt UTF-8, xác nhận qua `node --check` + `node -e` sau khi sửa.
 
 ## Ý tưởng phát sinh — hợp đồng thuê xe.pdf đang public trên Production
 
+> **Master Recovery 2026-09-25**: đã gỡ khỏi Git (`653249d`) + chặn 404 qua `netlify.toml` (`bc57f3d`) — CHỜ DEPLOY. File vẫn còn trong Git history (repo public).
+
 Phát hiện tình cờ khi đối chiếu danh sách file deploy Netlify (2026-08-15): `hợp đồng thuê xe.pdf` ở gốc repo đang được serve công khai thật trên `https://pshopmusic.com/` (`curl` trả về 200). Có vẻ là file cá nhân lọt vào repo, không phải asset site — cần Chief Architect xác nhận có phải chủ đích không, nếu không thì gỡ khỏi repo (không tự ý xóa vì có thể là chủ đích chưa rõ).
 
 ## Ý tưởng phát sinh — workspace-categories.js chưa có trang HTML nào trỏ tới
+
+> **Master Recovery 2026-09-25**: vẫn đúng — `platform/workspace/categories.html` là file 0 byte (cùng 9 trang Workspace khác). NOT IMPLEMENTED.
 
 Phát hiện khi rà toàn bộ CMS sau sự cố `d3f3f79`: `js/workspace-categories.js` (Customer Workspace — quản lý danh mục theo từng tenant) đã code xong, gọi `PSH.escapeHtml` đúng cú pháp, nhưng KHÔNG có file `platform/workspace/*.html` nào nạp nó — trang này hiện không thể truy cập được từ UI. Khi ai đó nối trang này vào (thêm `platform/workspace/categories.html` hoặc tương tự), cần thêm cả `<script src="js/shared.js">` (định nghĩa `PSH`) vào trang đó — hiện `shared.js` chưa được nạp ở BẤT KỲ trang nào trong dự án.
 
@@ -142,7 +179,7 @@ Track kiến trúc riêng, xem `SPRINT14_API_ARCHITECTURE_FINAL.md` (bản duy�
 - **Social Media Center — `schedule` chỉ lưu ý định, CHƯA có Cloud Scheduler/Cloud Task thật kích hoạt** (FINAL mục 17.20 gọi đây là "bắt buộc", "điều kiện tiên quyết cho OpenClaw") — cần Founder quyết định có provision hạ tầng GCP mới (Cloud Tasks queue, IAM, phát sinh chi phí) hay không; hiện hành vi giống hệt client cũ (chỉ chạy khi có tab trình duyệt mở).
 - **Founder Agent Conversation Session — TTL 30 phút chỉ kiểm tra tại thời điểm gọi API**, CHƯA có Cloud Scheduler dọn dẹp bản ghi `agentConversations`/`agentPlans` hết hạn thật (cùng loại quyết định hạ tầng GCP như mục Social Media Center ở trên) — bản ghi hết hạn vẫn tồn tại vĩnh viễn trong RTDB cho tới khi có cơ chế dọn dẹp.
 - **Media AI Generate APIs (Phase 5) — CHƯA có worker nền thật** (Cloud Task/Pub-Sub) — mọi lệnh generate chạy đồng bộ trong 1 request HTTP (đến 120s timeout), khác tinh thần "KHÔNG chờ đồng bộ" tài liệu FINAL mục 9/14 đề xuất — cùng loại quyết định hạ tầng GCP đang treo như 2 mục Cloud Scheduler ở trên. Webhook Events (Phase 6) đã thật, nhưng chỉ bắn SAU KHI generate xong đồng bộ — chưa phải mẫu "trả jobId ngay, xử lý nền, báo qua webhook" đúng nghĩa mục 14 mô tả cho OpenClaw.
-- **Phát hiện phụ, KHÔNG sửa (Phase 5)**: `seo-generator` (`targetCollection:'blogPosts'`) trả `content` chỉ có field SEO, thiếu `title`/`contentHtml` — nếu Founder publish TRỰC TIẾP 1 Draft SEO-only (API mới cho phép, trước đây chỉ có UI hạn chế hơn), `publishToTarget()`'s `sanitizeBlogContentForPublish()` có thể ghi đè `title`/`contentHtml` thật của bài đã publish thành rỗng/suy diễn sai. Hành vi ĐÃ CÓ SẴN trong code cũ, không phải lỗi Phase 5/Phase 3 gây ra — chờ Founder quyết định có cần Requirement riêng để sửa không.
+- **Phát hiện phụ, KHÔNG sửa (Phase 5)**: `seo-generator` (`targetCollection:'blogPosts'`) trả `content` chỉ có field SEO, thiếu `title`/`contentHtml` — nếu Founder publish TRỰC TIẾP 1 Draft SEO-only (API mới cho phép, trước đây chỉ có UI hạn chế hơn), `publishToTarget()`'s `sanitizeBlogContentForPublish()` có thể ghi đè `title`/`contentHtml` thật của bài đã publish thành rỗng/suy diễn sai. Hành vi ĐÃ CÓ SẴN trong code cũ, không phải lỗi Phase 5/Phase 3 gây ra — chờ Founder quyết định có cần Requirement riêng để sửa không. **→ Master Recovery 2026-09-25: đã sửa (`ec5a994`, client + server) — Draft SEO-only chỉ merge field SEO; CHỜ DEPLOY.**
 - **Role `agent`** trong `functions/shared/permissions.js` vẫn cố tình để RỖNG (`[]`) — Decision Record riêng (tài liệu FINAL mục 6.4) chưa được Founder duyệt, chưa kích hoạt bất kỳ quyền `structural.write.*` nào cho Agent/OpenClaw. **Điều này có nghĩa: dù API OpenClaw đã sẵn sàng kỹ thuật (Phase 6), OpenClaw dùng role `agent` hiện KHÔNG THỂ tạo/sửa Product trực tiếp hay chạy Generic Plugin tools qua Founder Agent cho tới khi role này được kích hoạt riêng** — chỉ đọc CMS công khai + các API `staff` (admin/editor) mới dùng được nếu OpenClaw được cấp tài khoản admin/editor thật (không phải role `agent`).
 
 ## Sửa lỗi thật phát hiện qua điều tra Production — Sprint 12, Requirement #2
@@ -150,7 +187,7 @@ Track kiến trúc riêng, xem `SPRINT14_API_ARCHITECTURE_FINAL.md` (bản duy�
 - ✅ ~~Entity matching báo "không tìm thấy" dù khớp được đa số từ (case "AlphaTheta XDJ AN")~~ — **đã làm** (Near-Miss Fallback, `weakRatio`/`NEAR_MISS_THRESHOLD` trong `js/ai/task-router.js`) — xem `PROJECT_ARCHITECTURE.md` mục "Sửa lỗi thật phát hiện qua điều tra Production".
 - ✅ ~~FAQ Generator/Image Prompt Generator chưa định tuyến được ở AI Assistant hội thoại~~ — **đã làm** (2 route mới trong `AI_TASK_ROUTES`) — Product Opportunity này ở mục "Founder AI Assistant First" bên dưới nay đã hoàn tất.
 - ✅ ~~Sidebar "Trợ lý AI"/"AI Assistant" trùng tên gây bấm nhầm~~ — **đã làm** (đổi label + đồng bộ `title` 13 trang cùng cụm).
-- **Giới hạn đã biết, chưa sửa (ngoài phạm vi lần này)**: `FOUNDER_SMART_NAV`'s "AI Content"/"AI Image" vẫn cùng trỏ `admin/ai/index.html` (Plugin Dashboard chung) — chưa có 2 trang Founder-friendly riêng biệt lọc đúng theo loại Plugin (Content vs Image). Đây là giới hạn đã ghi nhận từ Sprint 10 Requirement #5, chưa thay đổi.
+- **Giới hạn đã biết, chưa sửa (ngoài phạm vi lần này)**: `FOUNDER_SMART_NAV`'s "AI Content"/"AI Image" vẫn cùng trỏ `admin/ai/index.html` (Plugin Dashboard chung) — chưa có 2 trang Founder-friendly riêng biệt lọc đúng theo loại Plugin (Content vs Image). Đây là giới hạn đã ghi nhận từ Sprint 10 Requirement #5, chưa thay đổi. **→ Master Recovery 2026-09-25: sidebar Smart Mode đã trỏ `ai/images.html` từ trước; Quick Action Founder Home sửa ở `c222883`.**
 - **Product Opportunity (chưa triển khai, chỉ ghi nhận)**: `image-prompt-generator` hiện chỉ sinh TEXT PROMPT mô tả ảnh (để dùng ở công cụ AI tạo ảnh khác như Midjourney/DALL-E) — chưa có Plugin nào gọi API sinh ảnh thật (DALL-E/Stable Diffusion...). Nếu Founder cần "AI Image" nghĩa là tạo ra file ảnh thật, đây là 1 năng lực hoàn toàn mới, cần Provider mới + Decision Record riêng (chi phí/API Key/lưu trữ ảnh sinh ra), không phải chỉnh Router.
 - **Giới hạn near-miss đã biết**: ngưỡng `NEAR_MISS_THRESHOLD = 0.5` là hằng số cố định, dựa trên đúng 1 case thật đã xác nhận (2/3 token khớp) — chưa có đủ dữ liệu thật để khẳng định đây là ngưỡng tối ưu cho mọi trường hợp tương lai; cần theo dõi qua `admin/ai/logs.html` xem có near-miss nào gợi ý sai (Founder chọn "HỦY" thay vì "Chọn") để tinh chỉnh sau nếu cần.
 
