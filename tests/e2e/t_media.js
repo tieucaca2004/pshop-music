@@ -1,0 +1,10 @@
+const { launch, newPage, login, BASE } = require('./cms');
+(async () => { const b = await launch(); const { page, log } = await newPage(b);
+  await login(page, 'admin@test.local'); await page.goto(BASE + '/admin/media-library.html'); await page.waitForTimeout(5000);
+  const n0 = await page.$$eval('#mlGrid > *', r => r.length); console.log('LIST initial items:', n0, '| grid text', (await page.textContent('#mlGrid')).trim().slice(0, 80));
+  await page.setInputFiles('#mlUploadInput', process.env.E2E_PNG); await page.waitForTimeout(5000);
+  console.log('UPLOAD status:', (await page.textContent('#mlUploadStatus')).trim().slice(0, 100));
+  await page.reload(); await page.waitForTimeout(5000);
+  const items = await page.$$eval('#mlGrid img', r => r.map(i => i.src)); console.log('LIST after reload items:', items.length, items.slice(0, 2).map(s => s.slice(0, 90)));
+  console.log('errors', JSON.stringify([...new Set(log.errors)]), 'console', JSON.stringify(log.console.slice(0, 3)));
+  await b.close(); })();
