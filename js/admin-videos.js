@@ -48,7 +48,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function edit(id) {
-    const v = videos.find(x => x.id === id);
+    // Đọc LẠI bản ghi từ DB trước khi điền form: danh sách chỉ tải lúc mở
+    // trang — bản ghi đã được sửa ở tab khác/AI/Agent sau đó thì form nạp
+    // giá trị cũ và bấm Lưu GHI ĐÈ thay đổi mới (mất dữ liệu).
+    return VideoDB.get(id).catch(() => null).then(fresh => fillEdit(id, fresh || videos.find(x => x.id === id)));
+  }
+
+  function fillEdit(id, v) {
     if (!v) return;
     editingId = id;
     document.getElementById('vTitle').value = v.title || '';

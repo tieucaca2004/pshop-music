@@ -58,7 +58,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function edit(id) {
-    const p = posts.find(x => x.id === id);
+    // Đọc LẠI bản ghi từ DB trước khi điền form: danh sách chỉ tải lúc mở
+    // trang — bản ghi đã được sửa ở tab khác/AI/Agent sau đó thì form nạp
+    // giá trị cũ và bấm Lưu GHI ĐÈ thay đổi mới (mất dữ liệu).
+    return BlogDB.get(id).catch(() => null).then(fresh => fillEdit(id, fresh || posts.find(x => x.id === id)));
+  }
+
+  function fillEdit(id, p) {
     if (!p) return;
     editingId = id;
     slugManuallyEdited = true;

@@ -132,18 +132,21 @@ const AdminApp = (function () {
     const editId = params.get('edit');
     if (!editId || !products.some(p => p.id === editId)) return;
     deepLinkHandled = true;
-    editProduct(editId);
-    const field = (params.get('field') || '').toLowerCase();
-    const value = params.get('value');
-    const fieldElId = AGENT_FIELD_MAP[field];
-    if (fieldElId && value !== null) {
-      const el = document.getElementById(fieldElId);
-      if (el) {
-        el.value = value;
-        el.classList.add('agent-field-highlight');
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // editProduct() đọc lại DB (bất đồng bộ) — áp giá trị Agent SAU khi form
+    // đã điền xong, không thì bị ghi đè bởi giá trị từ DB.
+    editProduct(editId).then(() => {
+      const field = (params.get('field') || '').toLowerCase();
+      const value = params.get('value');
+      const fieldElId = AGENT_FIELD_MAP[field];
+      if (fieldElId && value !== null) {
+        const el = document.getElementById(fieldElId);
+        if (el) {
+          el.value = value;
+          el.classList.add('agent-field-highlight');
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
       }
-    }
+    });
   }
 
   // rowHtml — 1 dòng sản phẩm (tách riêng khỏi renderTable để dùng lại được
@@ -243,7 +246,13 @@ const AdminApp = (function () {
   }
 
   function editProduct(id) {
-    const p = products.find(x => x.id === id);
+    // Đọc LẠI bản ghi từ DB trước khi điền form: danh sách chỉ tải lúc mở
+    // trang — bản ghi đã được sửa ở tab khác/AI/Agent sau đó thì form nạp
+    // giá trị cũ và bấm Lưu GHI ĐÈ thay đổi mới (mất dữ liệu).
+    return DB.get(id).catch(() => null).then(fresh => fillEditProduct(id, fresh || products.find(x => x.id === id)));
+  }
+
+  function fillEditProduct(id, p) {
     if (!p) return;
     editingId = id;
     document.getElementById('pId').value = p.id;
