@@ -9,14 +9,22 @@
  *
  *   Browser (CMS) → Cloud Function Proxy (openaiProxy) → OpenAI API
  *
- * TODO sau khi deploy Cloud Function lần đầu: thay đúng URL thật (Firebase
- * CLI in ra sau khi `firebase deploy --only functions` chạy xong) vào hằng
- * số OPENAI_PROXY_URL bên dưới.
+ * OPENAI_PROXY_URL bên dưới là URL thật của Cloud Function openaiProxy
+ * (project pshop-music, region us-central1).
  */
 const OPENAI_PROXY_URL = 'https://us-central1-pshop-music.cloudfunctions.net/openaiProxy';
 
+// Phân biệt rõ lỗi (Master Recovery P2): chưa đăng nhập / phiên hết hạn /
+// Cloud Function lỗi — trước đây currentUser null → TypeError khó hiểu, và
+// phản hồi không phải JSON (502/HTML) → "Unexpected token <".
 function callOpenAiProxy(body) {
-  return firebase.auth().currentUser.getIdToken().then(idToken => {
+  const user = typeof firebase !== 'undefined' && firebase.auth() ? firebase.auth().currentUser : null;
+  if (!user) {
+    return Promise.reject(new Error('OpenAI: Chưa đăng nhập CMS — cần đăng nhập để gọi Cloud Function Proxy.'));
+  }
+  return user.getIdToken().catch(err => {
+    throw new Error('OpenAI: Phiên đăng nhập đã hết hạn hoặc bị Firebase từ chối (' + (err && err.code || err.message) + ') — tải lại trang/đăng nhập lại.');
+  }).then(idToken => {
     return fetch(OPENAI_PROXY_URL, {
       method: 'POST',
       headers: {
@@ -24,7 +32,9 @@ function callOpenAiProxy(body) {
         Authorization: 'Bearer ' + idToken
       },
       body: JSON.stringify(body)
-    }).then(res => res.json().then(data => ({ ok: res.ok, data })));
+    }).then(res => res.json()
+      .catch(() => ({ error: 'Cloud Function Proxy trả về HTTP ' + res.status + ' (không phải JSON).' }))
+      .then(data => ({ ok: res.ok, data: data || {} })));
   });
 }
 
