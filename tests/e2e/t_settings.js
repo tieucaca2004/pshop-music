@@ -1,0 +1,11 @@
+const { launch, newPage, login, BASE } = require('./cms');
+const db = p => fetch('http://127.0.0.1:9000/' + p + '.json?ns=pshop-music-default-rtdb', { headers: { Authorization: 'Bearer owner' } }).then(r => r.json());
+(async () => { const b = await launch(); const { page, log } = await newPage(b); await login(page, 'admin@test.local');
+  await page.goto(BASE + '/admin/settings.html'); await page.waitForTimeout(4000);
+  await page.fill('#setPhone', '0911111111'); await page.click('#saveSettingsBtn'); await page.waitForTimeout(1500);
+  await page.fill('#heroTagInput', 'HERO TAG TEST'); await page.click('#saveHeroTextBtn'); await page.waitForTimeout(1500);
+  const sc = await db('siteContent'); console.log('phone', JSON.stringify(sc.settings && sc.settings.phone), '| heroTag có', JSON.stringify(sc).includes('HERO TAG TEST'), '| menu còn', JSON.stringify(sc.menu || {}).includes('MENU-EDIT-OK'));
+  await page.reload(); await page.waitForTimeout(3500); console.log('reload form phone', await page.inputValue('#setPhone'), '| heroTag', await page.inputValue('#heroTagInput'));
+  await page.goto(BASE + '/admin/categories.html'); await page.waitForTimeout(4500); await page.click('#saveTilesBtn'); await page.waitForTimeout(1500);
+  const sc2 = await db('siteContent'); console.log('sau Lưu ô danh mục: phone giữ', sc2.settings && sc2.settings.phone === '0911111111', '| tiles', Array.isArray(sc2.categoryTiles) ? sc2.categoryTiles.length : typeof sc2.categoryTiles, '| errors', JSON.stringify(log.errors));
+  await b.close(); })();

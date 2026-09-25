@@ -1,0 +1,12 @@
+const { launch, newPage, login, BASE } = require('./cms');
+const db = p => fetch('http://127.0.0.1:9000/' + p + '.json?ns=pshop-music-default-rtdb', { headers: { Authorization: 'Bearer owner' } }).then(r => r.json());
+(async () => { const b = await launch(); const A = await newPage(b); await login(A.page, 'admin@test.local');
+  const tabSlider = A.page; const B2 = await newPage(b); await login(B2.page, 'admin@test.local'); const tabMenu = B2.page;
+  await tabSlider.goto(BASE + '/admin/sliders.html'); await tabSlider.waitForTimeout(4000);
+  await tabMenu.goto(BASE + '/admin/menu.html'); await tabMenu.waitForTimeout(4000);
+  await tabMenu.waitForSelector('#menuList input', {timeout: 15000}); await tabMenu.fill('#menuList input >> nth=0', 'MENU-SUA-TAB3');
+  await tabMenu.click('#saveMenuBtn'); await tabMenu.waitForTimeout(2000);
+  console.log('Sau khi lưu Menu (tab 2):', JSON.stringify((await db('siteContent/menu/items') || []).map(x => x.label).filter(l => /TAB3/.test(l))));
+  await tabSlider.click('#saveSlidesBtn'); await tabSlider.waitForTimeout(2000);
+  console.log('Sau khi lưu Slider (tab 1, mở trước):', JSON.stringify((await db('siteContent/menu/items') || []).map(x => x.label).filter(l => /TAB3/.test(l))));
+  await b.close(); })();

@@ -13,7 +13,7 @@ const HOOK = `
     if(firebase.storage&&!done.s){ firebase.storage().useEmulator('127.0.0.1',9199); done.s=1; }
   }catch(e){ console.warn('emu hook', e.message); } }
   window.__emuHook=hook;
-  if(firebase.initializeApp && !firebase.__wrapped){ var o=firebase.initializeApp.bind(firebase); firebase.initializeApp=function(){ var a=o.apply(null,arguments); hook(); return a; }; firebase.__wrapped=1; }
+  if(firebase.initializeApp && !firebase.__wrapped){ var o=firebase.initializeApp.bind(firebase); firebase.initializeApp=function(){ var a=o.apply(null,arguments); hook(); try{ if(arguments[1] && a.auth) a.auth().useEmulator('http://127.0.0.1:9099',{disableWarnings:true}); }catch(e){} return a; }; firebase.__wrapped=1; }
   hook();
 })();`;
 async function launch() {
