@@ -10,6 +10,8 @@
 
 **Đã test PASS trên emulator (chưa phải PASS Production)**: đăng nhập; quét 64 trang (0 lỗi JS ở toàn bộ trang admin/*, admin/ai/*, Media Center); CRUD Sản phẩm (tạo/sửa/reload/xoá bản ghi TEST, Nháp không public), Banner, Blog (public list + chi tiết), Video, Slider, Menu, Footer, SEO, Cài đặt, Users (đọc); Duyệt & Publish nháp AI (JSON lỗi bị chặn, partial không xoá field, banner AI tắt); Thư viện ảnh upload + list (Storage); RBAC editor/không role/chưa đăng nhập (không vòng lặp redirect); 0 nút onclick gọi hàm không tồn tại.
 
+**Đợt 2 (tiếp tục audit)**: bấm mọi nút trên 54 trang CMS (emulator) → 1 lỗi: `0481e3c` thiếu SDK storage ở `admin/ai/index.html` + `admin/social-media-center.html` (đã sửa, retest 0 lỗi). Regression các fix trước: PASS (emulator).
+
 **CRITICAL — CHƯA SỬA, chờ Founder duyệt**: `functions/routes/registration.js` — `POST /v1/register` (không cần đăng nhập) ghi `roles/<uid>.role='admin'` → ai cũng tự thành admin CMS pshopmusic (emulator: ghi được `products/41/price`); `POST /v1/register/verify-email` không kiểm tra quyền.
 
 **Ghi nhận, chưa sửa**: 10 node client dùng nhưng `database.rules.json` không có rule (`businessMembers`, `a-tieu`, `aiHistory`, `apiAsyncJobs`, `assetLibrary`, `templates`, `projects`, `media-center`, `atieu`, `aiBatchJobs`); "Thêm danh mục" tạo ngay tab "Danh mục mới" rỗng hiển thị công khai; AdminAuth redirect login không giữ `?next=`.
