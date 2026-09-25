@@ -54,13 +54,21 @@ const DB = (function () {
     },
 
     add(product) {
+      // Giữ id dạng số như cũ (trang sản phẩm tĩnh dùng PRODUCT_ID '41'...),
+      // nhưng GIỮ CHỖ id bằng transaction: trước đây đọc max+1 rồi set() —
+      // 2 lượt lưu đồng thời (bấm Lưu 2 lần, 2 tab) cùng ra 1 id và lượt
+      // sau GHI ĐÈ sản phẩm của lượt trước (mất dữ liệu). Transaction chỉ
+      // ghi khi id còn trống; bị chiếm thì thử id kế tiếp.
       return productsRef().once('value').then(snap => {
-        const products = toArray(snap.val());
-        const newProduct = Object.assign({}, product, {
-          id: nextId(products),
-          createdAt: Date.now()
-        });
-        return productsRef().child(newProduct.id).set(newProduct).then(() => newProduct);
+        let candidate = parseInt(nextId(toArray(snap.val())), 10);
+        function tryId(attempt) {
+          if (attempt > 20) return Promise.reject(new Error('Không cấp được mã sản phẩm mới — thử lại.'));
+          const id = String(candidate + attempt);
+          const newProduct = Object.assign({}, product, { id, createdAt: Date.now() });
+          return productsRef().child(id).transaction(cur => (cur === null ? newProduct : undefined))
+            .then(res => (res.committed ? newProduct : tryId(attempt + 1)));
+        }
+        return tryId(0);
       });
     },
 
