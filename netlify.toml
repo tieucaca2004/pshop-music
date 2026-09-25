@@ -443,6 +443,12 @@
   force = true
 
 [[redirects]]
+  from = "/storage-cors.json"
+  to = "/404"
+  status = 404
+  force = true
+
+[[redirects]]
   from = "/storage.rules"
   to = "/404"
   status = 404

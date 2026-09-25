@@ -85,3 +85,24 @@ Vì môi trường này không có quyền truy cập Firebase thật, việc ki
 ## 6. Giới hạn đã biết — không tự sửa ở Requirement này
 
 `storage.rules` **không thể** phân biệt vai trò Admin/Editor cho `write` (ví dụ chỉ Admin mới được xoá, Editor chỉ được thêm) — Firebase Storage Security Rules không có cách nào cross-reference node `roles/{uid}` trong Realtime Database (chỉ hỗ trợ `firestore.get()`/`firestore.exists()` cho Cloud Firestore, dự án này dùng Realtime Database). Cách duy nhất để Storage Rules biết vai trò thật của `request.auth.uid` là Firebase Auth **Custom Claims** (đặt qua Admin SDK/Cloud Function khi tạo/thu hồi tài khoản ở `admin/users.html`) — đây là thay đổi Business Logic + Cloud Function mới, ngoài phạm vi Requirement #3, cần Decision Record + Chief Architect phê duyệt riêng nếu triển khai sau. Xem thêm `ROADMAP.md` mục "Firebase Storage Security Rules".
+
+## Storage bucket CORS (Master Recovery 2026-09-25)
+
+Thao tác FREE của Media Center (rotate/resize/crop/compress/convert) đọc pixel ảnh
+bằng canvas → cần bucket trả `Access-Control-Allow-Origin`. Hiện bucket CHƯA có
+CORS nên `js/media-edit.js loadImageEl()` phải lùi về proxy `fetch_image_data`
+(Cloud Function, FREE, không gọi OpenAI) — chậm hơn 1 lượt gọi server.
+
+File cấu hình: `storage-cors.json` (chỉ GET/HEAD, chỉ 2 origin thật
+`https://pshopmusic.com`, `https://www.pshopmusic.com` — KHÔNG dùng `*`).
+
+Chief Architect tự chạy (cần quyền Storage Admin trên project `pshop-music`):
+
+```
+gcloud storage buckets update gs://pshop-music.firebasestorage.app --cors-file=storage-cors.json
+# hoặc: gsutil cors set storage-cors.json gs://pshop-music.firebasestorage.app
+gcloud storage buckets describe gs://pshop-music.firebasestorage.app --format="default(cors_config)"
+```
+
+Kiểm tra: mở Media Center trên https://pshopmusic.com → chọn ảnh → Rotate; DevTools
+Network KHÔNG còn request `fetch_image_data` cho ảnh đó.
