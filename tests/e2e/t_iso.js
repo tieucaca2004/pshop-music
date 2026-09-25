@@ -1,0 +1,16 @@
+const { launch, newPage, login, BASE } = require('./cms');
+const H = { headers: { Authorization: 'Bearer owner' } };
+const put = (p, v) => fetch('http://127.0.0.1:9000/' + p + '.json?ns=pshop-music-default-rtdb', { method: 'PUT', body: JSON.stringify(v), ...H });
+const IDS = ['pName','pPrice','pOldPrice','pSku','pWarranty','pSpecs','pBadgeText','pSpecifications','pFeatures','pTags','pImages','pBgImage','pYoutubeUrl','pSeoTitle','pSeoDescription','pSeoKeywords','pCanonical','pOgImage','pSlug'];
+(async () => { const b = await launch(); const { page, log } = await newPage(b); await login(page, 'admin@test.local');
+  await put('products/901', { id: '901', name: 'A-NAME', price: 'A-PRICE', oldPrice: 'A-OLD', sku: 'A-SKU', warranty: 'A-W', specs: 'A-S', badgeText: 'A-B', specifications: 'A-SPEC', features: ['A-F'], tags: ['A-T'], images: ['https://a/1.jpg'], image: 'https://a/1.jpg', backgroundImage: 'https://a/bg.jpg', youtubeUrl: 'https://youtu.be/aaaaaaaaaaa', seoTitle: 'A-SEO', metaDescription: 'A-META', seoKeywords: ['a'], canonical: 'https://a', ogImage: 'https://a/og.jpg', slug: 'a-slug', categoryIds: ['dj'], category: 'dj', description: '<p>A-DESC</p>' });
+  await put('products/902', { id: '902', name: 'B-NAME', price: null, images: [], seoKeywords: [], features: [], tags: [], description: '', categoryIds: ['loa'], category: 'loa' });
+  await page.goto(BASE + '/admin/products.html'); await page.waitForTimeout(4000);
+  const snap = () => page.evaluate(ids => ({ f: ids.map(i => document.getElementById(i).value), cats: [...document.querySelectorAll('#pCategoriesList input:checked')].map(x => x.value), desc: document.querySelector('#pDescriptionEditor .ql-editor').innerText.trim() }), IDS);
+  await page.evaluate(() => AdminApp.editProduct('901')); const a1 = await snap();
+  await page.evaluate(() => AdminApp.editProduct('902')); const bb = await snap();
+  await page.evaluate(() => AdminApp.editProduct('901')); const a2 = await snap();
+  const leak = IDS.map((id, i) => [id, bb.f[i]]).filter(([id, v]) => /A-|https:\/\/a|a-slug/.test(v) && id !== 'pName');
+  console.log('B (sau A): field còn giá trị của A:', JSON.stringify(leak), '| cats', JSON.stringify(bb.cats), '| desc', JSON.stringify(bb.desc), '| name', bb.f[0]);
+  console.log('A → B → A giống lần đầu:', JSON.stringify(a1) === JSON.stringify(a2));
+  console.log('errors', JSON.stringify(log.errors)); await b.close(); })();
