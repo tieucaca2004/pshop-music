@@ -8,6 +8,10 @@
 - Test mới (emulator, có đối chiếu public): Danh mục thêm/sửa/tắt/xoá, Slider thêm/đổi thứ tự/reload, Menu thêm/xoá → nav public, Footer/Cài đặt → public, Xoá SP/Blog/Banner/Video → biến mất public (có confirm), tạo+thu hồi user → tài khoản mất quyền, 10 vòng Banner, 10 vòng Danh mục, SEO SP/Blog CMS → HTML public. Regression toàn hệ thống đạt (quét 64 trang: chỉ 7 trang permission_denied do Rules; xung đột; chưa lưu; stale-edit; nháp AI; AI SEO; 10 vòng Media; cách ly field; 20 vòng SP/Blog); `npm test` 10/10.
 - Ghi nhận, chưa sửa: SEO global defaultTitle/defaultDescription/ogImage lưu nhưng trang public không áp dụng (SiteChrome.applySeo chỉ dùng gaId/searchConsoleTag); vài số điện thoại ghi cứng trong HTML (index.html:157, category.html:182); trang sản phẩm tĩnh không render menu/footer từ CMS.
 
+**Truy vết bổ sung (finalize sprint, 0 sửa code)**:
+- Số điện thoại cũ còn sót: `index.html:157` (đoạn "Giá thuê…") và `category.html:182` (modal "GỌI TƯ VẤN NGAY") là text HTML tĩnh, không gắn với `settings` (chỉ nav qua `SiteChrome.renderNav` và `#contactPhone` qua `home.js:376` đọc CMS) → DESIGN LIMITATION / LOW, không phải bug code.
+- SEO global: `applySeo` (`js/site-chrome.js:79`) chỉ xử lý `searchConsoleTag` + `gaId` từ commit gốc `ac12865`; `defaultTitle/defaultDescription/ogImage` chưa trang công khai nào đọc (title/description/og:image hardcode trong HTML; SEO riêng blog/sản phẩm do `blog-post.js`/`product-runtime-render.js` đặt); `robotsExtra` không có nơi tiêu thụ (`robots.txt` tĩnh, JS không đổi được). Không có tài liệu kiến trúc định nghĩa thứ tự ưu tiên → MISSING IMPLEMENTATION, ứng viên fix, CHỜ Founder quyết (đổi SEO công khai).
+
 ## Save Reliability + Unsaved Data Protection đợt 7 (2026-09-26) — ⏳ CHỜ DEPLOY + FOUNDER ACCEPTANCE TEST
 
 - `81e7e30` Phát hiện xung đột khi Lưu (SP/Blog/Banner/Video): chụp bản ghi lúc mở form, so với DB lúc Lưu — khác → KHÔNG ghi, hỏi Founder (Giữ form [mặc định] / Tải lại / Ghi đè). Client-only, KHÔNG thêm field version/schema, KHÔNG đổi Rules. AI Assist "Áp dụng" chụp lại bản ghi (không báo xung đột giả).
