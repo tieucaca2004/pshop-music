@@ -28,6 +28,11 @@ const WorkflowEngine = (function () {
   var DEFAULT_RETRY_MAX = 3;
   var DEFAULT_TIMEOUT_MS = 300000; // 5 minutes
   var FALLBACK_ATTEMPT_DELAY_MS = 2000;
+  // Trần số vòng runLoop — maxIterations lớn hơn (kể cả Infinity) bị giới hạn
+  // ở đây để engine luôn kết thúc (trước đây Infinity treo, 2.000.000 vòng
+  // khoá luồng 3,6 s). Tái dùng hạn mức AI đã có của dự án: aiGenerateDaily =
+  // 100 lượt/ngày/uid (functions/shared/rateLimit.js, FINAL mục 7).
+  var MAX_LOOP_ITERATIONS = 100;
 
   /* ═══════════════════════════════════════════
      CORE EXECUTION
@@ -617,6 +622,9 @@ const WorkflowEngine = (function () {
     options = options || {};
     var steps = (cfg && cfg.steps) || [];
     var max = (cfg && cfg.maxIterations) || 1;
+    // Chỉ giới hạn giá trị VƯỢT trần; giá trị ≤ trần/không hợp lệ giữ nguyên hành vi cũ.
+    var capped = Number(max) > MAX_LOOP_ITERATIONS;
+    if (capped) max = MAX_LOOP_ITERATIONS;
     var ctx = options.decisionContext || null;
     var allResults = [];
     var chain = Promise.resolve();
@@ -642,7 +650,7 @@ const WorkflowEngine = (function () {
         });
       })(i);
     }
-    return chain.then(function () { return { iterations: allResults.length, iterationsCompleted: allResults, stoppedEarly: stopped }; });
+    return chain.then(function () { return { iterations: allResults.length, iterationsCompleted: allResults, stoppedEarly: stopped, capped: capped }; });
   }
 
   /**
@@ -977,6 +985,7 @@ const WorkflowEngine = (function () {
     runSwitch: runSwitch,
     // WORKFLOW-04 LOOP/FOREACH (capability 4)
     runLoop: runLoop,
+    MAX_LOOP_ITERATIONS: MAX_LOOP_ITERATIONS,
     runForEach: runForEach,
     // WORKFLOW-04 PARALLEL (capability 5)
     runParallel: runParallel,

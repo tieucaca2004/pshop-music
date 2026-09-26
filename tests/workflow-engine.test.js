@@ -364,6 +364,63 @@ async function t(name, fn) {
     assert.strictEqual(W.resolveBranch({ a: { condition: { key: 'x', op: 'eq', value: 9 } }, default: { steps: ['D'] } }, c).selected, 'default');
   });
 
+  // ── D. LOOP — trần số vòng (GAP 1) ───────────────────────────────────
+  // Ca có thể treo (Infinity) chạy trong process con, bị giết cứng sau 5 s —
+  // test luôn kết thúc, kể cả trên code chưa sửa.
+  const { spawnSync } = require('child_process');
+  const inChild = (body) => {
+    const r = spawnSync(process.execPath, ['-e', `const W = require(${JSON.stringify(ENGINE)}).WorkflowEngine;
+      const ok = () => Promise.resolve({ status: 'completed' });
+      (async () => { ${body} })().then(v => { console.log(JSON.stringify(v)); process.exit(0); });`], { encoding: 'utf8', timeout: 5000 });
+    if (r.error || r.status !== 0) return { terminated: false, why: r.error ? r.error.code : 'exit ' + r.status };
+    return Object.assign({ terminated: true }, JSON.parse(r.stdout.trim().split('\n').pop()));
+  };
+  const CAP = W.MAX_LOOP_ITERATIONS;
+  await t('[GAP1] trần vòng lặp là hằng số của engine = 100 (tái dùng aiGenerateDaily 100/ngày/uid)', async () => {
+    assert.strictEqual(CAP, 100);
+  });
+  await t('[GAP1] dưới trần / đúng trần: chạy đủ, capped=false', async () => {
+    let n = 0; const exec = () => { n++; return ok(); };
+    let r = await W.runLoop({ steps: [{ type: 'generation' }], maxIterations: 3 }, 'u', 'e', { overrideExecute: exec });
+    assert.strictEqual(n, 3); assert.strictEqual(r.capped, false);
+    n = 0; r = await W.runLoop({ steps: [{ type: 'generation' }], maxIterations: CAP }, 'u', 'e', { overrideExecute: exec });
+    assert.strictEqual(n, CAP); assert.strictEqual(r.iterations, CAP); assert.strictEqual(r.capped, false);
+  });
+  await t('[GAP1] vượt trần (CAP+1 và 2.000.000): dừng đúng ở trần, capped=true, không khoá luồng', async () => {
+    let n = 0; const exec = () => { n++; return ok(); };
+    let r = await W.runLoop({ steps: [{ type: 'generation' }], maxIterations: CAP + 1 }, 'u', 'e', { overrideExecute: exec });
+    assert.strictEqual(n, CAP); assert.strictEqual(r.capped, true);
+    const t0 = Date.now(); n = 0;
+    r = await W.runLoop({ steps: [{ type: 'generation' }], maxIterations: 2e6 }, 'u', 'e', { overrideExecute: exec });
+    assert.strictEqual(n, CAP); assert.strictEqual(r.capped, true); assert.ok(Date.now() - t0 < 1000, 'mất ' + (Date.now() - t0) + ' ms');
+  });
+  await t('[GAP1] maxIterations = Infinity → kết thúc ở trần (process con, giới hạn 5 s)', async () => {
+    const r = inChild(`let n = 0; const out = await W.runLoop({ steps: [{ type: 'generation' }], maxIterations: Infinity }, 'u', 'e', { overrideExecute: () => { n++; return ok(); } }); return { n, capped: out.capped };`);
+    assert.strictEqual(r.terminated, true, 'không kết thúc: ' + r.why); assert.strictEqual(r.n, CAP); assert.strictEqual(r.capped, true);
+  });
+  await t('[GAP1] Infinity + breakOn: dừng ở breakOn trước trần', async () => {
+    const r = inChild(`const c = W.createDecisionContext({ variables: { n: 0 } }); let n = 0;
+      const out = await W.runLoop({ steps: [{ type: 'generation' }], maxIterations: Infinity, breakOn: { key: 'n', op: 'gte', value: 7 } }, 'u', 'e', { decisionContext: c, overrideExecute: () => { n++; c.variables.n++; return ok(); } });
+      return { n };`);
+    assert.strictEqual(r.terminated, true, 'không kết thúc: ' + r.why); assert.strictEqual(r.n, 7);
+  });
+  await t('[GAP1] giá trị không hợp lệ giữ nguyên hành vi cũ và luôn kết thúc (undefined/0/NaN→1, âm/"abc"→0, "3"→3)', async () => {
+    const counts = [];
+    for (const v of [undefined, 0, NaN, -5, 'abc', '3']) {
+      let n = 0;
+      await W.runLoop({ steps: [{ type: 'generation' }], maxIterations: v }, 'u', 'e', { overrideExecute: () => { n++; return ok(); } });
+      counts.push(n);
+    }
+    assert.deepStrictEqual(counts, [1, 1, 1, 0, 0, 3]);
+  });
+  await t('[GAP1] vòng lồng nhau Infinity × Infinity → kết thúc ở CAP × CAP (process con, 5 s)', async () => {
+    const r = inChild(`let inner = 0;
+      const out = await W.runLoop({ steps: [{ type: 'generation' }], maxIterations: Infinity }, 'u', 'e', {
+        overrideExecute: () => W.runLoop({ steps: [{ type: 'generation' }], maxIterations: Infinity }, 'u', 'e', { overrideExecute: () => { inner++; return ok(); } }).then(() => ({ status: 'completed' })) });
+      return { outer: out.iterations, inner };`);
+    assert.strictEqual(r.terminated, true, 'không kết thúc: ' + r.why); assert.strictEqual(r.outer, CAP); assert.strictEqual(r.inner, CAP * CAP);
+  });
+
   console.log('WORKFLOW ENGINE js/ai/workflow-engine.js'); results.forEach(r => console.log(r));
   console.log(process.exitCode ? 'workflow-engine: FAILED' : 'workflow-engine: OK');
   process.exit(process.exitCode || 0);
