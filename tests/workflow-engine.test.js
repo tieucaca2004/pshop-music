@@ -437,6 +437,51 @@ async function t(name, fn) {
     assert.strictEqual(s.settled, 'resolved'); assert.strictEqual(s.v.results[0].eventPayload.x, 2);
   });
 
+  // ── I. TIMEOUT — step.config.timeout trong run() (GAP 3) ─────────────
+  const slow = (ms, status) => () => sleep(ms).then(() => ({ status: status || 'completed' }));
+  await t('[GAP3] step xong trước timeout → completed, chạy tiếp', async () => {
+    const r = await W.run([{ type: 'generation', config: { timeout: 200 } }, { type: 'generation' }], 'u', 'e', { overrideExecute: slow(5) });
+    assert.deepStrictEqual(r.results.map(x => x.status), ['completed', 'completed']); assert.strictEqual(r.stoppedEarly, false);
+  });
+  await t('[GAP3] step quá timeout → failed "Timeout on step", run() không chờ hết executor', async () => {
+    const t0 = Date.now();
+    const r = await W.run([{ type: 'generation', moduleId: 'blog-writer', config: { timeout: 30 } }], 'u', 'e', { overrideExecute: slow(400) });
+    assert.ok(Date.now() - t0 < 300, 'mất ' + (Date.now() - t0) + ' ms');
+    assert.strictEqual(r.results[0].status, 'failed'); assert.match(r.results[0].error, /Timeout on step: blog-writer/);
+    assert.strictEqual(r.stoppedEarly, true); assert.strictEqual(r.reason, 'failed');
+  });
+  await t('[GAP3] lỗi timeout lan đúng qua onStepDone; step kế KHÔNG chạy; kết quả trễ không ghi đè', async () => {
+    let n = 0; const seen = [];
+    const exec = st => { n++; return st.tag === 'slow' ? sleep(150).then(() => ({ status: 'completed', late: true })) : ok(); };
+    const r = await W.run([{ type: 'generation', tag: 'slow', config: { timeout: 20 } }, { type: 'generation' }], 'u', 'e', { overrideExecute: exec, onStepDone: e => seen.push(e.status) });
+    await sleep(200);
+    assert.strictEqual(n, 1); assert.deepStrictEqual(seen, ['failed']);
+    assert.strictEqual(r.results.length, 1); assert.strictEqual(r.results[0].late, undefined);
+  });
+  await t('[GAP3] timeout rồi retry lần 2 kịp giờ → completed, step kế chạy tiếp', async () => {
+    let n = 0;
+    const exec = st => { n++; return st.tag === 'x' && n === 1 ? sleep(200).then(() => ({ status: 'completed' })) : ok(); };
+    const r = await W.run([{ type: 'generation', tag: 'x', config: { timeout: 20, retryCount: 1, retryDelayMs: 1 } }, { type: 'generation' }], 'u', 'e', { overrideExecute: exec });
+    assert.strictEqual(r.stoppedEarly, false); assert.strictEqual(r.results[r.results.length - 1].status, 'completed'); assert.strictEqual(n, 3);
+  });
+  await t('[GAP3] timeout trong LOOP → vòng đó failed, loop dừng (WF-D5)', async () => {
+    let n = 0;
+    const r = await W.runLoop({ steps: [{ type: 'generation', config: { timeout: 20 } }], maxIterations: 5 }, 'u', 'e', { overrideExecute: () => { n++; return sleep(150).then(() => ({ status: 'completed' })); } });
+    assert.strictEqual(n, 1); assert.strictEqual(r.stoppedEarly, true);
+  });
+  await t('[GAP3] timeout trong PARALLEL: nhánh là run() con có step timeout → nhánh failed; options.timeout của runParallel không đổi', async () => {
+    const sub = st => W.run([{ type: 'generation', config: { timeout: st.to } }], 'u', 'e', { overrideExecute: slow(st.ms) })
+      .then(o => ({ status: o.stoppedEarly ? 'failed' : 'completed', error: o.results[0].error }));
+    let r = await W.runParallel([{ to: 20, ms: 200 }, { to: 200, ms: 5 }], 'u', 'e', { overrideExecute: sub });
+    assert.strictEqual(r.results[0].status, 'failed'); assert.match(r.results[0].error, /Timeout on step/); assert.strictEqual(r.results[1].status, 'completed');
+    r = await W.runParallel([{ moduleId: 'p', ms: 200 }], 'u', 'e', { overrideExecute: s => sleep(s.ms).then(() => ({ status: 'completed' })), timeout: 20 });
+    assert.match(r.results[0].error, /Timeout on parallel step: p/);
+  });
+  await t('[GAP3] không khai báo timeout → không áp timeout mặc định (giữ nguyên hành vi)', async () => {
+    const r = await W.run([{ type: 'generation' }], 'u', 'e', { overrideExecute: slow(60) });
+    assert.strictEqual(r.results[0].status, 'completed');
+  });
+
   console.log('WORKFLOW ENGINE js/ai/workflow-engine.js'); results.forEach(r => console.log(r));
   console.log(process.exitCode ? 'workflow-engine: FAILED' : 'workflow-engine: OK');
   process.exit(process.exitCode || 0);

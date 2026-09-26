@@ -290,7 +290,13 @@ const WorkflowEngine = (function () {
       // (hợp đồng Sprint 7; UI chỉ có .then(), reject làm kẹt nút "Chạy Workflow").
       function safeExecute(s) {
         return Promise.resolve()
-          .then(function () { return executionFn(s, userId, userEmail); })
+          .then(function () {
+            // step.config.timeout (ms) — cùng semantics timeout của runParallel/
+            // wait_event: hết giờ → step 'failed' (thôi chờ; việc đang chạy không bị huỷ).
+            // Không khai báo → không áp timeout (giữ hành vi cũ).
+            return pTimeout(Promise.resolve(executionFn(s, userId, userEmail)),
+              s && s.config && s.config.timeout, s && (s.moduleId || s.pluginId || s.type), 'Timeout on step: ');
+          })
           .then(function (r) {
             return (r && typeof r === 'object') ? r : { status: 'failed', error: 'Bước không trả về kết quả.' };
           }, function (err) {
@@ -695,12 +701,14 @@ const WorkflowEngine = (function () {
      REUSE: execute()/run(). Không engine mới. Promise.allSettled.
      ═══════════════════════════════════════════ */
 
-  function pTimeout(promise, ms, tag) {
+  // label: tiền tố thông báo lỗi (mặc định giữ nguyên cho runParallel); run()
+  // dùng lại hàm này cho step.config.timeout với 'Timeout on step: '.
+  function pTimeout(promise, ms, tag, label) {
     if (!ms || ms <= 0) return promise;
     return Promise.race([
       promise,
       new Promise(function (_, rej) {
-        setTimeout(function () { rej(new Error('Timeout on parallel step: ' + (tag || '?'))); }, ms);
+        setTimeout(function () { rej(new Error((label || 'Timeout on parallel step: ') + (tag || '?'))); }, ms);
       })
     ]);
   }
