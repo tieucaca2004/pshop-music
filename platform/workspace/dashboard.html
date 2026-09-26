@@ -2,6 +2,7 @@
 (function(){
 var bid=new URLSearchParams(location.search).get('bid');
 if(!bid){var s=localStorage.getItem('psh_bid');if(s&&s!=='null')bid=s;}
+if(bid&&!/^[A-Za-z0-9_-]+$/.test(bid)){localStorage.removeItem('psh_bid');bid=null;}/* SECURITY: bid chèn vào innerHTML bên dưới — chỉ nhận mã hợp lệ (chống XSS qua ?bid=) */
 if(!bid){window.location='/platform/login/';return;}
 localStorage.setItem('psh_bid',bid);
 document.getElementById('wsBid').textContent=bid.toUpperCase();

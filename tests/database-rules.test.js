@@ -23,6 +23,7 @@ const { ref, get, set, update } = require('firebase/database');
         b1: { users: { t1: { role: 'business_admin' }, v1: { role: 'business_viewer' } }, orders: { o1: { total: 1 } }, products: { x: { name: 'A' } } },
         b2: { users: { t2: { role: 'business_admin' } }, orders: { o2: { total: 2 } } }
       },
+      siteContent: { settings: { phone: '1' }, menu: [{ label: 'Trang chủ' }] },
       'a-tieu': { menu: { m1: { name: 'Hủ tiếu', price: 35000 } } }
     });
   });
@@ -41,7 +42,23 @@ const { ref, get, set, update } = require('firebase/database');
     ['[tenant] admin b1 ghi products b1', () => assertSucceeds(set(ref(db('t1'), 'businesses/b1/products/y'), { name: 'Z' }))],
     ['[tenant] legacy admin (không là member) đọc orders b1 BỊ CHẶN', () => assertFails(get(ref(db('adm'), 'businesses/b1/orders')))],
     // ── Hành vi đã biết cần Founder quyết định (test GHI NHẬN, không phải mục tiêu) ──
-    ['[ĐÃ BIẾT] user đăng nhập KHÔNG có role vẫn đọc được toàn bộ roles', () => assertSucceeds(get(ref(db('stranger'), 'roles')))],
+    // S-04: roles chỉ admin đọc toàn bộ; mỗi user chỉ đọc role của chính mình.
+    ['[S-04] user KHÔNG role đọc toàn bộ roles BỊ CHẶN', () => assertFails(get(ref(db('stranger'), 'roles')))],
+    ['[S-04] editor đọc toàn bộ roles BỊ CHẶN', () => assertFails(get(ref(db('edi'), 'roles')))],
+    ['[S-04] editor đọc role người khác BỊ CHẶN', () => assertFails(get(ref(db('edi'), 'roles/adm')))],
+    ['[S-04] editor đọc role của chính mình', () => assertSucceeds(get(ref(db('edi'), 'roles/edi')))],
+    ['[S-04] admin đọc toàn bộ roles (trang Users)', () => assertSucceeds(get(ref(db('adm'), 'roles')))],
+    // S-06: editor không ghi menu/footer/settings (trang chỉ admin); vẫn ghi được phần editor dùng.
+    ['[S-06] editor ghi siteContent/menu BỊ CHẶN', () => assertFails(set(ref(db('edi'), 'siteContent/menu'), [{ label: 'x' }]))],
+    ['[S-06] editor ghi đè toàn bộ siteContent BỊ CHẶN', () => assertFails(set(ref(db('edi'), 'siteContent'), { x: 1 }))],
+    ['[S-06] editor ghi siteContent/heroSlides', () => assertSucceeds(set(ref(db('edi'), 'siteContent/heroSlides'), []))],
+    ['[S-06] editor ghi siteContent/mediaAssets', () => assertSucceeds(set(ref(db('edi'), 'siteContent/mediaAssets/m1'), { url: 'x' }))],
+    ['[S-06] editor update() nhiều key cho phép (heroSlides+categoryTiles)', () => assertSucceeds(update(ref(db('edi'), 'siteContent'), { heroSlides: [], categoryTiles: [] }))],
+    ['[S-06] editor update() có lẫn key admin (menu) BỊ CHẶN', () => assertFails(update(ref(db('edi'), 'siteContent'), { heroSlides: [], menu: [{ label: 'x' }] }))],
+    ['[S-06] admin ghi siteContent/menu', () => assertSucceeds(set(ref(db('adm'), 'siteContent/menu'), []))],
+    ['[S-06] editor ghi đè key đã có (siteContent/settings) BỊ CHẶN', () => assertFails(set(ref(db('edi'), 'siteContent/settings'), { phone: 'x' }))],
+    ['[S-06] editor backfill key seed CÒN THIẾU (ensureSeeded) được phép', () => assertSucceeds(update(ref(db('edi'), 'siteContent'), { infoBoxRows: [{ a: 1 }] }))],
+    ['[S-06] chưa đăng nhập ghi siteContent BỊ CHẶN', () => assertFails(set(ref(db(null), 'siteContent/heroSlides'), []))],
     ['[BLOCKER deploy] a-tieu/menu: public KHÔNG đọc được (rules không có node a-tieu → $other deny)', () => assertFails(get(ref(db(null), 'a-tieu/menu')))],
     ['[BLOCKER deploy] a-tieu/menu: admin KHÔNG ghi được', () => assertFails(set(ref(db('adm'), 'a-tieu/menu/m2'), { name: 'x' }))]
   ];

@@ -159,15 +159,20 @@
     },
     "siteContent": {
       ".read": true,
-      ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')"
+      ".write": "(auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin') || (!data.exists() && auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor'))",
+      "$seedKey": { ".write": "!data.exists() && auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')" },
+      "heroSlides": { ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')" },
+      "categoryTiles": { ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')" },
+      "mediaAssets": { ".write": "auth != null && (root.child('roles').child(auth.uid).child('role').val() === 'admin' || root.child('roles').child(auth.uid).child('role').val() === 'editor')" }
     },
     "seoSettings": {
       ".read": true,
       ".write": "auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin'"
     },
     "roles": {
-      ".read": "auth != null || !data.exists()",
+      ".read": "!data.exists() || (auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin')",
       "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
         ".write": "(auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin') || (auth != null && auth.uid === $uid && !root.child('roles').exists())",
         ".validate": "newData.hasChildren(['role']) && (newData.child('role').val() === 'admin' || newData.child('role').val() === 'editor' || newData.child('role').val() === 'agent')"
       }

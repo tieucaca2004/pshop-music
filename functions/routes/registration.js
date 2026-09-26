@@ -279,13 +279,9 @@ async function handle(req, res, helpers) {
       return sendError(res, 'PROVISIONING_FAILED', 'Khởi tạo doanh nghiệp thất bại: ' + err.message);
     }
 
-    // Create legacy roles entry for backward compatibility
-    await admin.database().ref('roles/' + uid).set({
-      email: body.email,
-      name: body.displayName || 'Owner',
-      role: 'admin',
-      createdAt: admin.database.ServerValue.TIMESTAMP
-    });
+    // SECURITY: KHÔNG ghi roles/<uid> legacy — node roles là quyền CMS
+    // pshopmusic (Database Rules cấp write products/categories/roles cho
+    // role 'admin'). Tenant chỉ có custom claims business_admin ở trên.
 
     // ─── Send verification email ──────────────────────────────────────
     // Uses Firebase Auth's built-in email system via the REST API.
@@ -351,6 +347,14 @@ async function handle(req, res, helpers) {
   // ─── Email Verification (mock) ─────────────────────────────────────
   // POST /v1/register/verify-email
   if (path === '/v1/register/verify-email' && req.method === 'POST') {
+    // SECURITY: route mock — chỉ super_admin (xác thực qua ID token).
+    const authz = (req.get('Authorization') || '').match(/^Bearer (.+)$/);
+    if (!authz) return sendError(res, 'UNAUTHENTICATED', 'Thiếu token.');
+    let caller;
+    try { caller = await admin.auth().verifyIdToken(authz[1]); } catch (e) { return sendError(res, 'UNAUTHENTICATED', 'Token không hợp lệ.'); }
+    const isSuper = (caller.roles && caller.roles.super_admin) ||
+      (await admin.database().ref('superAdmins/' + caller.uid).once('value')).exists();
+    if (!isSuper) return sendError(res, 'FORBIDDEN', 'Chỉ super_admin.');
     const body = req.body || {};
     if (!body.uid) return sendError(res, 'INVALID_REQUEST', 'uid là bắt buộc.');
 

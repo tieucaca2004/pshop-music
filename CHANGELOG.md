@@ -2,6 +2,19 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Security Hardening Sprint (2026-09-26) — ⏳ CHỜ FOUNDER DEPLOY RULES/FUNCTIONS + ACCEPTANCE TEST
+
+**Đã tái hiện trên Emulator trước khi sửa, sửa tối thiểu, test lại ALLOW/DENY:**
+- S-01 CRITICAL — `POST /v1/register` (không cần đăng nhập) ghi `roles/<uid>={role:'admin'}` → tài khoản vừa đăng ký ghi được `products` (HTTP 200). Sửa: áp dụng `docs/security/registration-security.patch` (bỏ ghi roles legacy; tenant vẫn có claim `business_admin`). Sau sửa: roles null, ghi products 401.
+- S-02 HIGH — `POST /v1/register/verify-email` không kiểm tra token, ai cũng đánh dấu email người khác đã xác thực. Sửa: cùng patch — chỉ super_admin (ID token + `superAdmins/<uid>`). Không có client nào gọi route này.
+- S-04 MEDIUM — mọi user đăng nhập (kể cả tenant, không role) đọc toàn bộ `roles` (email + quyền). Sửa `database.rules.json`: đọc toàn bộ chỉ admin (hoặc khi roles rỗng — bootstrap), mỗi user đọc `roles/<mình>`.
+- S-06 MEDIUM — editor ghi thẳng `siteContent/menu|footer|settings` và ghi đè TOÀN BỘ `siteContent` qua Rules (UI chỉ ẩn trang). Sửa Rules: siteContent chỉ admin; editor ghi `heroSlides`, `categoryTiles`, `mediaAssets` (các trang editor dùng) và chỉ được TẠO key seed còn thiếu (`ensureSeeded`), không ghi đè key đã có. Lần sửa đầu làm editor lỗi trang Slider khi thiếu key seed → phát hiện qua regression, sửa bằng rule `$seedKey`, không đụng `js/db.js`.
+- S-07 — Dashboard/Layout Workspace: `?bid=` chèn thẳng vào `innerHTML` → reflected XSS (alert chạy, 8 thẻ img bị chèn). Sửa `platform/workspace/dashboard.html`, `layout.html`: chỉ nhận bid `[A-Za-z0-9_-]`. Truy cập chéo tenant qua `?bid=B`: dashboard không đọc dữ liệu tenant; Rules chặn A đọc info/orders/users/customers và ghi products của B (401). `products/categories/cms` tenant là `.read:true` (catalog công khai theo thiết kế). Patch `tenant-dashboard-bid.patch` (lấy bid từ claim) là UX, CHƯA áp dụng.
+
+**Không sửa (cần Founder quyết):** S-03 9 node chưa có Rules đang bị `$other` CHẶN HẾT (không lộ dữ liệu, chỉ tính năng không chạy); mở `apiAsyncJobs` cho client sẽ cho phép kích hoạt worker AI trả phí → không đoán rule. S-05 `businessMembers` hiện bị chặn toàn bộ (không lộ); tìm doanh nghiệp của user cần index theo uid hoặc dùng claim `businessId` → quyết định kiến trúc. S-08 Facebook Page token (5 file script ở `2a649b0`, đã xoá khỏi HEAD) và `n8n-data/config`, `database.sqlite` trong lịch sử Git public → Founder thu hồi/đổi; không rewrite history. Khớp "EAA…" trong HEAD là dương tính giả (ảnh base64 Lighthouse, thư viện, lockfile). Tenant đã đăng ký TRƯỚC fix vẫn còn `roles/<uid>=admin` trên Production → cần Founder duyệt dọn dữ liệu.
+
+**Kiểm thử (Emulator):** `tests/registration-security.test.js` 9/9, `tests/database-rules.test.js` 28/28, storage-rules OK, `tests/e2e/t_sec_rules.js` 18/18, `t_sec_tenant.js` 11/11, `t_sec_editor.js` 6/6; regression login/logout, sửa Banner/Video/Slider/Menu/Footer, Danh mục/Slider/Menu/Footer → public, Xoá 4 module, Users thu hồi, Blog/Footer 5 trang, xung đột, cảnh báo chưa lưu: không regression. `npm test` 10/10. **CHƯA:** deploy Rules/Functions (Founder tự deploy), Production.
+
 ## Full System Deep Audit — Final Round (2026-09-26) — ⏳ CHỜ DEPLOY + FOUNDER ACCEPTANCE TEST
 
 - `8f1899c` F-01: blog.html / blog-post.html / videos.html chưa từng nạp js/db.js → menu/footer/cài đặt sửa trong CMS không hiện trên 3 trang này. Thêm 1 thẻ script; 5 trang public hiện footer CMS.
