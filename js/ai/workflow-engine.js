@@ -241,6 +241,10 @@ const WorkflowEngine = (function () {
       var maxRetries = (step.config && step.config.retryCount) || 0;
       var fallbackProvider = step.config && step.config.fallbackProvider;
       var requireApproval = step.config && step.config.requireApproval;
+      // Cờ fallback thuộc về LƯỢT chạy step này — không ghi vào object step của
+      // caller (trước đây step._fallbackAttempted làm lần chạy sau/vòng lặp sau
+      // bỏ qua fallback).
+      var fallbackAttempted = false;
 
       // WORKFLOW-04 WAIT EVENT (capability 6): step wait_event → pause run(),
       // chờ resumeExecution() (event) rồi mới tiếp tục step kế. Không polling.
@@ -312,8 +316,8 @@ const WorkflowEngine = (function () {
           }
 
           // Provider fallback
-          if (result.status === 'failed' && fallbackProvider && !step._fallbackAttempted) {
-            step._fallbackAttempted = true;
+          if (result.status === 'failed' && fallbackProvider && !fallbackAttempted) {
+            fallbackAttempted = true;
             var fallbackStep = Object.assign({}, step, {
               config: Object.assign({}, step.config, { fallbackProvider: null }),
               inputParams: Object.assign({}, step.inputParams, { _fallbackProvider: fallbackProvider })

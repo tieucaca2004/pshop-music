@@ -280,6 +280,23 @@ async function t(name, fn) {
     const rb = await b; assert.strictEqual(rb.settled, 'resolved'); assert.strictEqual(rb.v.eventPayload.v, 1);
   });
 
+  // ── J. RETRY/FALLBACK — không ghi đè định nghĩa step (WF-D4) ─────────
+  const fbExec = calls => st => { const p = st.inputParams && st.inputParams._fallbackProvider; calls.push(p || 'primary'); return ok(p ? 'completed' : 'failed'); };
+  await t('[WF-D4] cùng định nghĩa chạy 2 lần → lần nào cũng thử fallback; step gốc không bị ghi đè', async () => {
+    const def = [{ type: 'generation', config: { fallbackProvider: 'p2' } }];
+    const c1 = [], c2 = [];
+    const r1 = await W.run(def, 'u', 'e', { overrideExecute: fbExec(c1) });
+    const r2 = await W.run(def, 'u', 'e', { overrideExecute: fbExec(c2) });
+    assert.deepStrictEqual(c1, ['primary', 'p2']); assert.deepStrictEqual(c2, ['primary', 'p2']);
+    assert.strictEqual(r1.stoppedEarly, false); assert.strictEqual(r2.stoppedEarly, false);
+    assert.strictEqual('_fallbackAttempted' in def[0], false);
+  });
+  await t('[WF-D4] runLoop dùng lại step: mọi vòng đều thử fallback', async () => {
+    const calls = [];
+    await W.runLoop({ steps: [{ type: 'generation', config: { fallbackProvider: 'p2' } }], maxIterations: 2 }, 'u', 'e', { overrideExecute: fbExec(calls) });
+    assert.deepStrictEqual(calls, ['primary', 'p2', 'primary', 'p2']);
+  });
+
   console.log('WORKFLOW ENGINE js/ai/workflow-engine.js'); results.forEach(r => console.log(r));
   console.log(process.exitCode ? 'workflow-engine: FAILED' : 'workflow-engine: OK');
   process.exit(process.exitCode || 0);
