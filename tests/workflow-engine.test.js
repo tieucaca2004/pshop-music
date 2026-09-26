@@ -482,6 +482,30 @@ async function t(name, fn) {
     assert.strictEqual(r.results[0].status, 'completed');
   });
 
+  // ── E. FOREACH — không truyền buildIterationContext / mảng rỗng (GAP 4) ──
+  await t('[GAP4] mảng rỗng → kết quả rỗng ngay, cùng shape (stoppedEarly:false), không chạy step', async () => {
+    let n = 0;
+    const r = await W.runForEach([], { steps: [{ type: 'generation' }] }, 'u', 'e', { overrideExecute: () => { n++; return ok(); } });
+    assert.deepStrictEqual(r, { itemsProcessed: 0, results: [], stoppedEarly: false }); assert.strictEqual(n, 0);
+  });
+  await t('[GAP4] không truyền buildIterationContext → MỖI item chạy steps với context cha (như runLoop)', async () => {
+    const parent = W.createDecisionContext({ variables: { on: true } }); let n = 0;
+    const r = await W.runForEach([1, 2, 3], { steps: [{ type: 'generation', condition: { key: 'on', op: 'eq', value: true } }] }, 'u', 'e',
+      { decisionContext: parent, overrideExecute: () => { n++; return ok(); } });
+    assert.strictEqual(n, 3); assert.strictEqual(r.itemsProcessed, 3); assert.ok(r.results.every(x => x.skipped === false));
+  });
+  await t('[GAP4] builder trả null / {skip:true} → vẫn bỏ qua item (hợp đồng skip giữ nguyên)', async () => {
+    let n = 0;
+    const r = await W.runForEach([1, 2, 3], { steps: [{ type: 'generation' }] }, 'u', 'e',
+      { overrideExecute: () => { n++; return ok(); }, buildIterationContext: item => item === 1 ? null : item === 2 ? { skip: true } : W.createDecisionContext({}) });
+    assert.strictEqual(n, 1); assert.deepStrictEqual(r.results.map(x => x.skipped), [true, true, false]);
+  });
+  await t('[GAP4] không builder + item lỗi → vẫn dừng toàn chuỗi (WF-D5)', async () => {
+    let n = 0;
+    const r = await W.runForEach([1, 2, 3], { steps: [{ type: 'generation' }] }, 'u', 'e', { overrideExecute: () => { n++; return ok('failed'); } });
+    assert.strictEqual(n, 1); assert.strictEqual(r.stoppedEarly, true);
+  });
+
   console.log('WORKFLOW ENGINE js/ai/workflow-engine.js'); results.forEach(r => console.log(r));
   console.log(process.exitCode ? 'workflow-engine: FAILED' : 'workflow-engine: OK');
   process.exit(process.exitCode || 0);

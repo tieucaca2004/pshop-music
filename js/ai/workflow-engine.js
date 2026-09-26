@@ -667,7 +667,7 @@ const WorkflowEngine = (function () {
   function runForEach(items, cfg, userId, userEmail, options) {
     options = options || {};
     if (!Array.isArray(items) || !items.length) {
-      return Promise.resolve({ itemsProcessed: 0, results: [] });
+      return Promise.resolve({ itemsProcessed: 0, results: [], stoppedEarly: false });
     }
     var steps = (cfg && cfg.steps) || [];
     var ctx = options.decisionContext || null;
@@ -677,9 +677,12 @@ const WorkflowEngine = (function () {
     items.forEach(function (item, idx) {
       chain = chain.then(function () {
         if (stopped) return;
-        var itemCtx = options.buildIterationContext ? options.buildIterationContext(item, idx, ctx) : null;
-        // continue: nếu itemCtx === null hoặc {skip:true} → bỏ qua item này
-        if (!itemCtx || itemCtx.skip) {
+        var hasBuilder = typeof options.buildIterationContext === 'function';
+        var itemCtx = hasBuilder ? options.buildIterationContext(item, idx, ctx) : ctx;
+        // continue: builder trả null hoặc {skip:true} → bỏ qua item này. Không
+        // truyền builder → chạy item với context cha (như runLoop), KHÔNG bỏ qua
+        // (trước đây mọi item bị đánh skipped, steps không bao giờ chạy).
+        if (hasBuilder && (!itemCtx || itemCtx.skip)) {
           allResults.push({ index: idx, skipped: true });
           return Promise.resolve();
         }
