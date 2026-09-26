@@ -2,6 +2,13 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Save Reliability + Unsaved Data Protection đợt 7 (2026-09-26) — ⏳ CHỜ DEPLOY + FOUNDER ACCEPTANCE TEST
+
+- `81e7e30` Phát hiện xung đột khi Lưu (SP/Blog/Banner/Video): chụp bản ghi lúc mở form, so với DB lúc Lưu — khác → KHÔNG ghi, hỏi Founder (Giữ form [mặc định] / Tải lại / Ghi đè). Client-only, KHÔNG thêm field version/schema, KHÔNG đổi Rules. AI Assist "Áp dụng" chụp lại bản ghi (không báo xung đột giả).
+- `81e7e30` Cảnh báo rời trang khi form có thay đổi chưa lưu (beforeunload, theo từng form; sạch khi mở form / Lưu thành công / Hủy).
+- Test (emulator): xung đột 4 module + 3 lựa chọn; 9 ca rời trang; Lưu thất bại/Giữ form giữ dữ liệu; regression 20 vòng SP/Blog, stale-edit đợt 6, deep link Agent, nháp AI, AI SEO, 10 vòng Media, cách ly field, Banner/Video/Slider/Menu/Footer: đạt; `npm test` 10/10.
+- Giới hạn: trình duyệt hiển thị câu cảnh báo rời trang mặc định (không tuỳ biến nội dung); trang Menu/Footer/Slider/Cài đặt/Danh mục chưa có cảnh báo chưa lưu và chưa có phát hiện xung đột (đã có chống ghi đè theo key ở đợt 5).
+
 ## Product + Content Reliability đợt 6 (2026-09-25) — ⏳ CHỜ DEPLOY + FOUNDER ACCEPTANCE TEST
 
 - `384e7ca` Nút "Sửa" (Sản phẩm/Blog/Banner/Video) nạp bản ghi từ danh sách tải lúc mở trang → bản ghi đã bị sửa ở tab khác/AI/Agent: form hiện giá trị cũ, bấm Lưu ghi đè thay đổi mới (tái hiện: price/SEO mới bị trả về cũ). Sửa: đọc lại DB trước khi điền form; deep link Agent áp giá trị sau khi form điền xong.
