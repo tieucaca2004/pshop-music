@@ -218,6 +218,37 @@ async function t(name, fn) {
     assert.match(r.results[0].error, /GenerationService not available/);
   });
 
+  // ── H. ERROR — run() không bao giờ reject thô (WF-D2) ─────────────────
+  await t('[WF-D2] executor reject → run() resolve, step failed kèm lỗi, dừng chuỗi', async () => {
+    const s = await settleWithin(W.run([{ type: 'generation' }, { type: 'generation' }], 'u', 'e', { overrideExecute: () => Promise.reject(new Error('network down')) }), 500);
+    assert.strictEqual(s.settled, 'resolved');
+    assert.strictEqual(s.v.results[0].status, 'failed'); assert.strictEqual(s.v.results[0].error, 'network down');
+    assert.strictEqual(s.v.stoppedEarly, true); assert.strictEqual(s.v.results.length, 1);
+  });
+  await t('[WF-D2] executor throw đồng bộ / trả rỗng → failed, không reject', async () => {
+    let s = await settleWithin(W.run([{ type: 'generation' }], 'u', 'e', { overrideExecute: () => { throw new Error('sync boom'); } }), 500);
+    assert.strictEqual(s.settled, 'resolved'); assert.strictEqual(s.v.results[0].error, 'sync boom');
+    s = await settleWithin(W.run([{ type: 'generation' }], 'u', 'e', { overrideExecute: () => Promise.resolve(undefined) }), 500);
+    assert.strictEqual(s.settled, 'resolved'); assert.strictEqual(s.v.results[0].status, 'failed');
+  });
+  await t('[WF-D2] executor reject vẫn được retry', async () => {
+    let n = 0;
+    const r = await W.run([{ type: 'generation', config: { retryCount: 1, retryDelayMs: 1 } }], 'u', 'e', { overrideExecute: () => { n++; return n === 1 ? Promise.reject(new Error('tạm lỗi')) : ok(); } });
+    assert.strictEqual(n, 2); assert.strictEqual(r.stoppedEarly, false);
+  });
+  await t('[WF-D2] fallback reject → failed reason fallback_failed, không reject', async () => {
+    const s = await settleWithin(W.run([{ type: 'generation', config: { fallbackProvider: 'p2' } }], 'u', 'e', {
+      overrideExecute: st => st.inputParams && st.inputParams._fallbackProvider ? Promise.reject(new Error('p2 lỗi')) : ok('failed')
+    }), 500);
+    assert.strictEqual(s.settled, 'resolved'); assert.strictEqual(s.v.reason, 'fallback_failed'); assert.strictEqual(s.v.results[0].error, 'p2 lỗi');
+  });
+  await t('[WF-D2] trang Workflow: kiểm quyền lỗi mạng → step failed + onStepDone, nút không kẹt', async () => {
+    governed({ permReject: true });
+    const seen = [];
+    const s = await settleWithin(W.run([{ pluginId: 'a', inputParams: {} }], 'u', 'e', entry => seen.push(entry.status)), 500);
+    assert.strictEqual(s.settled, 'resolved'); assert.strictEqual(s.v.results[0].status, 'failed'); assert.deepStrictEqual(seen, ['failed']);
+  });
+
   console.log('WORKFLOW ENGINE js/ai/workflow-engine.js'); results.forEach(r => console.log(r));
   console.log(process.exitCode ? 'workflow-engine: FAILED' : 'workflow-engine: OK');
   process.exit(process.exitCode || 0);

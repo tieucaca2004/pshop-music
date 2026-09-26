@@ -276,8 +276,21 @@ const WorkflowEngine = (function () {
         if (pol.providerId) step = Object.assign({}, step, { config: Object.assign({}, step.config, { providerId: pol.providerId }) });
       }
 
+      // Lỗi của executor (reject, throw đồng bộ, trả rỗng) → StepResult 'failed'
+      // để retry/fallback/dừng xử lý như mọi step lỗi — run() KHÔNG reject thô
+      // (hợp đồng Sprint 7; UI chỉ có .then(), reject làm kẹt nút "Chạy Workflow").
+      function safeExecute(s) {
+        return Promise.resolve()
+          .then(function () { return executionFn(s, userId, userEmail); })
+          .then(function (r) {
+            return (r && typeof r === 'object') ? r : { status: 'failed', error: 'Bước không trả về kết quả.' };
+          }, function (err) {
+            return { pluginId: s.pluginId || s.moduleId, status: 'failed', error: (err && err.message) || String(err) };
+          });
+      }
+
       function attemptExecution() {
-        return executionFn(step, userId, userEmail).then(function (result) {
+        return safeExecute(step).then(function (result) {
           result.stepIndex = index;
           results.push(result);
 
@@ -305,7 +318,7 @@ const WorkflowEngine = (function () {
               config: Object.assign({}, step.config, { fallbackProvider: null }),
               inputParams: Object.assign({}, step.inputParams, { _fallbackProvider: fallbackProvider })
             });
-            return executionFn(fallbackStep, userId, userEmail).then(function (fallbackResult) {
+            return safeExecute(fallbackStep).then(function (fallbackResult) {
               fallbackResult.stepIndex = index;
               results[results.length - 1] = fallbackResult;
               if (fallbackResult.status !== 'completed') {
