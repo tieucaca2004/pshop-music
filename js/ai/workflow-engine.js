@@ -618,10 +618,12 @@ const WorkflowEngine = (function () {
     var ctx = options.decisionContext || null;
     var allResults = [];
     var chain = Promise.resolve();
+    var stopped = false; // 1 vòng dừng sớm (lỗi/từ chối/chờ duyệt) → không chạy các vòng sau
     var i;
     for (i = 0; i < max; i++) {
       (function (iter) {
         chain = chain.then(function () {
+          if (stopped) return;
           // break condition mỗi iteration (trước khi chạy lại)
           if (cfg && cfg.breakOn && ctx) {
             try {
@@ -632,13 +634,13 @@ const WorkflowEngine = (function () {
           var iterOpts = Object.assign({}, options, { decisionContext: iterCtx || ctx });
           return run(steps, userId, userEmail, iterOpts).then(function (out) {
             allResults.push({ iteration: iter, results: out.results });
-            if (out.stoppedEarly) return;
+            if (out.stoppedEarly) { stopped = true; return; }
             return out;
           });
         });
       })(i);
     }
-    return chain.then(function () { return { iterations: allResults.length, iterationsCompleted: allResults }; });
+    return chain.then(function () { return { iterations: allResults.length, iterationsCompleted: allResults, stoppedEarly: stopped }; });
   }
 
   /**
@@ -655,8 +657,10 @@ const WorkflowEngine = (function () {
     var ctx = options.decisionContext || null;
     var allResults = [];
     var chain = Promise.resolve();
+    var stopped = false; // item dừng sớm → break toàn chuỗi (các item sau không chạy)
     items.forEach(function (item, idx) {
       chain = chain.then(function () {
+        if (stopped) return;
         var itemCtx = options.buildIterationContext ? options.buildIterationContext(item, idx, ctx) : null;
         // continue: nếu itemCtx === null hoặc {skip:true} → bỏ qua item này
         if (!itemCtx || itemCtx.skip) {
@@ -666,13 +670,13 @@ const WorkflowEngine = (function () {
         var iterOpts = Object.assign({}, options, { decisionContext: itemCtx });
         return run(steps, userId, userEmail, iterOpts).then(function (out) {
           allResults.push({ index: idx, skipped: false, results: out.results });
-          if (out.stoppedEarly) return; // break toàn chuỗi
+          if (out.stoppedEarly) { stopped = true; return; } // break toàn chuỗi
           return out;
         });
       });
     });
     return chain.then(function () {
-      return { itemsProcessed: allResults.filter(function (r) { return !r.skipped; }).length, results: allResults };
+      return { itemsProcessed: allResults.filter(function (r) { return !r.skipped; }).length, results: allResults, stoppedEarly: stopped };
     });
   }
 

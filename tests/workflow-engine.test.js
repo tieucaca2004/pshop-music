@@ -297,6 +297,45 @@ async function t(name, fn) {
     assert.deepStrictEqual(calls, ['primary', 'p2', 'primary', 'p2']);
   });
 
+  // ── D/E. LOOP / FOREACH ──────────────────────────────────────────────
+  await t('LOOP: chạy đủ maxIterations khi mọi vòng thành công', async () => {
+    let n = 0;
+    const r = await W.runLoop({ steps: [{ type: 'generation' }], maxIterations: 3 }, 'u', 'e', { overrideExecute: () => { n++; return ok(); } });
+    assert.strictEqual(n, 3); assert.strictEqual(r.iterations, 3);
+  });
+  await t('LOOP: breakOn dừng khi điều kiện đúng', async () => {
+    const c = W.createDecisionContext({ variables: { n: 0 } }); let n = 0;
+    await W.runLoop({ steps: [{ type: 'generation' }], maxIterations: 10, breakOn: { key: 'n', op: 'gte', value: 2 } }, 'u', 'e',
+      { decisionContext: c, overrideExecute: () => { n++; c.variables.n++; return ok(); } });
+    assert.strictEqual(n, 2);
+  });
+  await t('FOREACH: bỏ qua item (skip) rồi chạy item sau; danh sách rỗng', async () => {
+    let n = 0;
+    const r = await W.runForEach([1, 2, 3], { steps: [{ type: 'generation' }] }, 'u', 'e', { overrideExecute: () => { n++; return ok(); },
+      buildIterationContext: item => item === 2 ? { skip: true } : W.createDecisionContext({ variables: { item } }) });
+    assert.strictEqual(n, 2); assert.strictEqual(r.itemsProcessed, 2); assert.strictEqual(r.results[1].skipped, true);
+    assert.strictEqual((await W.runForEach([], { steps: [] }, 'u', 'e', {})).itemsProcessed, 0);
+  });
+  await t('[WF-D5] LOOP: 1 vòng lỗi → dừng, không chạy các vòng sau (không gọi AI lỗi N lần)', async () => {
+    let n = 0;
+    const r = await W.runLoop({ steps: [{ type: 'generation' }], maxIterations: 5 }, 'u', 'e', { overrideExecute: () => { n++; return ok('failed'); } });
+    assert.strictEqual(n, 1); assert.strictEqual(r.iterations, 1); assert.strictEqual(r.stoppedEarly, true);
+  });
+  await t('[WF-D5] FOREACH: item lỗi → dừng toàn chuỗi (đúng comment "break toàn chuỗi")', async () => {
+    let n = 0;
+    const r = await W.runForEach([1, 2, 3], { steps: [{ type: 'generation' }] }, 'u', 'e', { overrideExecute: () => { n++; return ok(n === 1 ? 'failed' : 'completed'); },
+      buildIterationContext: item => W.createDecisionContext({ variables: { item } }) });
+    assert.strictEqual(n, 1); assert.strictEqual(r.results.length, 1); assert.strictEqual(r.stoppedEarly, true);
+  });
+  await t('[WF-D5] FOREACH: chờ duyệt (awaiting_approval) cũng dừng chuỗi; chạy trọn → stoppedEarly=false', async () => {
+    let n = 0;
+    const build = item => W.createDecisionContext({ variables: { item } });
+    let r = await W.runForEach([1, 2], { steps: [{ type: 'generation', policy: { requireApproval: true } }] }, 'u', 'e', { overrideExecute: () => { n++; return ok(); }, buildIterationContext: build });
+    assert.strictEqual(r.results.length, 1); assert.strictEqual(r.stoppedEarly, true); assert.strictEqual(n, 0);
+    r = await W.runForEach([1, 2], { steps: [{ type: 'generation' }] }, 'u', 'e', { overrideExecute: () => ok(), buildIterationContext: build });
+    assert.strictEqual(r.itemsProcessed, 2); assert.strictEqual(r.stoppedEarly, false);
+  });
+
   console.log('WORKFLOW ENGINE js/ai/workflow-engine.js'); results.forEach(r => console.log(r));
   console.log(process.exitCode ? 'workflow-engine: FAILED' : 'workflow-engine: OK');
   process.exit(process.exitCode || 0);
