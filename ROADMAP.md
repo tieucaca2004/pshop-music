@@ -20,12 +20,27 @@ Chi tiết commit/kiểm thử: `CHANGELOG.md` mục "Master Recovery". Nhãn: C
 | CSS cache / SEO domain / sitemap | CODE FIXED |
 | OpenAI provider lỗi rõ | CODE FIXED; Claude/Gemini/DeepSeek/Kimi = STUB; Seedance = BROKEN (không có seedanceProxy) |
 | database.rules.json deploy | BLOCKED — thiếu rule node `a-tieu` (deploy sẽ chặn menu A Tiểu, test emulator) |
-| aiGenerateWorker / WORKFLOW-01/02 | CODE PRESENT — deploy NOT VERIFIED |
+| aiGenerateWorker / WORKFLOW-01/02 | CODE PRESENT — deploy NOT VERIFIED; Cancel/Pause CODE FIXED `b62bb1f` (chờ deploy Functions); trigger client bị Rules chặn (`apiAsyncJobs`, S-03) |
+| Trang Workflow Automation (`admin/ai/workflow.html`) | CODE FIXED `82bc2a2` (hỏng từ `f2d8e75`) — chờ deploy Netlify + Founder Acceptance; sinh AI end-to-end BLOCKED (mạng) |
 | Facebook Real Mode V4/V5 | BLOCKED — Meta App thật |
 | Video / Voice / Subtitle AI | NOT IMPLEMENTED (`functions/routes/aiGenerate.js` STUB_ROUTES) |
 | 10 trang `platform/workspace/*.html` rỗng 0 byte (có link trong sidebar Workspace) | NOT IMPLEMENTED |
 | RBAC `canAccess()` API | 4/34 route dùng canAccess; các route còn lại có kiểm tra role riêng |
 | OpenClaw | NOT CONNECTED |
+
+## Ý tưởng phát sinh — Workflow Automation audit 2026-09-26 (chỉ ghi nhận, chưa làm)
+
+Chi tiết + bằng chứng: `docs/workflow/WORKFLOW-AUTOMATION-GAP-REPORT.md`.
+- WF-E1: `runLoop` chưa có trần `maxIterations` (2.000.000 vòng khoá luồng 3,6 s; `Infinity` treo) — cần chọn trần (đề xuất 1.000).
+- WF-E2: event phát trước khi workflow chờ bị mất — cần quyết có buffer (TTL?) hay không.
+- WF-E3: wait-state/Decision Context/định nghĩa workflow chỉ trong bộ nhớ trình duyệt — lưu bền = đổi Database Structure.
+- WF-E4: server `workflow:auto` không có đường resume sau PAUSED/restart (`onValueCreated` chỉ 1 lần) — cần trigger `onValueUpdated` hoặc API resume.
+- WF-E5: không idempotency key cho trigger `workflow:auto` (mỗi lần lưu SP published = 1 job mới).
+- WF-C1: `run()` bỏ qua `config.timeout` — cần quyết semantics (huỷ Job AI hay chỉ bỏ chờ).
+- WF-C2: `runForEach` không có context mặc định (không truyền `buildIterationContext` → 0 item chạy).
+- WF-C3: job `workflow:auto` giữ `status:'queued'` dù COMPLETED; log step `required:false` mất lỗi gốc; log SUCCESS không ghi draftId; `WAITING` không dùng.
+- WF-S1: `GenerationService.generate()` gọi thẳng `AIJobQueue.enqueue()` (bỏ qua PermissionService/PluginManager) — hiện không trang nào nạp; không được nạp file này khi chưa sửa.
+- WF-S2: role `agent` (`jobs.view`) đọc được mọi `apiAsyncJobs` theo id qua `GET /v1/jobs/:id`.
 
 ## Ý tưởng phát sinh (Master Recovery) — admin/atieu-menu.html chưa có auth guard
 

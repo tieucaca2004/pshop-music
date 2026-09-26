@@ -52,10 +52,10 @@ Founder đổi workflow bằng cách ghi node Firebase `workflowConfigs/{name}`:
 {
   "id": "product-auto",
   "steps": [
-    { "type": "generation", "moduleId": "product-content" },
-    { "type": "generation", "moduleId": "blog-post" },
-    { "type": "generation", "moduleId": "facebook-post", "config": { "retryCount": 2, "required": false } },
-    { "type": "generation", "moduleId": "banner" }
+    { "type": "generation", "moduleId": "product-description-writer" },
+    { "type": "generation", "moduleId": "blog-writer" },
+    { "type": "generation", "moduleId": "facebook-post-generator", "config": { "retryCount": 2, "required": false } },
+    { "type": "generation", "moduleId": "banner-generator" }
   ]
 }
 ```

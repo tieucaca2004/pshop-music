@@ -5,6 +5,8 @@
 > - UI: Chromium + Firebase Emulator (Auth/Database), đăng nhập admin thật, bấm nút thật trên `admin/ai/workflow.html`.
 > - Server: gọi handler THẬT `aiGenerateWorker` (`functions/index.js`) trên Database Emulator; CHỈ thay `runGeneration` (lời gọi AI trả phí) bằng stub điều khiển được thành công/thất bại.
 > - Không có mạng tới Production/AI Provider → mọi lượt sinh nội dung AI thật: BLOCKED.
+>
+> **Cập nhật sau sửa (xem mục 8):** 7 lỗi D đã sửa trên branch `feature/cms-ai-sprint2`, CHƯA deploy, CHƯA Founder Acceptance.
 
 Phân loại: **A** PASS · **B** có nhưng thiếu test · **C** hiện thực một phần · **D** HỎNG · **E** THIẾU · **F** cần Founder quyết.
 
@@ -12,13 +14,13 @@ Phân loại: **A** PASS · **B** có nhưng thiếu test · **C** hiện thực
 
 | ID | Hạng mục | Loại | Mức | Xử lý đợt này |
 |---|---|---|---|---|
-| WF-D1 | Trang Workflow Automation không chạy được bất kỳ workflow nào | D | **CRITICAL** (tính năng Founder dùng) | Sửa |
-| WF-D2 | `run()` bị reject thô khi executor lỗi → nút "CHẠY WORKFLOW" kẹt | D | MEDIUM | Sửa |
-| WF-D3 | `cancelWaitEvent()` không giải phóng workflow đang chờ → treo vĩnh viễn; registry cũ sau timeout | D | MEDIUM | Sửa |
-| WF-D4 | Fallback provider ghi đè `step._fallbackAttempted` vào định nghĩa step → chỉ chạy được 1 lần | D | MEDIUM | Sửa |
-| WF-D5 | `runLoop`/`runForEach` không dừng khi 1 vòng lỗi (comment code ghi "break toàn chuỗi") | D | MEDIUM | Sửa |
-| WF-D6 | Decision: toán tử lạ → `true` (fail-open); `op` không phải chuỗi → throw; `resolveBranch` chọn nhánh có điều kiện SAI khi không nhánh nào khớp | D | MEDIUM/LOW | Sửa |
-| WF-D7 | Server `workflow:auto`: Cancel/Pause bị chính worker ghi đè `workflowState:'RUNNING'` sau mỗi step | D | MEDIUM (chưa có đường kích hoạt) | Sửa |
+| WF-D1 | Trang Workflow Automation không chạy được bất kỳ workflow nào | D | **CRITICAL** (tính năng Founder dùng) | ĐÃ SỬA `82bc2a2` |
+| WF-D2 | `run()` bị reject thô khi executor lỗi → nút "CHẠY WORKFLOW" kẹt | D | MEDIUM | ĐÃ SỬA `9ec0e2f` |
+| WF-D3 | `cancelWaitEvent()` không giải phóng workflow đang chờ → treo vĩnh viễn; registry cũ sau timeout | D | MEDIUM | ĐÃ SỬA `1554390` |
+| WF-D4 | Fallback provider ghi đè `step._fallbackAttempted` vào định nghĩa step → chỉ chạy được 1 lần | D | MEDIUM | ĐÃ SỬA `953fa42` |
+| WF-D5 | `runLoop`/`runForEach` không dừng khi 1 vòng lỗi (comment code ghi "break toàn chuỗi") | D | MEDIUM | ĐÃ SỬA `03763dc` |
+| WF-D6 | Decision: toán tử lạ → `true` (fail-open); `op` không phải chuỗi → throw; `resolveBranch` chọn nhánh có điều kiện SAI khi không nhánh nào khớp | D | MEDIUM/LOW | ĐÃ SỬA `33fc3bc` |
+| WF-D7 | Server `workflow:auto`: Cancel/Pause bị chính worker ghi đè `workflowState:'RUNNING'` sau mỗi step | D | MEDIUM (chưa có đường kích hoạt) | ĐÃ SỬA `b62bb1f` (cần deploy Functions) |
 | WF-C1 | `run()` bỏ qua `config.timeout` của step (docstring có ghi) | C | LOW | Báo cáo — cần quyết semantics |
 | WF-C2 | `runForEach` xử lý 0 item nếu không truyền `buildIterationContext`; item không được đưa vào context | C | LOW | Báo cáo |
 | WF-C3 | Server: `status` của job `workflow:auto` luôn `queued`; log step `required:false` mất lỗi gốc; log không ghi draftId | C | LOW | Báo cáo |
@@ -120,3 +122,23 @@ Phân loại: **A** PASS · **B** có nhưng thiếu test · **C** hiện thực
 ## 7. Không thuộc phạm vi / FROZEN
 
 AIJobQueue, PluginManager, PermissionService, Firebase Rules, lớp bảo mật `8869226`/`a950352`/`5ceccf1`, One Click Marketing, Founder Agent, CMS modules — không sửa.
+
+## 8. Kết quả sau sửa (2026-09-26)
+
+| Commit | Nội dung | Test |
+|---|---|---|
+| `982794e` | Inventory + gap report (chưa sửa code) | — |
+| `82bc2a2` | WF-D1: step `{pluginId}` → PermissionService → PluginManager → AIJobQueue; `run()` nhận `onStepDone` | `tests/workflow-engine.test.js` 9 ca; `tests/e2e/t_wf_ui.js` |
+| `9ec0e2f` | WF-D2: `run()` không reject thô | 5 ca |
+| `1554390` | WF-D3: `cancelWaitEvent` reject `WAIT_CANCELLED`; dọn registry sau timeout | 4 ca |
+| `953fa42` | WF-D4: cờ fallback cục bộ | 2 ca |
+| `03763dc` | WF-D5: `runLoop`/`runForEach` dừng khi vòng/item `stoppedEarly` | 3 ca + 3 baseline |
+| `33fc3bc` | WF-D6: Decision fail-closed; `resolveBranch` không chọn nhánh sai | 3 ca + 1 baseline |
+| `b62bb1f` | WF-D7: worker không ghi đè CANCELLED/PAUSED | `tests/workflow-worker.test.js` 8 ca (Emulator) |
+| `8c9572b` | Bump cache-bust `?v=33fc3bc` (71 file HTML) — bắt buộc vì `/js/*` immutable | `cache-bust.test.js` |
+
+**Bằng chứng sau sửa (Emulator + Chromium):** trang Workflow chạy 2 step → Step 1 tạo `aiJobs` (createdBy admin, input đúng) + `aiLogs`, lỗi DỪNG ở Provider (`Failed to fetch` — không có mạng AI), Step 2 "Chưa chạy (dừng do bước trước lỗi)", bảng tiến trình vẽ real-time; 0 lỗi JS. Sinh nội dung AI thành công end-to-end: BLOCKED (mạng).
+
+**Regression:** `npm test` 11/11 nhóm (gồm `workflow-engine` 47/47); Emulator: database-rules, storage-rules, registration-security, custom-claims-security, workflow-worker 8/8 — tất cả OK; quét 64 trang: y hệt baseline (7 trang `permission_denied` do Rules, 10 trang workspace rỗng, 3 trang workspace về login); CMS: login/logout, sửa Banner/Video/Slider/Menu/Footer, Blog/Footer lên 5 trang public, trang bảo vệ khi chưa đăng nhập → login: PASS. Module FROZEN bị sửa: 0.
+
+**Còn mở (không sửa trong đợt này):** WF-C1..C3, WF-E1..E5, WF-F1, WF-S1, WF-S2 — xem mục 4–6.

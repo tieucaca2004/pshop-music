@@ -2,6 +2,36 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Workflow Automation — Audit + Fix (2026-09-26) — ⏳ CHỜ DEPLOY (Netlify + Functions) + FOUNDER ACCEPTANCE TEST
+
+**Phạm vi**: chỉ subsystem Workflow Automation. Tài liệu: `docs/workflow/WORKFLOW-AUTOMATION-INVENTORY.md` (kiểm kê 18 module), `docs/workflow/WORKFLOW-AUTOMATION-GAP-REPORT.md` (bằng chứng chạy thật từng hạng mục).
+
+**Root cause lỗi chính (CRITICAL)**: commit `f2d8e75` (2026-07-20, Phase 2.7) viết lại `WorkflowEngine.execute()/run()` theo `step.type` + `GenerationService` nhưng KHÔNG sửa `js/admin-ai-workflow.js` → từ đó mọi lượt bấm "CHẠY WORKFLOW" ở `admin/ai/workflow.html` báo "Unknown step type: undefined", không tạo Job/Log nào (tái hiện trên Chromium + Emulator).
+
+**Commit (branch `feature/cms-ai-sprint2`)**:
+- `982794e` docs — inventory + gap report (trước khi sửa code).
+- `82bc2a2` WF-D1 — step `{pluginId, inputParams}` đi lại đúng PermissionService → PluginManager → AIJobQueue (khôi phục `runStep()` Sprint 7); `run()` nhận hàm ở tham số thứ 4 làm `onStepDone`. KHÔNG dùng `GenerationService` (không được nạp trên trang, và `generate()` của nó bỏ qua PermissionService).
+- `9ec0e2f` WF-D2 — `run()` không reject thô khi executor lỗi (nút "CHẠY WORKFLOW" không còn kẹt).
+- `1554390` WF-D3 — `cancelWaitEvent()` reject `WAIT_CANCELLED` (trước đây workflow đang chờ treo vĩnh viễn); dọn registry sau timeout.
+- `953fa42` WF-D4 — fallback provider không ghi đè `_fallbackAttempted` lên định nghĩa step của caller.
+- `03763dc` WF-D5 — `runLoop`/`runForEach` dừng khi 1 vòng/item dừng sớm (đúng comment "break toàn chuỗi"); trả thêm `stoppedEarly`.
+- `33fc3bc` WF-D6 — Decision fail-closed: toán tử lạ → không khớp; `op` không phải chuỗi không throw; `resolveBranch` không chọn nhánh có điều kiện sai.
+- `b62bb1f` WF-D7 — server `aiGenerateWorker` (`workflow:auto`): Cancel/Pause không còn bị worker ghi đè `RUNNING`/`RETRYING` (transaction `updateWorkflowStateUnlessStopped`).
+- `8c9572b` bump cache-bust `?v=33fc3bc` (71 file HTML, chỉ đổi chuỗi version).
+- Tài liệu `WORKFLOW_02_ORCHESTRATION.md`: ví dụ `workflowConfigs` dùng moduleId thật (ví dụ cũ `product-content`/`blog-post`… không tồn tại).
+
+**0 sửa đổi**: `js/admin-ai-workflow.js` (UI), `AIJobQueue`, `PluginManager`, `PermissionService`, `GenerationService`, `runGeneration`, Firebase Rules, lớp bảo mật `8869226`/`a950352`/`5ceccf1`, mọi CMS module, Founder Agent, One Click Marketing.
+
+**Kiểm thử ĐÃ chạy** (local/Emulator, mã nguồn thật):
+- `tests/workflow-engine.test.js` (mới, trong `npm test`): 47 ca — 26 ca baseline khoá hành vi đang đúng (Decision/IF/SWITCH/PARALLEL 5 ca/WAIT/POLICY/LOOP/FOREACH/run/batch) + 21 ca cho WF-D1..D6; mỗi ca lỗi được xác nhận FAIL trên code cũ trước khi sửa.
+- `tests/workflow-worker.test.js` (mới, cần Emulator): handler `aiGenerateWorker` thật, chỉ stub `runGeneration` — 8 ca (happy path, fail+resume, retry, skip, cancel, pause+resume, cancel khi retry, `ai-generate:*` không đổi).
+- `tests/e2e/t_wf_ui.js` (mới): Chromium + Emulator — trang Workflow 2 step: Step 1 tạo `aiJobs` + `aiLogs`, lỗi dừng ở Provider, Step 2 "Chưa chạy", tiến trình real-time, 0 lỗi JS.
+- Regression: `npm test` 11/11; database-rules, storage-rules, registration-security, custom-claims-security: OK; quét 64 trang y hệt baseline; login/logout, sửa Banner/Video/Slider/Menu/Footer, Blog/Footer 5 trang public, redirect khi chưa đăng nhập: PASS.
+
+**CHƯA test / BLOCKED**: sinh nội dung AI thành công end-to-end (không có mạng tới AI Provider); Production (chưa deploy); Founder dùng thật trang Workflow.
+
+**Còn mở, chờ quyết định** (chi tiết trong gap report): giới hạn số vòng `runLoop` (WF-E1), buffer event (WF-E2), lưu bền wait-state/định nghĩa workflow (WF-E3), trigger resume server sau PAUSED/restart (WF-E4), idempotency trigger (WF-E5), timeout trong `run()` (WF-C1), context mặc định FOREACH (WF-C2), `status`/log server (WF-C3), mở `apiAsyncJobs` (WF-F1 = S-03), `GenerationService` bỏ qua PermissionService (WF-S1, dormant), agent đọc mọi job async (WF-S2).
+
 ## Security Hardening Sprint (2026-09-26) — ⏳ CHỜ FOUNDER DEPLOY RULES/FUNCTIONS + ACCEPTANCE TEST
 
 **Đã tái hiện trên Emulator trước khi sửa, sửa tối thiểu, test lại ALLOW/DENY:**
