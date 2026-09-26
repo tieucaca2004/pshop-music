@@ -2,6 +2,12 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Full System Deep Audit — Final Round (2026-09-26) — ⏳ CHỜ DEPLOY + FOUNDER ACCEPTANCE TEST
+
+- `8f1899c` F-01: blog.html / blog-post.html / videos.html chưa từng nạp js/db.js → menu/footer/cài đặt sửa trong CMS không hiện trên 3 trang này. Thêm 1 thẻ script; 5 trang public hiện footer CMS.
+- Test mới (emulator, có đối chiếu public): Danh mục thêm/sửa/tắt/xoá, Slider thêm/đổi thứ tự/reload, Menu thêm/xoá → nav public, Footer/Cài đặt → public, Xoá SP/Blog/Banner/Video → biến mất public (có confirm), tạo+thu hồi user → tài khoản mất quyền, 10 vòng Banner, 10 vòng Danh mục, SEO SP/Blog CMS → HTML public. Regression toàn hệ thống đạt (quét 64 trang: chỉ 7 trang permission_denied do Rules; xung đột; chưa lưu; stale-edit; nháp AI; AI SEO; 10 vòng Media; cách ly field; 20 vòng SP/Blog); `npm test` 10/10.
+- Ghi nhận, chưa sửa: SEO global defaultTitle/defaultDescription/ogImage lưu nhưng trang public không áp dụng (SiteChrome.applySeo chỉ dùng gaId/searchConsoleTag); vài số điện thoại ghi cứng trong HTML (index.html:157, category.html:182); trang sản phẩm tĩnh không render menu/footer từ CMS.
+
 ## Save Reliability + Unsaved Data Protection đợt 7 (2026-09-26) — ⏳ CHỜ DEPLOY + FOUNDER ACCEPTANCE TEST
 
 - `81e7e30` Phát hiện xung đột khi Lưu (SP/Blog/Banner/Video): chụp bản ghi lúc mở form, so với DB lúc Lưu — khác → KHÔNG ghi, hỏi Founder (Giữ form [mặc định] / Tải lại / Ghi đè). Client-only, KHÔNG thêm field version/schema, KHÔNG đổi Rules. AI Assist "Áp dụng" chụp lại bản ghi (không báo xung đột giả).
