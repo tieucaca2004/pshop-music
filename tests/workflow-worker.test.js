@@ -34,10 +34,14 @@ const db = admin.database();
 const JOB = id => db.ref('apiAsyncJobs/' + id);
 const STEPS = ['product-description-writer', 'blog-writer', 'facebook-post-generator', 'banner-generator'];
 const wf = (extra) => Object.assign({ type: 'workflow:auto', uid: 'TEST_WF_UID', status: 'queued', payload: { async: true, productId: 'TEST_P', workflowName: 'TEST_wf_default_' + Date.now() } }, extra || {});
+// onValueCreated luôn giao snapshot LÚC TẠO job — kể cả khi platform giao lại
+// event (retry/restart) — không phải giá trị hiện tại trong DB. Gọi lại
+// handler (resume) vì vậy dùng đúng snapshot lúc tạo.
+const created = {};
 async function invoke(id, job) {
-  if (job) await JOB(id).set(job);
-  const cur = (await JOB(id).once('value')).val();
-  await fx.aiGenerateWorker.run({ data: { val: () => cur }, params: { jobId: id } });
+  if (job) { await JOB(id).set(job); created[id] = job; }
+  const snap = created[id];
+  await fx.aiGenerateWorker.run({ data: { val: () => snap }, params: { jobId: id } });
   return (await JOB(id).once('value')).val();
 }
 const setState = (id, s) => () => JOB(id).child('workflowState').set(s);
@@ -116,9 +120,57 @@ async function t(name, fn) {
     assert.deepStrictEqual(calls, []);
   });
 
+  // ── GAP 5: trường `status` (API GET /v1/jobs/:id, poller) phải theo đúng vòng đời ──
+  const statusNow = id => JOB(id).child('status').once('value').then(s => s.val());
+  await t('[GAP5] thành công → status completed', async () => {
+    ids.push('TEST_WFS_ok');
+    const j = await invoke('TEST_WFS_ok', wf());
+    assert.strictEqual(j.status, 'completed'); assert.strictEqual(j.workflowState, 'COMPLETED');
+  });
+  await t('[GAP5] step bắt buộc lỗi → status failed kèm error', async () => {
+    ids.push('TEST_WFS_fail');
+    plan = { 'blog-writer': { fail: true } };
+    const j = await invoke('TEST_WFS_fail', wf());
+    assert.strictEqual(j.status, 'failed'); assert.match(String(j.error), /stub lỗi blog-writer/);
+  });
+  await t('[GAP5] huỷ → status cancelled; tạm dừng → paused; resume (giao lại event) → completed', async () => {
+    ids.push('TEST_WFS_cancel', 'TEST_WFS_pause');
+    plan = { 'blog-writer': { hook: setState('TEST_WFS_cancel', 'CANCELLED') } };
+    let j = await invoke('TEST_WFS_cancel', wf());
+    assert.strictEqual(j.status, 'cancelled'); assert.strictEqual(j.workflowState, 'CANCELLED');
+    calls.length = 0; plan = { 'product-description-writer': { hook: setState('TEST_WFS_pause', 'PAUSED') } };
+    j = await invoke('TEST_WFS_pause', wf());
+    assert.strictEqual(j.status, 'paused'); assert.strictEqual(j.workflowState, 'PAUSED');
+    calls.length = 0; plan = {};
+    await JOB('TEST_WFS_pause').child('workflowState').set('RUNNING');
+    j = await invoke('TEST_WFS_pause');
+    assert.deepStrictEqual(calls, STEPS.slice(1)); assert.strictEqual(j.status, 'completed');
+  });
+  await t('[GAP5] retry: running → retrying → completed', async () => {
+    ids.push('TEST_WFS_retry');
+    await db.ref('workflowConfigs/TEST_wf_sr').set({ id: 'TEST_wf_sr', steps: [{ type: 'generation', moduleId: 'blog-writer', config: { retryCount: 1, retryDelayMs: 5 } }] });
+    const seen = [];
+    plan = { 'blog-writer': { fail: true, failTimes: 1, hook: async () => { seen.push(await statusNow('TEST_WFS_retry')); } } };
+    const j = await invoke('TEST_WFS_retry', wf({ payload: { async: true, workflowName: 'TEST_wf_sr' } }));
+    assert.deepStrictEqual(seen, ['running', 'retrying']); assert.strictEqual(j.status, 'completed');
+  });
+  await t('[GAP5] step required:false lỗi rồi skip → status completed', async () => {
+    ids.push('TEST_WFS_skip');
+    plan = { 'blog-writer': { fail: true } };
+    const j = await invoke('TEST_WFS_skip', wf({ payload: { async: true, workflowName: 'TEST_wf_skip' } }));
+    assert.strictEqual(j.status, 'completed'); assert.strictEqual(j.executionLog[0].status, 'SKIPPED');
+  });
+  await t('[GAP5] huỷ trong lúc retry → status cancelled (WF-D7 giữ nguyên)', async () => {
+    ids.push('TEST_WFS_cr');
+    let first = true;
+    plan = { 'blog-writer': { fail: true, failTimes: 1, hook: async () => { if (first) { first = false; await setState('TEST_WFS_cr', 'CANCELLED')(); } } } };
+    const j = await invoke('TEST_WFS_cr', wf({ payload: { async: true, workflowName: 'TEST_wf_cr' } }));
+    assert.strictEqual(j.workflowState, 'CANCELLED'); assert.strictEqual(j.status, 'cancelled');
+  });
+
   // Dọn toàn bộ dữ liệu TEST_* đã tạo
   for (const id of ids) await JOB(id).remove();
-  for (const k of ['TEST_wf_retry', 'TEST_wf_skip', 'TEST_wf_cr']) await db.ref('workflowConfigs/' + k).remove();
+  for (const k of ['TEST_wf_retry', 'TEST_wf_skip', 'TEST_wf_cr', 'TEST_wf_sr']) await db.ref('workflowConfigs/' + k).remove();
   console.log('WORKFLOW WORKER functions/index.js aiGenerateWorker'); results.forEach(r => console.log(r));
   console.log(process.exitCode ? 'workflow-worker: FAILED' : 'workflow-worker: OK');
   process.exit(process.exitCode || 0);

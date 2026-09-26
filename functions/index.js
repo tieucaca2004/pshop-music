@@ -1075,10 +1075,12 @@ exports.aiGenerateWorker = onValueCreated({ ref: '/apiAsyncJobs/{jobId}', region
         const fresh = await getJob(event.params.jobId);
         if (fresh && fresh.workflowState === 'CANCELLED') {
           await appendExecutionLog(event.params.jobId, { stepIndex: i, moduleId: step.moduleId, status: 'SKIPPED', finishedAt: Date.now(), error: 'CANCELLED' });
+          await updateJobStatus(event.params.jobId, 'cancelled'); // status khớp workflowState CANCELLED
           return;
         }
         if (fresh && fresh.workflowState === 'PAUSED') {
           await appendExecutionLog(event.params.jobId, { stepIndex: i, moduleId: step.moduleId, status: 'PENDING', finishedAt: Date.now(), note: 'PAUSED — sẽ resume từ step này' });
+          await updateJobStatus(event.params.jobId, 'paused'); // status khớp workflowState PAUSED
           return; // dừng, workflow sẽ resume từ step này khi unpause (instance giữ currentStep)
         }
         const stepJobId = event.params.jobId + ':step' + i;

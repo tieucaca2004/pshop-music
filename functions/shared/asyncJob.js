@@ -52,8 +52,12 @@ module.exports = { createJob, getJob, updateJobStatus, updateWorkflowState, upda
 
 // Workflow State & Step State (enum — tài liệu trạng thái hợp lệ)
 async function updateWorkflowState(jobId, state, extra) {
+  // `status` (trường chung của mọi apiAsyncJobs — GET /v1/jobs/:id, poller đọc
+  // completed/failed) phản chiếu workflowState dạng chữ thường; trước đây job
+  // workflow:auto giữ 'queued' mãi dù đã COMPLETED/FAILED.
   const patch = Object.assign({
     workflowState: state,
+    status: String(state).toLowerCase(),
     updatedAt: admin.database.ServerValue.TIMESTAMP
   }, extra || {});
   await admin.database().ref('apiAsyncJobs/' + jobId).update(patch);
@@ -69,8 +73,10 @@ async function updateWorkflowState(jobId, state, extra) {
  */
 async function updateWorkflowStateUnlessStopped(jobId, state, extra) {
   const ref = admin.database().ref('apiAsyncJobs/' + jobId);
-  await ref.child('workflowState').transaction(cur => (cur === 'CANCELLED' || cur === 'PAUSED') ? undefined : state);
-  await ref.update(Object.assign({ updatedAt: admin.database.ServerValue.TIMESTAMP }, extra || {}));
+  const tx = await ref.child('workflowState').transaction(cur => (cur === 'CANCELLED' || cur === 'PAUSED') ? undefined : state);
+  // status theo trạng thái THỰC SỰ sau transaction (state mới, hoặc CANCELLED/PAUSED giữ nguyên).
+  const actual = (tx && tx.snapshot && tx.snapshot.val()) || state;
+  await ref.update(Object.assign({ status: String(actual).toLowerCase(), updatedAt: admin.database.ServerValue.TIMESTAMP }, extra || {}));
 }
 
 /**
