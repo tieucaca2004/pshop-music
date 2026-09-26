@@ -421,6 +421,22 @@ async function t(name, fn) {
     assert.strictEqual(r.terminated, true, 'không kết thúc: ' + r.why); assert.strictEqual(r.outer, CAP); assert.strictEqual(r.inner, CAP * CAP);
   });
 
+  // ── G. WAIT EVENT — hợp đồng thứ tự event (GAP 2) ────────────────────
+  await t('[GAP2] hợp đồng: event phát TRƯỚC khi chờ không được giữ lại; nơi phát nhận emitted:false', async () => {
+    assert.deepStrictEqual(W.resumeExecution('T-evt-early', { x: 1 }), { emitted: false, listeners: 0 });
+    const p = W.run([{ type: 'wait_event', eventId: 'T-evt-early', config: { timeout: 40 } }], 'u', 'e', {});
+    const s = await settleWithin(p, 500);
+    assert.strictEqual(s.settled, 'resolved'); assert.strictEqual(s.v.reason, 'event_timeout');
+  });
+  await t('[GAP2] phát lại event SAU khi workflow đã chờ → resume bình thường', async () => {
+    W.resumeExecution('T-evt-late', { x: 1 });
+    const p = W.run([{ type: 'wait_event', eventId: 'T-evt-late' }], 'u', 'e', {});
+    await sleep(5);
+    assert.deepStrictEqual(W.resumeExecution('T-evt-late', { x: 2 }), { emitted: true, listeners: 1 });
+    const s = await settleWithin(p, 300);
+    assert.strictEqual(s.settled, 'resolved'); assert.strictEqual(s.v.results[0].eventPayload.x, 2);
+  });
+
   console.log('WORKFLOW ENGINE js/ai/workflow-engine.js'); results.forEach(r => console.log(r));
   console.log(process.exitCode ? 'workflow-engine: FAILED' : 'workflow-engine: OK');
   process.exit(process.exitCode || 0);

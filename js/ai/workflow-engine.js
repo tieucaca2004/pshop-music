@@ -774,6 +774,11 @@ const WorkflowEngine = (function () {
      WORKFLOW-04 — DECISION ENGINE (capability 6: WAIT EVENT)
      REUSE: execute()/run(). Không engine mới, không polling/scheduler/cron.
      Event registry in-memory: workflow chờ eventId, resumeExecution() giải phóng.
+     HỢP ĐỒNG: event phải phát SAU khi workflow đã chờ (waitForEvent). Không
+     có buffer — resumeExecution() khi chưa ai chờ trả { emitted:false,
+     listeners:0 } để nơi phát tự xử lý (phát lại sau), không lưu event cho
+     lượt chờ tương lai (eventId dùng chung toàn cục, buffer có thể bị 1
+     workflow khác cùng eventId tiêu thụ nhầm). Đổi hợp đồng = Founder quyết.
      ═══════════════════════════════════════════ */
 
   var waitRegistry = {}; // eventId -> { resolvers: [], cancelTimers: {}, metadata }
