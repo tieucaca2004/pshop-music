@@ -354,7 +354,7 @@ async function handle(req, res, helpers) {
     try { caller = await admin.auth().verifyIdToken(authz[1]); } catch (e) { return sendError(res, 'UNAUTHENTICATED', 'Token không hợp lệ.'); }
     const isSuper = (caller.roles && caller.roles.super_admin) ||
       (await admin.database().ref('superAdmins/' + caller.uid).once('value')).exists();
-    if (!isSuper) return sendError(res, 'FORBIDDEN', 'Chỉ super_admin.');
+    if (!isSuper) return sendError(res, 'PERMISSION_DENIED', 'Chỉ super_admin.');
     const body = req.body || {};
     if (!body.uid) return sendError(res, 'INVALID_REQUEST', 'uid là bắt buộc.');
 

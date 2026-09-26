@@ -12,8 +12,9 @@ const rq=require('module').createRequire(F+'index.js');const admin=rq('firebase-
 admin.initializeApp({projectId:'pshop-music',databaseURL:'http://127.0.0.1:9000?ns=pshop-music-default-rtdb'});
 const {getDatabase,ServerValue}=rq('firebase-admin/database');admin.database=getDatabase;admin.database.ServerValue=ServerValue;admin.auth=rq('firebase-admin/auth').getAuth;
 const { handle }=require(F+'routes/registration.js');
+const MW=require(F+'shared/middleware.js'); // HTTP status thật theo hợp đồng sendError
 const H={Authorization:'Bearer owner'};
-function call(path, body, headers){ return new Promise(async r=>{ const res={}; const helpers={sendSuccess:(x,d,o)=>r({ok:true,status:(o&&o.status)||200,data:d}),sendError:(x,c,m)=>r({ok:false,code:c,msg:m})};
+function call(path, body, headers){ return new Promise(async r=>{ const res={}; const helpers={sendSuccess:(x,d,o)=>r({ok:true,status:(o&&o.status)||200,data:d}),sendError:(x,c,m)=>{ let st; MW.sendError({status(v){st=v;return this;},json(){return this;}},c,m); r({ok:false,code:c,msg:m,http:st}); }};
   const req={__pshPath:path,method:'POST',body,get:k=>(headers||{})[k]||(headers||{})[k.toLowerCase()]}; try{ const out=await handle(req,res,helpers); if(out===false||out===undefined) r({unhandled:true}); }catch(e){ r({threw:e.message}); } }); }
 async function idToken(email,pw){ const j=await fetch('http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=fake',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password:pw,returnSecureToken:true})}).then(r=>r.json()); return j.idToken; }
 (async()=>{ const out=[]; const R=(n,pass,info)=>out.push((pass?'PASS ':'FAIL ')+n+(info?' | '+info:''));
@@ -32,12 +33,12 @@ async function idToken(email,pw){ const j=await fetch('http://127.0.0.1:9099/ide
  // S-02
  const victim=await admin.auth().createUser({email:'test_victim_'+Date.now()+'@test.local',password:'Test12345!',emailVerified:false});
  let v=await call('/v1/register/verify-email',{uid:victim.uid});
- R('S-02 không token → bị từ chối', !v.ok && (await admin.auth().getUser(victim.uid)).emailVerified===false, JSON.stringify(v).slice(0,80));
+ R('S-02 không token → bị từ chối (HTTP 401)', !v.ok && v.http===401 && (await admin.auth().getUser(victim.uid)).emailVerified===false, JSON.stringify(v).slice(0,80));
  const editorTok=await idToken('editor@test.local','Test12345!');
  v=await call('/v1/register/verify-email',{uid:victim.uid},{Authorization:'Bearer '+editorTok});
- R('S-02 user thường (editor) xác thực email người khác → bị từ chối', !v.ok && (await admin.auth().getUser(victim.uid)).emailVerified===false, JSON.stringify(v).slice(0,80));
+ R('S-02 user thường (editor) xác thực email người khác → bị từ chối (HTTP 403)', !v.ok && v.http===403 && (await admin.auth().getUser(victim.uid)).emailVerified===false, JSON.stringify(v).slice(0,80));
  v=await call('/v1/register/verify-email',{uid:victim.uid},{Authorization:'Bearer garbage'});
- R('S-02 token giả → bị từ chối', !v.ok, JSON.stringify(v).slice(0,80));
+ R('S-02 token giả → bị từ chối (HTTP 401)', !v.ok && v.http===401, JSON.stringify(v).slice(0,80));
  v=await call('/v1/register/verify-email',{},{});
  R('S-02 request thiếu uid → lỗi', !v.ok, v.code);
  // super_admin hợp lệ vẫn dùng được
@@ -46,6 +47,6 @@ async function idToken(email,pw){ const j=await fetch('http://127.0.0.1:9099/ide
  v=await call('/v1/register/verify-email',{uid:victim.uid},{Authorization:'Bearer '+saTok});
  R('S-02 super_admin → được phép', v.ok && (await admin.auth().getUser(victim.uid)).emailVerified===true, JSON.stringify(v).slice(0,80));
  v=await call('/v1/register/verify-email',{uid:'khong_ton_tai'},{Authorization:'Bearer '+saTok});
- R('S-02 super_admin + uid không tồn tại → NOT_FOUND', !v.ok, v.code);
+ R('S-02 super_admin + uid không tồn tại → NOT_FOUND (HTTP 404)', !v.ok && v.http===404, v.code);
  await admin.database().ref('superAdmins/uid_admin').remove(); await admin.auth().deleteUser(victim.uid);
  out.forEach(x=>console.log(x)); const f=out.filter(x=>x.startsWith('FAIL')).length; console.log(f?'registration-security: FAILED ('+f+')':'registration-security: OK'); process.exit(f?1:0); })();
