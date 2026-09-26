@@ -17,7 +17,7 @@
 - `03763dc` WF-D5 — `runLoop`/`runForEach` dừng khi 1 vòng/item dừng sớm (đúng comment "break toàn chuỗi"); trả thêm `stoppedEarly`.
 - `33fc3bc` WF-D6 — Decision fail-closed: toán tử lạ → không khớp; `op` không phải chuỗi không throw; `resolveBranch` không chọn nhánh có điều kiện sai.
 - `b62bb1f` WF-D7 — server `aiGenerateWorker` (`workflow:auto`): Cancel/Pause không còn bị worker ghi đè `RUNNING`/`RETRYING` (transaction `updateWorkflowStateUnlessStopped`).
-- `8c9572b` bump cache-bust `?v=33fc3bc` (71 file HTML, chỉ đổi chuỗi version).
+- `8c9572b` bump cache-bust `?v=9a1f682` (71 file HTML, chỉ đổi chuỗi version).
 - Tài liệu `WORKFLOW_02_ORCHESTRATION.md`: ví dụ `workflowConfigs` dùng moduleId thật (ví dụ cũ `product-content`/`blog-post`… không tồn tại).
 
 **0 sửa đổi**: `js/admin-ai-workflow.js` (UI), `AIJobQueue`, `PluginManager`, `PermissionService`, `GenerationService`, `runGeneration`, Firebase Rules, lớp bảo mật `8869226`/`a950352`/`5ceccf1`, mọi CMS module, Founder Agent, One Click Marketing.
