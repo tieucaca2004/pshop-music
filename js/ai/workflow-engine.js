@@ -67,6 +67,11 @@ const WorkflowEngine = (function () {
     if (step.type === 'wait_event') {
       return waitOnStep(step, userId, userEmail);
     }
+    // Step dạng Sprint 7 ({ pluginId, inputParams }, không có `type`) —
+    // admin/ai/workflow.html gửi đúng dạng này. Xem executePluginStep().
+    if (!step.type && step.pluginId) {
+      return executePluginStep(step, userId, userEmail);
+    }
     return Promise.resolve({
       stepIndex: step.index,
       status: 'failed',
@@ -107,6 +112,59 @@ const WorkflowEngine = (function () {
           result: genResult
         };
       });
+  }
+
+  /**
+   * executePluginStep(step, userId, userEmail) — Step dạng Sprint 7 do
+   * admin/ai/workflow.html gửi. Đi ĐÚNG luồng bắt buộc (CLAUDE.md mục 5,
+   * AI_RULES.md mục 8): PermissionService.checkPluginExecution() →
+   * PluginManager.loadPlugin(id).execute() → AIJobQueue → Draft — khôi phục
+   * nguyên runStep() của Sprint 7 (ec34848). Phase 2.7 (f2d8e75) viết lại
+   * execute() theo step.type nhưng không sửa UI, làm mọi Workflow thất bại
+   * "Unknown step type: undefined". KHÔNG dùng GenerationService: file đó
+   * không được nạp trên trang, và generate() của nó gọi thẳng
+   * AIJobQueue.enqueue(), bỏ qua PermissionService/PluginManager.
+   */
+  function executePluginStep(step, userId, userEmail) {
+    if (typeof PermissionService === 'undefined' || typeof PluginManager === 'undefined' ||
+        typeof AIJobQueue === 'undefined' || typeof JobDB === 'undefined') {
+      return Promise.resolve({
+        pluginId: step.pluginId, jobId: null, status: 'failed',
+        error: 'Thiếu PermissionService/PluginManager/AIJobQueue trên trang — không chạy được Plugin.'
+      });
+    }
+    return PermissionService.checkPluginExecution(userId, userEmail, step.pluginId).then(function (check) {
+      if (!check.granted) {
+        return {
+          pluginId: step.pluginId, jobId: null, status: 'permission_denied',
+          error: 'Không có quyền chạy plugin này (thiếu "' + (check.permission || 'quyền chưa được gán') + '").'
+        };
+      }
+      return PluginManager.loadPlugin(step.pluginId).then(function (plugin) {
+        if (!plugin) {
+          return { pluginId: step.pluginId, jobId: null, status: 'plugin_not_found', error: 'Không tìm thấy plugin.' };
+        }
+        // Mỗi Step chạy đúng 1 item — execute() → enqueue() → resume() y hệt
+        // runModule() (js/admin-ai.js); Workflow không tự gọi AIJobQueue.enqueue().
+        return plugin.execute([step.inputParams], userId, userEmail)
+          .then(function (job) {
+            return AIJobQueue.resume(userId, userEmail).then(function () { return JobDB.get(job.id); }).then(function (finalJob) {
+              var status = finalJob ? finalJob.status : 'unknown';
+              var failedItem = finalJob && Array.isArray(finalJob.items)
+                ? finalJob.items.filter(function (i) { return i.status === 'failed'; })[0] : null;
+              return {
+                pluginId: step.pluginId,
+                jobId: job.id,
+                status: status,
+                error: status === 'completed' ? null : ((failedItem && failedItem.error) || 'Job không hoàn tất.')
+              };
+            });
+          })
+          .catch(function (err) {
+            return { pluginId: step.pluginId, jobId: null, status: 'failed', error: err.message };
+          });
+      });
+    });
   }
 
   /**
@@ -157,6 +215,9 @@ const WorkflowEngine = (function () {
    * }
    */
   function run(steps, userId, userEmail, options) {
+    // Hợp đồng Sprint 7: tham số thứ 4 là hàm onStepDone(entry) — UI
+    // admin/ai/workflow.html dùng để vẽ tiến trình real-time. Nhận cả 2 dạng.
+    if (typeof options === 'function') options = { onStepDone: options };
     options = options || {};
     var results = [];
     var stopFlag = false;
@@ -272,7 +333,14 @@ const WorkflowEngine = (function () {
     return steps.reduce(function (chain, step, index) {
       return chain.then(function (chainResult) {
         if (chainResult) return chainResult; // Early stop
-        return processStep(step, index);
+        var before = results.length;
+        return processStep(step, index).then(function (stepOut) {
+          // onStepDone: đúng 1 lần/step với kết quả CUỐI của step đó (sau retry/fallback).
+          if (typeof options.onStepDone === 'function' && results.length > before) {
+            try { options.onStepDone(results[results.length - 1]); } catch (e) { /* lỗi UI không làm hỏng workflow */ }
+          }
+          return stepOut;
+        });
       });
     }, Promise.resolve()).then(function (finalResult) {
       if (finalResult) return finalResult;
