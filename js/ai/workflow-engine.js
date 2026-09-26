@@ -538,7 +538,7 @@ const WorkflowEngine = (function () {
     // dạng { key, op, value }
     var value = ctx && ctx.variables ? ctx.variables[condition.key] : undefined;
     var target = condition.value;
-    switch ((condition.op || 'eq').toLowerCase()) {
+    switch (String(condition.op || 'eq').toLowerCase()) {
       case 'eq': case '==': case '===': return value === target;
       case 'ne': case '!=': case '!==': return value !== target;
       case 'gt': case '>': return Number(value) > Number(target);
@@ -551,7 +551,9 @@ const WorkflowEngine = (function () {
       case 'falsy': return !value;
       case 'exists': return value !== undefined && value !== null;
       case 'empty': return value === undefined || value === null || value === '';
-      default: return !!value;
+      // Toán tử không hỗ trợ (gõ sai cấu hình) → KHÔNG khớp (fail-closed).
+      // Trước đây trả !!value → step có điều kiện vẫn chạy khi biến truthy.
+      default: return false;
     }
   }
 
@@ -935,7 +937,8 @@ const WorkflowEngine = (function () {
       }
     }
     if (!selected && defaultBranch) selected = Object.assign({ name: 'default' }, defaultBranch);
-    if (!selected && sorted.length) selected = sorted[sorted.length - 1];
+    // Không nhánh nào khớp + không default/nhánh không điều kiện → không chọn nhánh
+    // nào (trước đây rơi về nhánh cuối — nhánh có điều kiện đã đánh giá là SAI).
     // context inheritance
     var branchCtx = ctx;
     if (selected && selected.inheritContext === false && ctx) {

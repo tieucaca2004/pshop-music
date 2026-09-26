@@ -336,6 +336,34 @@ async function t(name, fn) {
     assert.strictEqual(r.itemsProcessed, 2); assert.strictEqual(r.stoppedEarly, false);
   });
 
+  // ── B. DECISION — cấu hình điều kiện sai phải fail-closed (WF-D6) ─────
+  await t('[WF-D6] toán tử không hỗ trợ → false (không chạy step do gõ sai toán tử)', async () => {
+    const c = W.createDecisionContext({ variables: { x: 5 } });
+    assert.strictEqual(W.evaluateCondition({ key: 'x', op: 'bogus', value: 999 }, c), false);
+    let n = 0;
+    const r = await W.run([{ type: 'generation', condition: { key: 'x', op: 'gtt', value: 1 } }], 'u', 'e', { decisionContext: c, overrideExecute: () => { n++; return ok(); } });
+    assert.strictEqual(r.results[0].status, 'skipped'); assert.strictEqual(n, 0);
+  });
+  await t('[WF-D6] op không phải chuỗi không ném lỗi; op viết hoa và thiếu op vẫn đúng', async () => {
+    const c = W.createDecisionContext({ variables: { x: 5 } });
+    assert.strictEqual(W.evaluateCondition({ key: 'x', op: 5, value: 5 }, c), false);
+    assert.doesNotThrow(() => W.decideBranch([{ condition: { key: 'x', op: 7 } }], c));
+    assert.strictEqual(W.evaluateCondition({ key: 'x', op: 'GT', value: 1 }, c), true);
+    assert.strictEqual(W.evaluateCondition({ key: 'x', value: 5 }, c), true);
+  });
+  await t('[WF-D6] resolveBranch: không nhánh nào khớp, không default → không chọn nhánh nào', async () => {
+    const c = W.createDecisionContext({ variables: { x: 3 } });
+    const r = W.resolveBranch([{ name: 'a', condition: { key: 'x', op: 'eq', value: 1 } }, { name: 'b', condition: { key: 'x', op: 'eq', value: 2 } }], c);
+    assert.strictEqual(r.selected, null); assert.deepStrictEqual(r.steps, []);
+  });
+  await t('resolveBranch: nhánh khớp theo priority; nhánh không điều kiện = else; default (object)', async () => {
+    const c = W.createDecisionContext({ variables: { x: 3 } });
+    assert.strictEqual(W.resolveBranch([{ name: 'else' }, { name: 'hit', condition: { key: 'x', op: 'eq', value: 3 } }], c).selected, 'hit');
+    assert.strictEqual(W.resolveBranch([{ name: 'a', condition: { key: 'x', op: 'eq', value: 9 } }, { name: 'else', steps: ['E'] }], c).selected, 'else');
+    assert.strictEqual(W.resolveBranch({ lo: { priority: 1, condition: { key: 'x', op: 'gt', value: 0 } }, hi: { priority: 5, condition: { key: 'x', op: 'eq', value: 3 } } }, c).selected, 'hi');
+    assert.strictEqual(W.resolveBranch({ a: { condition: { key: 'x', op: 'eq', value: 9 } }, default: { steps: ['D'] } }, c).selected, 'default');
+  });
+
   console.log('WORKFLOW ENGINE js/ai/workflow-engine.js'); results.forEach(r => console.log(r));
   console.log(process.exitCode ? 'workflow-engine: FAILED' : 'workflow-engine: OK');
   process.exit(process.exitCode || 0);
