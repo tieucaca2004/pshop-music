@@ -506,6 +506,15 @@ async function t(name, fn) {
     assert.strictEqual(n, 1); assert.strictEqual(r.stoppedEarly, true);
   });
 
+  // ── M. GAP 6 — GenerationService (bỏ qua PermissionService/PluginManager) KHÔNG được nạp ──
+  await t('[GAP6] không trang HTML nào nạp js/ai/services/generation-service.js (dormant — nạp vào là bỏ qua PermissionService)', async () => {
+    const { execSync } = require('child_process');
+    const root = path.join(__dirname, '..');
+    const html = execSync('git ls-files "*.html"', { cwd: root }).toString().split('\n').filter(Boolean);
+    const loaders = html.filter(f => /generation-service\.js/.test(require('fs').readFileSync(path.join(root, f), 'utf8')));
+    assert.deepStrictEqual(loaders, [], 'Trang nạp GenerationService: ' + loaders.join(', ') + ' — phải cho generate() qua PermissionService/PluginManager trước.');
+  });
+
   console.log('WORKFLOW ENGINE js/ai/workflow-engine.js'); results.forEach(r => console.log(r));
   console.log(process.exitCode ? 'workflow-engine: FAILED' : 'workflow-engine: OK');
   process.exit(process.exitCode || 0);
