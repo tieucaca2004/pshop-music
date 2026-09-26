@@ -2,6 +2,27 @@
 
 Định dạng: mỗi mục là 1 Sprint/đợt thay đổi, mới nhất ở trên.
 
+## Workflow Automation — Post-fix Gap Closure (2026-09-26) — ⏳ CHỜ DEPLOY (Netlify + Functions) + FOUNDER ACCEPTANCE TEST
+
+**Phạm vi**: đóng các GAP còn lại của Workflow Automation (chi tiết + bằng chứng: `docs/workflow/WORKFLOW-AUTOMATION-GAP-REPORT.md` mục 9). WF-D1..D7 giữ FROZEN, không sửa lại.
+
+**Commit (branch `feature/cms-ai-sprint2`)**:
+- `aaa5bcc` GAP 1 — `runLoop` có trần `MAX_LOOP_ITERATIONS = 100` (tái dùng hạn mức `aiGenerateDaily` 100/ngày/uid, FINAL mục 7); Infinity/giá trị quá lớn luôn kết thúc, trả `capped:true`.
+- `98aaa07` GAP 2 — KHÔNG phải lỗi: ghi rõ hợp đồng WAIT EVENT (event phải phát SAU khi workflow chờ; không buffer) + test khoá hợp đồng.
+- `b98c598` GAP 3 — `run()` tôn trọng `step.config.timeout` bằng `pTimeout()` có sẵn của `runParallel`.
+- `9a1f682` GAP 4 — `runForEach` không truyền builder → chạy mỗi item với context cha (trước đây mọi item bị skip); mảng rỗng cùng shape.
+- `22c2b69` GAP 5 — job `workflow:auto` có `status` đúng vòng đời (running/retrying/paused/cancelled/completed/failed); resume không đổi.
+- `a8eaea1` GAP 6 — ARCHITECTURAL GAP / DEFERRED: test khoá "không trang nào nạp `GenerationService`" (không refactor).
+- `393bbe3` bump cache-bust `?v=9a1f682`; `56893a9` khôi phục 2 dòng lịch sử bị `sed` của lần bump đổi nhầm.
+
+**0 sửa đổi**: fix WF-D1..D7, `js/admin-ai-workflow.js`, `AIJobQueue`, `PluginManager`, `PermissionService`, `GenerationService`, `runGeneration`, nhánh `ai-generate:*`, Firebase Rules, lớp bảo mật `8869226`/`a950352`/`5ceccf1`, mọi CMS module.
+
+**Kiểm thử ĐÃ chạy**: `workflow-engine` 68/68 (+22 ca GAP; ca có thể treo chạy trong process con giới hạn 5 s); `workflow-worker` 14/14 (Emulator, +6 ca GAP 5; harness gọi lại handler bằng snapshot lúc tạo — đúng cách platform giao lại event, 8 ca cũ vẫn PASS trước khi sửa); `npm test` 11/11; database-rules, storage-rules, registration-security, custom-claims-security OK; E2E Workflow UI; CMS login/logout/sửa/public/redirect PASS; quét 64 trang y hệt baseline.
+
+**CHƯA test / BLOCKED**: sinh AI thành công end-to-end (không mạng AI Provider); Production (chưa deploy); Founder dùng thật.
+
+**Chờ Founder quyết**: lưu bền workflow/wait-state; resume server sau PAUSED/restart; mở `apiAsyncJobs`; quyền agent đọc job async; buffer event (hợp đồng B) nếu cần; có giữ trần vòng lặp = 100 không.
+
 ## Workflow Automation — Audit + Fix (2026-09-26) — ⏳ CHỜ DEPLOY (Netlify + Functions) + FOUNDER ACCEPTANCE TEST
 
 **Phạm vi**: chỉ subsystem Workflow Automation. Tài liệu: `docs/workflow/WORKFLOW-AUTOMATION-INVENTORY.md` (kiểm kê 18 module), `docs/workflow/WORKFLOW-AUTOMATION-GAP-REPORT.md` (bằng chứng chạy thật từng hạng mục).

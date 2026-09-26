@@ -31,15 +31,15 @@ Chi tiết commit/kiểm thử: `CHANGELOG.md` mục "Master Recovery". Nhãn: C
 ## Ý tưởng phát sinh — Workflow Automation audit 2026-09-26 (chỉ ghi nhận, chưa làm)
 
 Chi tiết + bằng chứng: `docs/workflow/WORKFLOW-AUTOMATION-GAP-REPORT.md`.
-- WF-E1: `runLoop` chưa có trần `maxIterations` (2.000.000 vòng khoá luồng 3,6 s; `Infinity` treo) — cần chọn trần (đề xuất 1.000).
-- WF-E2: event phát trước khi workflow chờ bị mất — cần quyết có buffer (TTL?) hay không.
+- WF-E1: ~~chưa có trần vòng lặp~~ → CODE FIXED `aaa5bcc` (trần 100 = `aiGenerateDaily`); Founder có thể đổi hằng số `MAX_LOOP_ITERATIONS`.
+- WF-E2: event phát trước khi workflow chờ không được giữ — hợp đồng A đã ghi rõ `98aaa07`; muốn buffer (hợp đồng B) cần Founder quyết.
 - WF-E3: wait-state/Decision Context/định nghĩa workflow chỉ trong bộ nhớ trình duyệt — lưu bền = đổi Database Structure.
 - WF-E4: server `workflow:auto` không có đường resume sau PAUSED/restart (`onValueCreated` chỉ 1 lần) — cần trigger `onValueUpdated` hoặc API resume.
 - WF-E5: không idempotency key cho trigger `workflow:auto` (mỗi lần lưu SP published = 1 job mới).
-- WF-C1: `run()` bỏ qua `config.timeout` — cần quyết semantics (huỷ Job AI hay chỉ bỏ chờ).
-- WF-C2: `runForEach` không có context mặc định (không truyền `buildIterationContext` → 0 item chạy).
-- WF-C3: job `workflow:auto` giữ `status:'queued'` dù COMPLETED; log step `required:false` mất lỗi gốc; log SUCCESS không ghi draftId; `WAITING` không dùng.
-- WF-S1: `GenerationService.generate()` gọi thẳng `AIJobQueue.enqueue()` (bỏ qua PermissionService/PluginManager) — hiện không trang nào nạp; không được nạp file này khi chưa sửa.
+- WF-C1: ~~`run()` bỏ qua `config.timeout`~~ → CODE FIXED `b98c598` (semantics có sẵn của runParallel: thôi chờ, không huỷ Job).
+- WF-C2: ~~`runForEach` không builder → 0 item chạy~~ → CODE FIXED `9a1f682` (context cha như runLoop).
+- WF-C3: ~~`status:'queued'` dù COMPLETED~~ → CODE FIXED `22c2b69`; còn lại (LOW): log step `required:false` mất lỗi gốc, log SUCCESS không ghi draftId, `WAITING` không dùng.
+- WF-S1: `GenerationService.generate()` bỏ qua PermissionService/PluginManager — ARCHITECTURAL GAP / DEFERRED; test `a8eaea1` fail nếu có trang nạp file này.
 - WF-S2: role `agent` (`jobs.view`) đọc được mọi `apiAsyncJobs` theo id qua `GET /v1/jobs/:id`.
 
 ## Ý tưởng phát sinh (Master Recovery) — admin/atieu-menu.html chưa có auth guard
