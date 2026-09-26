@@ -31,6 +31,8 @@ async function handle(req, res, helpers) {
   const path = req.__pshPath;
   if (!auth.ok || auth.role !== 'admin') {
     if (path === '/v1/users' || path.indexOf('/v1/users/') === 0 || path.indexOf('/v1/roles/') === 0) {
+      // Thiếu/sai token → 401 (UNAUTHENTICATED); đã đăng nhập nhưng không phải admin → 403.
+      if (!auth.ok && auth.code === 'UNAUTHENTICATED') return sendError(res, 'UNAUTHENTICATED', auth.error);
       return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin được quản lý Users/Roles.');
     }
   }
@@ -61,6 +63,20 @@ async function handle(req, res, helpers) {
     const validRoles = ['super_admin', 'business_admin', 'business_editor', 'business_viewer'];
     if (!role || validRoles.indexOf(role) < 0) {
       return sendError(res, 'INVALID_REQUEST', 'role phải là: ' + validRoles.join(', ') + '.');
+    }
+    // SECURITY: chỉ super_admin được gán super_admin (admin thường chỉ gán
+    // business_*). Xác định super_admin từ ID token đã verify ở server
+    // (claim roles.super_admin) hoặc node superAdmins/<uid> (Rules .write:false)
+    // — KHÔNG tin bất kỳ field nào trong body.
+    if (role === 'super_admin') {
+      let callerIsSuper = false;
+      try {
+        const m = (req.get('Authorization') || '').match(/^Bearer (.+)$/);
+        const decoded = m ? await admin.auth().verifyIdToken(m[1]) : null;
+        callerIsSuper = !!(decoded && decoded.uid === auth.uid && decoded.roles && decoded.roles.super_admin) ||
+          (await admin.database().ref('superAdmins/' + auth.uid).once('value')).exists();
+      } catch (e) { callerIsSuper = false; }
+      if (!callerIsSuper) return sendError(res, 'PERMISSION_DENIED', 'Chỉ super_admin được gán quyền super_admin.');
     }
     if (role !== 'super_admin' && (!businessId || typeof businessId !== 'string')) {
       return sendError(res, 'INVALID_REQUEST', 'businessId là bắt buộc cho business roles.');
