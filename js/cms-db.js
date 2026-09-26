@@ -145,3 +145,83 @@ const CmsSaveError = (function () {
   }
   return { report, classify };
 })();
+
+// CmsEditGuard — phát hiện XUNG ĐỘT khi Lưu: chụp bản ghi lúc mở form, lúc
+// Lưu đọc lại DB và so sánh. Không cần field version/schema mới. Khác nhau
+// → KHÔNG ghi, hỏi Founder (mặc định an toàn = giữ form, chưa lưu).
+const CmsEditGuard = (function () {
+  const snapshots = {};
+  function stable(r) {
+    if (!r || typeof r !== 'object') return JSON.stringify(r === undefined ? null : r);
+    if (Array.isArray(r)) return '[' + r.map(stable).join(',') + ']';
+    return '{' + Object.keys(r).sort().map(k => JSON.stringify(k) + ':' + stable(r[k])).join(',') + '}';
+  }
+  function capture(scope, record) { snapshots[scope] = stable(record); }
+  function clear(scope) { delete snapshots[scope]; }
+  function changedSince(scope, current) { return scope in snapshots && snapshots[scope] !== stable(current); }
+  // askConflict() → Promise<'keep'|'reload'|'overwrite'>
+  function askConflict() {
+    return new Promise(resolve => {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:99999;display:flex;align-items:center;justify-content:center';
+      wrap.innerHTML = '<div role="dialog" aria-modal="true" style="background:#fff;max-width:460px;padding:1.4rem;border-radius:10px;font-size:.95rem;line-height:1.5">' +
+        '<h3 style="margin:0 0 .6rem">Dữ liệu đã được thay đổi ở nơi khác</h3>' +
+        '<p style="margin:0 0 1rem">Bản ghi này đã bị sửa (tab khác / AI / Founder Agent / người khác) SAU khi bạn mở form. Chưa có gì được lưu — nội dung bạn đang nhập vẫn còn nguyên.</p>' +
+        '<div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:flex-end">' +
+        '<button type="button" data-a="keep" class="submit-btn">GIỮ FORM, CHƯA LƯU</button>' +
+        '<button type="button" data-a="reload" class="btn-secondary">TẢI LẠI DỮ LIỆU</button>' +
+        '<button type="button" data-a="overwrite" class="btn-danger">TIẾP TỤC GHI ĐÈ</button></div></div>';
+      wrap.addEventListener('click', e => {
+        const a = e.target && e.target.getAttribute && e.target.getAttribute('data-a');
+        if (!a) return;
+        wrap.remove(); resolve(a);
+      });
+      document.body.appendChild(wrap);
+      wrap.querySelector('[data-a="keep"]').focus();
+    });
+  }
+  // guardedSave(scope, id, fetchCurrent, doSave, onReload): chỉ ghi khi bản
+  // ghi chưa bị đổi từ lúc mở form, hoặc Founder chủ động chọn GHI ĐÈ.
+  function guardedSave(scope, id, fetchCurrent, doSave, onReload) {
+    if (!id) return doSave();
+    return fetchCurrent(id).then(current => {
+      if (!changedSince(scope, current)) return doSave();
+      return askConflict().then(choice => {
+        if (choice === 'overwrite') return doSave();
+        if (choice === 'reload' && onReload) onReload(id);
+        return { conflict: choice };
+      });
+    });
+  }
+  return { capture, clear, changedSince, askConflict, guardedSave };
+})();
+
+// CmsDirtyForm — cảnh báo khi rời trang / reload / đóng tab mà form đã có
+// thay đổi CHƯA LƯU. Theo từng form (panel), chỉ đánh dấu khi NGƯỜI DÙNG
+// gõ/chọn (sự kiện input/change); điền form bằng code không làm form "bẩn".
+const CmsDirtyForm = (function () {
+  const dirty = {};
+  let installed = false;
+  function any() { return Object.keys(dirty).some(k => dirty[k]); }
+  function watch(panelId) {
+    const el = document.getElementById(panelId);
+    if (!el) return;
+    dirty[panelId] = false;
+    const mark = () => { dirty[panelId] = true; };
+    el.addEventListener('input', mark, true);
+    el.addEventListener('change', mark, true);
+    if (!installed) {
+      installed = true;
+      window.addEventListener('beforeunload', e => {
+        if (!any()) return;
+        e.preventDefault();
+        e.returnValue = 'Bạn có thay đổi chưa lưu. Bạn có chắc muốn rời trang?';
+        return e.returnValue;
+      });
+    }
+  }
+  function clean(panelId) { dirty[panelId] = false; }
+  function markDirty(panelId) { dirty[panelId] = true; }
+  function isDirty(panelId) { return panelId ? !!dirty[panelId] : any(); }
+  return { watch, clean, markDirty, isDirty };
+})();

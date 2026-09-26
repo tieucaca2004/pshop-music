@@ -67,6 +67,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function fillEdit(id, p) {
     if (!p) return;
     editingId = id;
+    CmsEditGuard.capture('blog', p); // chụp bản ghi lúc mở form — so sánh khi Lưu
+    CmsDirtyForm.clean('blogFormPanel');
     slugManuallyEdited = true;
     document.getElementById('postTitle').value = p.title || '';
     document.getElementById('postSlug').value = p.slug || '';
@@ -86,6 +88,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function resetForm() {
     editingId = null;
+    CmsEditGuard.clear('blog');
+    CmsDirtyForm.clean('blogFormPanel');
     slugManuallyEdited = false;
     ['postTitle', 'postSlug', 'postExcerpt', 'postCover', 'postTags', 'postSeoTitle', 'postSeoDescription'].forEach(id => {
       document.getElementById(id).value = '';
@@ -127,8 +131,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveBtn = document.getElementById('blogSaveBtn');
     if (saveBtn.disabled) return;
     saveBtn.disabled = true;
-    const action = editingId ? BlogDB.update(editingId, data) : BlogDB.add(data);
-    action.then(() => {
+    // Lưu có kiểm tra xung đột: bản ghi đổi ở nơi khác sau khi mở form → KHÔNG ghi đè, hỏi Founder.
+    const action = CmsEditGuard.guardedSave('blog', editingId, id => BlogDB.get(id),
+      () => (editingId ? BlogDB.update(editingId, data) : BlogDB.add(data)), id => edit(id));
+    action.then(result => {
+      if (result && result.conflict) return; // Founder chọn giữ form / tải lại — chưa lưu
       showStatus(editingId ? 'Đã cập nhật bài viết.' : 'Đã thêm bài viết mới.');
       resetForm();
       load();
@@ -151,6 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   document.getElementById('blogSaveBtn').addEventListener('click', save);
+  CmsDirtyForm.watch('blogFormPanel');
   document.getElementById('blogResetBtn').addEventListener('click', resetForm);
   document.getElementById('postTitle').addEventListener('input', e => {
     if (!slugManuallyEdited) document.getElementById('postSlug').value = slugify(e.target.value);

@@ -57,6 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function fillEdit(id, v) {
     if (!v) return;
     editingId = id;
+    CmsEditGuard.capture('video', v); // chụp bản ghi lúc mở form — so sánh khi Lưu
+    CmsDirtyForm.clean('videoFormPanel');
     document.getElementById('vTitle').value = v.title || '';
     document.getElementById('vUrl').value = v.url || '';
     document.getElementById('vDescription').value = v.description || '';
@@ -69,6 +71,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function resetForm() {
     editingId = null;
+    CmsEditGuard.clear('video');
+    CmsDirtyForm.clean('videoFormPanel');
     ['vTitle', 'vUrl', 'vDescription'].forEach(id => { document.getElementById(id).value = ''; });
     document.getElementById('vOrder').value = 0;
     document.getElementById('vActive').checked = true;
@@ -92,8 +96,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveBtn = document.getElementById('videoSaveBtn');
     if (saveBtn.disabled) return;
     saveBtn.disabled = true;
-    const action = editingId ? VideoDB.update(editingId, data) : VideoDB.add(data);
-    action.then(() => {
+    // Lưu có kiểm tra xung đột: bản ghi đổi ở nơi khác sau khi mở form → KHÔNG ghi đè, hỏi Founder.
+    const action = CmsEditGuard.guardedSave('video', editingId, id => VideoDB.get(id),
+      () => (editingId ? VideoDB.update(editingId, data) : VideoDB.add(data)), id => edit(id));
+    action.then(result => {
+      if (result && result.conflict) return; // Founder chọn giữ form / tải lại — chưa lưu
       showStatus(editingId ? 'Đã cập nhật video.' : 'Đã thêm video mới.');
       resetForm();
       load();
@@ -114,6 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   document.getElementById('videoSaveBtn').addEventListener('click', save);
+  CmsDirtyForm.watch('videoFormPanel');
   document.getElementById('videoResetBtn').addEventListener('click', resetForm);
 
   window.AdminVideos = { edit, remove };

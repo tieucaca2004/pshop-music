@@ -255,6 +255,7 @@ const AdminApp = (function () {
   function fillEditProduct(id, p) {
     if (!p) return;
     editingId = id;
+    CmsEditGuard.capture('product', p); // chụp bản ghi lúc mở form — so sánh khi Lưu
     document.getElementById('pId').value = p.id;
     document.getElementById('pName').value = p.name || '';
     document.getElementById('pSku').value = p.sku || '';
@@ -294,6 +295,7 @@ const AdminApp = (function () {
     if (typeof AdminBgRemover !== 'undefined' && images[0]) {
       AdminBgRemover.setSourceUrl('pBgRemover', images[0]);
     }
+    CmsDirtyForm.clean('formPanel');
     document.getElementById('formTitle').textContent = 'SỬA SẢN PHẨM';
     document.getElementById('saveBtn').textContent = 'CẬP NHẬT SẢN PHẨM';
     document.getElementById('formPanel').scrollIntoView({ behavior: 'smooth' });
@@ -311,6 +313,8 @@ const AdminApp = (function () {
 
   function resetForm() {
     editingId = null;
+    CmsEditGuard.clear('product');
+    CmsDirtyForm.clean('formPanel');
     document.getElementById('pId').value = '';
     // + 6 field SEO (PRODUCT-SEO-01): thiếu ở đây thì slug/canonical/SEO của
     // sản phẩm vừa lưu bị ghi sang sản phẩm MỚI tạo ngay sau đó.
@@ -389,8 +393,11 @@ const AdminApp = (function () {
     const saveBtn = document.getElementById('saveBtn');
     if (saveBtn.disabled) return;
     saveBtn.disabled = true;
-    const action = editingId ? DB.update(editingId, data) : DB.add(data);
+    // Lưu có kiểm tra xung đột: bản ghi đổi ở nơi khác sau khi mở form → KHÔNG ghi đè, hỏi Founder.
+    const action = CmsEditGuard.guardedSave('product', editingId, id => DB.get(id),
+      () => (editingId ? DB.update(editingId, data) : DB.add(data)), id => editProduct(id));
     action.then(savedProduct => {
+      if (savedProduct && savedProduct.conflict) return; // Founder chọn giữ form / tải lại — chưa lưu
       showStatus(editingId ? 'Đã cập nhật sản phẩm.' : 'Đã thêm sản phẩm mới.');
       resetForm();
       loadProducts(document.getElementById('adminSearch').value);
@@ -487,6 +494,7 @@ const AdminApp = (function () {
   }
 
   document.addEventListener('DOMContentLoaded', () => {
+    CmsDirtyForm.watch('formPanel');
     AdminAuth.init({ page: 'products', title: 'QUẢN LÝ SẢN PHẨM' }).then(() => {
       loadCategories().then(() => loadProducts());
     });

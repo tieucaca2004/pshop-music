@@ -57,6 +57,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function fillEdit(id, b) {
     if (!b) return;
     editingId = id;
+    CmsEditGuard.capture('banner', b); // chụp bản ghi lúc mở form — so sánh khi Lưu
+    CmsDirtyForm.clean('bannerFormPanel');
     document.getElementById('bTitle').value = b.title || '';
     document.getElementById('bImage').value = b.image || '';
     bImagePicker.refresh();
@@ -71,6 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function resetForm() {
     editingId = null;
+    CmsEditGuard.clear('banner');
+    CmsDirtyForm.clean('bannerFormPanel');
     ['bTitle', 'bImage', 'bLink'].forEach(id => { document.getElementById(id).value = ''; });
     bImagePicker.refresh();
     document.getElementById('bZone').value = 'home-top';
@@ -95,8 +99,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveBtn = document.getElementById('bannerSaveBtn');
     if (saveBtn.disabled) return;
     saveBtn.disabled = true;
-    const action = editingId ? BannerDB.update(editingId, data) : BannerDB.add(data);
-    action.then(() => {
+    // Lưu có kiểm tra xung đột: bản ghi đổi ở nơi khác sau khi mở form → KHÔNG ghi đè, hỏi Founder.
+    const action = CmsEditGuard.guardedSave('banner', editingId, id => BannerDB.get(id),
+      () => (editingId ? BannerDB.update(editingId, data) : BannerDB.add(data)), id => edit(id));
+    action.then(result => {
+      if (result && result.conflict) return; // Founder chọn giữ form / tải lại — chưa lưu
       showStatus(editingId ? 'Đã cập nhật banner.' : 'Đã thêm banner mới.');
       resetForm();
       load();
@@ -117,6 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   document.getElementById('bannerSaveBtn').addEventListener('click', save);
+  CmsDirtyForm.watch('bannerFormPanel');
   document.getElementById('bannerResetBtn').addEventListener('click', resetForm);
 
   window.AdminBanners = { edit, remove };

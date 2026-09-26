@@ -227,6 +227,8 @@ const ProductAIAssist = (function () {
     AdminAI.publishDraftById(draft.id).then(() => {
       if (config.applyMode === 'product') {
         syncProductForm(draft.content);
+        // AI vừa ghi DB + đồng bộ form → chụp lại bản ghi, tránh báo xung đột giả khi Founder bấm Lưu.
+        if (draft.targetId && typeof CmsEditGuard !== 'undefined') DB.get(draft.targetId).then(p => CmsEditGuard.capture('product', p));
         showMessage('Đã áp dụng vào sản phẩm — đã lưu vào Firebase. Form đã đồng bộ hiển thị mới nhất.');
       } else {
         showMessage('Đã publish — ' + (config.publishedNote || 'nội dung đã được lưu.'));

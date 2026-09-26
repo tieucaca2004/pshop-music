@@ -1,0 +1,22 @@
+const { launch, newPage, login, BASE } = require('./cms');
+(async () => { const b = await launch(); const { page, log } = await newPage(b); await login(page, 'admin@test.local'); const R = [];
+  let bu = 0; page.on('dialog', d => { if (d.type() === 'beforeunload') bu++; });
+  async function leave(how) { const before = bu;
+    if (how === 'reload') await page.reload().catch(() => {});
+    else if (how === 'sidebar') await page.click('#adminSidebar a[href*="/admin/blog.html"], #adminSidebar a[href*="blog"]').catch(() => {});
+    else await page.goto(BASE + how).catch(() => {});
+    await page.waitForTimeout(2500); return bu > before; }
+  const P = '/admin/products.html', B = '/admin/blog.html';
+  await page.goto(BASE + P); await page.waitForTimeout(3500); R.push('1. SP form sạch → reload: cảnh báo=' + await leave('reload') + ' (phải false)');
+  await page.waitForTimeout(1000); await page.fill('#pName', 'đang nhập'); R.push('2. SP đang nhập → reload: cảnh báo=' + await leave('reload') + ' (phải true)');
+  await page.goto(BASE + P); await page.waitForTimeout(3500); await page.fill('#pName', 'đang nhập'); R.push('3. SP đang nhập → bấm sidebar Blog: cảnh báo=' + await leave('sidebar'));
+  await page.goto(BASE + P); await page.waitForTimeout(3500); await page.evaluate(() => AdminApp.editProduct('41')); await page.waitForTimeout(500); R.push('4. SP mở Sửa (chưa gõ) → rời trang: cảnh báo=' + await leave(B) + ' (phải false)');
+  await page.goto(BASE + P); await page.waitForTimeout(3500); await page.fill('#pName', 'SP LUU OK'); await page.check('#pCategoriesList input[type=checkbox] >> nth=0'); await page.click('#saveBtn'); await page.waitForTimeout(2000); R.push('5. SP Lưu thành công → rời trang: cảnh báo=' + await leave(B) + ' (phải false)');
+  await page.goto(BASE + P); await page.waitForTimeout(3500); await page.fill('#pName', 'bỏ'); await page.evaluate(() => AdminApp.resetForm()); R.push('6. SP gõ rồi Hủy/Reset → rời trang: cảnh báo=' + await leave(B) + ' (phải false)');
+  await page.goto(BASE + B); await page.waitForTimeout(3500); await page.click('#postContentEditor .ql-editor'); await page.keyboard.type('nội dung dài'); R.push('7. Blog gõ nội dung (editor) → reload: cảnh báo=' + await leave('reload'));
+  await page.goto(BASE + B); await page.waitForTimeout(3500); await page.fill('#postTitle', 'x'); await page.click('#blogResetBtn').catch(() => {}); R.push('8. Blog gõ rồi bấm Hủy → rời: cảnh báo=' + await leave(P) + ' (phải false)');
+  await page.goto(BASE + B); await page.waitForTimeout(3500); await page.fill('#postTitle', 'Blog có ảnh'); await page.click('#postCoverPreview button.link-btn >> nth=0').catch(() => {}); await page.waitForTimeout(1500);
+  await page.setInputFiles('#medialibUploadInput', { name: 'c.png', mimeType: 'image/png', buffer: require('fs').readFileSync((process.env.E2E_FILES || __dirname) + '/big.png') }).catch(e => R.push('   (không có input upload: ' + e.message.slice(0, 50) + ')'));
+  await page.waitForTimeout(4000); R.push('9. Blog gõ title → upload ảnh bìa: title còn "' + await page.inputValue('#postTitle') + '", ảnh=' + ((await page.inputValue('#postCover')) ? 'có' : 'không') + ', rời trang cảnh báo=' + await leave(P));
+  R.forEach(r => console.log(r)); console.log('errors', JSON.stringify([...new Set(log.errors)]));
+  await b.close(); })();

@@ -1,0 +1,14 @@
+const { launch, newPage, login, BASE } = require('./cms');
+const H = { headers: { Authorization: 'Bearer owner' } };
+const put = (p, v) => fetch('http://127.0.0.1:9000/' + p + '.json?ns=pshop-music-default-rtdb', { method: 'PUT', body: JSON.stringify(v), ...H });
+const patch = (p, v) => fetch('http://127.0.0.1:9000/' + p + '.json?ns=pshop-music-default-rtdb', { method: 'PATCH', body: JSON.stringify(v), ...H });
+(async () => { const b = await launch(); const { page, log } = await newPage(b); await login(page, 'admin@test.local');
+  await page.goto(BASE + '/admin/products.html'); await page.waitForTimeout(3500);
+  await put('roles/uid_admin/role', 'agent');
+  await page.fill('#pName', 'LUU-THAT-BAI'); await page.check('#pCategoriesList input[type=checkbox] >> nth=0'); await page.click('#saveBtn'); await page.waitForTimeout(2500);
+  console.log('Lưu THẤT BẠI → báo lỗi:', log.console.some(c => /LƯU THẤT BẠI/.test(c)), '| form còn:', await page.inputValue('#pName'), '| vẫn "chưa lưu":', await page.evaluate(() => CmsDirtyForm.isDirty('formPanel')), '| nút Lưu mở lại:', !(await page.$eval('#saveBtn', b => b.disabled)));
+  await put('roles/uid_admin/role', 'admin');
+  await page.evaluate(() => AdminApp.editProduct('950')); await patch('products/950', { price: '555' }); await page.fill('#pName', 'GIU-FORM');
+  await page.click('#saveBtn'); await page.waitForTimeout(1500); await page.click('[data-a="keep"]');
+  console.log('Xung đột → GIỮ FORM: form còn', await page.inputValue('#pName'), '| vẫn "chưa lưu":', await page.evaluate(() => CmsDirtyForm.isDirty('formPanel')), '| nút Lưu mở lại:', !(await page.$eval('#saveBtn', b => b.disabled)));
+  await b.close(); })();
