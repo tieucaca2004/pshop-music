@@ -772,10 +772,11 @@ const WorkflowEngine = (function () {
       var timer = null;
       if (opts.timeout && opts.timeout > 0) {
         timer = setTimeout(function () {
-          // xoá khỏi registry
+          // xoá khỏi registry (entry rỗng cũng xoá — tránh resume báo sai emitted:true)
           if (waitRegistry[eventId]) {
             var idx = waitRegistry[eventId].resolvers.indexOf(handle);
             if (idx >= 0) waitRegistry[eventId].resolvers.splice(idx, 1);
+            if (!waitRegistry[eventId].resolvers.length) delete waitRegistry[eventId];
           }
           var err = new Error('WaitEvent timeout: ' + eventId);
           err.code = 'WAIT_TIMEOUT';
@@ -787,6 +788,11 @@ const WorkflowEngine = (function () {
         resolve({ eventId: eventId, eventPayload: payload || null });
       }
       handle._timeoutTimer = timer;
+      // cancelWaitEvent() reject waiter qua đây (trước đây chỉ xoá registry → Promise treo vĩnh viễn)
+      handle._reject = function (err) {
+        if (timer) clearTimeout(timer);
+        reject(err);
+      };
       entry.resolvers.push(handle);
       if (opts.metadata) entry.metadata = opts.metadata;
     });
@@ -814,14 +820,12 @@ const WorkflowEngine = (function () {
   function cancelWaitEvent(eventId) {
     var entry = waitRegistry[eventId];
     if (!entry) return false;
+    delete waitRegistry[eventId];
     entry.resolvers.forEach(function (h) {
-      if (h._timeoutTimer) clearTimeout(h._timeoutTimer);
       var err = new Error('WaitEvent cancelled: ' + eventId);
       err.code = 'WAIT_CANCELLED';
-      // reject qua việc resolve? -> cần reject; dùng cách reject qua handle không được, dùng entry
-      // (thực tế waitForEvent reject qua timeout; cancel xoá registry + các promise không resolve)
+      if (h._reject) h._reject(err); // waitOnStep → 'cancelled' → run() dừng reason 'event_cancelled'
     });
-    delete waitRegistry[eventId];
     return true;
   }
 

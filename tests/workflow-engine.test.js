@@ -249,6 +249,37 @@ async function t(name, fn) {
     assert.strictEqual(s.settled, 'resolved'); assert.strictEqual(s.v.results[0].status, 'failed'); assert.deepStrictEqual(seen, ['failed']);
   });
 
+  // ── G. WAIT EVENT — cancel/timeout dọn dẹp (WF-D3) ───────────────────
+  await t('[WF-D3] cancelWaitEvent → run() đang chờ kết thúc với reason event_cancelled (không treo)', async () => {
+    let n = 0;
+    const p = W.run([{ type: 'wait_event', eventId: 'T-evt-c' }, { type: 'generation' }], 'u', 'e', { overrideExecute: () => { n++; return ok(); } });
+    await sleep(10);
+    assert.strictEqual(W.cancelWaitEvent('T-evt-c'), true);
+    const s = await settleWithin(p, 300);
+    assert.strictEqual(s.settled, 'resolved', 'run() vẫn treo sau cancel');
+    assert.strictEqual(s.v.reason, 'event_cancelled'); assert.strictEqual(s.v.results[0].status, 'cancelled'); assert.strictEqual(n, 0);
+    assert.strictEqual(W.resumeExecution('T-evt-c', {}).emitted, false);
+  });
+  await t('[WF-D3] waitForEvent bị cancel → reject code WAIT_CANCELLED; cancel event không tồn tại → false', async () => {
+    const s = settleWithin(W.waitForEvent('T-evt-c2', { timeout: 5000 }), 300);
+    W.cancelWaitEvent('T-evt-c2');
+    const r = await s;
+    assert.strictEqual(r.settled, 'rejected'); assert.strictEqual(r.e.code, 'WAIT_CANCELLED');
+    assert.strictEqual(W.cancelWaitEvent('T-evt-khong-co'), false);
+  });
+  await t('[WF-D3] hết timeout → registry được dọn (resume báo không có listener)', async () => {
+    const s = await settleWithin(W.waitForEvent('T-evt-to', { timeout: 10 }), 300);
+    assert.strictEqual(s.settled, 'rejected'); assert.strictEqual(s.e.code, 'WAIT_TIMEOUT');
+    assert.deepStrictEqual(W.resumeExecution('T-evt-to', {}), { emitted: false, listeners: 0 });
+  });
+  await t('[WF-D3] 2 waiter cùng event: 1 timeout, waiter còn lại vẫn resume được', async () => {
+    const a = settleWithin(W.waitForEvent('T-evt-2w', { timeout: 10 }), 300);
+    const b = settleWithin(W.waitForEvent('T-evt-2w', {}), 300);
+    assert.strictEqual((await a).settled, 'rejected');
+    assert.deepStrictEqual(W.resumeExecution('T-evt-2w', { v: 1 }), { emitted: true, listeners: 1 });
+    const rb = await b; assert.strictEqual(rb.settled, 'resolved'); assert.strictEqual(rb.v.eventPayload.v, 1);
+  });
+
   console.log('WORKFLOW ENGINE js/ai/workflow-engine.js'); results.forEach(r => console.log(r));
   console.log(process.exitCode ? 'workflow-engine: FAILED' : 'workflow-engine: OK');
   process.exit(process.exitCode || 0);
