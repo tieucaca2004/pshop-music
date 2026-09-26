@@ -829,7 +829,7 @@ const { checkAndIncrement } = require('./shared/rateLimit');
 const { ALLOWED_ORIGINS } = require('./shared/corsConfig');
 const auditLog = require('./shared/auditLog');
 const { sendWebhook, WEBHOOK_SIGNING_SECRET } = require('./shared/webhook');
-const { createJob, getJob, updateJobStatus, updateWorkflowState, appendExecutionLog, getWorkflowConfig } = require('./shared/asyncJob');
+const { createJob, getJob, updateJobStatus, updateWorkflowState, updateWorkflowStateUnlessStopped, appendExecutionLog, getWorkflowConfig } = require('./shared/asyncJob');
 const { onValueCreated } = require('firebase-functions/v2/database');
 const { runGeneration } = require('./shared/aiGenerate');
 const { withRetry } = require('./shared/retry');
@@ -1090,7 +1090,7 @@ exports.aiGenerateWorker = onValueCreated({ ref: '/apiAsyncJobs/{jobId}', region
         // Retry theo STEP (không retry toàn workflow)
         while (attempts <= maxRetry) {
           try {
-            if (attempts > 0) await updateWorkflowState(event.params.jobId, 'RETRYING', { stepIndex: i, retryCount: attempts });
+            if (attempts > 0) await updateWorkflowStateUnlessStopped(event.params.jobId, 'RETRYING', { stepIndex: i, retryCount: attempts });
             await runGeneration(stepJobId, step.moduleId, Object.assign({}, baseParams, step.inputParams || {}, (step.config && step.config._skipFallback) ? {} : {}), job.uid);
             stepErr = null;
             break;
@@ -1115,7 +1115,8 @@ exports.aiGenerateWorker = onValueCreated({ ref: '/apiAsyncJobs/{jobId}', region
         } else {
           await appendExecutionLog(event.params.jobId, { stepIndex: i, moduleId: step.moduleId, status: 'SUCCESS', finishedAt: Date.now(), durationMs: Date.now() - t0, retry: attempts });
         }
-        await updateWorkflowState(event.params.jobId, 'RUNNING', { currentStep: i + 1 });
+        // Không ghi đè CANCELLED/PAUSED đặt trong lúc step vừa chạy — kiểm tra đầu step kế sẽ dừng.
+        await updateWorkflowStateUnlessStopped(event.params.jobId, 'RUNNING', { currentStep: i + 1 });
       }
       await updateWorkflowState(event.params.jobId, 'COMPLETED', { currentStep: steps.length, totalSteps: steps.length });
     } catch (err) {

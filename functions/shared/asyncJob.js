@@ -37,7 +37,7 @@ async function updateJobStatus(jobId, status, resultOrError) {
   return getJob(jobId);
 }
 
-module.exports = { createJob, getJob, updateJobStatus, updateWorkflowState, appendExecutionLog, getWorkflowConfig };
+module.exports = { createJob, getJob, updateJobStatus, updateWorkflowState, updateWorkflowStateUnlessStopped, appendExecutionLog, getWorkflowConfig };
 
 /**
  * WORKFLOW-02 Orchestration & Execution (directive 17:06).
@@ -58,6 +58,19 @@ async function updateWorkflowState(jobId, state, extra) {
   }, extra || {});
   await admin.database().ref('apiAsyncJobs/' + jobId).update(patch);
   return getJob(jobId);
+}
+
+/**
+ * updateWorkflowStateUnlessStopped(jobId, state, extra) — worker tự chuyển
+ * sang trạng thái chạy (RUNNING/RETRYING) nhưng KHÔNG ghi đè CANCELLED/PAUSED
+ * do Founder đặt trong lúc 1 step đang chạy (transaction nguyên tử). Trước
+ * đây updateWorkflowState('RUNNING') sau mỗi step ghi đè ngay lệnh Cancel/
+ * Pause → lần kiểm tra đầu step kế không thấy, workflow chạy tới hết.
+ */
+async function updateWorkflowStateUnlessStopped(jobId, state, extra) {
+  const ref = admin.database().ref('apiAsyncJobs/' + jobId);
+  await ref.child('workflowState').transaction(cur => (cur === 'CANCELLED' || cur === 'PAUSED') ? undefined : state);
+  await ref.update(Object.assign({ updatedAt: admin.database.ServerValue.TIMESTAMP }, extra || {}));
 }
 
 /**

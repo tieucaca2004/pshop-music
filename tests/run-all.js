@@ -5,7 +5,7 @@
 const { spawnSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const EMULATOR_ONLY = ['storage-rules.test.js', 'database-rules.test.js', 'registration-security.test.js', 'custom-claims-security.test.js'];
+const EMULATOR_ONLY = ['storage-rules.test.js', 'database-rules.test.js', 'registration-security.test.js', 'custom-claims-security.test.js', 'workflow-worker.test.js'];
 const files = fs.readdirSync(__dirname).filter(f => f.endsWith('.test.js') && !EMULATOR_ONLY.includes(f)).sort();
 let failed = 0;
 for (const f of files) {
