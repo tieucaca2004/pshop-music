@@ -135,7 +135,7 @@ AIJobQueue, PluginManager, PermissionService, Firebase Rules, lớp bảo mật 
 | `03763dc` | WF-D5: `runLoop`/`runForEach` dừng khi vòng/item `stoppedEarly` | 3 ca + 3 baseline |
 | `33fc3bc` | WF-D6: Decision fail-closed; `resolveBranch` không chọn nhánh sai | 3 ca + 1 baseline |
 | `b62bb1f` | WF-D7: worker không ghi đè CANCELLED/PAUSED | `tests/workflow-worker.test.js` 8 ca (Emulator) |
-| `8c9572b` | Bump cache-bust `?v=9a1f682` (71 file HTML) — bắt buộc vì `/js/*` immutable | `cache-bust.test.js` |
+| `8c9572b` | Bump cache-bust `?v=33fc3bc` (71 file HTML) — bắt buộc vì `/js/*` immutable | `cache-bust.test.js` |
 
 **Bằng chứng sau sửa (Emulator + Chromium):** trang Workflow chạy 2 step → Step 1 tạo `aiJobs` (createdBy admin, input đúng) + `aiLogs`, lỗi DỪNG ở Provider (`Failed to fetch` — không có mạng AI), Step 2 "Chưa chạy (dừng do bước trước lỗi)", bảng tiến trình vẽ real-time; 0 lỗi JS. Sinh nội dung AI thành công end-to-end: BLOCKED (mạng).
 
