@@ -28,6 +28,8 @@ const listResource = require('../shared/listResource');
 const { buildPlan } = require('../shared/agentPlanner');
 const { executeStep, undoLastStep } = require('../shared/agentExecute');
 const { TOOL_MAP, TOOL_GROUPS } = require('../shared/agentTools');
+const { hasPermission } = require('../shared/permissions');
+const admin = require('firebase-admin');
 
 const PLANS_NODE = 'agentPlans';
 const CONVERSATIONS_NODE = 'agentConversations';
@@ -82,6 +84,11 @@ async function handle(req, res, helpers) {
     if (!planId) return sendError(res, 'INVALID_REQUEST', 'Thiếu planId.');
     const plan = await listResource.getOne(PLANS_NODE, planId);
     if (!plan) return sendError(res, 'NOT_FOUND', 'Không tìm thấy Plan.');
+    // API-02 Phase 1 — Plan là PRIVATE: createPlan() lưu uid người tạo, không
+    // có cơ chế chia sẻ/liệt kê Plan nào. Mọi thao tác (xem/execute/undo/
+    // resume/discard) chỉ cho đúng chủ Plan — biết planId không đủ để dùng
+    // Plan của người khác. Plan thiếu uid → từ chối (fail-closed).
+    if (!plan.uid || plan.uid !== auth.uid) return sendError(res, 'PERMISSION_DENIED', 'Plan này thuộc tài khoản khác.');
 
     // /v1/agent/plan/{planId}/steps/{i}/execute
     if (parts[1] === 'steps' && parts[3] === 'execute' && req.method === 'POST') {
@@ -89,7 +96,26 @@ async function handle(req, res, helpers) {
       const step = plan.steps[i];
       if (!step) return sendError(res, 'NOT_FOUND', 'Không tìm thấy Step.');
       if (step.status === 'running') return sendError(res, 'INVALID_REQUEST', 'Step đang chạy.');
-      const updatedStep = await executeStep(step, plan.steps, { authHeader, uid: auth.uid, email: auth.email });
+      if (step.tool === 'create-product') {
+        // API-02 Phase 1 (AG-2): isStaff chưa đủ — CREATE_PRODUCT cần đúng
+        // quyền structural.write.product (shared/permissions.js), theo role
+        // thật từ roles/<uid>, không theo nội dung Plan do LLM sinh.
+        if (!hasPermission(auth.role, 'structural.write.product')) {
+          return sendError(res, 'PERMISSION_DENIED', 'Cần quyền structural.write.product để tạo sản phẩm qua Founder Agent.');
+        }
+        // Chống chạy 2 lần (execute trùng/đồng thời): claim nguyên tử
+        // pending → running trên chính step trong agentPlans. Step đã
+        // completed/running → 409, không tạo sản phẩm thứ 2.
+        const claim = await admin.database().ref(PLANS_NODE + '/' + planId + '/steps/' + i + '/status')
+          .transaction(cur => (cur === 'running' || cur === 'completed') ? undefined : 'running');
+        if (!claim.committed) return sendError(res, 'CONFLICT', 'Bước tạo sản phẩm đã/đang được thực thi — không tạo trùng.');
+      }
+      const updatedStep = await executeStep(step, plan.steps, { authHeader, uid: auth.uid, email: auth.email, role: auth.role });
+      if (step.tool === 'create-product') {
+        // Trace tối thiểu cho CREATE_PRODUCT (uid, thời điểm; productId/status/errorText đã có trên step).
+        updatedStep.executedBy = auth.uid;
+        updatedStep.executedAt = Date.now();
+      }
       plan.steps[i] = updatedStep;
       const allDone = plan.steps.every(s => ['completed', 'skipped', 'failed'].indexOf(s.status) !== -1);
       const updated = await listResource.update(PLANS_NODE, planId, { steps: plan.steps, status: allDone ? 'finished' : 'active' });

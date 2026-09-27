@@ -29,6 +29,8 @@ const {
   GROUP_WRITE_DIRECT, GROUP_IMAGE_SYNC, GROUP_READONLY, GROUP_NAVIGATE, GROUP_GENERIC_PLUGIN
 } = require('./agentTools');
 
+const { hasPermission } = require('./permissions');
+
 const FUNCTIONS_BASE = 'https://us-central1-pshop-music.cloudfunctions.net';
 
 function resolveInputParams(step, allSteps, products) {
@@ -64,6 +66,73 @@ function resolveInputParams(step, allSteps, products) {
   return ok ? params : null;
 }
 
+// ─── API-02 Phase 1 — validate CREATE_PRODUCT (inputParams = UNTRUSTED) ──
+// Đúng contract Product legacy pshop-music đang dùng (js/admin-products.js
+// form Lưu + routes/cmsLists.js createSchema): name bắt buộc; price là CHUỖI
+// hiển thị (rỗng = "Liên hệ"); categoryIds + category (= categoryIds[0]) +
+// categoryLabel ghi cùng nhau như form CMS. Chỉ đọc đúng các field
+// whitelist dưới đây — uid/role/businessId/path/pubStatus... LLM gửi kèm bị
+// bỏ qua. Luôn pubStatus 'draft' (Founder tự Publish trong CMS).
+const PRODUCT_TEXT_MAX = 200;
+const PRICE_MAX = 100000000000; // 100 tỷ ₫ — chặn số vô lý
+
+// parseVndPrice('8.900.000 ₫' | '8,900,000 VND' | '8900000' | 8900000) → 8900000
+// Trả null nếu không parse được CHẮC CHẮN (không đoán "8tr", "75k"...).
+function parseVndPrice(raw) {
+  if (typeof raw === 'number') return Number.isInteger(raw) && raw > 0 && raw <= PRICE_MAX ? raw : null;
+  if (typeof raw !== 'string') return null;
+  const s = raw.trim().replace(/\s*(₫|đ|vnđ|vnd)\s*$/i, '').replace(/\s+/g, '');
+  if (!/^(\d+|\d{1,3}(\.\d{3})+|\d{1,3}(,\d{3})+)$/.test(s)) return null;
+  const n = parseInt(s.replace(/[.,]/g, ''), 10);
+  return n > 0 && n <= PRICE_MAX ? n : null;
+}
+
+function formatVndPrice(n) {
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' ₫';
+}
+
+function validateCreateProductInput(params, activeCats) {
+  params = params || {};
+  const issues = [];
+  const text = (v, field) => {
+    if (v === undefined || v === null || v === '') return '';
+    if (typeof v !== 'string') { issues.push('Field "' + field + '" phải là chuỗi.'); return ''; }
+    const t = v.trim();
+    if (t.length > PRODUCT_TEXT_MAX) issues.push('Field "' + field + '" dài quá ' + PRODUCT_TEXT_MAX + ' ký tự.');
+    return t;
+  };
+  const product = { pubStatus: 'draft' };
+  product.name = text(params.name, 'name');
+  if (!product.name) issues.push('Thiếu tên sản phẩm (name).');
+  ['brand', 'model', 'sku'].forEach(f => { const v = text(params[f], f); if (v) product[f] = v; });
+
+  if (params.price !== undefined && params.price !== null && params.price !== '') {
+    const n = parseVndPrice(params.price);
+    if (n === null) issues.push('Giá không hợp lệ: "' + String(params.price).slice(0, 40) + '" — cần số dương, vd 8.900.000.');
+    else product.price = formatVndPrice(n);
+  }
+
+  let codes = params.categoryIds !== undefined ? params.categoryIds : (params.category !== undefined ? [params.category] : []);
+  if (!Array.isArray(codes)) codes = [codes];
+  codes = codes.filter(c => c !== undefined && c !== null && c !== '');
+  if (codes.length) {
+    const uniq = [];
+    let badCategory = false;
+    codes.forEach(c => {
+      const found = typeof c === 'string' && activeCats.find(a => a.code === c.trim());
+      if (!found) { badCategory = true; issues.push('Danh mục không tồn tại hoặc không hoạt động: "' + String(c).slice(0, 40) + '".'); }
+      else if (uniq.indexOf(found.code) === -1) uniq.push(found.code);
+    });
+    if (!badCategory) {
+      const first = activeCats.find(a => a.code === uniq[0]);
+      product.categoryIds = uniq;
+      product.category = uniq[0];
+      product.categoryLabel = first ? first.label : '';
+    }
+  }
+  return issues.length ? { ok: false, issues } : { ok: true, product };
+}
+
 async function applyCategoryAssignment(productId, categoryIds, activeCats) {
   const first = activeCats.find(c => c.code === categoryIds[0]);
   return listResource.update('products', productId, { categoryIds, category: categoryIds[0], categoryLabel: first ? first.label : '' });
@@ -97,12 +166,25 @@ async function executeStep(step, allSteps, ctx) {
     const group = TOOL_GROUPS[step.tool];
 
     if (step.tool === 'create-product') {
-      const name = (resolvedParams.name || step.target || 'Sản phẩm mới').trim();
+      // API-02 Phase 1 (AG-1/AG-2): quyền kiểm tra DETERMINISTIC theo role
+      // thật của caller (ctx.role từ roles/<uid>) — không bao giờ theo
+      // inputParams do LLM sinh. Route đã chặn trước; đây là lớp phòng thủ
+      // thứ 2 cho mọi caller khác của executeStep().
+      if (!hasPermission(ctx.role, 'structural.write.product')) {
+        step.status = 'failed';
+        step.errorText = 'Không có quyền structural.write.product để tạo sản phẩm.';
+        return step;
+      }
+      const categories = await listResource.getAll('categories');
+      const checked = validateCreateProductInput(resolvedParams, categories.filter(c => c.active !== false));
+      if (!checked.ok) {
+        step.status = 'failed';
+        step.errorText = checked.issues.join(' ');
+        return step;
+      }
       const extra = {};
-      if (resolvedParams.brand) extra.brand = String(resolvedParams.brand).trim();
-      if (resolvedParams.model) extra.model = String(resolvedParams.model).trim();
       if (step.attachedImageUrl) { extra.images = [step.attachedImageUrl]; extra.image = step.attachedImageUrl; }
-      const newProduct = await listResource.add('products', Object.assign({ name, pubStatus: 'draft' }, extra));
+      const newProduct = await listResource.add('products', Object.assign({}, checked.product, extra));
       step.productId = newProduct.id;
       step.status = 'completed';
 
@@ -404,4 +486,4 @@ async function undoLastStep(steps) {
   return { ok: true };
 }
 
-module.exports = { resolveInputParams, executeStep, applyCategoryAssignment, undoLastStep };
+module.exports = { resolveInputParams, executeStep, applyCategoryAssignment, undoLastStep, validateCreateProductInput, parseVndPrice };
