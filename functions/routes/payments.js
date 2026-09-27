@@ -28,6 +28,17 @@ async function handle(req, res, helpers) {
 
   if (path.indexOf('/v1/businesses/') !== 0) return null;
 
+  // ─── /.../payments/callback/{provider} — FAIL-CLOSED (API-01, PAY-1) ──
+  // Chưa có payment provider thật: không có contract chữ ký webhook, không
+  // có secret, adapter đều là stub. Firebase ID token KHÔNG phải cách xác
+  // thực provider, nên không role nào (kể cả business_admin) được tạo sự
+  // kiện thanh toán qua đường này. Từ chối trước auth của router này, mọi
+  // method, mọi provider — không đọc/ghi DB. Xác nhận thanh toán thủ công
+  // vẫn đi qua PATCH /payments/{id} (chỉ admin), tách riêng.
+  if (/^\/v1\/businesses\/[^/]+\/payments\/callback(\/.*)?$/.test(path)) {
+    return sendError(res, 'FORBIDDEN', 'Webhook thanh toán chưa được kích hoạt: chưa cấu hình nhà cung cấp thanh toán có xác thực chữ ký.');
+  }
+
   const authRes = await verifyAuth(req);
   if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
 
@@ -41,12 +52,10 @@ async function handle(req, res, helpers) {
 
   const listPattern = /^\/v1\/businesses\/([^/]+)\/payments$/;
   const itemPattern = /^\/v1\/businesses\/([^/]+)\/payments\/([^/]+)$/;
-  const callbackPattern = /^\/v1\/businesses\/([^/]+)\/payments\/callback\/([a-z_]+)$/;
 
   const listMatch = path.match(listPattern);
   const itemMatch = path.match(itemPattern);
-  const cbMatch = path.match(callbackPattern);
-  if (!listMatch && !itemMatch && !cbMatch) return null;
+  if (!listMatch && !itemMatch) return null;
 
   // ─── Provider list endpoint ─────────────────────────────────────────
   if (listMatch && req.method === 'GET' && req.query && req.query.providers === 'true') {
@@ -148,88 +157,6 @@ async function handle(req, res, helpers) {
     await ref.set(record);
 
     return sendSuccess(res, record, { status: 201 });
-  }
-
-  // ─── POST /.../payments/callback/{provider} — Webhook ─────────────
-  if (cbMatch && req.method === 'POST') {
-    // Payment callbacks bypass normal auth — validated via transactionId
-    const provider = cbMatch[2];
-    const adapter = getAdapter(provider);
-
-    // Verify webhook payload
-    var webhookResult;
-    try {
-      webhookResult = await adapter.verifyWebhook(req.body || {}, '');
-    } catch (err) {
-      return sendError(res, 'INVALID_WEBHOOK', 'Xác thực webhook thất bại: ' + err.message);
-    }
-
-    if (!webhookResult.valid) {
-      return sendError(res, 'INVALID_WEBHOOK', 'Webhook không hợp lệ.');
-    }
-
-    const transactionId = webhookResult.transactionId;
-    if (!transactionId) {
-      return sendError(res, 'INVALID_WEBHOOK', 'Thiếu transactionId từ webhook.');
-    }
-
-    // Find payment by transactionId
-    const allSnap = await db.ref(paymentsPath).once('value');
-    var paymentRef = null;
-    var paymentData = null;
-    if (allSnap.exists()) {
-      allSnap.forEach(function(s) {
-        var p = s.val();
-        if (p.transactionId === transactionId) {
-          paymentRef = s.key;
-          paymentData = p;
-        }
-      });
-    }
-
-    if (!paymentData) {
-      return sendError(res, 'NOT_FOUND', 'Không tìm thấy giao dịch với transactionId: ' + transactionId);
-    }
-
-    // Prevent duplicate callback
-    if (paymentData.status === 'paid') {
-      return sendSuccess(res, { received: true, message: 'Callback đã được xử lý trước đó.', status: 'paid' });
-    }
-
-    // Update payment status
-    var newStatus = 'paid';
-    if (webhookResult.event === 'payment.failed') newStatus = 'failed';
-    else if (webhookResult.event === 'payment.cancelled') newStatus = 'cancelled';
-
-    var updateData = {
-      status: newStatus,
-      updatedAt: admin.database.ServerValue.TIMESTAMP
-    };
-    if (newStatus === 'paid') {
-      updateData.paidAt = admin.database.ServerValue.TIMESTAMP;
-    }
-
-    await db.ref(paymentsPath + '/' + paymentRef).update(updateData);
-
-    // Update order payment status
-    var orderStatus = 'pending';
-    if (newStatus === 'paid') orderStatus = 'paid';
-    else if (newStatus === 'failed') orderStatus = 'payment_failed';
-    else if (newStatus === 'cancelled') orderStatus = 'payment_cancelled';
-
-    if (paymentData.orderId) {
-      db.ref('businesses/' + businessId + '/orders/' + paymentData.orderId).update({
-        paymentStatus: orderStatus,
-        updatedAt: admin.database.ServerValue.TIMESTAMP
-      });
-    }
-
-    return sendSuccess(res, {
-      received: true,
-      transactionId: transactionId,
-      paymentId: paymentRef,
-      status: newStatus
-    });
   }
 
   // ─── GET /.../payments/{id} — Read One ─────────────────────────────

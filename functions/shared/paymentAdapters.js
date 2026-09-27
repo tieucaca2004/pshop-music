@@ -16,6 +16,14 @@
 const crypto = require('crypto');
 
 /**
+ * FAIL-CLOSED (API-01): chưa adapter nào có contract chữ ký webhook thật —
+ * mọi webhook bị coi là không hợp lệ cho tới khi triển khai provider thật.
+ */
+async function rejectWebhook() {
+  return { valid: false, event: null, transactionId: '', reason: 'WEBHOOK_NOT_CONFIGURED' };
+}
+
+/**
  * Mock adapter — returns simulated responses for demos and development.
  * Replace each method with real API calls when integrating a provider.
  */
@@ -45,9 +53,7 @@ const mockAdapter = {
     return { success: true, transactionId, amount, message: 'Mock: hoàn tiền ' + amount + ' thành công.' };
   },
 
-  async verifyWebhook(payload) {
-    return { valid: true, event: 'payment.completed', transactionId: payload.transactionId || '' };
-  }
+  verifyWebhook: rejectWebhook
 };
 
 /**
@@ -79,9 +85,7 @@ const cashAdapter = {
     return { success: true, transactionId, amount, message: 'Hoàn tiền mặt: ' + amount };
   },
 
-  async verifyWebhook(payload) {
-    return { valid: true, event: 'payment.completed', transactionId: payload.transactionId || '' };
-  }
+  verifyWebhook: rejectWebhook
 };
 
 /**
@@ -117,9 +121,7 @@ const bankTransferAdapter = {
     return { success: true, transactionId, amount };
   },
 
-  async verifyWebhook(payload) {
-    return { valid: true, event: 'payment.completed', transactionId: payload.transactionId || '' };
-  }
+  verifyWebhook: rejectWebhook
 };
 
 /**
@@ -155,9 +157,7 @@ const vietQrAdapter = {
     return { success: true, transactionId, amount };
   },
 
-  async verifyWebhook(payload) {
-    return { valid: true, event: 'payment.completed', transactionId: payload.transactionId || '' };
-  }
+  verifyWebhook: rejectWebhook
 };
 
 /**
@@ -190,9 +190,7 @@ const vnpayAdapter = {
     return { success: true, transactionId, amount };
   },
 
-  async verifyWebhook(payload) {
-    return { valid: true, event: 'payment.completed', transactionId: payload.vnp_TxnRef || '' };
-  }
+  verifyWebhook: rejectWebhook
 };
 
 /**
@@ -224,9 +222,7 @@ const momoAdapter = {
     return { success: true, transactionId, amount };
   },
 
-  async verifyWebhook(payload) {
-    return { valid: true, event: 'payment.completed', transactionId: payload.orderId || '' };
-  }
+  verifyWebhook: rejectWebhook
 };
 
 /**
@@ -258,9 +254,7 @@ const zaloPayAdapter = {
     return { success: true, transactionId, amount };
   },
 
-  async verifyWebhook(payload) {
-    return { valid: true, event: 'payment.completed', transactionId: payload.apptransid || '' };
-  }
+  verifyWebhook: rejectWebhook
 };
 
 /**
@@ -292,9 +286,7 @@ const stripeAdapter = {
     return { success: true, transactionId, amount };
   },
 
-  async verifyWebhook(payload) {
-    return { valid: true, event: 'payment.completed', transactionId: payload.id || '' };
-  }
+  verifyWebhook: rejectWebhook
 };
 
 /**
@@ -326,9 +318,7 @@ const paypalAdapter = {
     return { success: true, transactionId, amount };
   },
 
-  async verifyWebhook(payload) {
-    return { valid: true, event: 'payment.completed', transactionId: payload.id || '' };
-  }
+  verifyWebhook: rejectWebhook
 };
 
 /**
