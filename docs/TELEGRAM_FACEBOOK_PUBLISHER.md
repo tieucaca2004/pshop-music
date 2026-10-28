@@ -20,25 +20,36 @@ Không có hệ thống riêng: tái dùng `routes/fbPublisher.js`, `shared/fbDr
 `/retry <mã>` chỉ đưa `FAILED(publish)` về `PENDING_APPROVAL` (version +1) khi Facebook CHƯA ghi nhận bài (`facebookPostId` rỗng).
 `draft.steps.{intake,content,image,preview}` ghi trạng thái từng bước; `draft.notices` là cảnh báo hiển thị cho người duyệt.
 
-## 3. Cấu hình RTDB (server-only, do Founder ghi; KHÔNG sửa Rules trong đợt này)
+## 3. Cấu hình — SECRET ở Functions secrets, cấu hình thường ở RTDB (KHÔNG sửa Rules)
+**Secret (Secret Manager, chỉ Cloud Functions đọc; KHÔNG ở RTDB — super_admin đọc được toàn RTDB từ trình duyệt):**
+| Secret | Hàm được bind | Dùng cho |
+|---|---|---|
+| `TELEGRAM_BOT_TOKEN` | `telegramWebhook`, `apiGateway` | gọi Telegram Bot API (tải ảnh, gửi xem trước/kết quả) |
+| `TELEGRAM_WEBHOOK_SECRET` | `telegramWebhook` | so với header `X-Telegram-Bot-Api-Secret-Token` (cùng giá trị với `secret_token` của `setWebhook`) |
+| `COMPOSITOR_SECRET` | `telegramWebhook` | header `X-Compositor-Secret` gọi máy chủ compositor |
+| `WEBHOOK_SIGNING_SECRET` (đã có) | `apiGateway` | secret gateway cho `/v1/facebook-publisher/callback` (không còn đọc RTDB `webhookSigningSecret`) |
+| `OPENAI_API_KEY` (đã có) | `telegramWebhook`, `apiGateway` | AI viết nội dung |
+Tạo secret (Founder, prompt ẩn — KHÔNG dán vào chat/log): `firebase functions:secrets:set TELEGRAM_BOT_TOKEN --project pshop-music` (tương tự cho `TELEGRAM_WEBHOOK_SECRET`, `COMPOSITOR_SECRET`). Secret phải tồn tại TRƯỚC khi deploy hàm dùng nó.
+**RTDB (không bí mật):**
 ```
 telegramConfig: {
-  token:        "<bot token>",
   chatId:       "<id chat được phép>",          // số, hoặc @kênh công khai
   approverIds:  ["<telegram user id>", ...],    // BẮT BUỘC, khác rỗng
   approverMap:  { "<telegram user id>": "<uid PSH>" },   // BẮT BUỘC, từng người
   publishRoles: ["admin","editor"],             // tuỳ chọn; super_admin luôn được
-  dryRun:       false                           // true = chạy đủ luồng nhưng KHÔNG gọi Facebook (thử an toàn); báo "[DRY-RUN]" trên Telegram
+  allowedPageIds: ["<page id>"],                // tuỳ chọn; mặc định chỉ Page đang chọn
+  dryRun:       false                           // true = chạy đủ luồng nhưng KHÔNG gọi Facebook (thử an toàn)
 }
-telegramWebhookSecret: "<chuỗi ngẫu nhiên riêng>"   // khác webhookSigningSecret
 imageRouterConfig: {                              // mặc định KHÔNG có = không xử lý ảnh
   providers: {
-    compositor:   { enabled: true, approvedForProductPhotos: true, url: "https://<máy chủ compositor>", secret: "<>=24 ký tự>", timeoutMs: 45000,
-                    canvas: {width:1200,height:1200}, style: "studio" },
-    aiBackground: { enabled: false, approvedForBackgrounds: false }   // TÍNH PHÍ nếu bật; chỉ vẽ NỀN, không nhận ảnh sản phẩm
+    compositor:   { enabled: true, approvedForProductPhotos: true, url: "https://<máy chủ compositor>", timeoutMs: 45000,
+                    canvas: {width:1200,height:1200}, style: "studio" },     // KHÔNG có trường secret
+    aiBackground: { enabled: false, approvedForBackgrounds: false }          // TÍNH PHÍ nếu bật
   }
 }
 ```
+**Trường bí mật còn sót trong RTDB bị BỎ QUA** (`telegramConfig.token/botToken/secret/…`, `imageRouterConfig.providers.compositor.secret`, `telegramWebhookSecret`, `webhookSigningSecret`): không bao giờ được dùng; có cảnh báo trong log (chỉ tên khoá). Hãy xoá chúng khỏi RTDB (Founder thao tác thủ công).
+Thiếu secret ⇒ dừng an toàn: webhook từ chối mọi request (`reason:auth`, log "TELEGRAM_WEBHOOK_SECRET chưa được cấu hình"); thiếu bot token ⇒ không xử lý tin nhắn (log "TELEGRAM_BOT_TOKEN chưa được cấu hình"); thiếu compositor secret ⇒ ảnh gốc + cảnh báo người duyệt.
 Quyền: uid trong `approverMap` phải có `superAdmins/{uid}.role === 'super_admin'` hoặc `roles/{uid}` thuộc `publishRoles` **tại thời điểm thao tác**. Thiếu ánh xạ/mất quyền → từ chối (fail-closed). `agent` không có quyền đăng mặc định.
 Fanpage: mặc định Page đang active (Super Admin chọn ở trang quản trị — G1). Dòng `Page: <id>` chỉ được chấp nhận nếu server có token cho Page đó; `pageId` còn được Graph xác minh (`getPageInfo`) khi nhận và khi đăng.
 
@@ -62,7 +73,7 @@ Không có `rembg` và không có mask → compositor trả `NO_SEGMENTATION`, r
 Test: `python -m unittest -v` trong `tools/compositor`.
 
 ## 6. Việc của Founder trước khi bật trên Production (chưa thực hiện)
-1. Tạo/chọn bot Telegram; ghi `telegramConfig` (token, chatId, approverIds, approverMap) và `telegramWebhookSecret`.
+1. Tạo/chọn bot Telegram; tạo 3 Functions secret (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, `COMPOSITOR_SECRET` nếu dùng compositor); ghi `telegramConfig` (chatId, approverIds, approverMap — KHÔNG có token).
 2. Quyết định chính sách quyền: ai (uid/role) được gửi sản phẩm và duyệt đăng.
 3. Deploy hàm `telegramWebhook` + `apiGateway` (liệt kê từng hàm); `setWebhook` với `secret_token`.
 4. (Tuỳ chọn) dựng máy chủ compositor + mô hình tách nền; ghi `imageRouterConfig` (cần duyệt gửi ảnh sản phẩm cho máy chủ này).

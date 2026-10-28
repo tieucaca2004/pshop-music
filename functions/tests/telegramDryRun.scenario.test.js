@@ -71,8 +71,8 @@ const clone = (v) => JSON.parse(JSON.stringify(v));
 async function reset() {
   calls = []; sentTg = []; nPost = 0; feedMode = 'ok'; logs.length = 0;
   await db.ref().set(null);
-  await db.ref('telegramConfig').set({ token: BOT, chatId: '555', approverIds: ['777'], approverMap: { '777': 'uid_ok' }, dryRun: true });
-  await db.ref('telegramWebhookSecret').set(SECRET);
+  process.env.TELEGRAM_BOT_TOKEN = BOT; process.env.TELEGRAM_WEBHOOK_SECRET = SECRET; process.env.COMPOSITOR_SECRET = 'dryrun-compositor-secret-0123456789'; // Phase 5: Functions secret (env), không ở RTDB
+  await db.ref('telegramConfig').set({ chatId: '555', approverIds: ['777'], approverMap: { '777': 'uid_ok' }, dryRun: true });
   await db.ref('roles/uid_ok').set('admin'); await db.ref('roles/uid_agent').set('agent');
   await db.ref('facebookConnection').set({ status: 'connected', pageId: 'page_live', pageName: 'Fanpage ĐANG HOẠT ĐỘNG' });
   await db.ref('facebookActiveToken').set({ pageId: 'page_live', accessToken: PAGE_TOKEN, isMock: false, expiresAt: Date.now() + 1e9 });
@@ -97,7 +97,7 @@ async function reset() {
   const server = await new Promise((r) => { const x = app.listen(0, '127.0.0.1', () => r(x)); });
   const base = 'http://127.0.0.1:' + server.address().port + '/tg';
   const send = async (update, secret) => { const r = await realFetch(base, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': secret === undefined ? SECRET : secret }, body: JSON.stringify(update) }); return { status: r.status, json: await r.json() }; };
-  const setCompositorCfg = (extra) => db.ref('imageRouterConfig/providers/compositor').set(Object.assign({ enabled: true, approvedForProductPhotos: true, url: 'https://compositor.dryrun.test', secret: 'dryrun-compositor-secret-0123456789', timeoutMs: 120000 }, extra || {}));
+  const setCompositorCfg = (extra) => db.ref('imageRouterConfig/providers/compositor').set(Object.assign({ enabled: true, approvedForProductPhotos: true, url: 'https://compositor.dryrun.test', timeoutMs: 120000 }, extra || {}));
 
   out('\n=== DRY-RUN ĐẦU CUỐI (RTDB+Storage emulator thật; Telegram/Facebook/OpenAI = mock/fixture) ===');
   await reset(); if (haveRembg) await setCompositorCfg();
@@ -187,10 +187,11 @@ async function reset() {
   });
   await step(13, 'Không lộ secret trong log / tin nhắn / bản nháp / metadata Storage', async () => {
     const secrets = [BOT, PAGE_TOKEN, 'sk-dryrun-DUMMYKEY0123456789', SECRET, 'dryrun-compositor-secret-0123456789'];
-    const hay = JSON.stringify({ logs, sentTg, drafts: await drafts(), updates: (await db.ref('telegramUpdates').once('value')).val() });
+    const rtdb = (await db.ref().once('value')).val() || {}; delete rtdb.facebookActiveToken; // token Page của G1 nằm ở đó theo thiết kế
+    const hay = JSON.stringify({ logs, sentTg, rtdb });
     const leaked = secrets.filter((s) => hay.includes(s)); assert(leaked.length === 0, 'rò rỉ ' + leaked.length + ' secret');
     const [files] = await bucket.getFiles({ prefix: 'fbDrafts/' }); const meta = JSON.stringify(files.map((f) => f.metadata)); assert(!secrets.some((s) => meta.includes(s)), 'metadata Storage sạch');
-    return { evidence: 'quét ' + logs.length + ' dòng log, ' + sentTg.length + ' tin Telegram, mọi draft, metadata ' + files.length + ' object: 0 secret' };
+    return { evidence: 'quét ' + logs.length + ' dòng log, ' + sentTg.length + ' tin Telegram, TOÀN BỘ RTDB (trừ token Page của G1), metadata ' + files.length + ' object: 0 secret' };
   });
   await step(14, 'Fanpage đang hoạt động KHÔNG bị thay đổi (facebookActiveToken / facebookConnection)', async () => {
     const after = clone({ a: (await db.ref('facebookActiveToken').once('value')).val(), c: (await db.ref('facebookConnection').once('value')).val() });

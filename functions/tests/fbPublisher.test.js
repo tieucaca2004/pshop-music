@@ -25,7 +25,7 @@ function getPath(obj, path) {
   return cur === undefined ? null : cur;
 }
 
-function setPath(obj, path, val) {
+function _rawSetPath(obj, path, val) {
   const parts = path.split('/').filter(Boolean);
   let cur = obj;
   for (let i = 0; i < parts.length - 1; i++) {
@@ -39,6 +39,18 @@ function updatePath(obj, path, changes) {
   const cur = getPath(obj, path) || {};
   const merged = Object.assign({}, cur, changes);
   setPath(obj, path, merged);
+}
+
+// Phase 5 — secret KHÔNG ở RTDB: bot token/secret được cấp qua Functions secret (biến môi trường). Các test cũ cấu hình chúng bằng
+// setPath(...); ở đây ánh xạ sang process.env để giữ nguyên kịch bản. RTDB chỉ nhận phần cấu hình KHÔNG bí mật.
+function _setEnv(k, v) { if (v === null || v === undefined || v === '') delete process.env[k]; else process.env[k] = String(v); }
+function _clearSecretEnv() { for (const k of ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_WEBHOOK_SECRET', 'WEBHOOK_SIGNING_SECRET', 'COMPOSITOR_SECRET']) delete process.env[k]; }
+function setPath(obj, path, val) {
+  if (path === 'webhookSigningSecret') { _setEnv('WEBHOOK_SIGNING_SECRET', val); return; }
+  if (path === 'telegramWebhookSecret') { _setEnv('TELEGRAM_WEBHOOK_SECRET', val); return; }
+  if (path === 'telegramConfig/token') { _setEnv('TELEGRAM_BOT_TOKEN', val); return; }
+  if (path === 'telegramConfig') { const v = val && typeof val === 'object' ? Object.assign({}, val) : val; _setEnv('TELEGRAM_BOT_TOKEN', v && v.token); if (v && typeof v === 'object') delete v.token; return _rawSetPath(obj, path, v); }
+  return _rawSetPath(obj, path, val);
 }
 
 let _keyCounter = 0;
@@ -145,6 +157,7 @@ function assert(cond, msg) {
 // kiểm ở functions/tests/fbPublisherHardening.test.js và telegramWebhookRelay.test.js.
 const TEST_TG_CONFIG = { chatId: '555', allowGatewayCallback: true, approverIds: ['1', '123', '777'], approverMap: { '1': 'uid_tg', '123': 'uid_tg', '777': 'uid_tg' } };
 function resetDb() {
+  _clearSecretEnv();
   dbData = {};
   _keyCounter = 0;
   setPath(dbData, 'telegramConfig', Object.assign({}, TEST_TG_CONFIG));

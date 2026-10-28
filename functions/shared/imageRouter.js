@@ -18,6 +18,7 @@
 'use strict';
 const admin = require('firebase-admin');
 const media = require('./telegramMedia');
+const secrets = require('./telegramSecrets');
 
 const DEFAULT_TIMEOUT_MS = 45000;
 
@@ -55,7 +56,7 @@ async function routeImage(draft, originalBuffer, deps) {
   const d = Object.assign({ fetch: global.fetch, generateForModule: async () => { throw new Error('generateForModule chưa được cấp'); }, uid: null, email: null }, deps || {});
   let cfg;
   try { cfg = await loadConfig(); } catch (e) { return { status: 'failed', provider: null, note: 'Không đọc được imageRouterConfig.' }; }
-  const comp = cfg.providers && cfg.providers.compositor;
+  const comp = secrets.withCompositorSecret(cfg.providers && cfg.providers.compositor); // secret từ COMPOSITOR_SECRET, không từ RTDB
   if (!comp || comp.enabled !== true) {
     return { status: 'skipped', provider: null, note: 'Chưa bật provider ghép nền (imageRouterConfig.providers.compositor). Dùng ảnh gốc.' };
   }
@@ -63,7 +64,7 @@ async function routeImage(draft, originalBuffer, deps) {
     return { status: 'blocked', provider: 'compositor', note: 'Provider ghép nền chưa được duyệt nhận ảnh sản phẩm (approvedForProductPhotos). Dùng ảnh gốc.' };
   }
   if (!isHttpsUrl(comp.url) || !comp.secret || typeof comp.secret !== 'string') {
-    return { status: 'blocked', provider: 'compositor', note: 'Cấu hình compositor thiếu url HTTPS hoặc secret. Dùng ảnh gốc.' };
+    return { status: 'blocked', provider: 'compositor', note: 'Compositor thiếu url HTTPS (RTDB) hoặc COMPOSITOR_SECRET (Functions secret). Dùng ảnh gốc.' };
   }
   if (!Buffer.isBuffer(originalBuffer) || !media.sniffImage(originalBuffer)) {
     return { status: 'failed', provider: 'compositor', note: 'Ảnh gốc không đọc được từ kho lưu trữ.' };

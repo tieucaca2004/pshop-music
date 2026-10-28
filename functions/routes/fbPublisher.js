@@ -34,8 +34,9 @@
  * Security constraints (từ Founder):
  *   - Không ghi token vào source code hay log
  *   - Token đọc từ RTDB facebookPageTokens (server-only node)
- *   - Telegram bot token đọc từ RTDB telegramConfig (server-only node)
- *   - Webhook secret đọc từ RTDB webhookSigningSecret
+ *   - Telegram bot token: Functions secret TELEGRAM_BOT_TOKEN (Secret Manager), KHÔNG ở RTDB (shared/telegramSecrets.js)
+ *   - telegramConfig (RTDB) chỉ chứa cấu hình KHÔNG bí mật (chatId, approverIds, approverMap, dryRun...)
+ *   - Secret gateway: Functions secret WEBHOOK_SIGNING_SECRET
  *   - Mock mode tự động nếu page.isMock === true (không cần config thêm)
  */
 const admin = require('firebase-admin');
@@ -47,12 +48,13 @@ const facebookGraphApi = require('../facebook-graph-api');
 const { safeEqual } = require('../shared/secretCompare');
 const { isRelayTrusted } = require('../shared/relayTrust');
 const { resolvePshActor } = require('../shared/approverPolicy');
+const secrets = require('../shared/telegramSecrets');
 
 // ── Helpers đọc config từ RTDB (server-only nodes) ───────────────────────────
 
+// Phase 5: cấu hình KHÔNG bí mật từ RTDB + bot token từ Functions secret TELEGRAM_BOT_TOKEN (xem shared/telegramSecrets.js).
 async function getTelegramConfig() {
-  const snap = await admin.database().ref('telegramConfig').once('value');
-  return snap.val() || {};
+  return secrets.loadTelegramConfig();
 }
 
 // notifyChat — tin nhắn kết quả vào chat đã cấu hình (best-effort, không ném lỗi).
@@ -61,9 +63,9 @@ async function notifyChat(tgConfig, text) {
   try { await sendMessage({ token: tgConfig.token, chatId: tgConfig.chatId, text: String(text).slice(0, 3900) }); } catch (e) { /* best-effort */ }
 }
 
+// Secret gateway = Functions secret WEBHOOK_SIGNING_SECRET (đã bind cho apiGateway), không còn đọc RTDB.
 async function getWebhookSecret() {
-  const snap = await admin.database().ref('webhookSigningSecret').once('value');
-  return snap.val() || '';
+  return secrets.getGatewaySigningSecret();
 }
 
 // ── Auth helpers ──────────────────────────────────────────────────────────────

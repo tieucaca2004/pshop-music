@@ -63,8 +63,8 @@ function eq(a, b, m) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Er
 async function reset() {
   calls = []; sentTg = []; nPost = 0; feedFail = false; openaiMode = 'ok'; logs.length = 0;
   await db.ref().set(null);
-  await db.ref('telegramConfig').set({ token: BOT, chatId: '555', approverIds: ['777'], approverMap: { '777': 'uid_ok' } });
-  await db.ref('telegramWebhookSecret').set(SECRET);
+  process.env.TELEGRAM_BOT_TOKEN = BOT; process.env.TELEGRAM_WEBHOOK_SECRET = SECRET; // Phase 5: secret ở env (Functions secret), không ở RTDB
+  await db.ref('telegramConfig').set({ chatId: '555', approverIds: ['777'], approverMap: { '777': 'uid_ok' } });
   await db.ref('roles/uid_ok').set('admin');
   await db.ref('facebookConnection').set({ status: 'connected', pageId: 'page_1' });
   await db.ref('facebookActiveToken').set({ pageId: 'page_1', accessToken: 'PAGE_TOKEN_SECRET', isMock: false, expiresAt: Date.now() + 1e9 });
@@ -78,6 +78,7 @@ const drafts = async () => Object.entries((await db.ref('fbPostDrafts').once('va
 (async () => {
   const app = express(); app.use(express.json());
   app.post('/tg', (q, s) => fx.telegramWebhook(q, s));
+  app.all('/gw/*', (q, s) => { q.url = q.url.slice(3); fx.apiGateway(q, s); });
   const server = await new Promise((r) => { const x = app.listen(0, '127.0.0.1', () => r(x)); });
   const base = 'http://127.0.0.1:' + server.address().port + '/tg';
   const send = async (update, secret) => { const r = await realFetch(base, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Telegram-Bot-Api-Secret-Token': secret === undefined ? SECRET : secret }, body: JSON.stringify(update) }); return { status: r.status, json: await r.json() }; };
@@ -137,6 +138,20 @@ const drafts = async () => Object.entries((await db.ref('fbPostDrafts').once('va
     x = (await drafts())[0]; eq(x.status, 'PENDING_APPROVAL'); eq(x.version, 2);
     const attempts = feeds().length; await send(cb('fb_approve', d.id, 1)); eq(feeds().length, attempts, 'nút v1 không còn hiệu lực');
     await send(cb('fb_approve', d.id, 2)); eq((await drafts())[0].status, 'PUBLISHED'); eq(feeds().length, attempts + 1);
+  });
+  await test('Client KHÔNG lấy được secret qua API: gateway (không token / token giả / sai secret webhook) + webhook — mọi response và log không chứa secret; RTDB không có secret', async () => {
+    await reset(); process.env.WEBHOOK_SIGNING_SECRET = 'GATEWAY-SIGNING-SECRET-VALUE'; process.env.COMPOSITOR_SECRET = 'COMPOSITOR-SECRET-VALUE-0123456789';
+    const gwBase = 'http://127.0.0.1:' + server.address().port + '/gw'; const bodies = [];
+    for (const [m, p, h, b] of [['POST', '/v1/facebook-publisher/drafts', {}, { pageId: 'page_1', caption: 'x' }], ['POST', '/v1/facebook-publisher/drafts', { Authorization: 'Bearer abc.def.ghi' }, {}],
+      ['POST', '/v1/facebook-publisher/callback', { 'X-PSH-Webhook-Secret': 'doan-mo' }, { callback_query: { id: 'q', data: 'fb_approve:x:1', from: { id: 777 }, message: { chat: { id: 555 } } } }],
+      ['POST', '/v1/facebook-publisher/callback', { 'X-PSH-Webhook-Secret': 'GATEWAY-SIGNING-SECRET-VALUE' }, { callback_query: { id: 'q', data: 'fb_cancel:x', from: { id: 777 }, message: { chat: { id: 555 } } } }],
+      ['GET', '/v1/telegramConfig', {}, null], ['GET', '/v1/system/health', {}, null]]) {
+      const r = await realFetch(gwBase + p, { method: m, headers: Object.assign({ 'Content-Type': 'application/json' }, h), body: b ? JSON.stringify(b) : undefined }); bodies.push(m + ' ' + p + ' ' + r.status + ' ' + (await r.text()));
+    }
+    await send(product()); await send(product({ update_id: 1 })); 
+    const hay = JSON.stringify({ bodies, logs, sentTg, rtdb: (await db.ref().once('value')).val() });
+    const secrets = [BOT, SECRET, 'GATEWAY-SIGNING-SECRET-VALUE', 'COMPOSITOR-SECRET-VALUE-0123456789', 'sk-test-dummy'];
+    const leaked = secrets.filter((x) => hay.includes(x)); assert(leaked.length === 0, 'rò rỉ ' + leaked.length + ' secret');
   });
   await test('DRY-RUN trên RTDB thật: duyệt → PUBLISHED(dryRun), KHÔNG có request Graph, Telegram báo rõ', async () => {
     await reset(); await db.ref('telegramConfig/dryRun').set(true); await send(product()); const [d] = await drafts();

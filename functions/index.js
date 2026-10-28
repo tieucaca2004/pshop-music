@@ -48,6 +48,10 @@ admin.auth = getAuth;
 admin.storage = getStorage;
 
 const OPENAI_API_KEY = defineSecret('OPENAI_API_KEY');
+// Telegram→Facebook Publisher (Phase 5): secret ở Secret Manager, KHÔNG ở RTDB. Chỉ bind cho hàm thật sự cần (xem shared/telegramSecrets.js).
+const TELEGRAM_BOT_TOKEN = defineSecret('TELEGRAM_BOT_TOKEN');
+const TELEGRAM_WEBHOOK_SECRET = defineSecret('TELEGRAM_WEBHOOK_SECRET');
+const COMPOSITOR_SECRET = defineSecret('COMPOSITOR_SECRET');
 
 // Sprint 12 — Facebook Integration V1. App ID KHÔNG hardcode (khác quyết
 // định tạm thời ở Facebook AI V5 trước đó) — đọc từ node Firebase
@@ -646,12 +650,12 @@ if (!getApps().length) { admin.initializeApp(); }
  * đồng bộ trước khi trả 200; update gửi lặp được chặn bằng claim nguyên tử (telegramUpdates/{update_id}).
  * Cấu hình/triển khai: docs/TELEGRAM_FACEBOOK_PUBLISHER.md. KHÔNG tự đăng ký webhook — việc của chủ dự án.
  */
-exports.telegramWebhook = onRequest({ secrets: [OPENAI_API_KEY], cors: false, timeoutSeconds: 120, memory: '512MiB' }, async (req, res) => {
+exports.telegramWebhook = onRequest({ secrets: [OPENAI_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, COMPOSITOR_SECRET], cors: false, timeoutSeconds: 120, memory: '512MiB' }, async (req, res) => {
   const { handleTelegramWebhook } = require('./shared/telegramWebhookRelay');
   return handleTelegramWebhook(req, res);
 });
 
-exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRET], cors: ALLOWED_ORIGINS, timeoutSeconds: 120 }, async (req, res) => {
+exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRET, TELEGRAM_BOT_TOKEN], cors: ALLOWED_ORIGINS, timeoutSeconds: 120 }, async (req, res) => {
   const requestId = makeRequestId();
   res.locals = { requestId };
   const path = (req.path || '/').replace(/\/+$/, '') || '/';

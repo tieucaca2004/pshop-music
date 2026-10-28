@@ -142,12 +142,17 @@ function resetAll(opts) {
   db = {}; storageFiles = {}; calls = []; sentTg = []; nPost = 0; keyCounter = 0; logs.length = 0;
   tgFileBytes = JPEG_BYTES; tgGetFileFail = false; tgSendFail = false; graphInfoFail = false; photoFail = false; feedFail = false; feedNetErr = false; compositorHandler = null;
   aiImpl = async () => ({ content: { versions: [{ hook: 'AI hook', caption: 'AI caption cho sản phẩm', cta: 'Nhắn tin ngay', hashtags: ['pshop', '#dj'] }] } });
-  setPath(db, 'telegramConfig', { token: BOT, chatId: '555', approverIds: ['777'], approverMap: { '777': 'uid_ok' } });
-  setPath(db, 'telegramWebhookSecret', SECRET);
+  // Phase 5: secret = Functions secret (env), KHÔNG ở RTDB; RTDB chỉ có cấu hình không bí mật.
+  process.env.TELEGRAM_BOT_TOKEN = BOT; process.env.TELEGRAM_WEBHOOK_SECRET = SECRET; delete process.env.COMPOSITOR_SECRET;
+  setPath(db, 'telegramConfig', { chatId: '555', approverIds: ['777'], approverMap: { '777': 'uid_ok' } });
   setPath(db, 'roles/uid_ok', 'admin');
   setPath(db, 'facebookConnection', { status: 'connected' });
   setPath(db, 'facebookActiveToken', { pageId: 'page_1', accessToken: 'PAGE_TOKEN_SECRET', isMock: false, expiresAt: Date.now() + 1e9 });
-  if (opts && opts.router) setPath(db, 'imageRouterConfig', { providers: { compositor: Object.assign({ enabled: true, approvedForProductPhotos: true, url: 'https://compositor.test', secret: 'c'.repeat(32), timeoutMs: 2000 }, opts.router) } });
+  if (opts && opts.router) {
+    const r = Object.assign({ enabled: true, approvedForProductPhotos: true, url: 'https://compositor.test', secret: 'c'.repeat(32), timeoutMs: 2000 }, opts.router);
+    const sec = r.secret; delete r.secret; if (sec) process.env.COMPOSITOR_SECRET = sec; // secret compositor = Functions secret COMPOSITOR_SECRET
+    setPath(db, 'imageRouterConfig', { providers: { compositor: r } });
+  }
 }
 let updSeq = 100;
 function productUpdate(over) {
@@ -224,7 +229,7 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
     assert(r.failed && /JPEG\/PNG\/WEBP/.test(only().failReason));
     resetAll(); tgFileBytes = Buffer.concat([JPEG_BYTES, Buffer.alloc(media.MAX_BYTES + 10, 1)]); r = await orch.handleTelegramMessage(productUpdate());
     assert(r.failed && /quá lớn/.test(only().failReason));
-    assert(!JSON.stringify(db).replace(JSON.stringify(getPath(db, 'telegramConfig')), '').includes(BOT), 'token không được xuất hiện ngoài telegramConfig');
+    assert(!JSON.stringify(db).includes(BOT), 'bot token không được xuất hiện ở bất kỳ đâu trong RTDB');
     assert(!sentTg.some((s) => JSON.stringify(s).includes(BOT)) && !logs.some((l) => l.includes(BOT)), 'token không có trong tin nhắn/log');
     eq(feedPosts().length, 0);
   });
@@ -276,7 +281,7 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
   });
   await test('telegramWebhook được bind secret OPENAI_API_KEY (aiGenerate đọc OPENAI_API_KEY.value(); thiếu ⇒ AI luôn lỗi âm thầm)', async () => {
     const src = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
-    assert(src.includes('exports.telegramWebhook = onRequest({ secrets: [OPENAI_API_KEY]'), 'index.js phải khai báo secrets cho telegramWebhook');
+    assert(src.includes('exports.telegramWebhook = onRequest({ secrets: [OPENAI_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, COMPOSITOR_SECRET]'), 'index.js phải khai báo secrets cho telegramWebhook');
   });
   await test('Tin nhắn quá cũ (phát lại) bị bỏ qua; tin nhắn mới có date hợp lệ vẫn nhận', async () => {
     resetAll(); const old = productUpdate(); old.message.date = Math.floor(Date.now() / 1000) - 2 * 3600;
@@ -397,6 +402,57 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
     } catch (e) { skip('Tích hợp THẬT compositor + rembg', 'không khởi động được: ' + e.message); }
     finally { if (srv2) srv2.kill(); }
   } else skip('Tích hợp THẬT compositor + rembg (mô hình thật)', 'rembg/onnxruntime chưa cài trong ' + py);
+
+  // ═════ [3c] Phase 5 — secret KHÔNG ở RTDB ═════
+  out('\n=== [3c] Bảo vệ secret (Functions secret / env, không RTDB) ===');
+  await test('Bot token CHỈ từ TELEGRAM_BOT_TOKEN: RTDB còn trường token cũ → BỊ BỎ QUA (không gửi gì tới Telegram); cảnh báo chỉ nêu TÊN khoá', async () => {
+    resetAll(); delete process.env.TELEGRAM_BOT_TOKEN; setPath(db, 'telegramConfig/token', BOT); setPath(db, 'telegramConfig/botToken', BOT);
+    const r = await orch.handleTelegramMessage(productUpdate()); eq(r.reason, 'telegram_token_missing'); eq(drafts().length, 0);
+    assert(!calls.some((c) => /api\.telegram\.org/.test(c.url)), 'không được gọi Telegram bằng token đọc từ RTDB');
+    const secretsMod = require('../shared/telegramSecrets'); const cfg = await secretsMod.loadTelegramConfig(); eq(cfg.token, ''); assert(!('botToken' in cfg), 'trường bí mật cũ bị loại khỏi cấu hình');
+    assert(logs.some((l) => /RTDB còn trường bí mật cũ \(token, botToken\)/.test(l)) && !logs.some((l) => l.includes(BOT)), 'cảnh báo nêu tên khoá, KHÔNG nêu giá trị');
+  });
+  await test('Thiếu TELEGRAM_BOT_TOKEN → dừng an toàn: không tạo draft, không gọi Telegram, log lỗi cấu hình không chứa secret', async () => {
+    resetAll(); delete process.env.TELEGRAM_BOT_TOKEN; const r = await orch.handleTelegramMessage(productUpdate()); eq(r.reason, 'telegram_token_missing'); eq(drafts().length, 0); eq(sentTg.length, 0);
+    assert(logs.some((l) => /TELEGRAM_BOT_TOKEN chưa được cấu hình/.test(l)));
+    const w = await webhook(productUpdate()); eq(w.status, 200); eq(drafts().length, 0); // webhook vẫn trả 200 (Telegram không retry), không lỗi
+  });
+  await test('Relay KHÔNG chấp nhận secret nằm trong RTDB: telegramWebhookSecret/webhookSigningSecret trong RTDB vô hiệu; chỉ TELEGRAM_WEBHOOK_SECRET', async () => {
+    resetAll(); delete process.env.TELEGRAM_WEBHOOK_SECRET; db.telegramWebhookSecret = 'rtdb-secret'; db.webhookSigningSecret = 'rtdb-gateway';
+    for (const h of ['rtdb-secret', 'rtdb-gateway', SECRET, '']) { const r = await webhook(productUpdate(), h); eq(r.json.reason, 'auth', 'header ' + h); }
+    eq(drafts().length, 0); assert(logs.some((l) => /TELEGRAM_WEBHOOK_SECRET chưa được cấu hình/.test(l)) && !logs.some((l) => l.includes('rtdb-secret') || l.includes('rtdb-gateway')), 'log lỗi cấu hình, không lộ giá trị');
+    process.env.TELEGRAM_WEBHOOK_SECRET = 'env-secret'; let r2 = await webhook(productUpdate(), 'rtdb-secret'); eq(r2.json.reason, 'auth'); r2 = await webhook(productUpdate(), 'env-secret'); eq(r2.status, 200); assert(r2.json.handled === true, 'đúng secret env được nhận');
+  });
+  await test('Compositor: thiếu COMPOSITOR_SECRET hoặc chỉ có "secret" trong RTDB → blocked, ảnh sản phẩm KHÔNG rời hệ thống; secret RTDB bị bỏ qua (có cảnh báo, không in giá trị)', async () => {
+    resetAll({ router: { secret: '' } }); setPath(db, 'imageRouterConfig/providers/compositor/secret', 'c'.repeat(32));
+    compositorHandler = async () => { throw new Error('không được gọi'); };
+    await orch.handleTelegramMessage(productUpdate()); eq(only().steps.image.result, 'blocked'); assert(!calls.some((c) => /compositor\.test/.test(c.url)), 'không gửi ảnh');
+    assert(only().notices.some((n) => /COMPOSITOR_SECRET/.test(n)), 'cảnh báo cho người duyệt nêu COMPOSITOR_SECRET'); assert(logs.some((l) => /imageRouterConfig\] CẢNH BÁO/.test(l)) && !logs.some((l) => l.includes('c'.repeat(32))));
+  });
+  await test('KHÔNG lộ secret: toàn bộ luồng (intake→AI→ảnh→preview→duyệt→đăng) + route gateway tạo draft — quét log, tin Telegram, RTDB, mọi response', async () => {
+    resetAll({ router: { secret: 'COMPOSITOR-SECRET-VALUE-0123456789' } });
+    process.env.WEBHOOK_SIGNING_SECRET = 'GATEWAY-SIGNING-SECRET-VALUE'; process.env.OPENAI_API_KEY = 'sk-test-OPENAI-VALUE-0123456789';
+    compositorHandler = async () => res({ ok: true, image_b64: makePng(64, 64).toString('base64'), report: { product_pixels_preserved: true } });
+    const responses = [];
+    responses.push(await webhook(productUpdate())); const d = only(); responses.push(await webhook(cbUpdate('fb_approve', d.id, 1)));
+    const fbPublisher = require('../routes/fbPublisher'); let gw = null;
+    await fbPublisher.handle({ method: 'POST', __pshPath: '/v1/facebook-publisher/drafts', body: { pageId: 'page_1', caption: 'x' }, get: () => null },
+      { status() { return this; }, json(x) { gw = x; } }, { sendSuccess: (r2, data) => r2.json({ success: true, data }), sendError: (r2, code, m) => r2.json({ success: false, code, m }), auth: { ok: true, role: 'admin', uid: 'u', email: 'a@x' } });
+    responses.push(gw);
+    const secretsList = [BOT, SECRET, 'COMPOSITOR-SECRET-VALUE-0123456789', 'GATEWAY-SIGNING-SECRET-VALUE', 'sk-test-OPENAI-VALUE-0123456789'];
+    const hay = JSON.stringify({ logs, sentTg, db, responses }); const leaked = secretsList.filter((x) => hay.includes(x));
+    assert(!JSON.stringify({ logs, sentTg, responses }).includes('PAGE_TOKEN_SECRET'), 'page token (G1, lưu trong facebookActiveToken theo thiết kế) không được lộ ra log/Telegram/response');
+    assert(leaked.length === 0, 'rò rỉ ' + leaked.length + '/' + secretsList.length + ' secret: ' + leaked.map((x) => x.slice(0, 6) + '…').join(','));
+    assert(gw && gw.success === true, 'route gateway tạo draft vẫn hoạt động (dùng bot token từ env)'); assert(sentTg.filter((x) => x.reply_markup).length >= 2, 'preview gửi cả từ webhook lẫn route gateway');
+  });
+  await test('Mã nguồn không còn đọc secret từ RTDB: không có tham chiếu tới RTDB webhookSigningSecret/telegramWebhookSecret/telegramConfig.token ngoài telegramSecrets.js', async () => {
+    const dirs = [path.join(__dirname, '..', 'shared'), path.join(__dirname, '..', 'routes')]; const offenders = [];
+    for (const dir of dirs) for (const fn of fs.readdirSync(dir)) {
+      if (!fn.endsWith('.js') || fn === 'telegramSecrets.js') continue; const src = fs.readFileSync(path.join(dir, fn), 'utf8');
+      if (/ref\(\s*['"](webhookSigningSecret|telegramWebhookSecret)['"]/.test(src) || /tgConfig\.token\s*=/.test(src)) offenders.push(fn);
+    }
+    eq(offenders.join(','), '');
+  });
 
   // ═════ [4] Chọn Fanpage ═════
   out('\n=== [4] Chọn Fanpage / xác thực Page ===');

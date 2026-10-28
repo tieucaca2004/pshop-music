@@ -24,6 +24,7 @@ const media = require('./telegramMedia');
 const imageRouter = require('./imageRouter');
 const graph = require('../facebook-graph-api');
 const { resolvePshActor } = require('./approverPolicy');
+const secrets = require('./telegramSecrets');
 
 const CLAIM_STALE_MS = 5 * 60 * 1000;
 const MAX_MESSAGE_AGE_S = 60 * 60;      // tin nhắn cũ hơn 1 giờ bị coi là phát lại và bỏ qua
@@ -269,8 +270,7 @@ async function runPipeline(draftId, deps) {
 }
 
 async function getTgConfig() {
-  const snap = await admin.database().ref('telegramConfig').once('value');
-  return snap.val() || {};
+  return secrets.loadTelegramConfig(); // RTDB (không bí mật) + TELEGRAM_BOT_TOKEN từ Functions secret
 }
 
 function defaultDeps(actor) {
@@ -290,6 +290,7 @@ async function handleTelegramMessage(update, depsIn) {
   const message = update && update.message;
   if (!message || !message.from || !message.chat || typeof update.update_id !== 'number') return { handled: false, reason: 'not_a_message' };
   const tgConfig = (depsIn && depsIn.tgConfig) || await getTgConfig();
+  if (!tgConfig.token) { console.error('[telegramWebhook] TELEGRAM_BOT_TOKEN chưa được cấu hình (Functions secret) — bỏ qua tin nhắn.'); return { handled: true, skipped: true, reason: 'telegram_token_missing' }; }
   const { checkApprover } = require('../routes/fbPublisher');
   // Chống phát lại: tin nhắn có thời điểm gửi quá cũ bị bỏ qua (Telegram retry thật chỉ trong thời gian ngắn).
   if (typeof message.date === 'number' && Date.now() / 1000 - message.date > MAX_MESSAGE_AGE_S) return { handled: true, skipped: true, reason: 'stale_message' };

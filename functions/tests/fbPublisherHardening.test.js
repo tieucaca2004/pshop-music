@@ -15,7 +15,19 @@
 let dbData = {};
 function parts(p) { return String(p || '').split('/').filter(Boolean); }
 function getPath(obj, p) { let c = obj; for (const k of parts(p)) { if (c == null || typeof c !== 'object') return null; c = c[k]; } return c === undefined ? null : c; }
-function setPath(obj, p, v) {
+// Phase 5 — secret KHÔNG ở RTDB: bot token/secret được cấp qua Functions secret (biến môi trường). Các test cũ cấu hình chúng bằng
+// setPath(...); ở đây ánh xạ sang process.env để giữ nguyên kịch bản. RTDB chỉ nhận phần cấu hình KHÔNG bí mật.
+function _setEnv(k, v) { if (v === null || v === undefined || v === '') delete process.env[k]; else process.env[k] = String(v); }
+function _clearSecretEnv() { for (const k of ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_WEBHOOK_SECRET', 'WEBHOOK_SIGNING_SECRET', 'COMPOSITOR_SECRET']) delete process.env[k]; }
+function setPath(obj, path, val) {
+  if (path === 'webhookSigningSecret') { _setEnv('WEBHOOK_SIGNING_SECRET', val); return; }
+  if (path === 'telegramWebhookSecret') { _setEnv('TELEGRAM_WEBHOOK_SECRET', val); return; }
+  if (path === 'telegramConfig/token') { _setEnv('TELEGRAM_BOT_TOKEN', val); return; }
+  if (path === 'telegramConfig') { const v = val && typeof val === 'object' ? Object.assign({}, val) : val; _setEnv('TELEGRAM_BOT_TOKEN', v && v.token); if (v && typeof v === 'object') delete v.token; return _rawSetPath(obj, path, v); }
+  return _rawSetPath(obj, path, val);
+}
+function _rawSetPath(obj, path, val) { return _rawSetPath2(obj, path, val); }
+function _rawSetPath2(obj, p, v) {
   const ps = parts(p); let c = obj;
   for (let i = 0; i < ps.length - 1; i++) { if (c[ps[i]] == null || typeof c[ps[i]] !== 'object') c[ps[i]] = {}; c = c[ps[i]]; }
   if (v === null) delete c[ps[ps.length - 1]]; else c[ps[ps.length - 1]] = v;
@@ -78,8 +90,10 @@ function eq(a, b, m) { if (a !== b) throw new Error((m || 'eq') + ': mong đợi
 
 const SECRET = 'whsec_test_value';
 function reset() {
+  _clearSecretEnv();
   dbData = {}; published = []; telegramCalls = []; keyCounter = 0;
-  setPath(dbData, 'webhookSigningSecret', SECRET);
+  setPath(dbData, 'webhookSigningSecret', SECRET);       // secret gateway (WEBHOOK_SIGNING_SECRET)
+  setPath(dbData, 'telegramWebhookSecret', SECRET);      // secret relay Telegram (TELEGRAM_WEBHOOK_SECRET)
   setPath(dbData, 'facebookPageTokens/uid1/page1', { accessToken: 'mock_tok', isMock: true });
   setPath(dbData, 'telegramConfig', { token: 'tg', chatId: '555', approverIds: ['1', '123', '777'], approverMap: { '1': 'uid_tg', '123': 'uid_tg', '777': 'uid_tg' } });
   setPath(dbData, 'roles/uid_tg', 'admin');
@@ -287,36 +301,35 @@ const OK_CQ = { from: { id: 777, username: 'founder' }, message: { chat: { id: 5
     await handleTelegramWebhook({ method: 'POST', get: (n) => n === 'X-PSH-Webhook-Secret' ? SECRET : null, body: { callback_query: Object.assign({ id: 'q', data: 'fb_approve:' + d.id + ':1' }, OK_CQ) } }, res);
     eq(out.reason, 'auth'); eq(published.length, 0);
   });
-  await test('FALLBACK có giới hạn, KHÔNG im lặng: chưa có telegramWebhookSecret → vẫn duyệt được nhưng mỗi request ghi cảnh báo (không lộ secret)', async () => {
-    setPath(dbData, 'telegramWebhookSecret', null);
-    const warns = []; const origWarn = console.warn; console.warn = (...a) => warns.push(a.join(' '));
+  await test('KHÔNG còn fallback: chưa có TELEGRAM_WEBHOOK_SECRET → relay từ chối kể cả khi gửi secret gateway; ghi lỗi cấu hình (không lộ secret)', async () => {
+    setPath(dbData, 'telegramWebhookSecret', null); // WEBHOOK_SIGNING_SECRET (gateway) vẫn có = SECRET
+    const errs = []; const origErr = console.error; console.error = (...a) => errs.push(a.join(' '));
+    let out = null;
     try {
-      const d = await pendingDraft(); const res = { status() { return this; }, json() {} };
+      const d = await pendingDraft(); const res = { status() { return this; }, json(b) { out = b; } };
       await handleTelegramWebhook({ method: 'POST', get: () => SECRET, body: { callback_query: Object.assign({ id: 'q', data: 'fb_approve:' + d.id + ':1' }, OK_CQ) } }, res);
-      eq(published.length, 1, 'luồng hợp lệ hiện tại không được bị hỏng khi chưa có cấu hình mới');
-    } finally { console.warn = origWarn; }
-    eq(warns.length, 1, 'phải có đúng 1 cảnh báo');
-    assert(/telegramWebhookSecret/.test(warns[0]), 'cảnh báo phải nêu telegramWebhookSecret');
-    assert(warns[0].indexOf(SECRET) < 0, 'cảnh báo KHÔNG được chứa giá trị secret');
+    } finally { console.error = origErr; }
+    eq(out.reason, 'auth'); eq(published.length, 0, 'secret gateway không được dùng thay secret Telegram');
+    assert(errs.length === 1 && /TELEGRAM_WEBHOOK_SECRET/.test(errs[0]) && errs[0].indexOf(SECRET) < 0, 'phải có đúng 1 lỗi cấu hình, không chứa giá trị secret');
   });
-  await test('FALLBACK: request SAI secret không sinh cảnh báo (không để kẻ lạ làm ngập log) và bị từ chối', async () => {
-    setPath(dbData, 'telegramWebhookSecret', null);
-    const warns = []; const origWarn = console.warn; console.warn = (...a) => warns.push(a.join(' '));
+  await test('Có TELEGRAM_WEBHOOK_SECRET riêng: request sai secret bị từ chối, KHÔNG ghi log (không để kẻ lạ làm ngập log)', async () => {
+    setPath(dbData, 'telegramWebhookSecret', 'tg_only_secret');
+    const errs = []; const warns = []; const oe = console.error, ow = console.warn; console.error = (...a) => errs.push(a.join(' ')); console.warn = (...a) => warns.push(a.join(' '));
     let out = null;
     try {
       const d = await pendingDraft(); const res = { status() { return this; }, json(b) { out = b; } };
       await handleTelegramWebhook({ method: 'POST', get: () => 'doan-mo', body: { callback_query: Object.assign({ id: 'q', data: 'fb_approve:' + d.id + ':1' }, OK_CQ) } }, res);
-    } finally { console.warn = origWarn; }
-    eq(out.reason, 'auth'); eq(warns.length, 0); eq(published.length, 0);
+    } finally { console.error = oe; console.warn = ow; }
+    eq(out.reason, 'auth'); eq(errs.length + warns.length, 0); eq(published.length, 0);
   });
-  await test('Có telegramWebhookSecret riêng → KHÔNG cảnh báo fallback', async () => {
+  await test('Có TELEGRAM_WEBHOOK_SECRET riêng + đúng secret → duyệt được, không ghi cảnh báo/lỗi', async () => {
     setPath(dbData, 'telegramWebhookSecret', 'tg_only_secret');
-    const warns = []; const origWarn = console.warn; console.warn = (...a) => warns.push(a.join(' '));
+    const errs = []; const warns = []; const oe = console.error, ow = console.warn; console.error = (...a) => errs.push(a.join(' ')); console.warn = (...a) => warns.push(a.join(' '));
     try {
       const d = await pendingDraft(); const res = { status() { return this; }, json() {} };
       await handleTelegramWebhook({ method: 'POST', get: () => 'tg_only_secret', body: { callback_query: Object.assign({ id: 'q', data: 'fb_approve:' + d.id + ':1' }, OK_CQ) } }, res);
-    } finally { console.warn = origWarn; }
-    eq(warns.length, 0); eq(published.length, 1);
+    } finally { console.error = oe; console.warn = ow; }
+    eq(errs.length + warns.length, 0); eq(published.length, 1);
   });
   await test('Không cấu hình secret nào (cả hai rỗng) → relay từ chối mọi request (fail-closed), kể cả header rỗng', async () => {
     setPath(dbData, 'telegramWebhookSecret', null); setPath(dbData, 'webhookSigningSecret', null);

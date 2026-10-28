@@ -13,6 +13,7 @@ const { sendSuccess, sendError } = require('./middleware');
 const fbPublisherRoutes = require('../routes/fbPublisher');
 const { safeEqual } = require('./secretCompare');
 const { markRelayTrusted } = require('./relayTrust');
+const secrets = require('./telegramSecrets');
 
 /**
  * handleTelegramWebhook — xử lý 1 Telegram update.
@@ -27,24 +28,17 @@ async function handleTelegramWebhook(req, res) {
 
   // Validate X-Telegram-Bot-Api-Secret-Token — do Telegram tự thêm khi setWebhook
   // có secret_token. Trả 200 khi fail để Telegram không retry liên tục.
-  // G1Q — secret dành riêng cho Telegram: RTDB `telegramWebhookSecret` (ưu tiên). Nếu chưa cấu hình thì
-  // dùng tạm `webhookSigningSecret` (hành vi cũ). Khi hai giá trị trùng nhau, ai biết secret gateway
-  // (X-PSH-Webhook-Secret) cũng giả được Telegram → nên cấu hình `telegramWebhookSecret` khác biệt và
-  // chạy lại setWebhook (thao tác của chủ dự án, xem docs/FACEBOOK_INTEGRATION_SETUP.md).
+  // Phase 5 — secret CHỈ lấy từ Functions secret TELEGRAM_WEBHOOK_SECRET (Secret Manager), KHÔNG đọc RTDB và KHÔNG có fallback
+  // sang secret dùng chung của gateway. Chưa cấu hình ⇒ từ chối mọi request (fail-closed), chỉ ghi log lý do (không có giá trị).
   const providedToken = (req.get && req.get('X-Telegram-Bot-Api-Secret-Token')) || '';
-  const dedicated = await admin.database().ref('telegramWebhookSecret').once('value').then(s => s.val() || '');
-  const sharedFallback = !dedicated;
-  const expectedSecret = dedicated || await admin.database().ref('webhookSigningSecret').once('value').then(s => s.val() || '');
-  if (!expectedSecret || !safeEqual(providedToken, expectedSecret)) {
+  const expectedSecret = secrets.getTelegramWebhookSecret();
+  if (!expectedSecret) {
+    console.error('[telegramWebhook] TELEGRAM_WEBHOOK_SECRET chưa được cấu hình (Functions secret) — từ chối mọi request.');
     return res.status(200).json({ ok: false, handled: false, reason: 'auth' });
   }
-  // Fallback CÓ GIỚI HẠN và KHÔNG im lặng: chỉ để không làm hỏng luồng duyệt hiện tại trước khi chủ dự án
-  // cấu hình telegramWebhookSecret. Mỗi request hợp lệ đi qua fallback đều ghi cảnh báo (không chứa giá trị secret)
-  // để thấy rõ trong log rằng secret dùng chung CHƯA an toàn bằng secret riêng.
-  if (sharedFallback) {
-    console.warn('[telegramWebhook] CANH BAO: telegramWebhookSecret chua duoc cau hinh — dang dung chung webhookSigningSecret (fallback tam thoi, kem an toan hon secret rieng). Xem docs/FACEBOOK_INTEGRATION_SETUP.md.');
+  if (!safeEqual(providedToken, expectedSecret)) {
+    return res.status(200).json({ ok: false, handled: false, reason: 'auth' });
   }
-
   const update = req.body || {};
   const { callback_query } = update;
 
@@ -73,7 +67,7 @@ async function handleTelegramWebhook(req, res) {
     method: 'POST',
     __pshPath: '/v1/facebook-publisher/callback',
     body: { callback_query },
-    get: (header) => header === 'X-PSH-Webhook-Secret' ? expectedSecret : undefined,
+    get: () => undefined, // request nội bộ đã được tin cậy qua relayTrust; KHÔNG truyền secret nào
     query: {}
   });
 
