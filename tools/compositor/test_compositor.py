@@ -177,6 +177,17 @@ class ComposeTests(unittest.TestCase):
             compositor.compose(b"", None, (1200, 1200))
 
 
+class DependencyTests(unittest.TestCase):
+    def test_missing_dependency_is_reported_clearly(self):
+        import subprocess
+        import sys
+        code = "import sys; sys.modules['numpy'] = None; import compositor_server"
+        p = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, cwd=__file__.rsplit("test_compositor.py", 1)[0] or ".")
+        self.assertEqual(p.returncode, 3)
+        self.assertIn("MISSING DEPENDENCY", p.stderr)
+        self.assertIn("requirements.txt", p.stderr)
+
+
 class ServerTests(unittest.TestCase):
     SECRET = "s" * 32
 

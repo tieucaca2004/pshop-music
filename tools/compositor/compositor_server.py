@@ -17,7 +17,12 @@ import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from compositor import CompositorError, compose
+try:
+    from compositor import CompositorError, compose
+except ImportError as _e:  # thiếu Pillow/numpy: báo rõ thay vì traceback khó hiểu
+    import sys
+    sys.stderr.write("MISSING DEPENDENCY (Pillow/numpy): %s\nInstall with: python -m pip install -r requirements.txt\n" % _e)
+    sys.exit(3)
 
 MAX_BODY = 40 * 1024 * 1024
 

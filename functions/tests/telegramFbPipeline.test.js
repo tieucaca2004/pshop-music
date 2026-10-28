@@ -74,7 +74,7 @@ Module._load = function (request, parent) {
 const realFetch = global.fetch;
 let calls = []; let sentTg = []; let nPost = 0;
 let tgFileBytes = null; let tgGetFileFail = false; let tgSendFail = false;
-let graphInfoFail = false; let photoFail = false; let feedFail = false;
+let graphInfoFail = false; let photoFail = false; let feedFail = false; let feedNetErr = false;
 let compositorHandler = null;
 const BOT = '123456:ABC-DEF_tokenTOKENtokenTOKENtoken12';
 const res = (body, ok = true, status = 200) => ({ ok, status, json: async () => body, arrayBuffer: async () => (Buffer.isBuffer(body) ? body : Buffer.from(JSON.stringify(body))) });
@@ -95,6 +95,7 @@ global.fetch = async (url, opts) => {
     if (!m) return res({ error: { message: 'unexpected graph url' } }, false, 400);
     if (m[3]) return graphInfoFail ? res({ error: { message: 'Invalid OAuth access token.' } }, false, 400) : res({ id: m[1], name: 'Fanpage Test' });
     if (m[2] === '/photos') return photoFail ? res({ error: { message: 'Image rejected by Facebook' } }, false, 400) : res({ id: 'ph_' + (++nPost) });
+    if (m[2] === '/feed' && feedNetErr) throw new TypeError('fetch failed');
     if (m[2] === '/feed') return feedFail ? res({ error: { message: '(#200) Permissions error' } }, false, 403) : res({ id: m[1] + '_post' + (++nPost) });
   }
   if (url.startsWith('https://compositor.test/')) {
@@ -139,7 +140,7 @@ const SECRET = 'tg-webhook-secret-for-tests';
 
 function resetAll(opts) {
   db = {}; storageFiles = {}; calls = []; sentTg = []; nPost = 0; keyCounter = 0; logs.length = 0;
-  tgFileBytes = JPEG_BYTES; tgGetFileFail = false; tgSendFail = false; graphInfoFail = false; photoFail = false; feedFail = false; compositorHandler = null;
+  tgFileBytes = JPEG_BYTES; tgGetFileFail = false; tgSendFail = false; graphInfoFail = false; photoFail = false; feedFail = false; feedNetErr = false; compositorHandler = null;
   aiImpl = async () => ({ content: { versions: [{ hook: 'AI hook', caption: 'AI caption cho sản phẩm', cta: 'Nhắn tin ngay', hashtags: ['pshop', '#dj'] }] } });
   setPath(db, 'telegramConfig', { token: BOT, chatId: '555', approverIds: ['777'], approverMap: { '777': 'uid_ok' } });
   setPath(db, 'telegramWebhookSecret', SECRET);
@@ -534,6 +535,19 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
     setPath(db, 'fbPostDrafts/' + d.id + '/facebookPostId', null); setPath(db, 'fbPostDrafts/' + d.id + '/failStage', 'intake'); rr = await orch.handleTelegramMessage({ update_id: ++updSeq, message: { from: { id: 777 }, chat: { id: 555 }, text: '/retry ' + d.id } }); eq(rr.reason, 'not_publish_failure');
     rr = await orch.handleTelegramMessage({ update_id: ++updSeq, message: { from: { id: 888 }, chat: { id: 555 }, text: '/retry ' + d.id } }); assert(rr.skipped);
     rr = await orch.handleTelegramMessage({ update_id: ++updSeq, message: { from: { id: 777 }, chat: { id: 555 }, text: '/retry ../../x' } }); eq(rr.reason, 'bad_id');
+  });
+  await test('Facebook feed MẤT KẾT NỐI/không rõ kết quả: FAILED(publish_unknown), /retry bị KHOÁ (tránh đăng trùng), Telegram yêu cầu kiểm tra Fanpage', async () => {
+    const d = await pending(); feedNetErr = true; await webhook(cbUpdate('fb_approve', d.id, 1));
+    const x = getPath(db, 'fbPostDrafts/' + d.id); eq(x.status, 'FAILED'); eq(x.failStage, 'publish_unknown'); assert(!x.facebookPostId);
+    const msg = sentTg.filter((s) => s.kind === 'sendMessage').pop().text; assert(/KHÔNG RÕ KẾT QUẢ/.test(msg) && /KIỂM TRA Fanpage/.test(msg) && !/Bài đã lên sóng/.test(msg));
+    feedNetErr = false; const rr = await orch.handleTelegramMessage({ update_id: ++updSeq, message: { from: { id: 777 }, chat: { id: 555 }, text: '/retry ' + d.id } });
+    eq(rr.reason, 'not_publish_failure'); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'FAILED'); eq(feedPosts().length, 1, 'chỉ đúng 1 lần gọi feed (không tự thử lại)');
+  });
+  await test('telegram.js: lỗi mạng chứa bot token được che trong kết quả trả về', async () => {
+    const tg = require('../shared/telegram'); const prev = global.fetch; global.fetch = async () => { throw new Error('connect ECONNRESET https://api.telegram.org/bot' + BOT + '/sendMessage'); };
+    const r = await tg.sendMessage({ token: BOT, chatId: '1', text: 'x' }); global.fetch = prev; assert(r.ok === false && !String(r.error).includes(BOT), 'token phải bị che: ' + r.error);
+    global.fetch = async () => { throw new Error('x ' + BOT); }; const r2 = await tg.answerCallbackQuery({ token: BOT, callbackQueryId: 'q' }); const r3 = await tg.sendPhoto({ token: BOT, chatId: '1', photo: 'u' }); global.fetch = prev;
+    assert(!String(r2.error).includes(BOT) && !String(r3.error).includes(BOT));
   });
   await test('Gửi xem trước Telegram thất bại → draft KHÔNG treo ở PENDING (CANCELLED + lý do), không thể duyệt', async () => {
     resetAll(); tgSendFail = true; const r = await orch.handleTelegramMessage(productUpdate()); assert(r.result && r.result.reason === 'preview_failed'); eq(only().status, 'CANCELLED'); eq(feedPosts().length, 0);

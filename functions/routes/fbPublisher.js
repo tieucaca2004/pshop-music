@@ -617,11 +617,14 @@ async function handle(req, res, helpers) {
 
       } catch (err) {
         const safeMsg = String(err && err.message || 'lỗi không rõ').replace(/\s+/g, ' ').slice(0, 300);
-        await fbDraftStore.updateStatus(draftId, 'FAILED', { failReason: 'Publish lỗi: ' + safeMsg, failStage: 'publish' });
+        const ambiguous = !!(err && err.ambiguous);
+        await fbDraftStore.updateStatus(draftId, 'FAILED', { failReason: 'Publish lỗi: ' + safeMsg, failStage: ambiguous ? 'publish_unknown' : 'publish' });
         if (tgConfig.token && callbackQueryId) {
           await answerCallbackQuery({ token: tgConfig.token, callbackQueryId, text: '❌ Đăng bài thất bại: ' + safeMsg.slice(0, 150) });
         }
-        await notifyChat(tgConfig, '❌ Đăng bài THẤT BẠI: ' + safeMsg + '\nDùng /retry ' + draftId + ' để duyệt lại (chỉ khả dụng khi Facebook chưa ghi nhận bài).');
+        await notifyChat(tgConfig, ambiguous
+          ? '⚠️ Đăng bài KHÔNG RÕ KẾT QUẢ: ' + safeMsg + '\nHãy KIỂM TRA Fanpage trước. /retry bị khoá để tránh đăng trùng; nếu bài chưa có, hãy gửi lại sản phẩm. Mã: ' + draftId
+          : '❌ Đăng bài THẤT BẠI: ' + safeMsg + '\nDùng /retry ' + draftId + ' để duyệt lại (chỉ khả dụng khi Facebook chưa ghi nhận bài).');
         return sendError(res, 'UPSTREAM_ERROR', 'Publish Facebook thất bại: ' + err.message);
       }
     }

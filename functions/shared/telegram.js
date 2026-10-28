@@ -16,6 +16,19 @@
 // sendMessage — gửi 1 tin nhắn Telegram (best-effort, không throw ra ngoài nếu bot token chưa set).
 // replyMarkup (optional) — Telegram InlineKeyboardMarkup object, vd:
 //   { inline_keyboard: [[{ text: '✅ Duyệt', callback_data: 'fb_approve:draftId' }]] }
+// tgFetch — fetch có timeout (Telegram treo không được làm treo cả webhook) + che bot token trong lỗi.
+const TG_TIMEOUT_MS = 15000;
+function redactTg(msg, token) {
+  let m = String(msg == null ? '' : msg);
+  if (token) m = m.split(token).join('***');
+  return m.replace(/bot\d{5,}:[A-Za-z0-9_-]{20,}/g, 'bot***');
+}
+async function tgFetch(url, opts) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), TG_TIMEOUT_MS);
+  try { return await fetch(url, Object.assign({}, opts, { signal: ctrl.signal })); } finally { clearTimeout(t); }
+}
+
 async function sendMessage({ token, chatId, text, replyMarkup }) {
   if (!token || !chatId || !text) {
     return { ok: false, error: 'Missing token/chatId/text' };
@@ -23,7 +36,7 @@ async function sendMessage({ token, chatId, text, replyMarkup }) {
   try {
     const body = { chat_id: chatId, text: text, disable_web_page_preview: true };
     if (replyMarkup) body.reply_markup = replyMarkup;
-    const r = await fetch('https://api.telegram.org/bot' + token + '/sendMessage', {
+    const r = await tgFetch('https://api.telegram.org/bot' + token + '/sendMessage', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
@@ -31,7 +44,7 @@ async function sendMessage({ token, chatId, text, replyMarkup }) {
     const data = await r.json();
     return { ok: !!data.ok, result: data };
   } catch (e) {
-    return { ok: false, error: e.message };
+    return { ok: false, error: redactTg(e && e.message, token) };
   }
 }
 
@@ -45,7 +58,7 @@ async function sendPhoto({ token, chatId, photo, caption, replyMarkup }) {
     const body = { chat_id: chatId, photo };
     if (caption) body.caption = caption;
     if (replyMarkup) body.reply_markup = replyMarkup;
-    const r = await fetch('https://api.telegram.org/bot' + token + '/sendPhoto', {
+    const r = await tgFetch('https://api.telegram.org/bot' + token + '/sendPhoto', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
@@ -53,7 +66,7 @@ async function sendPhoto({ token, chatId, photo, caption, replyMarkup }) {
     const data = await r.json();
     return { ok: !!data.ok, result: data };
   } catch (e) {
-    return { ok: false, error: e.message };
+    return { ok: false, error: redactTg(e && e.message, token) };
   }
 }
 
@@ -66,7 +79,7 @@ async function answerCallbackQuery({ token, callbackQueryId, text }) {
   try {
     const body = { callback_query_id: callbackQueryId };
     if (text) body.text = text;
-    const r = await fetch('https://api.telegram.org/bot' + token + '/answerCallbackQuery', {
+    const r = await tgFetch('https://api.telegram.org/bot' + token + '/answerCallbackQuery', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
@@ -74,7 +87,7 @@ async function answerCallbackQuery({ token, callbackQueryId, text }) {
     const data = await r.json();
     return { ok: !!data.ok, result: data };
   } catch (e) {
-    return { ok: false, error: e.message };
+    return { ok: false, error: redactTg(e && e.message, token) };
   }
 }
 

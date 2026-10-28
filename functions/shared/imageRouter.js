@@ -117,7 +117,7 @@ async function routeImage(draft, originalBuffer, deps) {
   }
   try {
     const saved = await media.saveToStorage('fbDrafts/' + draft.id + '/final.' + kind.ext, out, kind.mime);
-    return { status: 'ok', provider: 'compositor', note: bg.note || null, url: saved.url, storagePath: saved.path, report: { product_pixels_preserved: true, width: report.width || null, height: report.height || null, background: report.background || null } };
+    return { status: 'ok', provider: 'compositor', note: bg.note || null, url: saved.url, storagePath: saved.path, report: { product_pixels_preserved: true, width: report.width || null, height: report.height || null, background: report.background || null, canvas: Array.isArray(report.canvas) ? report.canvas.slice(0, 2) : null, product_size: Array.isArray(report.product_size) ? report.product_size.slice(0, 2) : null, core_pixels: report.core_pixels || null, core_pixels_mismatched: report.core_pixels_mismatched == null ? null : report.core_pixels_mismatched } };
   } catch (e) {
     return { status: 'failed', provider: 'compositor', note: 'Không lưu được ảnh kết quả. Dùng ảnh gốc.' };
   }

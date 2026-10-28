@@ -230,7 +230,7 @@ async function runPipeline(draftId, deps) {
       : { status: 'failed', provider: null, note: 'Không đọc được ảnh gốc từ kho lưu trữ.' };
     const fields = {};
     if (routed.status === 'ok') {
-      fields.generatedImageUrl = routed.url; fields.publishImages = [routed.url]; fields.imageMode = 'composited'; fields.finalStoragePath = routed.storagePath;
+      fields.generatedImageUrl = routed.url; fields.publishImages = [routed.url]; fields.imageMode = 'composited'; fields.finalStoragePath = routed.storagePath; fields.imageReport = routed.report || null;
     } else {
       fields.generatedImageUrl = null; fields.publishImages = Array.isArray(draft.imageUrls) ? draft.imageUrls.slice(0, 1) : []; fields.imageMode = 'original';
       addNotice('Ảnh quảng cáo CHƯA được tạo (' + routed.status + '): ' + (routed.note || 'không rõ lý do') + ' Nếu duyệt, bài sẽ đăng bằng ảnh GỐC.');
