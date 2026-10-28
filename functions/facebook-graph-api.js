@@ -17,8 +17,10 @@
  */
 const GRAPH_VERSION = 'v19.0';
 
-// timedFetch — fetch có timeout. Với publishToFeed, mất kết nối/timeout KHÔNG có nghĩa là bài chưa được tạo: lỗi mang
-// cờ ambiguous=true để tầng trên KHÔNG cho tự động thử lại (tránh đăng trùng).
+// timedFetch — CHỈ dùng khi caller truyền guard:true (luồng Telegram Publisher). Mặc định (guard không đặt) uploadPhoto/publishToFeed
+// giữ NGUYÊN hành vi G1: fetch thường, không timeout riêng, lỗi mạng ném nguyên văn (có test vi phân với bản G1).
+// Với publishToFeed có guard, mất kết nối/timeout KHÔNG có nghĩa là bài chưa được tạo: lỗi mang cờ ambiguous=true để tầng trên
+// KHÔNG cho tự động thử lại (tránh đăng trùng).
 async function timedFetch(url, opts, ms, ambiguousOnFail) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), ms);
@@ -69,13 +71,15 @@ async function getManagedPages({ mockMode, userToken }) {
   return data;
 }
 
-async function uploadPhoto({ mockMode, pageId, imageUrl, pageAccessToken }) {
+async function uploadPhoto({ mockMode, pageId, imageUrl, pageAccessToken, guard }) {
   if (mockMode) return { id: 'mock_photo_' + Date.now() + '_' + Math.random().toString(36).slice(2) };
-  const r = await timedFetch(`https://graph.facebook.com/${GRAPH_VERSION}/${pageId}/photos`, {
+  const photoReq = {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ url: imageUrl, published: false, access_token: pageAccessToken })
-  }, 30000, false);
+  };
+  const photoUrl = `https://graph.facebook.com/${GRAPH_VERSION}/${pageId}/photos`;
+  const r = guard ? await timedFetch(photoUrl, photoReq, 30000, false) : await fetch(photoUrl, photoReq);
   const data = await r.json();
   if (!r.ok || !data.id) {
     throw new Error((data.error && data.error.message) || 'Không tải được ảnh lên Facebook.');
@@ -83,17 +87,23 @@ async function uploadPhoto({ mockMode, pageId, imageUrl, pageAccessToken }) {
   return data;
 }
 
-async function publishToFeed({ mockMode, pageId, message, attachedMedia, pageAccessToken }) {
+async function publishToFeed({ mockMode, pageId, message, attachedMedia, pageAccessToken, guard }) {
   if (mockMode) return { id: pageId + '_mockpost_' + Date.now() };
   const body = { message, access_token: pageAccessToken };
   if (attachedMedia && attachedMedia.length) body.attached_media = attachedMedia;
-  const r = await timedFetch(`https://graph.facebook.com/${GRAPH_VERSION}/${pageId}/feed`, {
+  const feedReq = {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
-  }, 30000, true);
+  };
+  const feedUrl = `https://graph.facebook.com/${GRAPH_VERSION}/${pageId}/feed`;
+  const r = guard ? await timedFetch(feedUrl, feedReq, 30000, true) : await fetch(feedUrl, feedReq);
   let data;
-  try { data = await r.json(); } catch (e) { const err = new Error('Facebook trả phản hồi không đọc được — CHƯA biết bài đã được tạo hay chưa.'); err.ambiguous = true; throw err; }
+  if (guard) {
+    try { data = await r.json(); } catch (e) { const err = new Error('Facebook trả phản hồi không đọc được — CHƯA biết bài đã được tạo hay chưa.'); err.ambiguous = true; throw err; }
+  } else {
+    data = await r.json();
+  }
   if (!r.ok || !data.id) {
     throw new Error((data.error && data.error.message) || 'Facebook API từ chối đăng bài.');
   }

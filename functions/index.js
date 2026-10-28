@@ -593,7 +593,6 @@ const customersRoutes = require('./routes/customers');
 const ordersRoutes = require('./routes/orders');
 const paymentsRoutes = require('./routes/payments');
 const openclawRoutes = require('./routes/openclaw');
-const fbPublisherRoutes = require('./routes/fbPublisher');
 const businessesRoutes = require('./routes/businesses');
 const productsRoutes = require('./routes/products');
 const productMediaRoutes = require('./routes/productMedia');
@@ -650,12 +649,15 @@ if (!getApps().length) { admin.initializeApp(); }
  * đồng bộ trước khi trả 200; update gửi lặp được chặn bằng claim nguyên tử (telegramUpdates/{update_id}).
  * Cấu hình/triển khai: docs/TELEGRAM_FACEBOOK_PUBLISHER.md. KHÔNG tự đăng ký webhook — việc của chủ dự án.
  */
+// Phase 6 — apiGateway KHÔNG mount routes/fbPublisher và KHÔNG bind secret Telegram: mã G1 không gọi Telegram Bot API ở route nào
+// (git grep trên e31beac: chỉ nhãn/chú thích), nên apiGateway giữ ĐÚNG cấu hình G1 và không phụ thuộc secret mới. Toàn bộ luồng
+// Telegram→Facebook (nhận sản phẩm, xem trước, nút DUYỆT/HỦY, đăng, báo kết quả) chạy trong telegramWebhook.
 exports.telegramWebhook = onRequest({ secrets: [OPENAI_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, COMPOSITOR_SECRET], cors: false, timeoutSeconds: 120, memory: '512MiB' }, async (req, res) => {
   const { handleTelegramWebhook } = require('./shared/telegramWebhookRelay');
   return handleTelegramWebhook(req, res);
 });
 
-exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRET, TELEGRAM_BOT_TOKEN], cors: ALLOWED_ORIGINS, timeoutSeconds: 120 }, async (req, res) => {
+exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRET], cors: ALLOWED_ORIGINS, timeoutSeconds: 120 }, async (req, res) => {
   const requestId = makeRequestId();
   res.locals = { requestId };
   const path = (req.path || '/').replace(/\/+$/, '') || '/';
@@ -775,8 +777,7 @@ exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRE
       businessesRoutes,
       selfHealingRoutes,
       draftsRoutes, jobsLogsRoutes, facebookRoutes, socialMediaCenterRoutes, founderRoutes,
-      agentRoutes, aiGenerateRoutes, webhooksRoutes, openclawRoutes,
-      fbPublisherRoutes
+      agentRoutes, aiGenerateRoutes, webhooksRoutes, openclawRoutes
     ];
     for (const router of routers) {
       const result = await router.handle(req, res, helpers);

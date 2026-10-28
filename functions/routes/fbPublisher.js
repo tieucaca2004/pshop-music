@@ -572,6 +572,7 @@ async function handle(req, res, helpers) {
           for (const imgUrl of allImages) {
             try {
               const uploadResult = await facebookGraphApi.uploadPhoto({
+                guard: true,
                 mockMode,
                 pageId: approvedDraft.pageId,
                 imageUrl: imgUrl,
@@ -584,6 +585,7 @@ async function handle(req, res, helpers) {
             }
           }
           publishResult = await facebookGraphApi.publishToFeed({
+            guard: true,
             mockMode,
             pageId: approvedDraft.pageId,
             message: messageToPost,
@@ -592,6 +594,7 @@ async function handle(req, res, helpers) {
           });
         } else {
           publishResult = await facebookGraphApi.publishToFeed({
+            guard: true,
             mockMode,
             pageId: approvedDraft.pageId,
             message: messageToPost,

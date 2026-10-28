@@ -153,6 +153,17 @@ const drafts = async () => Object.entries((await db.ref('fbPostDrafts').once('va
     const secrets = [BOT, SECRET, 'GATEWAY-SIGNING-SECRET-VALUE', 'COMPOSITOR-SECRET-VALUE-0123456789', 'sk-test-dummy'];
     const leaked = secrets.filter((x) => hay.includes(x)); assert(leaked.length === 0, 'rò rỉ ' + leaked.length + ' secret');
   });
+  await test('G1 qua apiGateway KHÔNG phụ thuộc Telegram Publisher: env KHÔNG có secret Telegram/compositor + RTDB KHÔNG có telegramConfig ⇒ route G1 vẫn đáp ứng; route publisher không còn mount (404)', async () => {
+    await db.ref().set(null); for (const k of ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_WEBHOOK_SECRET', 'COMPOSITOR_SECRET']) delete process.env[k];
+    const gwBase = 'http://127.0.0.1:' + server.address().port + '/gw'; const out = {};
+    for (const [m, p] of [['GET', '/v1/health'], ['GET', '/v1/facebook/connection'], ['POST', '/v1/facebook/publish'], ['POST', '/v1/facebook/oauth/start'], ['GET', '/v1/products'], ['POST', '/v1/facebook-publisher/drafts'], ['POST', '/v1/facebook-publisher/callback'], ['GET', '/v1/khong-ton-tai']]) {
+      const r = await realFetch(gwBase + p, { method: m, headers: { 'Content-Type': 'application/json' }, body: m === 'POST' ? '{}' : undefined }); out[m + ' ' + p] = r.status;
+    }
+    eq(out['GET /v1/health'], 200); assert([401, 403].includes(out['GET /v1/facebook/connection']), 'G1 connection phải đòi đăng nhập: ' + out['GET /v1/facebook/connection']);
+    assert([401, 403].includes(out['POST /v1/facebook/publish']) && [401, 403].includes(out['POST /v1/facebook/oauth/start']), 'G1 publish/oauth phải đòi đăng nhập');
+    eq(out['POST /v1/facebook-publisher/drafts'], 404); eq(out['POST /v1/facebook-publisher/callback'], 404); eq(out['GET /v1/khong-ton-tai'], 404);
+    eq(blocked.length, 0, 'không có request ra ngoài');
+  });
   await test('DRY-RUN trên RTDB thật: duyệt → PUBLISHED(dryRun), KHÔNG có request Graph, Telegram báo rõ', async () => {
     await reset(); await db.ref('telegramConfig/dryRun').set(true); await send(product()); const [d] = await drafts();
     const g0 = calls.filter((c) => c.url.includes('graph.facebook.com')).length;

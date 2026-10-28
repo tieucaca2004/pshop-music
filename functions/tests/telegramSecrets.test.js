@@ -30,20 +30,25 @@ let bound = null; try { bound = JSON.parse(p.stdout.trim().split('\n').pop()); }
 console.log('\n=== Phase 5 — secret binding / Functions secrets ===');
 test('index.js nạp được KHÔNG cần giá trị secret nào (phát hiện hàm lúc deploy an toàn)', () => { assert(bound, 'không nạp được index.js: ' + String(p.stderr).slice(0, 200)); });
 test('telegramWebhook chỉ bind đúng 4 secret cần: OPENAI_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, COMPOSITOR_SECRET', () => { eq(bound.telegramWebhook, ['COMPOSITOR_SECRET', 'OPENAI_API_KEY', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_WEBHOOK_SECRET']); });
-test('apiGateway bind thêm CHỈ TELEGRAM_BOT_TOKEN (route /v1/facebook-publisher gửi bản xem trước); giữ OPENAI_API_KEY + WEBHOOK_SIGNING_SECRET như bản đang chạy', () => { eq(bound.apiGateway, ['OPENAI_API_KEY', 'TELEGRAM_BOT_TOKEN', 'WEBHOOK_SIGNING_SECRET']); });
-test('Secret Telegram/compositor KHÔNG bind cho hàm nào khác; TELEGRAM_WEBHOOK_SECRET và COMPOSITOR_SECRET chỉ ở telegramWebhook', () => {
+test('apiGateway giữ ĐÚNG binding của bản đang chạy (G1): OPENAI_API_KEY + WEBHOOK_SIGNING_SECRET — KHÔNG bind secret mới nào', () => { eq(bound.apiGateway, ['OPENAI_API_KEY', 'WEBHOOK_SIGNING_SECRET']); });
+test('apiGateway không mount routes/fbPublisher và không nạp mã Telegram: mọi route G1 không phụ thuộc cấu hình Publisher', () => {
+  const src = fs.readFileSync(path.join(FN, 'index.js'), 'utf8');
+  assert(!/require\('\.\/routes\/fbPublisher'\)/.test(src) && !/fbPublisherRoutes/.test(src), 'index.js không được mount fbPublisher');
+  const gw = src.slice(src.indexOf('exports.apiGateway = onRequest('), src.indexOf('exports.aiGenerateWorker'));
+  assert(!/telegram/i.test(gw), 'khối apiGateway không được nhắc Telegram');
+});
+test('Secret Telegram/compositor CHỈ bind cho telegramWebhook (không hàm G1 nào, kể cả apiGateway)', () => {
   for (const [name, list] of Object.entries(bound)) {
-    if (name !== 'telegramWebhook' && name !== 'apiGateway') assert(!list.some((s) => /^(TELEGRAM_|COMPOSITOR_)/.test(s)), name + ' bind secret Telegram/compositor');
-    if (name !== 'telegramWebhook') assert(!list.includes('TELEGRAM_WEBHOOK_SECRET') && !list.includes('COMPOSITOR_SECRET'), name + ' bind secret chỉ dành cho telegramWebhook');
+    if (name !== 'telegramWebhook') assert(!list.some((s) => /^(TELEGRAM_|COMPOSITOR_)/.test(s)), name + ' bind secret Telegram/compositor');
   }
 });
 test('Hàm G1 giữ nguyên binding (4 hàm Facebook, openaiProxy)', () => {
   eq(bound.facebookOAuthCallback, ['FACEBOOK_APP_SECRET']); eq(bound.facebookRefreshToken, ['FACEBOOK_APP_SECRET']); eq(bound.facebookSelectPage, []); eq(bound.facebookPublish, []); eq(bound.openaiProxy, ['OPENAI_API_KEY']);
 });
-test('Hai hàm mục tiêu độc lập: secret MỚI cần có trước khi deploy mỗi hàm không phụ thuộc hàm kia; WEBHOOK_SIGNING_SECRET đã tồn tại từ trước', () => {
+test('Phạm vi deploy = MỘT hàm: secret MỚI chỉ cần cho telegramWebhook (3 secret); apiGateway không cần secret mới nên không cần deploy lại', () => {
   const existing = new Set(['OPENAI_API_KEY', 'WEBHOOK_SIGNING_SECRET', 'FACEBOOK_APP_SECRET', 'DEEPSEEK_API_KEY']);
-  const newForWebhook = bound.telegramWebhook.filter((s) => !existing.has(s)).sort(); const newForGateway = bound.apiGateway.filter((s) => !existing.has(s)).sort();
-  eq(newForWebhook, ['COMPOSITOR_SECRET', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_WEBHOOK_SECRET']); eq(newForGateway, ['TELEGRAM_BOT_TOKEN']);
+  eq(bound.telegramWebhook.filter((s) => !existing.has(s)).sort(), ['COMPOSITOR_SECRET', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_WEBHOOK_SECRET']);
+  eq(bound.apiGateway.filter((s) => !existing.has(s)), []);
 });
 test('Không mã nguồn nào đọc secret từ RTDB hay gán tgConfig.token; mọi truy cập secret Telegram đi qua shared/telegramSecrets.js', () => {
   const offenders = [];
