@@ -316,7 +316,9 @@ const AdminAI = (function () {
       </div>`;
   }
 
-  const FACEBOOK_PUBLISH_URL = 'https://us-central1-pshop-music.cloudfunctions.net/facebookPublish';
+  // G1M — Cloud Function facebookPublish giờ CHỈ cho super_admin; Admin/Editor đăng qua
+  // route gateway (backend xác thực quyền thật). Gateway bọc response: { success, data } / { success:false, error }.
+  const FACEBOOK_PUBLISH_URL = 'https://us-central1-pshop-music.cloudfunctions.net/apiGateway/v1/facebook/publish';
 
   // absolutizeLink()/buildFacebookPublishMessage() — Sprint 12, Facebook AI
   // V5. Không sửa js/ai/modules/facebook-post-generator.js (Plugin — cấm sửa
@@ -410,7 +412,12 @@ const AdminAI = (function () {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
                 body: JSON.stringify({ message, imageUrls })
-              }).then(res => res.json().then(data => ({ ok: res.ok, data })));
+              }).then(res => res.json().catch(() => ({})).then(body => {
+                const inner = (body && body.success && body.data) ? body.data : null;
+                if (res.ok && inner) return { ok: true, data: inner };
+                const errMsg = body && body.error && (body.error.message || body.error);
+                return { ok: false, data: { error: errMsg || 'Không rõ nguyên nhân.' } };
+              }));
             }).then(({ ok, data }) => {
               const finalVersions = versions.slice();
               if (ok && data.success) {

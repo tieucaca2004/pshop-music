@@ -15,6 +15,13 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  * dạng redirect target thật của Cloud Function `facebookOAuthCallback`
  * (Facebook gọi trực tiếp, không qua apiGateway).
  *
+ * G1M — vá phân quyền: các route THAY ĐỔI kết nối (oauth/start, pages/select,
+ * token/refresh, repair, app-config, disconnect) CHỈ super_admin (xác thực lại ở
+ * backend bằng fbConnectionPatch.verifySuperAdmin, không dựa auth.role của gateway
+ * vì super_admin có thể không có node roles/{uid}). `publish` giữ admin/editor và gọi
+ * publishToActivePage() trong tiến trình (KHÔNG proxy sang Cloud Function
+ * facebookPublish, vốn chỉ cho super_admin). Các route chỉ-đọc giữ Admin.
+ *
  * 3 hằng số OAuth (dialog URL/callback URL/scopes) trùng với
  * `js/admin-facebook-connect.js:31-35` và `functions/index.js:44-45` — CỐ
  * TÌNH lặp lại ở đây (không import chéo giữa index.js và routes/) thay vì
@@ -22,6 +29,7 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  * thế" đã áp dụng cho shared/auth.js ở Phase 1.
  */
 const admin = require('firebase-admin');
+const fbConn = require('../shared/fbConnectionPatch');
 
 const FACEBOOK_OAUTH_DIALOG_URL = 'https://www.facebook.com/v19.0/dialog/oauth';
 const FACEBOOK_OAUTH_CALLBACK_URL = 'https://us-central1-pshop-music.cloudfunctions.net/facebookOAuthCallback';
@@ -59,7 +67,17 @@ async function handle(req, res, helpers) {
   if (path.indexOf('/v1/facebook/') !== 0) return null;
 
   const isAdmin = auth.ok && auth.role === 'admin';
-  const canPublish = auth.ok && (auth.role === 'admin' || auth.role === 'editor');
+  const canPublishRole = auth.ok && (auth.role === 'admin' || auth.role === 'editor');
+
+  // Route thay đổi kết nối → bắt buộc super_admin (kiểm tra thật ở backend).
+  async function requireSuper(deniedMessage) {
+    const sa = await fbConn.verifySuperAdmin(req);
+    if (!sa.ok) {
+      sendError(res, sa.code, deniedMessage || sa.error);
+      return null;
+    }
+    return sa;
+  }
 
   if (path === '/v1/facebook/connection' && req.method === 'GET') {
     if (!isAdmin) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin được xem trạng thái kết nối Facebook.');
@@ -79,9 +97,11 @@ async function handle(req, res, helpers) {
   }
 
   if (path === '/v1/facebook/oauth/start' && req.method === 'POST') {
-    if (!isAdmin) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin được khởi động kết nối Facebook.');
+    const sa = await requireSuper('Chỉ Super Admin được khởi động kết nối Facebook.');
+    if (!sa) return;
     const state = require('crypto').randomUUID();
-    await admin.database().ref('facebookOAuthState/' + state).set({ uid: auth.uid, createdAt: admin.database.ServerValue.TIMESTAMP });
+    // createdAt là số (ms) để callback kiểm TTL.
+    await admin.database().ref('facebookOAuthState/' + state).set({ uid: sa.uid, createdAt: Date.now() });
     const appId = await getFacebookAppId();
     if (!appId) {
       return sendSuccess(res, { state, oauthUrl: FACEBOOK_OAUTH_CALLBACK_URL + '?code=mock-code&state=' + encodeURIComponent(state), mockMode: true });
@@ -93,18 +113,51 @@ async function handle(req, res, helpers) {
   }
 
   if (path === '/v1/facebook/pages/select' && req.method === 'POST') {
-    if (!isAdmin) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin được chọn Trang Facebook.');
+    const sa = await requireSuper('Chỉ Super Admin được chọn Trang Facebook.');
+    if (!sa) return;
     return proxyToFunction(req, res, helpers, 'facebookSelectPage');
   }
 
   if (path === '/v1/facebook/publish' && req.method === 'POST') {
-    if (!canPublish) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin/Editor được đăng lên Facebook.');
-    return proxyToFunction(req, res, helpers, 'facebookPublish');
+    // Admin/Editor (do gateway xác thực) HOẶC super_admin. Gọi logic dùng chung trong tiến
+    // trình — không đi vòng qua Cloud Function facebookPublish (chỉ cho super_admin).
+    let allowed = canPublishRole;
+    if (!allowed) allowed = (await fbConn.verifySuperAdmin(req)).ok;
+    if (!allowed) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin/Editor/Super Admin được đăng lên Facebook.');
+    const body = req.body || {};
+    let result;
+    try {
+      result = await fbConn.publishToActivePage({ message: body.message, imageUrls: body.imageUrls });
+    } catch (err) {
+      return sendError(res, 'UPSTREAM_ERROR', err.message);
+    }
+    if (result.status === 200) return sendSuccess(res, result.body);
+    return sendError(res, 'INVALID_REQUEST', result.body.error || 'Không đăng được bài.');
   }
 
   if (path === '/v1/facebook/token/refresh' && req.method === 'POST') {
-    if (!isAdmin) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin được làm mới Token Facebook.');
+    const sa = await requireSuper('Chỉ Super Admin được làm mới Token Facebook.');
+    if (!sa) return;
     return proxyToFunction(req, res, helpers, 'facebookRefreshToken');
+  }
+
+  // G1M — thay thế việc browser ghi thẳng RTDB (facebookAppConfig / facebookConnection
+  // đã bị đóng ở database.rules.json). Chỉ super_admin.
+  if (path === '/v1/facebook/app-config' && req.method === 'POST') {
+    const sa = await requireSuper('Chỉ Super Admin được đổi Facebook App ID.');
+    if (!sa) return;
+    const appId = req.body && typeof req.body.appId === 'string' ? req.body.appId.trim() : null;
+    if (appId === null) return sendError(res, 'INVALID_REQUEST', 'Thiếu "appId" (chuỗi).');
+    const saved = await fbConn.setAppId({ appId, uid: sa.uid });
+    if (!saved.ok) return sendError(res, 'INVALID_REQUEST', saved.error);
+    return sendSuccess(res, { appId: saved.appId, mockMode: !saved.appId });
+  }
+
+  if (path === '/v1/facebook/disconnect' && req.method === 'POST') {
+    const sa = await requireSuper('Chỉ Super Admin được ngắt kết nối Facebook.');
+    if (!sa) return;
+    await fbConn.disconnectFacebook(sa.uid);
+    return sendSuccess(res, { status: 'not_connected' });
   }
 
   // ── Self-Healing (Phase 6, FINAL mục 13) — status/validate/repair cho
@@ -136,7 +189,8 @@ async function handle(req, res, helpers) {
   // nối lần nào (status !== connected/token_expiring) là quyết định nghiệp
   // vụ (cần Founder tự OAuth) — KHÔNG tự thực thi.
   if (path === '/v1/facebook/repair' && req.method === 'POST') {
-    if (!isAdmin) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin được Repair Facebook.');
+    const sa = await requireSuper('Chỉ Super Admin được Repair Facebook.');
+    if (!sa) return;
     const connSnap = await admin.database().ref('facebookConnection').once('value');
     const conn = connSnap.val() || {};
     if (conn.status !== 'connected' && conn.status !== 'token_expiring') {

@@ -33,9 +33,55 @@ const AdminFacebookConnect = (function () {
   const FACEBOOK_SELECT_PAGE_URL = 'https://us-central1-pshop-music.cloudfunctions.net/facebookSelectPage';
   const FACEBOOK_REFRESH_TOKEN_URL = 'https://us-central1-pshop-music.cloudfunctions.net/facebookRefreshToken';
   const FACEBOOK_SCOPES = 'pages_show_list,pages_manage_posts,pages_read_engagement';
+  // G1M — facebookAppConfig / facebookConnection KHÔNG còn cho browser ghi trực tiếp
+  // (database.rules.json .write:false). Ghi qua route gateway, backend kiểm super_admin.
+  const API_BASE = 'https://us-central1-pshop-music.cloudfunctions.net/apiGateway';
   // Facebook Long-Lived User Token thường sống ~60 ngày — cảnh báo "sắp hết
   // hạn" khi còn dưới 7 ngày, để Founder có thời gian tự làm mới/kết nối lại.
   const TOKEN_EXPIRING_SOON_MS = 7 * 24 * 60 * 60 * 1000;
+
+  // G1O — chỉ Super Admin được thay đổi kết nối Facebook (backend kiểm tra thật, xem
+  // functions/shared/fbConnectionPatch.js). Giao diện CHỈ phản ánh quyền đó: ẩn các nút thay đổi cho
+  // người không đủ quyền. Đây là tiện ích hiển thị, KHÔNG phải ranh giới bảo mật.
+  // Điều kiện giống backend: superAdmins/{uid} tồn tại VÀ role === 'super_admin' (so sánh chặt).
+  // Không đọc được node (lỗi mạng/quyền) → coi là KHÔNG đủ quyền (ẩn nút), backend vẫn là nơi quyết định.
+  let canManage = false;
+
+  function detectCanManage() {
+    let user = null;
+    try { user = AdminAuth.getUser(); } catch (e) { user = null; }
+    if (!user || !user.uid) return Promise.resolve(false);
+    return firebase.database().ref('superAdmins/' + user.uid).once('value')
+      .then(snap => {
+        const v = snap.val();
+        return snap.exists() && !!v && typeof v === 'object' && v.role === 'super_admin';
+      })
+      .catch(() => false);
+  }
+
+  function requireManage() {
+    if (canManage) return true;
+    alert('Chỉ Super Admin được thay đổi kết nối Facebook.');
+    return false;
+  }
+
+  function renderPermissionNotice() {
+    let el = document.getElementById('fbPermissionNotice');
+    if (!el) {
+      const status = document.getElementById('fbConnectStatus');
+      if (!status || !status.parentNode) return;
+      el = document.createElement('p');
+      el.id = 'fbPermissionNotice';
+      el.className = 'small-muted';
+      status.parentNode.insertBefore(el, status.nextSibling);
+    }
+    el.style.display = canManage ? 'none' : 'block';
+    el.textContent = canManage ? '' : 'Bạn chỉ có quyền xem. Chỉ Super Admin được kết nối, đổi Fanpage, làm mới Token, ngắt kết nối hoặc đổi App ID.';
+    const appIdInput = document.getElementById('fbAppIdInput');
+    const appIdSave = document.getElementById('fbAppIdSaveBtn');
+    if (appIdInput) appIdInput.disabled = !canManage;
+    if (appIdSave) appIdSave.style.display = canManage ? '' : 'none';
+  }
 
   function ref() {
     return firebase.database().ref('facebookConnection');
@@ -47,8 +93,19 @@ const AdminFacebookConnect = (function () {
     }[c]));
   }
 
-  function generateStateNonce() {
-    return 'st-' + Math.random().toString(36).slice(2) + '-' + Date.now();
+  // callGateway() — POST JSON tới apiGateway kèm Firebase ID token; backend xác thực quyền thật.
+  function callGateway(path, body) {
+    return firebase.auth().currentUser.getIdToken().then(idToken => {
+      return fetch(API_BASE + path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken },
+        body: JSON.stringify(body || {})
+      }).then(res => res.json().catch(() => ({})).then(data => ({ ok: res.ok && data.success !== false, data })));
+    });
+  }
+
+  function gatewayErrorMessage(data) {
+    return (data && data.error && (data.error.message || data.error)) || 'Không rõ nguyên nhân.';
   }
 
   function getAppId() {
@@ -116,6 +173,10 @@ const AdminFacebookConnect = (function () {
     if (refreshTokenBtn) refreshTokenBtn.style.display = (connected || expired) ? 'inline-block' : 'none';
     if (disconnectBtn) disconnectBtn.style.display = (connected || expired) ? 'inline-block' : 'none';
     if (reconnectBtn) reconnectBtn.style.display = expired ? 'inline-block' : 'none';
+    // G1O — người không đủ quyền chỉ xem trạng thái, không thấy bất kỳ nút thay đổi nào.
+    if (!canManage) {
+      [connectBtn, changePageBtn, disconnectBtn, reconnectBtn, refreshTokenBtn].forEach(b => { if (b) b.style.display = 'none'; });
+    }
 
     // Mock Mode đang thật sự áp dụng nếu CHƯA điền App ID (mọi kết nối MỚI sẽ
     // là giả) HOẶC kết nối HIỆN TẠI đã được thiết lập lúc còn Mock Mode
@@ -141,39 +202,31 @@ const AdminFacebookConnect = (function () {
 
   // proceedOAuth() — Facebook Integration V1: KHÔNG còn báo "chưa cấu hình"
   // khi thiếu App ID — thay vào đó tự động chạy Mock Mode (xem comment đầu
-  // file). Ghi 1 nonce dùng 1 lần vào `facebookOAuthState/{state}` TRƯỚC khi
-  // rời trang trong CẢ 2 trường hợp (thật/mock) — đây là cách DUY NHẤT Cloud
+  // file). Một nonce dùng 1 lần được ghi vào `facebookOAuthState/{state}` TRƯỚC
+  // khi rời trang trong CẢ 2 trường hợp (thật/mock) — đây là cách DUY NHẤT Cloud
   // Function `facebookOAuthCallback` (nhận redirect, không có Firebase Auth
   // header vì là navigation trình duyệt thật, không phải fetch()) biết được
-  // "yêu cầu OAuth này của Founder nào".
+  // "yêu cầu OAuth này của Founder nào". Từ G1N nonce này do server ghi.
   function proceedOAuth() {
     closeConsentDialog();
-    const user = AdminAuth.getUser();
-    const state = generateStateNonce();
-    Promise.all([
-      getAppId(),
-      firebase.database().ref('facebookOAuthState/' + state).set({ uid: user.uid, createdAt: Date.now() })
-    ]).then(([appId]) => {
-      if (!appId) {
-        // Mock Mode — không có gì để redirect sang Facebook thật, đi thẳng
-        // tới CHÍNH Cloud Function callback của mình với code giả để kiểm
-        // thử toàn bộ luồng còn lại (state → exchange giả lập → pages giả →
-        // page selection → publish) y hệt luồng thật.
-        window.location.href = `${FACEBOOK_OAUTH_CALLBACK_URL}?code=mock-code&state=${encodeURIComponent(state)}`;
-        return;
-      }
-      const authUrl = `${FACEBOOK_OAUTH_DIALOG_URL}?client_id=${encodeURIComponent(appId)}` +
-        `&redirect_uri=${encodeURIComponent(FACEBOOK_OAUTH_CALLBACK_URL)}` +
-        `&scope=${encodeURIComponent(FACEBOOK_SCOPES)}&response_type=code&state=${encodeURIComponent(state)}`;
-      window.location.href = authUrl;
+    if (!requireManage()) return;
+    // G1N — state OAuth do SERVER cấp (route /v1/facebook/oauth/start, chỉ super_admin) và
+    // database.rules.json không cho browser ghi facebookOAuthState nữa. Server trả sẵn
+    // oauthUrl: Facebook thật nếu đã có App ID, hoặc thẳng callback với code giả (Mock Mode).
+    callGateway('/v1/facebook/oauth/start', {}).then(({ ok, data }) => {
+      const url = ok && data && data.data && data.data.oauthUrl;
+      if (!url) { alert('Không khởi tạo được phiên kết nối: ' + gatewayErrorMessage(data)); return; }
+      window.location.href = url;
     }).catch(err => alert('Không khởi tạo được phiên kết nối: ' + err.message));
   }
 
   function disconnect() {
+    if (!requireManage()) return;
     if (!confirm('Ngắt kết nối Facebook? Bạn có thể kết nối lại bất kỳ lúc nào.')) return;
-    ref().set({ status: 'not_connected' }).then(refresh).catch(() => {
-      alert('Không ghi được vào Firebase — có thể Database Rules cho node "facebookConnection" chưa được deploy. Xem docs/FACEBOOK_INTEGRATION_SETUP.md.');
-    });
+    callGateway('/v1/facebook/disconnect', {}).then(({ ok, data }) => {
+      if (!ok) { alert('Không ngắt được kết nối: ' + gatewayErrorMessage(data)); return; }
+      refresh();
+    }).catch(err => alert('Lỗi khi ngắt kết nối: ' + err.message));
   }
 
   // refreshToken() — Token Refresh (Facebook Integration V1). Gọi Cloud
@@ -182,6 +235,7 @@ const AdminFacebookConnect = (function () {
   // Token vẫn còn hạn. Nếu đã hết hạn hoàn toàn, Cloud Function trả lỗi rõ
   // ràng yêu cầu "Kết nối lại" thay vì báo chung chung.
   function refreshToken() {
+    if (!requireManage()) return;
     firebase.auth().currentUser.getIdToken().then(idToken => {
       return fetch(FACEBOOK_REFRESH_TOKEN_URL, {
         method: 'POST',
@@ -204,10 +258,12 @@ const AdminFacebookConnect = (function () {
   }
 
   function saveAppId() {
+    if (!requireManage()) return;
     const input = document.getElementById('fbAppIdInput');
     if (!input) return;
     const appId = input.value.trim();
-    firebase.database().ref('facebookAppConfig').update({ appId }).then(() => {
+    callGateway('/v1/facebook/app-config', { appId }).then(({ ok, data }) => {
+      if (!ok) { alert('Lỗi khi lưu App ID: ' + gatewayErrorMessage(data)); return; }
       alert(appId ? 'Đã lưu App ID.' : 'Đã xoá App ID — hệ thống quay lại Mock Mode.');
       refresh();
     }).catch(err => alert('Lỗi khi lưu App ID: ' + err.message));
@@ -245,6 +301,7 @@ const AdminFacebookConnect = (function () {
   }
 
   function saveSelectedPage() {
+    if (!requireManage()) return;
     const chosen = document.querySelector('input[name="fbPageChoice"]:checked');
     if (!chosen) { alert('Vui lòng chọn 1 Fanpage.'); return; }
     firebase.auth().currentUser.getIdToken().then(idToken => {
@@ -279,6 +336,7 @@ const AdminFacebookConnect = (function () {
       return;
     }
     if (oauth === 'success') {
+      if (!canManage) return;
       const user = AdminAuth.getUser();
       firebase.database().ref('facebookPendingPages/' + user.uid + '/pages').once('value').then(snap => {
         renderPageSelection(snap.val());
@@ -309,9 +367,13 @@ const AdminFacebookConnect = (function () {
     if (cancelXBtn) cancelXBtn.addEventListener('click', closeConsentDialog);
     if (proceedBtn) proceedBtn.addEventListener('click', proceedOAuth);
 
-    loadAppIdField();
-    refresh();
-    checkOAuthReturn();
+    // Xác định quyền TRƯỚC khi vẽ trạng thái để người không đủ quyền không bao giờ thấy nút thay đổi.
+    detectCanManage().then(ok => {
+      canManage = ok;
+      renderPermissionNotice();
+      loadAppIdField();
+      return refresh();
+    }).then(checkOAuthReturn);
   }
 
   return { init, getStatus, refresh };

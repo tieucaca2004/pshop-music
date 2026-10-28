@@ -198,13 +198,13 @@
     },
     "facebookConnection": {
       ".read": "auth != null && root.child('roles').child(auth.uid).exists()",
-      ".write": "auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin'"
+      ".write": false
     },
     "facebookOAuthState": {
       "$state": {
         ".read": false,
-        ".write": "auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin' && newData.child('uid').val() === auth.uid",
-        ".validate": "newData.hasChildren(['uid', 'createdAt'])"
+        ".write": false,
+        ".validate": "newData.hasChildren(['uid', 'createdAt']) && newData.child('createdAt').isNumber()"
       }
     },
     "facebookPendingPages": {
@@ -227,7 +227,7 @@
     },
     "facebookAppConfig": {
       ".read": "auth != null && root.child('roles').child(auth.uid).exists()",
-      ".write": "auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin'"
+      ".write": false
     },
     "$other": {
       ".read": false,

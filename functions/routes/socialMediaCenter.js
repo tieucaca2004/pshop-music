@@ -8,9 +8,9 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  * js/admin-social-center.js:34-39,80-85). `publish` port
  * `publishVersionToFacebookAfterPermission()` (js/admin-ai.js:378-437) —
  * CÙNG hành vi: kiểm tra `facebookConnection.status`, đánh dấu version
- * "publishing" trước, build message, gọi `facebookPublish` (qua proxy —
- * CÙNG cơ chế forward Authorization header như routes/facebook.js, tránh
- * viết lại lần 2), ghi "published"/"failed" vào ĐÚNG version đó — không
+ * "publishing" trước, build message, gọi publishToActivePage() trong tiến trình
+ * (G1M: Cloud Function `facebookPublish` giờ chỉ cho super_admin nên KHÔNG proxy
+ * sang đó nữa — quyền admin/editor do gateway xác thực), ghi "published"/"failed" vào ĐÚNG version đó — không
  * đổi `draft.status` cấp cao nhất (khác `publishToTarget()`).
  *
  * `schedule` port `schedulePublish()` (js/admin-social-center.js:412-428) —
@@ -24,9 +24,9 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  */
 const admin = require('firebase-admin');
 const listResource = require('../shared/listResource');
+const fbConn = require('../shared/fbConnectionPatch');
 
 const DRAFTS_NODE = 'aiDrafts';
-const FUNCTIONS_BASE = 'https://us-central1-pshop-music.cloudfunctions.net';
 const RELEVANT_MODULES = ['facebook-post-generator', 'banner-generator', 'blog-writer', 'product-description-writer'];
 
 function canPublish(auth) {
@@ -61,7 +61,13 @@ async function handle(req, res, helpers) {
   const path = req.__pshPath;
   if (path.indexOf('/v1/social-media-center/') !== 0) return null;
 
-  if (!canPublish(auth)) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin/Editor được dùng Social Media Center.');
+  // Admin/Editor (gateway xác thực) hoặc super_admin (xác thực lại ở backend).
+  let actorEmail = auth.email || '';
+  if (!canPublish(auth)) {
+    const sa = await fbConn.verifySuperAdmin(req);
+    if (!sa.ok) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin/Editor được dùng Social Media Center.');
+    actorEmail = sa.email;
+  }
 
   if (path === '/v1/social-media-center/drafts' && req.method === 'GET') {
     const all = await listResource.getAll(DRAFTS_NODE);
@@ -105,13 +111,9 @@ async function handle(req, res, helpers) {
 
     let ok = false, data = {};
     try {
-      const upstream = await fetch(FUNCTIONS_BASE + '/facebookPublish', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: req.get('Authorization') || '' },
-        body: JSON.stringify({ message, imageUrls })
-      });
-      ok = upstream.ok;
-      data = await upstream.json();
+      const result = await fbConn.publishToActivePage({ message, imageUrls });
+      ok = result.status === 200;
+      data = result.body || {};
     } catch (err) {
       data = { error: err.message };
     }
@@ -120,7 +122,7 @@ async function handle(req, res, helpers) {
     if (ok && data.success) {
       finalVersions[idx] = Object.assign({}, finalVersions[idx], {
         publishStatus: 'published', facebookPostId: data.facebookPostId, publishedAt: Date.now(),
-        publishedBy: auth.email, selectedPage: conn.pageName || ''
+        publishedBy: actorEmail, selectedPage: conn.pageName || ''
       });
     } else {
       finalVersions[idx] = Object.assign({}, finalVersions[idx], { publishStatus: 'failed', publishError: data.error || 'Không rõ nguyên nhân.' });
