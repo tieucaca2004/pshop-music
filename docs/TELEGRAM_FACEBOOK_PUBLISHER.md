@@ -38,7 +38,7 @@ telegramConfig: {
   approverMap:  { "<telegram user id>": "<uid PSH>" },   // BẮT BUỘC, từng người
   publishRoles: ["admin","editor"],             // tuỳ chọn; super_admin luôn được
   allowedPageIds: ["<page id>"],                // tuỳ chọn; mặc định chỉ Page đang chọn
-  dryRun:       false                           // true = chạy đủ luồng nhưng KHÔNG gọi Facebook (thử an toàn)
+  dryRun:       true                            // FAIL-SAFE: chỉ boolean false (tường minh) mới ĐĂNG THẬT; thiếu/null/sai kiểu/true/cấu hình hỏng/lỗi đọc RTDB ⇒ KHÔNG đăng
 }
 imageRouterConfig: {                              // mặc định KHÔNG có = không xử lý ảnh
   providers: {
@@ -49,6 +49,7 @@ imageRouterConfig: {                              // mặc định KHÔNG có = 
 }
 ```
 **Trường bí mật còn sót trong RTDB bị BỎ QUA** (`telegramConfig.token/botToken/secret/…`, `imageRouterConfig.providers.compositor.secret`, `telegramWebhookSecret`, `webhookSigningSecret`): không bao giờ được dùng; có cảnh báo trong log (chỉ tên khoá). Hãy xoá chúng khỏi RTDB (Founder thao tác thủ công).
+**Đăng thật (Phase 8):** chỉ khi `telegramConfig.dryRun` là boolean `false` được đặt tường minh (và vẫn phải qua secret relay, chat/approverIds, ánh xạ uid+role, approveTransaction, kiểm Page đang chọn). Bản xem trước ghi rõ chế độ. **Kết quả đăng không xác định** (HTTP ≥ 500, Graph code 1/2, HTTP 2xx thiếu post ID, mất kết nối/timeout) ⇒ `FAILED(publish_unknown)`: `/retry` bị khoá, Telegram yêu cầu kiểm tra Fanpage trước (Facebook không đảm bảo idempotency; hệ thống không tuyên bố exactly-once). Lỗi rõ ràng chưa đăng (vd 403 #200) vẫn cho `/retry`.
 Thiếu secret ⇒ dừng an toàn: webhook từ chối mọi request (`reason:auth`, log "TELEGRAM_WEBHOOK_SECRET chưa được cấu hình"); thiếu bot token ⇒ không xử lý tin nhắn (log "TELEGRAM_BOT_TOKEN chưa được cấu hình"); thiếu compositor secret ⇒ ảnh gốc + cảnh báo người duyệt.
 Quyền: uid trong `approverMap` phải có `superAdmins/{uid}.role === 'super_admin'` hoặc `roles/{uid}` thuộc `publishRoles` **tại thời điểm thao tác**. Thiếu ánh xạ/mất quyền → từ chối (fail-closed). `agent` không có quyền đăng mặc định.
 Fanpage: mặc định Page đang active (Super Admin chọn ở trang quản trị — G1). Dòng `Page: <id>` chỉ được chấp nhận nếu server có token cho Page đó; `pageId` còn được Graph xác minh (`getPageInfo`) khi nhận và khi đăng.

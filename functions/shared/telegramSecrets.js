@@ -37,8 +37,12 @@ function warnOnce(key, msg) { if (warned.has(key)) return; warned.add(key); cons
 // `token` rỗng nghĩa là chưa cấu hình secret: các nơi dùng đều coi là "chưa cấu hình" và dừng an toàn.
 async function loadTelegramConfig() {
   const snap = await admin.database().ref('telegramConfig').once('value');
-  const raw = snap.val() || {};
+  const rawVal = snap.val();
+  // Nút không phải object thuần (chuỗi/số/mảng) ⇒ cấu hình KHÔNG hợp lệ: đánh dấu để publishMode luôn ở dry-run (fail-safe).
+  const invalidShape = rawVal !== null && rawVal !== undefined && (typeof rawVal !== 'object' || Array.isArray(rawVal));
+  const raw = invalidShape ? {} : (rawVal || {});
   const cfg = {};
+  if (invalidShape) cfg.__configInvalid = true;
   const legacy = [];
   for (const k of Object.keys(raw)) { if (LEGACY_SECRET_KEYS.indexOf(k) >= 0) legacy.push(k); else cfg[k] = raw[k]; }
   if (legacy.length) {

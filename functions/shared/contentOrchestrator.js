@@ -25,6 +25,7 @@ const imageRouter = require('./imageRouter');
 const graph = require('../facebook-graph-api');
 const { resolvePshActor } = require('./approverPolicy');
 const secrets = require('./telegramSecrets');
+const { resolvePublishMode, describeMode } = require('./publishMode');
 
 const CLAIM_STALE_MS = 5 * 60 * 1000;
 const MAX_MESSAGE_AGE_S = 60 * 60;      // tin nhắn cũ hơn 1 giờ bị coi là phát lại và bỏ qua
@@ -173,13 +174,14 @@ function cleanTextKeepLines(s, max) {
 
 // ── Preview ──────────────────────────────────────────────────────────────────
 
-function buildPreviewText(draft) {
+function buildPreviewText(draft, mode) {
   const p = draft.product || {};
   const lines = ['📋 Xem trước bài đăng Facebook', 'Fanpage: ' + (draft.pageName || draft.pageId) + ' (' + draft.pageId + ')',
     'Sản phẩm: ' + (p.name || '') + ' — ' + (p.price ? formatVnd(p.price) : '') + ' — ' + (p.condition || ''), 'Phiên bản: v' + (draft.version || 1), ''];
   lines.push(draft.aiCaption || draft.caption || '');
   const notices = Array.isArray(draft.notices) ? draft.notices : [];
   if (notices.length) { lines.push(''); for (const n of notices) lines.push('⚠️ ' + n); }
+  if (mode) { lines.push(''); lines.push((mode.live ? '📣 Chế độ: ' : '🧪 Chế độ: ') + describeMode(mode) + (mode.live ? ' — DUYỆT sẽ ĐĂNG lên Fanpage' : ' — DUYỆT sẽ KHÔNG đăng lên Facebook')); }
   lines.push(''); lines.push('Ảnh đăng: ' + (draft.imageMode === 'composited' ? 'ảnh quảng cáo (nền mới, sản phẩm giữ nguyên pixel gốc)' : 'ẢNH GỐC (chưa ghép nền)'));
   return lines.join('\n');
 }
@@ -190,7 +192,7 @@ async function sendPreview(tgConfig, draft) {
     { text: '✅ DUYỆT & ĐĂNG', callback_data: 'fb_approve:' + draft.id + ':' + v },
     { text: '❌ HỦY', callback_data: 'fb_cancel:' + draft.id }
   ]] };
-  const text = buildPreviewText(draft);
+  const text = buildPreviewText(draft, resolvePublishMode(tgConfig));
   const img = Array.isArray(draft.publishImages) && draft.publishImages[0];
   if (img && text.length <= 1000) {
     return telegram.sendPhoto({ token: tgConfig.token, chatId: tgConfig.chatId, photo: img, caption: text, replyMarkup });
@@ -394,7 +396,7 @@ async function handleRetry(draftId, tgConfig, message) {
   if (!DRAFT_ID_PATTERN.test(draftId)) { await reply(tgConfig, message.chat.id, 'Mã bản nháp không hợp lệ.'); return { handled: true, skipped: true, reason: 'bad_id' }; }
   const r = await fbDraftStore.retryFailedPublish(draftId);
   if (!r.committed) {
-    const why = { not_found: 'không tìm thấy bản nháp', not_failed: 'bản nháp không ở trạng thái lỗi', not_publish_failure: 'lỗi không phải ở bước đăng — hãy gửi lại sản phẩm', already_posted: 'bài ĐÃ được Facebook ghi nhận — không đăng lại để tránh trùng' }[r.reason] || r.reason;
+    const why = { not_found: 'không tìm thấy bản nháp', not_failed: 'bản nháp không ở trạng thái lỗi', not_publish_failure: 'lỗi không phải ở bước đăng — hãy gửi lại sản phẩm', publish_outcome_unknown: 'kết quả đăng KHÔNG RÕ — hãy kiểm tra Fanpage; nếu bài chưa có, gửi lại sản phẩm để tạo bản nháp mới', already_posted: 'bài ĐÃ được Facebook ghi nhận — không đăng lại để tránh trùng' }[r.reason] || r.reason;
     await reply(tgConfig, message.chat.id, '⚠️ Không thể thử lại: ' + why + '.');
     return { handled: true, skipped: true, reason: r.reason };
   }

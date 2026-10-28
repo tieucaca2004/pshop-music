@@ -198,6 +198,17 @@ async function reset() {
     assert(JSON.stringify(after) === JSON.stringify(liveBefore), 'kết nối Facebook bị đổi!'); assert(drafts.length >= 0); return { evidence: 'hai node giống hệt trước/sau toàn bộ kịch bản; Page đích luôn = page_live' };
   });
 
+  await step(15, 'Fail-safe: thiếu/sai kiểu telegramConfig.dryRun ⇒ DUYỆT KHÔNG đăng (mặc định an toàn); chỉ boolean false mới đăng (Graph MOCK)', async () => {
+    photoBytes = originalBytes; const g0 = feeds().length;
+    for (const [label, apply] of [['thiếu', () => db.ref('telegramConfig/dryRun').remove()], ['chuỗi "false"', () => db.ref('telegramConfig/dryRun').set('false')], ['số 0', () => db.ref('telegramConfig/dryRun').set(0)]]) {
+      await apply(); const before = (await drafts()).map((q) => q.id); await send(productUpd()); const nd = (await drafts()).find((q) => !before.includes(q.id) && q.status === 'PENDING_APPROVAL'); assert(nd, 'draft mới (' + label + ')');
+      await send(cbUpd('fb_approve', nd.id, 1)); const x = (await drafts()).find((q) => q.id === nd.id); assert(x.status === 'PUBLISHED' && x.dryRun === true && !x.facebookPostId, label + ': status=' + x.status);
+      assert(feeds().length === g0, label + ': không được gọi feed'); assert(sentTg.filter((s) => s.kind === 'sendMessage').pop().text.indexOf('KHÔNG đăng') >= 0, label);
+    }
+    await db.ref('telegramConfig/dryRun').set(false); await send(productUpd()); const rd = (await drafts()).find((q) => q.status === 'PENDING_APPROVAL'); await send(cbUpd('fb_approve', rd.id, 1)); assert(feeds().length === g0 + 1, 'dryRun=false tường minh ⇒ đăng (Graph MOCK)');
+    return { evidence: 'thiếu / "false" / 0 ⇒ 0 POST feed, draft dryRun; false (boolean) ⇒ 1 POST (mock)' };
+  });
+
   server.close(); if (srv) srv.kill(); try { fs.unlinkSync(fixturePng); } catch (e) { /* noop */ }
   const fails = rows.filter((r) => r.status === 'FAIL'); const blockedRows = rows.filter((r) => r.status === 'BLOCKED');
   const md = '| # | Bước | Trạng thái | Bằng chứng |\n|---|---|---|---|\n' + rows.map((r) => '| ' + r.n + ' | ' + r.name + ' | **' + r.status + '** | ' + r.evidence.replace(/\|/g, '/') + ' |').join('\n') + '\n';

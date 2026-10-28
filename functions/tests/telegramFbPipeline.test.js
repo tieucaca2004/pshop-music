@@ -30,7 +30,7 @@ function setPath(obj, p, val) {
 let keyCounter = 0;
 function mockRef(p) {
   return {
-    once: async () => ({ exists: () => getPath(db, p) !== null, val: () => clone(getPath(db, p)) }),
+    once: async () => { if (failRead && (p === failRead || p.indexOf(failRead + '/') === 0)) throw new Error('RTDB unavailable'); return { exists: () => getPath(db, p) !== null, val: () => clone(getPath(db, p)) }; },
     set: async (v) => setPath(db, p, clone(v)),
     update: async (ch) => { for (const k of Object.keys(ch)) setPath(db, p + '/' + k, ch[k] === null ? null : clone(ch[k])); },
     push: () => { const key = 'k' + (++keyCounter) + 'x' + Math.random().toString(36).slice(2, 6); return { key, set: async (v) => setPath(db, p + '/' + key, clone(v)) }; },
@@ -74,7 +74,7 @@ Module._load = function (request, parent) {
 const realFetch = global.fetch;
 let calls = []; let sentTg = []; let nPost = 0;
 let tgFileBytes = null; let tgGetFileFail = false; let tgSendFail = false;
-let graphInfoFail = false; let photoFail = false; let feedFail = false; let feedNetErr = false;
+let graphInfoFail = false; let photoFail = false; let feedFail = false; let feedNetErr = false; let feedOverride = null; let failRead = null;
 let compositorHandler = null;
 const BOT = '123456:ABC-DEF_tokenTOKENtokenTOKENtoken12';
 const res = (body, ok = true, status = 200) => ({ ok, status, json: async () => body, arrayBuffer: async () => (Buffer.isBuffer(body) ? body : Buffer.from(JSON.stringify(body))) });
@@ -95,6 +95,7 @@ global.fetch = async (url, opts) => {
     if (!m) return res({ error: { message: 'unexpected graph url' } }, false, 400);
     if (m[3]) return graphInfoFail ? res({ error: { message: 'Invalid OAuth access token.' } }, false, 400) : res({ id: m[1], name: 'Fanpage Test' });
     if (m[2] === '/photos') return photoFail ? res({ error: { message: 'Image rejected by Facebook' } }, false, 400) : res({ id: 'ph_' + (++nPost) });
+    if (m[2] === '/feed' && feedOverride) return feedOverride();
     if (m[2] === '/feed' && feedNetErr) throw new TypeError('fetch failed');
     if (m[2] === '/feed') return feedFail ? res({ error: { message: '(#200) Permissions error' } }, false, 403) : res({ id: m[1] + '_post' + (++nPost) });
   }
@@ -140,11 +141,11 @@ const SECRET = 'tg-webhook-secret-for-tests';
 
 function resetAll(opts) {
   db = {}; storageFiles = {}; calls = []; sentTg = []; nPost = 0; keyCounter = 0; logs.length = 0;
-  tgFileBytes = JPEG_BYTES; tgGetFileFail = false; tgSendFail = false; graphInfoFail = false; photoFail = false; feedFail = false; feedNetErr = false; compositorHandler = null;
+  tgFileBytes = JPEG_BYTES; tgGetFileFail = false; tgSendFail = false; graphInfoFail = false; photoFail = false; feedFail = false; feedNetErr = false; feedOverride = null; failRead = null; compositorHandler = null;
   aiImpl = async () => ({ content: { versions: [{ hook: 'AI hook', caption: 'AI caption cho sản phẩm', cta: 'Nhắn tin ngay', hashtags: ['pshop', '#dj'] }] } });
   // Phase 5: secret = Functions secret (env), KHÔNG ở RTDB; RTDB chỉ có cấu hình không bí mật.
   process.env.TELEGRAM_BOT_TOKEN = BOT; process.env.TELEGRAM_WEBHOOK_SECRET = SECRET; delete process.env.COMPOSITOR_SECRET;
-  setPath(db, 'telegramConfig', { chatId: '555', approverIds: ['777'], approverMap: { '777': 'uid_ok' } });
+  setPath(db, 'telegramConfig', { chatId: '555', approverIds: ['777'], approverMap: { '777': 'uid_ok' }, dryRun: false }); // đăng thật bật TƯỜNG MINH (mặc định an toàn: xem [3d])
   setPath(db, 'roles/uid_ok', 'admin');
   setPath(db, 'facebookConnection', { status: 'connected' });
   setPath(db, 'facebookActiveToken', { pageId: 'page_1', accessToken: 'PAGE_TOKEN_SECRET', isMock: false, expiresAt: Date.now() + 1e9 });
@@ -454,6 +455,88 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
     eq(offenders.join(','), '');
   });
 
+  // ═════ [3d] Phase 8 — F1 (kết quả đăng không xác định) & F2 (dryRun fail-safe) ═════
+  out('\n=== [3d] Phase 8: F1 retry/đăng trùng · F2 dryRun fail-safe ===');
+  const { resolvePublishMode } = require('../shared/publishMode');
+  await test('F2 resolvePublishMode: CHỈ boolean false tường minh mới là live; mọi giá trị khác (thiếu/null/sai kiểu/true/cấu hình hỏng) là dry-run', async () => {
+    eq(resolvePublishMode({ dryRun: false }), { live: true, reason: 'dryRun_false' });
+    eq(resolvePublishMode({ dryRun: true }), { live: false, reason: 'dryRun_true' });
+    eq(resolvePublishMode({}).live, false); eq(resolvePublishMode({}).reason, 'dryRun_missing');
+    eq(resolvePublishMode({ dryRun: null }).reason, 'dryRun_missing'); eq(resolvePublishMode({ dryRun: undefined }).reason, 'dryRun_missing');
+    for (const bad of ['false', 'true', 'FALSE', 0, 1, -1, NaN, [], [false], {}, { x: 1 }, '', ' ']) { const m = resolvePublishMode({ dryRun: bad }); eq(m.live, false, 'dryRun=' + JSON.stringify(bad)); eq(m.reason, 'dryRun_invalid_type'); }
+    for (const bad of [null, undefined, 'garbage', 5, true, [], [{ dryRun: false }], { __configInvalid: true, dryRun: false }]) { const m = resolvePublishMode(bad); eq(m.live, false, 'cfg=' + JSON.stringify(bad)); eq(m.reason, 'config_invalid'); }
+  });
+  await test('F2 đầu-cuối: dryRun thiếu/null/"false"/"true"/0/1/[]/{}/true ⇒ DUYỆT KHÔNG gọi Facebook (0 POST photos/feed), draft dryRun; CHỈ false ⇒ đăng 1 bài', async () => {
+    const cases = [['thiếu', undefined, 'dryRun_missing'], ['null', null, 'dryRun_missing'], ['"false"', 'false', 'dryRun_invalid_type'], ['"true"', 'true', 'dryRun_invalid_type'], ['0', 0, 'dryRun_invalid_type'], ['1', 1, 'dryRun_invalid_type'],
+      ['[]', [], 'dryRun_invalid_type'], ['{}', {}, 'dryRun_invalid_type'], ['true', true, 'dryRun_true']];
+    for (const [label, val, reason] of cases) {
+      const d = await pending(); if (val === undefined) delete db.telegramConfig.dryRun; else db.telegramConfig.dryRun = val;
+      await webhook(cbUpdate('fb_approve', d.id, 1)); const x = getPath(db, 'fbPostDrafts/' + d.id);
+      eq(feedPosts().length, 0, 'dryRun=' + label + ': không được đăng'); eq(photoPosts().length, 0, 'dryRun=' + label); eq(x.status, 'PUBLISHED'); eq(x.dryRun, true, label); eq(x.dryRunReason, reason, label); assert(!x.facebookPostId);
+      assert(sentTg.filter((s) => s.kind === 'sendMessage').pop().text.includes('KHÔNG đăng'), 'thông báo dry-run: ' + label);
+    }
+    const d = await pending(); db.telegramConfig.dryRun = false; await webhook(cbUpdate('fb_approve', d.id, 1)); eq(feedPosts().length, 1, 'dryRun=false tường minh ⇒ đăng'); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'PUBLISHED'); assert(!getPath(db, 'fbPostDrafts/' + d.id + '/dryRun'));
+  });
+  await test('F2: thông báo dry-run mặc định nêu rõ lý do và cách bật đăng thật (không dán giá trị cấu hình)', async () => {
+    const d = await pending(); delete db.telegramConfig.dryRun; await webhook(cbUpdate('fb_approve', d.id, 1)); const t = sentTg.filter((s) => s.kind === 'sendMessage').pop().text;
+    assert(/mặc định an toàn/.test(t) && /dryRun_missing/.test(t) && /dryRun = false \(boolean\)/.test(t), t);
+  });
+  await test('F2: cấu hình telegramConfig sai dạng (chuỗi/số/mảng) ⇒ không nhận sản phẩm, DUYỆT bị từ chối, 0 đăng', async () => {
+    for (const garbage of ['garbage', 42, [false], true]) {
+      const d = await pending(); db.telegramConfig = garbage; await webhook(cbUpdate('fb_approve', d.id, 1));
+      eq(feedPosts().length, 0, 'cfg=' + JSON.stringify(garbage)); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'PENDING_APPROVAL');
+      const before = drafts().length; await orch.handleTelegramMessage(productUpdate()); eq(drafts().length, before, 'không tạo draft khi cấu hình hỏng');
+    }
+  });
+  await test('F2: LỖI ĐỌC RTDB telegramConfig lúc DUYỆT ⇒ không đăng, draft giữ PENDING_APPROVAL, callback trả 200; lúc nhận sản phẩm ⇒ không tạo draft; log không lộ secret', async () => {
+    const d = await pending(); failRead = 'telegramConfig'; logs.length = 0;
+    const r = await webhook(cbUpdate('fb_approve', d.id, 1)); eq(r.status, 200); eq((r.json.data || {}).reason, 'config_unreadable', JSON.stringify(r.json));
+    eq(feedPosts().length, 0); eq(photoPosts().length, 0); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'PENDING_APPROVAL');
+    const n = drafts().length; const w = await webhook(productUpdate()); eq(w.status, 200); eq(drafts().length, n, 'không tạo draft');
+    assert(!logs.some((l) => l.includes(BOT) || l.includes(SECRET)), 'log không lộ secret'); failRead = null;
+    await webhook(cbUpdate('fb_approve', d.id, 1)); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'PUBLISHED', 'sau khi RTDB hồi phục luồng bình thường');
+  });
+  await test('F2: bản xem trước nêu chế độ — dry-run mặc định / DRY-RUN / ĐĂNG THẬT — để người duyệt biết nút DUYỆT làm gì', async () => {
+    resetAll(); delete db.telegramConfig.dryRun; await orch.handleTelegramMessage(productUpdate()); let t = lastPreview(); t = t.caption || t.text; assert(/Chế độ: DRY-RUN mặc định an toàn/.test(t) && /KHÔNG đăng lên Facebook/.test(t), t);
+    resetAll(); db.telegramConfig.dryRun = true; await orch.handleTelegramMessage(productUpdate()); t = lastPreview(); t = t.caption || t.text; assert(/DRY-RUN \(telegramConfig\.dryRun = true\)/.test(t), t);
+    resetAll(); await orch.handleTelegramMessage(productUpdate()); t = lastPreview(); t = t.caption || t.text; assert(/ĐĂNG THẬT/.test(t) && /sẽ ĐĂNG lên Fanpage/.test(t), t);
+  });
+  const ambiguousCases = {
+    'HTTP 500': () => res({ error: { message: 'Internal', code: 190 } }, false, 500),
+    'HTTP 503': () => res({ error: { message: 'Service unavailable' } }, false, 503),
+    'Graph code 1 (HTTP 500)': () => res({ error: { message: 'An unknown error has occurred.', code: 1 } }, false, 500),
+    'Graph code 1 (HTTP 400)': () => res({ error: { message: 'An unknown error occurred', code: 1 } }, false, 400),
+    'Graph code 2 (HTTP 503)': () => res({ error: { message: 'Service temporarily unavailable', code: 2 } }, false, 503),
+    'Graph code 2 (HTTP 400)': () => res({ error: { message: 'Service temporarily unavailable', code: 2 } }, false, 400),
+    'HTTP 200 thiếu post ID': () => res({}, true, 200),
+    'HTTP 200 id rỗng': () => res({ id: '' }, true, 200),
+    'mất kết nối (TypeError)': () => { throw new TypeError('fetch failed'); },
+    'timeout (AbortError)': () => { const e = new Error('aborted'); e.name = 'AbortError'; throw e; }
+  };
+  await test('F1: kết quả KHÔNG xác định (HTTP 500/503, Graph code 1/2, HTTP 200 thiếu id, mất kết nối/timeout) ⇒ FAILED(publish_unknown), đúng 1 lần gọi feed, /retry bị khoá, báo kiểm tra Fanpage', async () => {
+    for (const [label, mk] of Object.entries(ambiguousCases)) {
+      const d = await pending(); feedOverride = mk; const before = feedPosts().length; await webhook(cbUpdate('fb_approve', d.id, 1)); feedOverride = null;
+      const x = getPath(db, 'fbPostDrafts/' + d.id); eq(x.status, 'FAILED', label); eq(x.failStage, 'publish_unknown', label); assert(!x.facebookPostId, label); eq(feedPosts().length - before, 1, label + ': không tự thử lại');
+      const m = sentTg.filter((s) => s.kind === 'sendMessage').pop().text; assert(/KHÔNG RÕ KẾT QUẢ/.test(m) && /KIỂM TRA Fanpage/.test(m) && /ĐÃ có trên Fanpage/.test(m) && /CHƯA có/.test(m) && !/Bài đã lên sóng/.test(m), label + ': ' + m);
+      const rr = await orch.handleTelegramMessage({ update_id: ++updSeq, message: { from: { id: 777 }, chat: { id: 555 }, text: '/retry ' + d.id } });
+      eq(rr.reason, 'publish_outcome_unknown', label); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'FAILED', label); eq(feedPosts().length - before, 1, label + ': /retry không được phát sinh lời gọi feed');
+      assert(sentTg.filter((s) => s.kind === 'sendMessage').pop().text.includes('KHÔNG RÕ'), label + ': /retry giải thích lý do');
+    }
+  });
+  await test('F1: lỗi RÕ RÀNG chưa đăng (HTTP 403 #200 lỗi quyền, HTTP 400 #100) vẫn là FAILED(publish) ⇒ /retry được (version +1, nút cũ vô hiệu) ⇒ đăng đúng 1 lần; thông báo không hứa exactly-once', async () => {
+    for (const [label, mk] of [['403 #200', () => res({ error: { message: '(#200) Permissions error', code: 200 } }, false, 403)], ['400 #100', () => res({ error: { message: 'Invalid parameter', code: 100 } }, false, 400)]]) {
+      const d = await pending(); feedOverride = mk; await webhook(cbUpdate('fb_approve', d.id, 1)); feedOverride = null;
+      let x = getPath(db, 'fbPostDrafts/' + d.id); eq(x.failStage, 'publish', label); eq(x.status, 'FAILED');
+      const m = sentTg.filter((s) => s.kind === 'sendMessage').pop().text; assert(/THẤT BẠI/.test(m) && /Facebook trả lỗi rõ ràng/.test(m) && /không thể bảo đảm tuyệt đối/.test(m) && !/KHÔNG RÕ/.test(m), m);
+      assert(!/exactly-once|đảm bảo duy nhất|chắc chắn không trùng/i.test(m), 'không được tuyên bố exactly-once');
+      const before = feedPosts().length; const rr = await orch.handleTelegramMessage({ update_id: ++updSeq, message: { from: { id: 777 }, chat: { id: 555 }, text: '/retry ' + d.id } }); assert(rr.retried && rr.version === 2, label);
+      await webhook(cbUpdate('fb_approve', d.id, 1)); eq(feedPosts().length, before, 'nút v1 không còn hiệu lực'); await webhook(cbUpdate('fb_approve', d.id, 2)); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'PUBLISHED'); eq(feedPosts().length, before + 1, label);
+    }
+  });
+  await test('F1: ảnh lỗi rõ ràng (photos 400) vẫn chưa tạo bài ⇒ FAILED(publish); lỗi mạng khi UPLOAD ảnh KHÔNG khoá retry (ảnh upload là published:false, không tạo bài)', async () => {
+    const d = await pending(); photoFail = true; await webhook(cbUpdate('fb_approve', d.id, 1)); photoFail = false; eq(getPath(db, 'fbPostDrafts/' + d.id + '/failStage'), 'publish'); eq(feedPosts().length, 0);
+  });
+
   // ═════ [4] Chọn Fanpage ═════
   out('\n=== [4] Chọn Fanpage / xác thực Page ===');
   await test('Mặc định dùng Page đang active; hiện tên Page lấy từ Graph', async () => {
@@ -605,7 +688,7 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
     const x = getPath(db, 'fbPostDrafts/' + d.id); eq(x.status, 'FAILED'); eq(x.failStage, 'publish_unknown'); assert(!x.facebookPostId);
     const msg = sentTg.filter((s) => s.kind === 'sendMessage').pop().text; assert(/KHÔNG RÕ KẾT QUẢ/.test(msg) && /KIỂM TRA Fanpage/.test(msg) && !/Bài đã lên sóng/.test(msg));
     feedNetErr = false; const rr = await orch.handleTelegramMessage({ update_id: ++updSeq, message: { from: { id: 777 }, chat: { id: 555 }, text: '/retry ' + d.id } });
-    eq(rr.reason, 'not_publish_failure'); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'FAILED'); eq(feedPosts().length, 1, 'chỉ đúng 1 lần gọi feed (không tự thử lại)');
+    eq(rr.reason, 'publish_outcome_unknown'); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'FAILED'); eq(feedPosts().length, 1, 'chỉ đúng 1 lần gọi feed (không tự thử lại)');
   });
   await test('telegram.js: lỗi mạng chứa bot token được che trong kết quả trả về', async () => {
     const tg = require('../shared/telegram'); const prev = global.fetch; global.fetch = async () => { throw new Error('connect ECONNRESET https://api.telegram.org/bot' + BOT + '/sendMessage'); };

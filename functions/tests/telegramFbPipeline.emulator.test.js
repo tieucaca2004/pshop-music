@@ -24,7 +24,7 @@ const rq = require('module').createRequire(F + 'index.js');
 
 // ── fetch: localhost đi thật (emulator); dịch vụ ngoài là mock; còn lại bị chặn ──
 const realFetch = global.fetch;
-let calls = [], sentTg = [], blocked = [], nPost = 0, feedFail = false, openaiMode = 'ok';
+let calls = [], sentTg = [], blocked = [], nPost = 0, feedFail = false, openaiMode = 'ok', feedOverride = null;
 const BOT = '987654:EMU-bot_tokenTOKENtokenTOKENtoken99';
 const jres = (b, ok = true, st = 200) => ({ ok, status: st, json: async () => b, arrayBuffer: async () => Buffer.from(JSON.stringify(b)) });
 const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(300, 9)]);
@@ -44,6 +44,7 @@ global.fetch = async (url, opts) => {
   if (g) {
     if (g[3]) return jres({ id: g[1], name: 'Fanpage Emulator' });
     if (g[2] === '/photos') return jres({ id: 'ph_' + (++nPost) });
+    if (g[2] === '/feed' && feedOverride) return feedOverride();
     if (g[2] === '/feed') return feedFail ? jres({ error: { message: '(#200) Permissions error' } }, false, 403) : jres({ id: g[1] + '_post' + (++nPost) });
   }
   blocked.push(url); throw new Error('Test chặn request ra ngoài: ' + url.replace(BOT, '***'));
@@ -61,10 +62,10 @@ function assert(c, m) { if (!c) throw new Error(m || 'assertion failed'); }
 function eq(a, b, m) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error((m || 'not equal') + ': ' + JSON.stringify(a) + ' !== ' + JSON.stringify(b)); }
 
 async function reset() {
-  calls = []; sentTg = []; nPost = 0; feedFail = false; openaiMode = 'ok'; logs.length = 0;
+  calls = []; sentTg = []; nPost = 0; feedFail = false; openaiMode = 'ok'; feedOverride = null; logs.length = 0;
   await db.ref().set(null);
   process.env.TELEGRAM_BOT_TOKEN = BOT; process.env.TELEGRAM_WEBHOOK_SECRET = SECRET; // Phase 5: secret ở env (Functions secret), không ở RTDB
-  await db.ref('telegramConfig').set({ chatId: '555', approverIds: ['777'], approverMap: { '777': 'uid_ok' } });
+  await db.ref('telegramConfig').set({ chatId: '555', approverIds: ['777'], approverMap: { '777': 'uid_ok' }, dryRun: false }); // đăng thật bật TƯỜNG MINH
   await db.ref('roles/uid_ok').set('admin');
   await db.ref('facebookConnection').set({ status: 'connected', pageId: 'page_1' });
   await db.ref('facebookActiveToken').set({ pageId: 'page_1', accessToken: 'PAGE_TOKEN_SECRET', isMock: false, expiresAt: Date.now() + 1e9 });
@@ -163,6 +164,23 @@ const drafts = async () => Object.entries((await db.ref('fbPostDrafts').once('va
     assert([401, 403].includes(out['POST /v1/facebook/publish']) && [401, 403].includes(out['POST /v1/facebook/oauth/start']), 'G1 publish/oauth phải đòi đăng nhập');
     eq(out['POST /v1/facebook-publisher/drafts'], 404); eq(out['POST /v1/facebook-publisher/callback'], 404); eq(out['GET /v1/khong-ton-tai'], 404);
     eq(blocked.length, 0, 'không có request ra ngoài');
+  });
+  await test('F2 trên RTDB thật: dryRun thiếu / "false" (chuỗi) / 0 / true ⇒ DUYỆT KHÔNG gọi Facebook; chỉ boolean false ⇒ đăng 1 bài', async () => {
+    for (const [label, val] of [['thiếu', undefined], ['"false"', 'false'], ['0', 0], ['true', true]]) {
+      await reset(); if (val === undefined) await db.ref('telegramConfig/dryRun').remove(); else await db.ref('telegramConfig/dryRun').set(val);
+      await send(product()); const [d] = await drafts(); await send(cb('fb_approve', d.id, 1)); const x = (await drafts())[0];
+      eq(feeds().length, 0, label); eq(calls.filter((c) => c.method === 'POST' && /graph\.facebook\.com/.test(c.url)).length, 0, label + ': không POST Graph'); eq(x.status, 'PUBLISHED'); eq(x.dryRun, true, label);
+    }
+    await reset(); await send(product()); const [d2] = await drafts(); await send(cb('fb_approve', d2.id, 1)); eq(feeds().length, 1, 'dryRun=false ⇒ đăng'); eq((await drafts())[0].dryRun, undefined);
+  });
+  await test('F1 trên RTDB thật: Facebook HTTP 503 / Graph code 1 ⇒ FAILED(publish_unknown), /retry khoá, 1 lần gọi feed; lỗi 403 ⇒ /retry được', async () => {
+    for (const [label, mk] of [['503', () => jres({ error: { message: 'Service unavailable' } }, false, 503)], ['code 1', () => jres({ error: { message: 'unknown', code: 1 } }, false, 500)], ['200 thiếu id', () => jres({}, true, 200)]]) {
+      await reset(); await send(product()); const [d] = await drafts(); feedOverride = mk; await send(cb('fb_approve', d.id, 1)); feedOverride = null;
+      let x = (await drafts())[0]; eq(x.failStage, 'publish_unknown', label); eq(feeds().length, 1, label);
+      await send({ update_id: ++upd, message: { date: Math.floor(Date.now() / 1000), from: { id: 777 }, chat: { id: 555 }, text: '/retry ' + d.id } }); x = (await drafts())[0]; eq(x.status, 'FAILED', label); eq(feeds().length, 1, label + ': /retry không phát sinh đăng');
+    }
+    await reset(); await send(product()); const [d3] = await drafts(); feedOverride = () => jres({ error: { message: '(#200) Permissions error', code: 200 } }, false, 403); await send(cb('fb_approve', d3.id, 1)); feedOverride = null;
+    eq((await drafts())[0].failStage, 'publish'); await send({ update_id: ++upd, message: { date: Math.floor(Date.now() / 1000), from: { id: 777 }, chat: { id: 555 }, text: '/retry ' + d3.id } }); eq((await drafts())[0].status, 'PENDING_APPROVAL');
   });
   await test('DRY-RUN trên RTDB thật: duyệt → PUBLISHED(dryRun), KHÔNG có request Graph, Telegram báo rõ', async () => {
     await reset(); await db.ref('telegramConfig/dryRun').set(true); await send(product()); const [d] = await drafts();

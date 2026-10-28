@@ -217,6 +217,7 @@ async function retryFailedPublish(draftId) {
     reason = null; newVersion = null;
     if (current === null || current === undefined) { reason = 'not_found'; return null; }
     if (current.status !== 'FAILED') { reason = 'not_failed'; return undefined; }
+    if (current.failStage === 'publish_unknown') { reason = 'publish_outcome_unknown'; return undefined; } // kết quả đăng KHÔNG RÕ: không bao giờ cho retry
     if (current.failStage !== 'publish') { reason = 'not_publish_failure'; return undefined; }
     if (current.facebookPostId) { reason = 'already_posted'; return undefined; }
     newVersion = (typeof current.version === 'number' ? current.version : 1) + 1;

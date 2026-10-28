@@ -49,6 +49,7 @@ const { safeEqual } = require('../shared/secretCompare');
 const { isRelayTrusted } = require('../shared/relayTrust');
 const { resolvePshActor } = require('../shared/approverPolicy');
 const secrets = require('../shared/telegramSecrets');
+const { resolvePublishMode, describeMode } = require('../shared/publishMode');
 
 // ── Helpers đọc config từ RTDB (server-only nodes) ───────────────────────────
 
@@ -434,7 +435,13 @@ async function handle(req, res, helpers) {
       return sendError(res, 'INVALID_REQUEST', 'draftId trong callback_data không hợp lệ.');
     }
 
-    const tgConfig = await getTelegramConfig();
+    let tgConfig;
+    try { tgConfig = await getTelegramConfig(); }
+    catch (e) {
+      // Không đọc được cấu hình ⇒ KHÔNG xử lý duyệt/huỷ và KHÔNG đăng (fail-safe). Log không chứa giá trị cấu hình.
+      console.error('[fbPublisher] không đọc được telegramConfig — bỏ qua callback (không đăng).');
+      return sendSuccess(res, { handled: true, draftId, action, skipped: true, reason: 'config_unreadable' });
+    }
 
     // G1Q — gọi thẳng qua gateway: không xác thực được người bấm → từ chối trừ khi chủ dự án chủ động
     // bật telegramConfig.allowGatewayCallback === true (chấp nhận rủi ro: ai giữ secret đều giả được duyệt).
@@ -530,12 +537,14 @@ async function handle(req, res, helpers) {
       // CHẾ ĐỘ DRY-RUN (telegramConfig.dryRun === true, do chủ dự án bật tường minh): chạy đủ intake → AI → ảnh → xem trước →
       // duyệt nhưng KHÔNG gọi Facebook (không upload ảnh, không đăng). Dùng để thử đầu-cuối trên Telegram/Storage/AI thật
       // mà không tạo bài công khai. Bản nháp ghi dryRun:true, facebookPostId rỗng; Telegram báo rõ "không đăng".
-      if (tgConfig.dryRun === true) {
-        await fbDraftStore.updateStatus(draftId, 'PUBLISHED', { publishedAt: Date.now(), dryRun: true, facebookPostId: null });
+      // F2 (Phase 8): FAIL-SAFE — chỉ đăng thật khi telegramConfig.dryRun === false (boolean, tường minh). Thiếu/null/sai kiểu/true/cấu hình hỏng ⇒ dry-run.
+      const publishMode = resolvePublishMode(tgConfig);
+      if (!publishMode.live) {
+        await fbDraftStore.updateStatus(draftId, 'PUBLISHED', { publishedAt: Date.now(), dryRun: true, dryRunReason: publishMode.reason, facebookPostId: null });
         if (tgConfig.token && callbackQueryId) {
           await answerCallbackQuery({ token: tgConfig.token, callbackQueryId, text: '🧪 DRY-RUN: đã duyệt, KHÔNG đăng lên Facebook.' });
         }
-        await notifyChat(tgConfig, '🧪 [DRY-RUN] Đã duyệt nhưng KHÔNG đăng lên Facebook (telegramConfig.dryRun = true).\nSẽ đăng lên Page: ' + (approvedDraft.pageName || approvedDraft.pageId) + ' (' + approvedDraft.pageId + ')\nẢnh: ' + (Array.isArray(approvedDraft.publishImages) ? approvedDraft.publishImages.length : 0) + ' · Mã bản nháp: ' + draftId);
+        await notifyChat(tgConfig, '🧪 [DRY-RUN] Đã duyệt nhưng KHÔNG đăng lên Facebook — chế độ: ' + describeMode(publishMode) + '.\nSẽ đăng lên Page: ' + (approvedDraft.pageName || approvedDraft.pageId) + ' (' + approvedDraft.pageId + ')\nẢnh: ' + (Array.isArray(approvedDraft.publishImages) ? approvedDraft.publishImages.length : 0) + ' · Mã bản nháp: ' + draftId + (publishMode.reason === 'dryRun_true' ? '' : '\n⚠️ Muốn đăng thật, chủ dự án phải đặt telegramConfig.dryRun = false (boolean) trong RTDB.'));
         return sendSuccess(res, { handled: true, draftId, action, dryRun: true });
       }
 
@@ -639,8 +648,8 @@ async function handle(req, res, helpers) {
           await answerCallbackQuery({ token: tgConfig.token, callbackQueryId, text: '❌ Đăng bài thất bại: ' + safeMsg.slice(0, 150) });
         }
         await notifyChat(tgConfig, ambiguous
-          ? '⚠️ Đăng bài KHÔNG RÕ KẾT QUẢ: ' + safeMsg + '\nHãy KIỂM TRA Fanpage trước. /retry bị khoá để tránh đăng trùng; nếu bài chưa có, hãy gửi lại sản phẩm. Mã: ' + draftId
-          : '❌ Đăng bài THẤT BẠI: ' + safeMsg + '\nDùng /retry ' + draftId + ' để duyệt lại (chỉ khả dụng khi Facebook chưa ghi nhận bài).');
+          ? '⚠️ Đăng bài KHÔNG RÕ KẾT QUẢ: ' + safeMsg + '\nHãy KIỂM TRA Fanpage (mục bài viết của Page) TRƯỚC khi làm gì tiếp. /retry bị khoá để tránh đăng trùng (Facebook không đảm bảo idempotency).\n• Nếu bài ĐÃ có trên Fanpage: không cần làm gì thêm.\n• Nếu bài CHƯA có: gửi lại sản phẩm để tạo bản nháp MỚI. Mã: ' + draftId
+          : '❌ Đăng bài THẤT BẠI (Facebook trả lỗi rõ ràng, chưa tạo bài): ' + safeMsg + '\nCó thể dùng /retry ' + draftId + ' để duyệt lại. Hệ thống không thể bảo đảm tuyệt đối — nếu nghi ngờ, hãy kiểm tra Fanpage trước khi /retry.');
         return sendError(res, 'UPSTREAM_ERROR', 'Publish Facebook thất bại: ' + err.message);
       }
     }

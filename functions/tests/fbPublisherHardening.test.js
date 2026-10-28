@@ -23,7 +23,7 @@ function setPath(obj, path, val) {
   if (path === 'webhookSigningSecret') { _setEnv('WEBHOOK_SIGNING_SECRET', val); return; }
   if (path === 'telegramWebhookSecret') { _setEnv('TELEGRAM_WEBHOOK_SECRET', val); return; }
   if (path === 'telegramConfig/token') { _setEnv('TELEGRAM_BOT_TOKEN', val); return; }
-  if (path === 'telegramConfig') { const v = val && typeof val === 'object' ? Object.assign({}, val) : val; _setEnv('TELEGRAM_BOT_TOKEN', v && v.token); if (v && typeof v === 'object') delete v.token; return _rawSetPath(obj, path, v); }
+  if (path === 'telegramConfig') { const v = val && typeof val === 'object' ? Object.assign({}, val) : val; _setEnv('TELEGRAM_BOT_TOKEN', v && v.token); if (v && typeof v === 'object') { delete v.token; if (!('dryRun' in v)) v.dryRun = false; /* Phase 8: đăng thật phải bật TƯỜNG MINH (dryRun:false); mặc định an toàn được kiểm ở telegramFbPipeline.test.js */ } return _rawSetPath(obj, path, v); }
   return _rawSetPath(obj, path, val);
 }
 function _rawSetPath(obj, path, val) { return _rawSetPath2(obj, path, val); }

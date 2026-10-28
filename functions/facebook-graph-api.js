@@ -101,6 +101,18 @@ async function publishToFeed({ mockMode, pageId, message, attachedMedia, pageAcc
   let data;
   if (guard) {
     try { data = await r.json(); } catch (e) { const err = new Error('Facebook trả phản hồi không đọc được — CHƯA biết bài đã được tạo hay chưa.'); err.ambiguous = true; throw err; }
+    // F1 (Phase 8) — chỉ lỗi Facebook trả về RÕ RÀNG là "chưa đăng" (vd 4xx như #200 lỗi quyền) mới được coi là thất bại chắc chắn.
+    // Các kết quả sau KHÔNG cho biết bài có được tạo hay không (Facebook không đảm bảo idempotency) ⇒ ambiguous, khoá retry:
+    //   - HTTP >= 500 (500/503...);  - Graph error.code 1 ("unknown") hoặc 2 ("service temporarily unavailable");
+    //   - HTTP 2xx nhưng phản hồi không có post id.
+    const status = typeof r.status === 'number' ? r.status : null;
+    const code = data && data.error ? Number(data.error.code) : null;
+    const fbMsg = (data && data.error && data.error.message) ? String(data.error.message) : '';
+    let why = null;
+    if (status !== null && status >= 500) why = 'HTTP ' + status;
+    else if (code === 1 || code === 2) why = 'Graph code ' + code;
+    else if (r.ok && !(data && data.id)) why = 'HTTP ' + (status === null ? '2xx' : status) + ' không có post ID';
+    if (why) { const err = new Error('Facebook trả kết quả không xác định (' + why + (fbMsg ? ': ' + fbMsg.slice(0, 120) : '') + ') — CHƯA biết bài đã được tạo hay chưa.'); err.ambiguous = true; err.ambiguousReason = why; throw err; }
   } else {
     data = await r.json();
   }

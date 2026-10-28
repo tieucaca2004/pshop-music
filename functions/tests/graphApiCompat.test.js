@@ -26,6 +26,12 @@ const mk = (mode) => async (url, opts) => {
   if (mode === 'badjson') return { ok: true, status: 200, json: async () => { throw new SyntaxError('Unexpected token <'); } };
   if (mode === 'apierr') return { ok: false, status: 403, json: async () => ({ error: { message: '(#200) Permissions error' } }) };
   if (mode === 'noid') return { ok: true, status: 200, json: async () => ({}) };
+  if (mode === 'http500') return { ok: false, status: 500, json: async () => ({ error: { message: 'Internal', code: 190 } }) };
+  if (mode === 'http503') return { ok: false, status: 503, json: async () => ({ error: { message: 'Unavailable' } }) };
+  if (mode === 'code1') return { ok: false, status: 400, json: async () => ({ error: { message: 'unknown error', code: 1 } }) };
+  if (mode === 'code2') return { ok: false, status: 503, json: async () => ({ error: { message: 'temporarily unavailable', code: 2 } }) };
+  if (mode === 'noid200') return { ok: true, status: 200, json: async () => ({ id: '' }) };
+  if (mode === 'http400') return { ok: false, status: 400, json: async () => ({ error: { message: 'Invalid parameter', code: 100 } }) };
   return { ok: true, status: 200, json: async () => ({ id: 'ID_1' }) };
 };
 async function run(fn, mode) { global.fetch = mk(mode); seen = []; try { return { ok: true, value: await fn() }; } catch (e) { return { ok: false, message: e.message, name: e.constructor.name, ambiguous: !!e.ambiguous }; } finally { global.fetch = realFetch; } }
@@ -37,7 +43,7 @@ async function run(fn, mode) { global.fetch = mk(mode); seen = []; try { return 
     eq(Object.keys(cur).filter((k) => !(k in g1)).sort(), ['getPageInfo']);
   });
   const args = { mockMode: false, pageId: 'p1', imageUrl: 'https://x/y.png', message: 'm', attachedMedia: [{ media_fbid: '1' }], pageAccessToken: 'tok' };
-  for (const mode of ['ok', 'apierr', 'net', 'badjson', 'noid']) {
+  for (const mode of ['ok', 'apierr', 'net', 'badjson', 'noid', 'http500', 'http503', 'code1', 'code2', 'noid200', 'http400']) {
     await test('uploadPhoto (mặc định, không guard) — kịch bản "' + mode + '": kết quả/lỗi GIỐNG HỆT G1', async () => {
       const a = await run(() => g1.uploadPhoto(args), mode), b = await run(() => cur.uploadPhoto(args), mode); eq(b, a);
     });
@@ -63,6 +69,18 @@ async function run(fn, mode) { global.fetch = mk(mode); seen = []; try { return 
     r = await run(() => cur.publishToFeed(Object.assign({ guard: true }, args)), 'apierr'); assert(!r.ok && !r.ambiguous && /Permissions error/.test(r.message), 'lỗi API rõ ràng KHÔNG ambiguous');
     r = await run(() => cur.uploadPhoto(Object.assign({ guard: true }, args)), 'net'); assert(!r.ok && !r.ambiguous);
     await run(() => cur.publishToFeed(Object.assign({ guard: true }, args)), 'ok'); assert(seen[0].signal && typeof seen[0].signal.aborted === 'boolean', 'guard ⇒ có AbortSignal');
+  });
+  await test('F1 (guard): HTTP 500/503, Graph code 1/2, HTTP 200 thiếu/rỗng post ID, mất kết nối/JSON hỏng ⇒ ambiguous; lỗi 403 #200 và 400 #100 ⇒ KHÔNG ambiguous', async () => {
+    const g = (mode) => run(() => cur.publishToFeed(Object.assign({ guard: true }, args)), mode);
+    for (const mode of ['http500', 'http503', 'code1', 'code2', 'noid', 'noid200', 'net', 'badjson']) { const r = await g(mode); assert(!r.ok && r.ambiguous === true, mode + ' phải ambiguous: ' + JSON.stringify(r)); assert(/CHƯA biết/.test(r.message), mode + ': thông điệp nêu chưa biết'); }
+    for (const mode of ['apierr', 'http400']) { const r = await g(mode); assert(!r.ok && !r.ambiguous, mode + ' phải là lỗi chắc chắn'); }
+    const ok = await g('ok'); assert(ok.ok && ok.value.id === 'ID_1', 'thành công vẫn trả id');
+  });
+  await test('F1: ambiguous chỉ áp cho publishToFeed có guard — uploadPhoto (ảnh published:false) và đường mặc định không bao giờ ambiguous', async () => {
+    for (const mode of ['http500', 'http503', 'code1', 'code2', 'noid200']) {
+      const u = await run(() => cur.uploadPhoto(Object.assign({ guard: true }, args)), mode); assert(!u.ok ? !u.ambiguous : true, 'uploadPhoto ' + mode);
+      const d = await run(() => cur.publishToFeed(args), mode); assert(!d.ok && !d.ambiguous, 'mặc định ' + mode);
+    }
   });
   await test('Mã G1 trong functions/ không gọi publishToFeed/uploadPhoto với guard (giữ đường G1)', async () => {
     const src = fs.readFileSync(path.join(__dirname, '..', 'shared', 'fbConnectionPatch.js'), 'utf8'); assert(!/guard\s*:/.test(src), 'fbConnectionPatch không được dùng guard');
