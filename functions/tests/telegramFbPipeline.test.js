@@ -4,7 +4,7 @@
  * Chạy: node tests/telegramFbPipeline.test.js   (từ thư mục functions/)
  * Không dùng Firebase/Telegram/Facebook/OpenAI thật: RTDB + Storage là bộ nhớ trong; fetch là mock cục bộ.
  * Test tích hợp compositor chạy tiến trình Python THẬT (compositor_server + segmenter giả trong tools/compositor/
- * test_server_stub.py) nếu có Python+Pillow+numpy (PSH_COMPOSITOR_PYTHON); nếu không → ghi rõ SKIPPED (không tính PASS).
+ * stub_segmenter_server.py) nếu có Python+Pillow+numpy (PSH_COMPOSITOR_PYTHON); nếu không → ghi rõ SKIPPED (không tính PASS).
  */
 'use strict';
 const zlib = require('zlib');
@@ -322,7 +322,7 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
   });
   // Tích hợp Python thật
   const py = process.env.PSH_COMPOSITOR_PYTHON || 'D:/PshopMusicSite-release-artifacts/work/pyvenv/Scripts/python.exe';
-  const stub = path.join(__dirname, '..', '..', 'tools', 'compositor', 'test_server_stub.py');
+  const stub = path.join(__dirname, '..', '..', 'tools', 'compositor', 'stub_segmenter_server.py');
   let srv = null;
   if (fs.existsSync(py) && fs.existsSync(stub)) {
     try {

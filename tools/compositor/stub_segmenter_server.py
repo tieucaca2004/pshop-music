@@ -1,6 +1,6 @@
 """CHỈ DÙNG CHO TEST TÍCH HỢP (không triển khai): chạy compositor_server THẬT nhưng thay bước tách nền bằng một
 segmenter giả (mask hình chữ nhật ở giữa) để kiểm tra đường HTTP + compose + xác minh pixel mà không cần mô hình rembg.
-In ra cổng đã bind ở dòng đầu tiên.  Dùng: COMPOSITOR_SECRET=... python test_server_stub.py"""
+In ra cổng đã bind ở dòng đầu tiên.  Dùng: COMPOSITOR_SECRET=... python stub_segmenter_server.py"""
 import os
 import sys
 import numpy as np
