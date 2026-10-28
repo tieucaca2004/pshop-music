@@ -8,7 +8,8 @@ const { execFileSync } = require('child_process');
 const [commit, out, flag] = process.argv.slice(2);
 if (!commit || !out) { console.error('Dùng: node make_functions_deploy_source.js <commit> <thư-mục-đích> [--no-install]'); process.exit(2); }
 if (fs.existsSync(out) && fs.readdirSync(out).length) { console.error('Thư mục đích phải rỗng/chưa tồn tại: ' + out); process.exit(2); }
-const git = (...a) => execFileSync('git', a, { encoding: 'buffer', maxBuffer: 1 << 28 });
+const REPO = path.resolve(__dirname, '..', '..');   // chạy được từ bất kỳ thư mục nào
+const git = (...a) => execFileSync('git', ['-C', REPO, ...a], { encoding: 'buffer', maxBuffer: 1 << 28 });
 const files = git('ls-tree', '-r', '--name-only', commit, 'functions').toString('utf8').split('\n').filter(Boolean);
 for (const f of files) { const p = path.join(out, f); fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, git('cat-file', 'blob', commit + ':' + f)); }
 fs.writeFileSync(path.join(out, 'firebase.json'), JSON.stringify({ functions: [{ source: 'functions', codebase: 'default', ignore: ['node_modules', '.git', 'firebase-debug.log', 'firebase-debug.*.log'] }] }, null, 2) + '\n');
