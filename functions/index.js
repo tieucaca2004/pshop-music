@@ -758,6 +758,7 @@ exports.facebookRefreshToken = onRequest({ secrets: [FACEBOOK_APP_SECRET], cors:
  * ════════════════════════════════════════════════════════════════════════
  */
 const { authenticate, isPublicPath } = require('./shared/auth');
+const { authenticateApiKey } = require('./shared/apiKeyAuth');
 const { hasPermission } = require('./shared/permissions');
 const { validateSchema } = require('./shared/validation');
 const { checkAndIncrement } = require('./shared/rateLimit');
@@ -802,6 +803,34 @@ const transactionsRoutes = require('./routes/transactions');
 const teamRoutes = require('./routes/team');
 const tenantCmsRoutes = require('./routes/tenantCms');
 const tenantSettingsRoutes = require('./routes/tenantSettings');
+
+// Machine API keys are accepted only for the legacy PShop product API.
+// All other gateway routes continue to require their existing Firebase auth.
+async function authenticateGatewayClient(req, path) {
+  const authHeader = req.get('Authorization') || '';
+  if (!/^Bearer\s+psh_/i.test(authHeader)) return authenticate(req);
+
+  if (!/^\/v1\/products(?:\/[^/]+)?$/.test(path)) {
+    return { ok: false, code: 'PERMISSION_DENIED', error: 'API key này chỉ được dùng cho Product CMS API.' };
+  }
+
+  const businessId = req.get('X-PSH-Business-ID') || '';
+  if (businessId !== 'pshop-music') {
+    return { ok: false, code: 'PERMISSION_DENIED', error: 'API key Product phải có X-PSH-Business-ID: pshop-music.' };
+  }
+
+  const apiKey = await authenticateApiKey(businessId, authHeader, req.ip || '');
+  if (!apiKey.ok) return apiKey;
+  return {
+    ok: true,
+    uid: 'api-key:' + apiKey.apiKeyId,
+    email: '',
+    role: 'api_key',
+    type: 'api_key',
+    businessId,
+    apiKey
+  };
+}
 
 // cors: ALLOWED_ORIGINS (Sprint 15 Phase 1, Task 1.2) — trước đây cors:true
 // (bất kỳ origin nào). Không ảnh hưởng gọi không có Origin header (curl,
@@ -909,7 +938,7 @@ exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRE
     if (!['GET', 'POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method)) {
       return sendError(res, 'METHOD_NOT_ALLOWED', 'Method không được hỗ trợ.');
     }
-    const auth = await authenticate(req); // {ok:false,...} nếu thiếu/sai token — KHÔNG chặn ở đây
+    const auth = await authenticateGatewayClient(req, path); // public reads remain available; writes validate in their route
     helpers.auth = auth;
 
     const rlKey = auth.ok ? 'uid:' + auth.uid : 'ip:' + (req.ip || 'unknown');
@@ -974,7 +1003,6 @@ exports.aiGenerateWorker = onValueCreated({ ref: '/apiAsyncJobs/{jobId}', region
     // ở đây để tránh RTDB trigger tự retry (xem chú thích đầu function).
   }
 });
-
 
 
 

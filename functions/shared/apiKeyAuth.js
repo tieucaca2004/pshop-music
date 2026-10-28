@@ -36,7 +36,7 @@ function generateApiKey() {
  * @param {string} authHeader - The Authorization header value (e.g. "Bearer psh_...")
  * @returns {object} { ok, apiKeyId, name, permissions, error? }
  */
-async function authenticateApiKey(businessId, authHeader) {
+async function authenticateApiKey(businessId, authHeader, clientIp) {
   if (!authHeader) {
     return { ok: false, status: 401, code: 'MISSING_API_KEY', error: 'Thiếu Authorization header.' };
   }
@@ -83,6 +83,11 @@ async function authenticateApiKey(businessId, authHeader) {
   // Check expiration
   if (found.expiresAt && found.expiresAt > 0 && now > found.expiresAt) {
     return { ok: false, status: 403, code: 'API_KEY_EXPIRED', error: 'API key đã hết hạn.' };
+  }
+
+  if (Array.isArray(found.allowedIPs) && found.allowedIPs.length > 0 &&
+      found.allowedIPs.indexOf(clientIp) === -1) {
+    return { ok: false, status: 403, code: 'API_KEY_IP_NOT_ALLOWED', error: 'IP không nằm trong allowlist của API key.' };
   }
 
   // Update lastUsedAt (fire-and-forget)

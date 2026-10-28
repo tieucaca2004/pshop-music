@@ -17,6 +17,7 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  */
 const listResource = require('../shared/listResource');
 const { validateSchema } = require('../shared/validation');
+const { hasApiPermission } = require('../shared/apiKeyAuth');
 
 function activeFilter(items) {
   return items.filter(i => i.active !== false);
@@ -56,10 +57,15 @@ async function handle(req, res, helpers) {
   if (!route) return null; // not handled by this router
   const { moduleKey, itemKey, config } = route;
   const staff = auth.ok && isStaffRole(auth.role);
+  const apiProductKey = auth.ok && auth.type === 'api_key' &&
+    auth.businessId === 'pshop-music' && moduleKey === 'products';
+  const canRead = staff || (apiProductKey &&
+    (hasApiPermission(auth.apiKey, 'products.read') || hasApiPermission(auth.apiKey, 'products.write')));
+  const canWrite = staff || (apiProductKey && hasApiPermission(auth.apiKey, 'products.write'));
 
   if (req.method === 'GET' && !itemKey) {
     let items = await listResource.getAll(config.node);
-    if (!staff && config.publicFilter) items = config.publicFilter(items);
+    if (!canRead && config.publicFilter) items = config.publicFilter(items);
     return sendSuccess(res, items);
   }
 
@@ -70,24 +76,28 @@ async function handle(req, res, helpers) {
       item = all.find(i => i.slug === itemKey) || null;
     }
     if (!item) return sendError(res, 'NOT_FOUND', moduleKey + ' không tồn tại.');
-    if (!staff && config.publicFilter && config.publicFilter([item]).length === 0) {
+    if (!canRead && config.publicFilter && config.publicFilter([item]).length === 0) {
       return sendError(res, 'NOT_FOUND', moduleKey + ' không tồn tại.');
     }
     return sendSuccess(res, item);
   }
 
   if (req.method === 'POST' && !itemKey) {
-    if (!staff) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin/Editor được tạo mới.');
+    if (!canWrite) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin/Editor hoặc API key có products.write được tạo mới.');
     const check = validateSchema(req.body, config.createSchema);
     if (!check.valid) return sendError(res, 'INVALID_REQUEST', check.issues.join(' '));
-    const created = await listResource.add(config.node, req.body || {});
+    const payload = Object.assign({}, req.body || {});
+    if (apiProductKey) payload.pubStatus = 'draft';
+    const created = await listResource.add(config.node, payload);
     return sendSuccess(res, created, { status: 201 });
   }
 
   if (req.method === 'PATCH' && itemKey) {
     if (!config.patchable) return sendError(res, 'METHOD_NOT_ALLOWED', moduleKey + ' không hỗ trợ PATCH.');
-    if (!staff) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin/Editor được sửa.');
-    const updated = await listResource.update(config.node, itemKey, req.body || {});
+    if (!canWrite) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin/Editor hoặc API key có products.write được sửa.');
+    const payload = Object.assign({}, req.body || {});
+    if (apiProductKey) payload.pubStatus = 'draft';
+    const updated = await listResource.update(config.node, itemKey, payload);
     if (!updated) return sendError(res, 'NOT_FOUND', moduleKey + ' không tồn tại.');
     return sendSuccess(res, updated);
   }
