@@ -13,7 +13,7 @@ const { ref, get, set, update } = require('firebase/database');
 (async () => {
   const [host, port] = (process.env.FIREBASE_DATABASE_EMULATOR_HOST || '127.0.0.1:9000').split(':');
   if (!/^(127\.0\.0\.1|localhost)$/.test(host)) { console.error('Từ chối chạy: host emulator phải là localhost'); process.exit(2); }
-  const env = await initializeTestEnvironment({ projectId: 'demo-pshop', database: { host, port: Number(port), rules: fs.readFileSync(path.join(__dirname, '..', 'database.rules.json'), 'utf8') } });
+  const env = await initializeTestEnvironment({ projectId: 'demo-pshop', database: { host, port: Number(port), rules: fs.readFileSync(process.env.PSH_RULES_FILE || path.join(__dirname, '..', 'database.rules.json'), 'utf8') } });
   await env.withSecurityRulesDisabled(async (c) => {
     await set(ref(c.database(), '/'), {
       roles: { adm: 'admin', edi: 'editor', agt: 'agent' },

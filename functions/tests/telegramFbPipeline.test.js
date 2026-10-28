@@ -408,9 +408,17 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
       resetAll(); const r = await orch.handleTelegramMessage(productUpdate({ caption: 'Tên: A\nGiá: 1tr\nTình trạng: Mới\nPage: ' + hint })); assert(r.rejected, hint); eq(drafts().length, 0);
     }
   });
-  await test('Page được chọn qua facebookPageTokens (đã kết nối) được chấp nhận; Page khác active vẫn phải có token', async () => {
+  await test('Page khác Page đang chọn: token "chờ chọn" KHÔNG đủ → bị từ chối; chỉ nhận khi Founder liệt kê trong telegramConfig.allowedPageIds (và có token)', async () => {
     resetAll(); setPath(db, 'facebookPageTokens/uidSuper/page_2', { accessToken: 'T2', isMock: false });
+    let r0 = await orch.handleTelegramMessage(productUpdate({ caption: 'Tên: A\nGiá: 1tr\nTình trạng: Mới\nPage: page_2' })); assert(r0.rejected && /không phải Page đang được chọn/.test(sentTg.filter((s) => s.kind === 'sendMessage').pop().text), 'phải bị từ chối'); eq(drafts().length, 0);
+    resetAll(); setPath(db, 'facebookPageTokens/uidSuper/page_2', { accessToken: 'T2', isMock: false }); setPath(db, 'telegramConfig/allowedPageIds', ['page_2']);
     const r = await orch.handleTelegramMessage(productUpdate({ caption: 'Tên: A\nGiá: 1tr\nTình trạng: Mới\nPage: page_2' })); assert(r.result && r.result.ok); eq(only().pageId, 'page_2');
+  });
+  await test('Super Admin đổi Page đang chọn GIỮA lúc xem trước và lúc duyệt → KHÔNG đăng (kể cả còn token chờ chọn của Page cũ)', async () => {
+    const d = await pending(); setPath(db, 'facebookActiveToken', { pageId: 'page_other', accessToken: 'OTHER', isMock: false, expiresAt: Date.now() + 1e9 });
+    setPath(db, 'facebookPageTokens/uidSuper/page_1', { accessToken: 'OLD_PENDING', isMock: false });
+    await webhook(cbUpdate('fb_approve', d.id, 1)); eq(feedPosts().length, 0); eq(photoPosts().length, 0); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'FAILED');
+    assert(/không còn là Page đang được chọn/.test(sentTg.filter((s) => s.kind === 'sendMessage').pop().text));
   });
   await test('Đã "Ngắt kết nối" (not_connected) hoặc chưa chọn Page → từ chối; token không hợp lệ với Page (Graph từ chối) → từ chối', async () => {
     resetAll(); setPath(db, 'facebookConnection/status', 'not_connected'); let r = await orch.handleTelegramMessage(productUpdate()); assert(r.rejected); eq(drafts().length, 0);

@@ -514,6 +514,17 @@ async function handle(req, res, helpers) {
       const approvedDraft = txn.draft;
       await fbDraftStore.updateStatus(draftId, 'PUBLISHING');
 
+      // Bản nháp từ Telegram: Page đích phải VẪN là Page đang được chọn (hoặc nằm trong allowedPageIds) tại lúc đăng — nếu Super Admin
+      // đã đổi Page giữa lúc xem trước và lúc duyệt, KHÔNG đăng (kể cả khi còn token chờ chọn của Page cũ).
+      if (approvedDraft.source === 'telegram' && !(await fbPageConfig.isPageAllowedForTelegram(approvedDraft.pageId, tgConfig))) {
+        await fbDraftStore.updateStatus(draftId, 'FAILED', { failReason: 'Page đích không còn là Page đang được chọn: ' + approvedDraft.pageId, failStage: 'publish' });
+        if (tgConfig.token && callbackQueryId) {
+          await answerCallbackQuery({ token: tgConfig.token, callbackQueryId, text: '⛔ Page đích không còn là Page đang chọn — không đăng.' });
+        }
+        await notifyChat(tgConfig, '⛔ Không đăng: Page đích (' + approvedDraft.pageId + ') không còn là Page đang được chọn trong trang quản trị. Gửi lại sản phẩm sau khi kiểm tra Page.');
+        return sendSuccess(res, { handled: true, draftId, action, skipped: true, reason: 'page_not_active' });
+      }
+
       // CHẾ ĐỘ DRY-RUN (telegramConfig.dryRun === true, do chủ dự án bật tường minh): chạy đủ intake → AI → ảnh → xem trước →
       // duyệt nhưng KHÔNG gọi Facebook (không upload ảnh, không đăng). Dùng để thử đầu-cuối trên Telegram/Storage/AI thật
       // mà không tạo bài công khai. Bản nháp ghi dryRun:true, facebookPostId rỗng; Telegram báo rõ "không đăng".

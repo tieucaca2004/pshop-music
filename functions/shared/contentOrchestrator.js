@@ -111,7 +111,7 @@ async function finishClaim(updateId, patch) {
 
 // ── Chọn Fanpage (không tin pageId từ tin nhắn) ──────────────────────────────
 
-async function resolveTargetPage(pageHint) {
+async function resolveTargetPage(pageHint, tgConfig) {
   const conn = await admin.database().ref('facebookConnection/status').once('value');
   if (conn.exists() && conn.val() === 'not_connected') return { ok: false, error: 'Facebook đang ở trạng thái đã ngắt kết nối. Super Admin cần kết nối lại trong trang quản trị.' };
   let pageId = pageHint;
@@ -121,6 +121,9 @@ async function resolveTargetPage(pageHint) {
     if (!pageId) return { ok: false, error: 'Chưa có Fanpage nào được chọn. Super Admin cần kết nối và chọn Page trong trang quản trị.' };
   }
   if (!PAGE_ID_PATTERN.test(pageId)) return { ok: false, error: 'Page ID không hợp lệ.' };
+  if (!(await fbPageConfig.isPageAllowedForTelegram(pageId, tgConfig))) {
+    return { ok: false, error: 'Page "' + pageId + '" không phải Page đang được chọn trong trang quản trị và chưa nằm trong telegramConfig.allowedPageIds.' };
+  }
   const tok = await fbPageConfig.getPageToken(pageId);
   if (!tok) return { ok: false, error: 'Page "' + pageId + '" chưa được kết nối hoặc không có token. Chỉ đăng được lên Page đã kết nối trong trang quản trị.' };
   try {
@@ -340,7 +343,7 @@ async function handleTelegramMessage(update, depsIn) {
     await reply(tgConfig, message.chat.id, '❌ Chưa nhận được sản phẩm:\n- ' + parsed.errors.join('\n- ') + '\n\nMẫu chú thích:\n' + TEMPLATE);
     return { handled: true, rejected: true, errors: parsed.errors };
   }
-  const page = await resolveTargetPage(parsed.pageHint);
+  const page = await resolveTargetPage(parsed.pageHint, tgConfig);
   if (!page.ok) {
     await finishClaim(update.update_id, { state: 'rejected', reason: 'page_invalid' });
     await reply(tgConfig, message.chat.id, '❌ ' + page.error);

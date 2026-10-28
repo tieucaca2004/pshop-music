@@ -84,4 +84,15 @@ async function listConnectedPages() {
   return pages;
 }
 
-module.exports = { getPageToken, listConnectedPages };
+// isPageAllowedForTelegram — luồng Telegram chỉ được đăng lên Page ĐANG ĐƯỢC CHỌN (facebookActiveToken.pageId, do Super Admin chọn ở
+// G1) hoặc Page được Founder liệt kê tường minh trong telegramConfig.allowedPageIds. Token "chờ chọn" (facebookPageTokens) của Page khác
+// KHÔNG đủ: đó là token OAuth tạm thời chưa được Super Admin chọn.
+async function isPageAllowedForTelegram(pageId, tgConfig) {
+  if (!pageId) return false;
+  const act = await admin.database().ref('facebookActiveToken/pageId').once('value');
+  if (act.exists() && String(act.val()) === String(pageId)) return true;
+  const list = tgConfig && Array.isArray(tgConfig.allowedPageIds) ? tgConfig.allowedPageIds.map(String) : [];
+  return list.indexOf(String(pageId)) >= 0;
+}
+
+module.exports = { getPageToken, listConnectedPages, isPageAllowedForTelegram };
