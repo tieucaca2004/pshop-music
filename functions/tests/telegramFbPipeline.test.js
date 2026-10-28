@@ -34,10 +34,13 @@ function mockRef(p) {
     set: async (v) => setPath(db, p, clone(v)),
     update: async (ch) => { for (const k of Object.keys(ch)) setPath(db, p + '/' + k, ch[k] === null ? null : clone(ch[k])); },
     push: () => { const key = 'k' + (++keyCounter) + 'x' + Math.random().toString(36).slice(2, 6); return { key, set: async (v) => setPath(db, p + '/' + key, clone(v)) }; },
+    // Mô phỏng RTDB THẬT: updateFunction được gọi LẦN ĐẦU với cache cục bộ RỖNG (null) — trả undefined ở lần đó là ABORT
+    // ngay (không hỏi server); trả giá trị khác thì SDK gửi lên, server từ chối vì khác hash, rồi gọi lại với giá trị thật.
     transaction: async (fn) => {
       const cur = getPath(db, p);
-      const next = fn(cur === null ? null : clone(cur));
+      let next = fn(null);
       if (next === undefined) return { committed: false, snapshot: { val: () => cur } };
+      if (cur !== null) { next = fn(clone(cur)); if (next === undefined) return { committed: false, snapshot: { val: () => cur } }; }
       setPath(db, p, clone(next));
       return { committed: true, snapshot: { val: () => next } };
     }
@@ -265,6 +268,24 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
     eq(d.contentSource, 'template'); eq(d.status, 'PENDING_APPROVAL'); assert(d.notices.some((n) => /nội dung mẫu/.test(n)));
     assert((lastPreview().caption || lastPreview().text).includes('⚠️'), 'cảnh báo phải hiện trong xem trước');
   });
+  await test('AI treo quá thời hạn → nội dung mẫu + cảnh báo (không treo webhook)', async () => {
+    resetAll(); aiImpl = () => new Promise(() => {}); // không bao giờ trả
+    const t0 = Date.now(); await orch.handleTelegramMessage(productUpdate(), { aiTimeoutMs: 80 }); const d = only();
+    assert(Date.now() - t0 < 5000, 'không được chờ vô hạn'); eq(d.contentSource, 'template'); assert(d.notices.some((n) => /nội dung mẫu/.test(n)));
+  });
+  await test('telegramWebhook được bind secret OPENAI_API_KEY (aiGenerate đọc OPENAI_API_KEY.value(); thiếu ⇒ AI luôn lỗi âm thầm)', async () => {
+    const src = fs.readFileSync(path.join(__dirname, '..', 'index.js'), 'utf8');
+    assert(src.includes('exports.telegramWebhook = onRequest({ secrets: [OPENAI_API_KEY]'), 'index.js phải khai báo secrets cho telegramWebhook');
+  });
+  await test('Tin nhắn quá cũ (phát lại) bị bỏ qua; tin nhắn mới có date hợp lệ vẫn nhận', async () => {
+    resetAll(); const old = productUpdate(); old.message.date = Math.floor(Date.now() / 1000) - 2 * 3600;
+    let r = await orch.handleTelegramMessage(old); eq(r.reason, 'stale_message'); eq(drafts().length, 0);
+    const fresh = productUpdate(); fresh.message.date = Math.floor(Date.now() / 1000) - 30; r = await orch.handleTelegramMessage(fresh); assert(r.result && r.result.ok);
+  });
+  await test('Người chưa được cấp quyền (trong chat đúng) nhận Telegram ID của chính họ để gửi Founder cấu hình', async () => {
+    resetAll(); await orch.handleTelegramMessage(productUpdate({ from: { id: 888 } })); assert(sentTg.some((x) => /Telegram ID của bạn: 888/.test(x.text || '')));
+    resetAll(); setPath(db, 'telegramConfig/approverIds', ['777', '888']); await orch.handleTelegramMessage(productUpdate({ from: { id: 888 } })); assert(sentTg.some((x) => /Telegram ID của bạn: 888/.test(x.text || '') && /approverMap/.test(x.text)));
+  });
   await test('Tên sản phẩm chứa ký tự điều khiển/quá dài bị làm sạch', async () => {
     const p = orch.parseProductCaption('Tên: ' + 'A\u0000\u0007B'.repeat(100) + '\nGiá: 2tr\nTình trạng: Mới'); assert(p.ok && p.product.name.length <= 120 && !/[\u0000-\u001f]/.test(p.product.name));
   });
@@ -347,6 +368,34 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
     } catch (e) { skip('Tích hợp compositor Python thật', 'không khởi động được (' + e.message + ')'); }
     finally { if (srv) srv.kill(); }
   } else skip('Tích hợp compositor Python thật', 'không tìm thấy Python/Pillow (đặt PSH_COMPOSITOR_PYTHON). Test Python chạy riêng: tools/compositor `python -m unittest`');
+
+  // Tích hợp Python THẬT + mô hình tách nền rembg THẬT (không stub). SKIPPED nếu rembg/mô hình chưa có.
+  const realSrv = path.join(__dirname, '..', '..', 'tools', 'compositor', 'compositor_server.py');
+  const demoMaker = path.join(__dirname, '..', '..', 'tools', 'compositor', 'make_demo_product.py');
+  let haveRembg = false;
+  if (fs.existsSync(py)) { try { require('child_process').execFileSync(py, ['-c', 'import rembg, onnxruntime'], { stdio: 'ignore' }); haveRembg = true; } catch (e) { haveRembg = false; } }
+  if (haveRembg && fs.existsSync(realSrv)) {
+    let srv2 = null;
+    try {
+      const secret2 = 'real-model-secret-0123456789abcdef';
+      const demoPng = path.join(require('os').tmpdir(), 'psh_demo_product_' + process.pid + '.png');
+      require('child_process').execFileSync(py, [demoMaker, demoPng], { cwd: path.dirname(demoMaker) });
+      const demoBytes = fs.readFileSync(demoPng); fs.unlinkSync(demoPng);
+      const port2 = 18700 + Math.floor(Math.random() * 200);
+      srv2 = spawn(py, [realSrv, '--host', '127.0.0.1', '--port', String(port2)], { cwd: path.dirname(realSrv), env: Object.assign({}, process.env, { COMPOSITOR_SECRET: secret2 }) });
+      await new Promise((ok, bad) => { const t0 = Date.now(); (function poll() { realFetch('http://127.0.0.1:' + port2 + '/health').then((r) => (r.ok ? ok() : Promise.reject())).catch(() => (Date.now() - t0 > 20000 ? bad(new Error('compositor thật không lên')) : setTimeout(poll, 300))); })(); });
+      await test('TÍCH HỢP THẬT (compositor_server + rembg + mô hình thật): ảnh sản phẩm → ảnh quảng cáo PNG; sản phẩm 1:1; báo cáo giữ pixel', async () => {
+        resetAll({ router: { secret: secret2, timeoutMs: 120000 } });
+        compositorHandler = (url, opts) => realFetch(url.replace('https://compositor.test', 'http://127.0.0.1:' + port2), opts);
+        tgFileBytes = demoBytes; await orch.handleTelegramMessage(productUpdate()); const d = only();
+        eq(d.imageMode, 'composited', JSON.stringify(d.notices)); eq(d.steps.image.result, 'ok');
+        const fin = storageFiles['fbDrafts/' + d.id + '/final.png']; assert(fin && fin.buf.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])));
+        assert(fin.buf.length > 20000 && fin.buf.length < 4500000, 'cỡ ảnh hợp lý: ' + fin.buf.length);
+        if (process.env.PSH_SAVE_OUTPUT) { fs.writeFileSync(process.env.PSH_SAVE_OUTPUT + '.final.png', fin.buf); fs.writeFileSync(process.env.PSH_SAVE_OUTPUT + '.original.png', demoBytes); }
+      });
+    } catch (e) { skip('Tích hợp THẬT compositor + rembg', 'không khởi động được: ' + e.message); }
+    finally { if (srv2) srv2.kill(); }
+  } else skip('Tích hợp THẬT compositor + rembg (mô hình thật)', 'rembg/onnxruntime chưa cài trong ' + py);
 
   // ═════ [4] Chọn Fanpage ═════
   out('\n=== [4] Chọn Fanpage / xác thực Page ===');
@@ -435,6 +484,18 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
     for (let i = 0; i < 5; i++) { d = await pending(); const before = feedPosts().length; await Promise.all([webhook(cbUpdate('fb_approve', d.id, 1)), webhook(cbUpdate('fb_cancel', d.id))]);
       const st = getPath(db, 'fbPostDrafts/' + d.id + '/status'); assert(st === 'PUBLISHED' || st === 'CANCELLED', st);
       eq(feedPosts().length - before, st === 'PUBLISHED' ? 1 : 0, 'đăng khớp trạng thái'); }
+  });
+  await test('DRY-RUN (telegramConfig.dryRun=true): duyệt xong KHÔNG gọi Facebook (không photos/feed), draft PUBLISHED+dryRun, Telegram báo rõ "KHÔNG đăng", không có URL; duyệt lặp vẫn 1 lần', async () => {
+    const d = await pending(); setPath(db, 'telegramConfig/dryRun', true);
+    const gBefore = calls.filter((c) => c.url.includes("graph.facebook.com")).length;
+    await Promise.all([webhook(cbUpdate('fb_approve', d.id, 1)), webhook(cbUpdate('fb_approve', d.id, 1))]);
+    const x = getPath(db, 'fbPostDrafts/' + d.id); eq(x.status, 'PUBLISHED'); eq(x.dryRun, true); assert(!x.facebookPostId);
+    eq(calls.filter((c) => c.url.includes("graph.facebook.com")).length, gBefore, 'không được có request Graph nào trong dry-run');
+    eq(feedPosts().length, 0); eq(photoPosts().length, 0);
+    const msgs = sentTg.filter((s2) => s2.kind === 'sendMessage'); assert(msgs.some((m) => /DRY-RUN/.test(m.text) && /KHÔNG đăng/.test(m.text)) && !msgs.some((m) => m.text.includes("facebook.com/")));
+    // tắt dry-run → draft mới đăng thật (ở đây là Graph mock)
+    setPath(db, 'telegramConfig/dryRun', false); await orch.handleTelegramMessage(productUpdate()); const d2 = drafts().find((q) => q.id !== d.id);
+    await webhook(cbUpdate('fb_approve', d2.id, 1)); eq(feedPosts().length, 1);
   });
   await test('Nút Duyệt cũ (sai version) vô hiệu sau khi bản nháp được chỉnh sửa/duyệt lại', async () => {
     const d = await pending(); await webhook(cbUpdate('fb_approve', d.id, 7)); eq(feedPosts().length, 0); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'PENDING_APPROVAL');

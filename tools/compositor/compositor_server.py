@@ -81,8 +81,8 @@ def make_handler(secret):
                 image = _b64(req.get("image_b64"), "image_b64")
                 background = _b64(req.get("background_b64"), "background_b64")
                 mask = _b64(req.get("mask_b64"), "mask_b64")
-                canvas = req.get("canvas") or {}
-                size = (int(canvas.get("width", 1200)), int(canvas.get("height", 1200)))
+                canvas = req.get("canvas")
+                size = (int(canvas["width"]), int(canvas["height"])) if isinstance(canvas, dict) and canvas.get("width") and canvas.get("height") else None
                 style = str(req.get("style") or "studio")[:40]
                 png, report = compose(image, background, size, style, mask)
             except CompositorError as e:

@@ -70,9 +70,10 @@ async function routeImage(draft, originalBuffer, deps) {
   }
 
   const bg = await maybeBackground(cfg, d, draft);
+  // canvas chỉ gửi khi chủ dự án cấu hình (kích thước TỐI THIỂU); mặc định compositor tự chọn khung theo cỡ sản phẩm.
   const canvas = comp.canvas && Number(comp.canvas.width) > 0 && Number(comp.canvas.height) > 0
     ? { width: Math.min(2048, Number(comp.canvas.width)), height: Math.min(2048, Number(comp.canvas.height)) }
-    : { width: 1200, height: 1200 };
+    : null;
   const payload = {
     request_id: draft && draft.id ? String(draft.id) : null,
     image_b64: originalBuffer.toString('base64'),

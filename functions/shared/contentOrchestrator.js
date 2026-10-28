@@ -26,6 +26,8 @@ const graph = require('../facebook-graph-api');
 const { resolvePshActor } = require('./approverPolicy');
 
 const CLAIM_STALE_MS = 5 * 60 * 1000;
+const MAX_MESSAGE_AGE_S = 60 * 60;      // tin nhắn cũ hơn 1 giờ bị coi là phát lại và bỏ qua
+const AI_TIMEOUT_MS = 60 * 1000;
 const PAGE_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const DRAFT_ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 
@@ -140,8 +142,13 @@ function templateCaption(product) {
 async function generateCaption(draft, deps) {
   const p = draft.product;
   const topic = 'Sản phẩm: ' + p.name + '. Tình trạng: ' + p.condition + '. CHỈ dùng đúng thông tin này; không bịa thông số, không nêu giá, không thêm link hay hashtag liên quan giá.';
+  let timer = null;
   try {
-    const ai = await deps.generateForModule('facebook-post-generator', { topic }, deps.uid, deps.email);
+    const timeoutMs = Number(deps.aiTimeoutMs) > 0 ? Number(deps.aiTimeoutMs) : AI_TIMEOUT_MS;
+    const ai = await Promise.race([
+      deps.generateForModule('facebook-post-generator', { topic }, deps.uid, deps.email),
+      new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('AI timeout')), timeoutMs); })
+    ]);
     const content = (ai && (ai.content || ai)) || {};
     const v = content.versions && content.versions[0];
     const parts = [];
@@ -154,7 +161,7 @@ async function generateCaption(draft, deps) {
     return { caption: body + '\n\n' + factsBlock(p) + (tags ? '\n\n' + tags : ''), source: 'ai', note: null };
   } catch (e) {
     return { caption: templateCaption(p), source: 'template', note: 'AI tạo nội dung lỗi/không khả dụng — đang dùng nội dung mẫu, hãy kiểm tra kỹ trước khi duyệt.' };
-  }
+  } finally { if (timer) clearTimeout(timer); }
 }
 function cleanTextKeepLines(s, max) {
   return String(s == null ? '' : s).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim().slice(0, max);
@@ -281,12 +288,14 @@ async function handleTelegramMessage(update, depsIn) {
   if (!message || !message.from || !message.chat || typeof update.update_id !== 'number') return { handled: false, reason: 'not_a_message' };
   const tgConfig = (depsIn && depsIn.tgConfig) || await getTgConfig();
   const { checkApprover } = require('../routes/fbPublisher');
+  // Chống phát lại: tin nhắn có thời điểm gửi quá cũ bị bỏ qua (Telegram retry thật chỉ trong thời gian ngắn).
+  if (typeof message.date === 'number' && Date.now() / 1000 - message.date > MAX_MESSAGE_AGE_S) return { handled: true, skipped: true, reason: 'stale_message' };
 
   // 1) Chat + người gửi (fail-closed). Chat lạ: im lặng.
   const who = checkApprover({ from: message.from, message: { chat: message.chat } }, tgConfig);
   if (!who.ok) {
     if (who.reason === 'chat_mismatch' || who.reason === 'chat_not_configured' || who.reason === 'chat_config_invalid') return { handled: true, skipped: true, reason: who.reason };
-    await reply(tgConfig, message.chat.id, '⛔ Bạn không có quyền gửi sản phẩm / duyệt bài trong PSH.');
+    await reply(tgConfig, message.chat.id, '⛔ Bạn không có quyền gửi sản phẩm / duyệt bài trong PSH.\nTelegram ID của bạn: ' + message.from.id + ' (gửi cho Founder để được cấp quyền).');
     return { handled: true, skipped: true, reason: who.reason };
   }
   const allowList = Array.isArray(tgConfig.approverIds) ? tgConfig.approverIds : [];
@@ -296,7 +305,7 @@ async function handleTelegramMessage(update, depsIn) {
   }
   const actor = await resolvePshActor(message.from.id, tgConfig);
   if (!actor.ok) {
-    await reply(tgConfig, message.chat.id, '⛔ Tài khoản Telegram của bạn chưa được liên kết với quyền đăng bài trong PSH (' + actor.reason + ').');
+    await reply(tgConfig, message.chat.id, '⛔ Tài khoản Telegram của bạn chưa được liên kết với quyền đăng bài trong PSH (' + actor.reason + ').\nTelegram ID của bạn: ' + message.from.id + ' (gửi cho Founder để cấu hình approverMap).');
     return { handled: true, skipped: true, reason: actor.reason };
   }
   const deps = Object.assign(defaultDeps(actor), depsIn || {});

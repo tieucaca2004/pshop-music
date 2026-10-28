@@ -127,12 +127,13 @@ async function bumpVersion(draftId) {
   const ref = admin.database().ref(DRAFTS_NODE + '/' + draftId);
   let newVersion = null;
   const result = await ref.transaction((current) => {
-    if (!current) return undefined; // node không tồn tại, abort
+    newVersion = null;
+    if (current === null || current === undefined) return null; // lần đầu có thể là cache rỗng — KHÔNG abort (xem ghi chú đầu transaction)
     const v = (typeof current.version === 'number' ? current.version : 1) + 1;
     newVersion = v;
     return Object.assign({}, current, { version: v, updatedAt: Date.now() });
   });
-  if (!result.committed) throw new Error('fbDraftStore: bumpVersion failed — draft không tồn tại: ' + draftId);
+  if (!result.committed || newVersion === null) throw new Error('fbDraftStore: bumpVersion failed — draft không tồn tại: ' + draftId);
   return newVersion;
 }
 
@@ -163,7 +164,8 @@ async function approveTransaction(draftId, opts) {
   let snapshot = null;
   const result = await ref.transaction((current) => {
     reason = null; snapshot = null;
-    if (!current) { currentStatus = null; reason = 'not_found'; return undefined; } // abort
+    // RTDB thật: lần gọi đầu có thể nhận null (cache cục bộ rỗng). Trả null (KHÔNG undefined) để SDK gọi lại với giá trị server.
+    if (current === null || current === undefined) { currentStatus = null; reason = 'not_found'; return null; }
     currentStatus = current.status;
     if (current.status !== 'PENDING_APPROVAL') { reason = 'not_pending'; return undefined; } // abort, không thay đổi
     if (expectedVersion !== null && typeof current.version === 'number' && current.version !== expectedVersion) {
@@ -175,11 +177,12 @@ async function approveTransaction(draftId, opts) {
     snapshot = next;
     return next;
   });
+  const committed = !!(result.committed && snapshot);
   return {
-    committed: result.committed,
+    committed,
     currentStatus,
-    reason: result.committed ? null : reason,
-    draft: result.committed && snapshot ? Object.assign({ id: draftId }, snapshot) : null
+    reason: committed ? null : (reason || 'not_found'),
+    draft: committed ? Object.assign({ id: draftId }, snapshot) : null
   };
 }
 
@@ -193,14 +196,15 @@ async function applyEditTransaction(draftId, patches) {
   let reason = null;
   const result = await ref.transaction((current) => {
     newVersion = null; reason = null;
-    if (!current) { reason = 'not_found'; return undefined; }
+    if (current === null || current === undefined) { reason = 'not_found'; return null; }
     if (current.status !== 'PENDING_APPROVAL') { reason = 'not_pending'; return undefined; }
     const safe = Object.assign({}, patches || {});
     delete safe.status; delete safe.version; delete safe.updatedAt;
     newVersion = (typeof current.version === 'number' ? current.version : 1) + 1;
     return Object.assign({}, current, safe, { version: newVersion, updatedAt: Date.now() });
   });
-  return { committed: result.committed, newVersion: result.committed ? newVersion : null, reason: result.committed ? null : reason };
+  const ok = !!(result.committed && newVersion !== null);
+  return { committed: ok, newVersion: ok ? newVersion : null, reason: ok ? null : (reason || 'not_found') };
 }
 
 // retryFailedPublish — cho phép người duyệt hợp lệ đưa một draft FAILED về PENDING_APPROVAL để duyệt lại,
@@ -211,30 +215,32 @@ async function retryFailedPublish(draftId) {
   let reason = null; let newVersion = null;
   const result = await ref.transaction((current) => {
     reason = null; newVersion = null;
-    if (!current) { reason = 'not_found'; return undefined; }
+    if (current === null || current === undefined) { reason = 'not_found'; return null; }
     if (current.status !== 'FAILED') { reason = 'not_failed'; return undefined; }
     if (current.failStage !== 'publish') { reason = 'not_publish_failure'; return undefined; }
     if (current.facebookPostId) { reason = 'already_posted'; return undefined; }
     newVersion = (typeof current.version === 'number' ? current.version : 1) + 1;
     return Object.assign({}, current, { status: 'PENDING_APPROVAL', version: newVersion, failReason: null, failStage: null, approvedBy: null, approvedAt: null, updatedAt: Date.now() });
   });
-  return { committed: result.committed, reason: result.committed ? null : reason, newVersion: result.committed ? newVersion : null };
+  const ok = !!(result.committed && newVersion !== null);
+  return { committed: ok, reason: ok ? null : (reason || 'not_found'), newVersion: ok ? newVersion : null };
 }
-
 // cancelTransaction — HUỶ nguyên tử: chỉ PENDING_APPROVAL → CANCELLED. Cùng kiểu transaction với approveTransaction nên
 // "huỷ" và "duyệt" đồng thời không thể cùng thắng; đã APPROVED/PUBLISHING thì huỷ bị từ chối.
 async function cancelTransaction(draftId, opts) {
   const cancelledBy = (opts && opts.cancelledBy) || null;
   const ref = admin.database().ref(DRAFTS_NODE + '/' + draftId);
-  let reason = null; let status = null;
+  let reason = null; let status = null; let cancelledNow = false;
   const result = await ref.transaction((current) => {
-    reason = null; status = null;
-    if (!current) { reason = 'not_found'; return undefined; }
+    reason = null; status = null; cancelledNow = false;
+    if (current === null || current === undefined) { reason = 'not_found'; return null; }
     status = current.status;
     if (current.status !== 'PENDING_APPROVAL') { reason = 'not_pending'; return undefined; }
+    cancelledNow = true;
     return Object.assign({}, current, { status: 'CANCELLED', updatedAt: Date.now() }, cancelledBy ? { cancelledBy, cancelledAt: Date.now() } : {});
   });
-  return { committed: result.committed, reason: result.committed ? null : reason, currentStatus: status };
+  const ok = !!(result.committed && cancelledNow);
+  return { committed: ok, reason: ok ? null : (reason || 'not_found'), currentStatus: status };
 }
 
 module.exports = {

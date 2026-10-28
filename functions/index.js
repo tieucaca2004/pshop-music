@@ -646,7 +646,7 @@ if (!getApps().length) { admin.initializeApp(); }
  * đồng bộ trước khi trả 200; update gửi lặp được chặn bằng claim nguyên tử (telegramUpdates/{update_id}).
  * Cấu hình/triển khai: docs/TELEGRAM_FACEBOOK_PUBLISHER.md. KHÔNG tự đăng ký webhook — việc của chủ dự án.
  */
-exports.telegramWebhook = onRequest({ cors: false, timeoutSeconds: 120, memory: '512MiB' }, async (req, res) => {
+exports.telegramWebhook = onRequest({ secrets: [OPENAI_API_KEY], cors: false, timeoutSeconds: 120, memory: '512MiB' }, async (req, res) => {
   const { handleTelegramWebhook } = require('./shared/telegramWebhookRelay');
   return handleTelegramWebhook(req, res);
 });

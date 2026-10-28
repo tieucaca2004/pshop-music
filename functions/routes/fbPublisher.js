@@ -514,6 +514,18 @@ async function handle(req, res, helpers) {
       const approvedDraft = txn.draft;
       await fbDraftStore.updateStatus(draftId, 'PUBLISHING');
 
+      // CHẾ ĐỘ DRY-RUN (telegramConfig.dryRun === true, do chủ dự án bật tường minh): chạy đủ intake → AI → ảnh → xem trước →
+      // duyệt nhưng KHÔNG gọi Facebook (không upload ảnh, không đăng). Dùng để thử đầu-cuối trên Telegram/Storage/AI thật
+      // mà không tạo bài công khai. Bản nháp ghi dryRun:true, facebookPostId rỗng; Telegram báo rõ "không đăng".
+      if (tgConfig.dryRun === true) {
+        await fbDraftStore.updateStatus(draftId, 'PUBLISHED', { publishedAt: Date.now(), dryRun: true, facebookPostId: null });
+        if (tgConfig.token && callbackQueryId) {
+          await answerCallbackQuery({ token: tgConfig.token, callbackQueryId, text: '🧪 DRY-RUN: đã duyệt, KHÔNG đăng lên Facebook.' });
+        }
+        await notifyChat(tgConfig, '🧪 [DRY-RUN] Đã duyệt nhưng KHÔNG đăng lên Facebook (telegramConfig.dryRun = true).\nSẽ đăng lên Page: ' + (approvedDraft.pageName || approvedDraft.pageId) + ' (' + approvedDraft.pageId + ')\nẢnh: ' + (Array.isArray(approvedDraft.publishImages) ? approvedDraft.publishImages.length : 0) + ' · Mã bản nháp: ' + draftId);
+        return sendSuccess(res, { handled: true, draftId, action, dryRun: true });
+      }
+
       const pageToken = await fbPageConfig.getPageToken(approvedDraft.pageId);
       if (!pageToken) {
         await fbDraftStore.updateStatus(draftId, 'FAILED', { failReason: 'Không tìm thấy page token cho pageId: ' + approvedDraft.pageId, failStage: 'publish' });

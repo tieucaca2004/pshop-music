@@ -27,7 +27,8 @@ telegramConfig: {
   chatId:       "<id chat được phép>",          // số, hoặc @kênh công khai
   approverIds:  ["<telegram user id>", ...],    // BẮT BUỘC, khác rỗng
   approverMap:  { "<telegram user id>": "<uid PSH>" },   // BẮT BUỘC, từng người
-  publishRoles: ["admin","editor"]              // tuỳ chọn; super_admin luôn được
+  publishRoles: ["admin","editor"],             // tuỳ chọn; super_admin luôn được
+  dryRun:       false                           // true = chạy đủ luồng nhưng KHÔNG gọi Facebook (thử an toàn); báo "[DRY-RUN]" trên Telegram
 }
 telegramWebhookSecret: "<chuỗi ngẫu nhiên riêng>"   // khác webhookSigningSecret
 imageRouterConfig: {                              // mặc định KHÔNG có = không xử lý ảnh
@@ -53,10 +54,10 @@ Giá và tình trạng trong bài LUÔN do hệ thống chèn từ dữ liệu n
 
 ## 5. Compositor (máy chủ riêng, KHÔNG chạy trong Cloud Functions)
 ```
-pip install Pillow numpy            # bắt buộc
-pip install rembg                   # tách nền thật (tải mô hình ~170MB — cần chủ dự án duyệt)
-COMPOSITOR_SECRET=<>=24 ký tự> python compositor_server.py --host 127.0.0.1 --port 8765   # đặt sau HTTPS reverse proxy
+python -m venv .venv && .venv\Scripts\python -m pip install -r requirements.txt     # Pillow, numpy, rembg[cpu]
+$env:COMPOSITOR_SECRET = "<>=24 ký tự ngẫu nhiên>" ; .\run_compositor.ps1 -ListenHost 127.0.0.1 -Port 8765
 ```
+Mô hình u2net (~176MB) tự tải từ GitHub ở lần chạy đầu (biến COMPOSITOR_REMBG_MODEL=u2netp để dùng mô hình nhỏ hơn). Máy chủ chỉ nghe localhost: Cloud Functions cần một địa chỉ HTTPS tới nó (reverse proxy/tunnel do Founder chọn; không tự mở cổng).
 Không có `rembg` và không có mask → compositor trả `NO_SEGMENTATION`, router báo "blocked" và dùng ảnh gốc (không giả vờ).
 Test: `python -m unittest -v` trong `tools/compositor`.
 

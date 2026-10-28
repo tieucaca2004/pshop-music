@@ -24,6 +24,8 @@ MIN_CANVAS = 256
 MAX_OUTPUT_BYTES = 4_500_000  # Telegram nhận ảnh qua URL tối đa 5 MB
 CORE_ALPHA = 255
 FILL_RATIO = 0.82            # sản phẩm chiếm tối đa ~82% cạnh khung
+AUTO_FILL_RATIO = 0.78       # khung tự chọn: sản phẩm chiếm ~78% cạnh
+AUTO_MIN_CANVAS = 640
 
 
 class CompositorError(Exception):
@@ -56,6 +58,19 @@ def _open_image(data, what):
     return im
 
 
+_SESSION = {}
+
+
+def _rembg_session(new_session):
+    """Phiên rembg dùng lại giữa các request. Mô hình chọn qua biến môi trường COMPOSITOR_REMBG_MODEL (mặc định u2net;
+    u2netp nhỏ/nhanh hơn, kém chính xác hơn)."""
+    import os
+    name = os.environ.get("COMPOSITOR_REMBG_MODEL", "u2net")
+    if name not in _SESSION:
+        _SESSION[name] = new_session(name)
+    return _SESSION[name]
+
+
 def _segment(rgb, mask_bytes):
     """Trả mảng alpha uint8 (H, W). Ném NoSegmentation nếu không có nguồn mask."""
     if mask_bytes:
@@ -64,12 +79,16 @@ def _segment(rgb, mask_bytes):
             raise CompositorError("mask khác kích thước ảnh", "BAD_MASK")
         return np.array(m, dtype=np.uint8)
     try:
-        from rembg import remove  # noqa: WPS433 — tuỳ chọn
+        from rembg import new_session, remove  # noqa: WPS433 — tuỳ chọn
     except Exception:
         raise NoSegmentation("Chưa có mô hình tách nền (rembg) và không có mask đi kèm")
     buf = io.BytesIO()
     rgb.save(buf, format="PNG")
-    out = remove(buf.getvalue())
+    try:
+        out = remove(buf.getvalue(), session=_rembg_session(new_session))
+    except Exception:
+        # mô hình chưa tải được / lỗi chạy: KHÔNG giả vờ đã tách nền
+        raise NoSegmentation("Mô hình tách nền không khả dụng (chưa tải hoặc lỗi chạy)")
     cut = Image.open(io.BytesIO(out)).convert("RGBA")
     if cut.size != rgb.size:
         raise CompositorError("segmentation trả kích thước lạ", "BAD_MASK")
@@ -106,8 +125,11 @@ def _cover(img, size):
     return ImageOps.fit(img.convert("RGB"), size, method=Image.LANCZOS, centering=(0.5, 0.5))
 
 
-def compose(product_bytes, background_bytes=None, canvas=(1200, 1200), style="studio", mask_bytes=None):
-    """Ghép sản phẩm lên nền mới. Trả (png_bytes, report)."""
+def compose(product_bytes, background_bytes=None, canvas=None, style="studio", mask_bytes=None):
+    """Ghép sản phẩm lên nền mới. Trả (png_bytes, report).
+
+    canvas=None → khung vuông TỰ CHỌN theo cỡ sản phẩm (sản phẩm chiếm ~78% cạnh, không bao giờ bị resize);
+    canvas=(w, h) → kích thước TỐI THIỂU của khung (khung được nới nếu sản phẩm lớn hơn)."""
     src = _open_image(product_bytes, "ảnh sản phẩm")
     src = ImageOps.exif_transpose(src)  # xoay theo EXIF: phép hình học không mất mát, làm TRƯỚC khi kiểm
     rgb = src.convert("RGB")
@@ -130,9 +152,11 @@ def compose(product_bytes, background_bytes=None, canvas=(1200, 1200), style="st
     prod_a = final_alpha[y0:y1, x0:x1]
     ph, pw = prod_a.shape
 
-    cw, ch = int(canvas[0]), int(canvas[1])
-    cw = max(MIN_CANVAS, cw)
-    ch = max(MIN_CANVAS, ch)
+    if canvas is None:
+        side = int(math.ceil(max(pw, ph) / AUTO_FILL_RATIO))
+        cw = ch = max(AUTO_MIN_CANVAS, side)
+    else:
+        cw, ch = max(MIN_CANVAS, int(canvas[0])), max(MIN_CANVAS, int(canvas[1]))
     need_w = int(math.ceil(pw / FILL_RATIO))
     need_h = int(math.ceil(ph / FILL_RATIO))
     cw, ch = max(cw, need_w), max(ch, need_h)

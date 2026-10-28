@@ -15,6 +15,12 @@ from PIL import Image, ImageDraw, ImageFilter
 import compositor
 import compositor_server
 
+try:
+    import rembg  # noqa: F401
+    HAVE_REMBG = True
+except Exception:
+    HAVE_REMBG = False
+
 
 def make_product(w=640, h=480, seed=7):
     """Sản phẩm giả: nhiều chi tiết (nhiễu màu + vạch giống chữ/nút) để lỗi nội suy/đổi màu bị phát hiện."""
@@ -108,6 +114,17 @@ class ComposeTests(unittest.TestCase):
         core = alpha[y0:y1, x0:x1] == 255
         self.assertTrue(np.array_equal(out[oy:oy + y1 - y0, ox:ox + x1 - x0][core], np.array(decoded)[y0:y1, x0:x1][core]))
 
+    def test_auto_canvas_fits_product_without_scaling(self):
+        prod = make_product()
+        mask = make_mask(*prod.size)
+        _, rep = compositor.compose(to_bytes(prod), None, None, "studio", to_bytes(mask))
+        pw, ph = rep["product_size"]
+        cw, ch = rep["canvas"]
+        self.assertEqual(cw, ch)
+        self.assertGreaterEqual(cw, 640)
+        self.assertLessEqual(cw, int(max(pw, ph) / 0.78) + 2)
+        self.assertTrue(rep["product_pixels_preserved"])
+
     def test_provider_background_used(self):
         prod = make_product()
         mask = make_mask(*prod.size)
@@ -136,11 +153,8 @@ class ComposeTests(unittest.TestCase):
         self.assertEqual(cm.exception.code, "PRODUCT_TOO_LARGE")
 
     def test_no_segmentation_without_mask_or_model(self):
-        try:
-            import rembg  # noqa: F401
-            self.skipTest("rembg đã cài trên máy này")
-        except Exception:
-            pass
+        if HAVE_REMBG:
+            self.skipTest("rembg đã cài trên máy này (kịch bản 'chưa có mô hình' không áp dụng)")
         with self.assertRaises(compositor.NoSegmentation) as cm:
             compositor.compose(to_bytes(make_product()), None, (1200, 1200), "studio", None)
         self.assertEqual(cm.exception.code, "NO_SEGMENTATION")
@@ -209,11 +223,8 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.post(self.payload(), "wrong-secret-wrong-secret-wrong")[0], 401)
 
     def test_no_segmentation_is_reported_not_faked(self):
-        try:
-            import rembg  # noqa: F401
-            self.skipTest("rembg đã cài")
-        except Exception:
-            pass
+        if HAVE_REMBG:
+            self.skipTest("rembg đã cài (kịch bản 'chưa có mô hình' không áp dụng)")
         st, body = self.post(self.payload(with_mask=False), self.SECRET)
         self.assertEqual(st, 422)
         self.assertEqual(body["code"], "NO_SEGMENTATION")

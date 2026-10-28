@@ -1,0 +1,5 @@
+# PSH compositor — phụ thuộc chạy trên máy chủ compositor (Python 3.10+)
+Pillow>=10
+numpy>=1.26
+# Tách nền thật (bắt buộc để tạo ảnh quảng cáo từ ảnh thường). Mô hình u2net (~176MB) tự tải từ GitHub lần chạy đầu.
+rembg[cpu]>=2.0.60
