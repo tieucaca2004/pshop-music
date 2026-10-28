@@ -589,6 +589,7 @@ const customersRoutes = require('./routes/customers');
 const ordersRoutes = require('./routes/orders');
 const paymentsRoutes = require('./routes/payments');
 const openclawRoutes = require('./routes/openclaw');
+const fbPublisherRoutes = require('./routes/fbPublisher');
 const businessesRoutes = require('./routes/businesses');
 const productsRoutes = require('./routes/products');
 const productMediaRoutes = require('./routes/productMedia');
@@ -637,6 +638,18 @@ async function authenticateGatewayClient(req, path) {
 
 // Initialize Firebase Admin if not already done
 if (!getApps().length) { admin.initializeApp(); }
+
+/*
+ * telegramWebhook — nhận update từ Telegram (setWebhook kèm secret_token), kiểm X-Telegram-Bot-Api-Secret-Token,
+ * rồi xử lý IN-PROCESS: (a) tin nhắn sản phẩm (ảnh + Tên/Giá/Tình trạng) → contentOrchestrator;
+ * (b) nút DUYỆT/HỦY (callback_query "fb_*") → routes/fbPublisher. Timeout 120s vì pipeline (AI + ghép ảnh) chạy
+ * đồng bộ trước khi trả 200; update gửi lặp được chặn bằng claim nguyên tử (telegramUpdates/{update_id}).
+ * Cấu hình/triển khai: docs/TELEGRAM_FACEBOOK_PUBLISHER.md. KHÔNG tự đăng ký webhook — việc của chủ dự án.
+ */
+exports.telegramWebhook = onRequest({ cors: false, timeoutSeconds: 120, memory: '512MiB' }, async (req, res) => {
+  const { handleTelegramWebhook } = require('./shared/telegramWebhookRelay');
+  return handleTelegramWebhook(req, res);
+});
 
 exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRET], cors: ALLOWED_ORIGINS, timeoutSeconds: 120 }, async (req, res) => {
   const requestId = makeRequestId();
@@ -758,7 +771,8 @@ exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRE
       businessesRoutes,
       selfHealingRoutes,
       draftsRoutes, jobsLogsRoutes, facebookRoutes, socialMediaCenterRoutes, founderRoutes,
-      agentRoutes, aiGenerateRoutes, webhooksRoutes, openclawRoutes
+      agentRoutes, aiGenerateRoutes, webhooksRoutes, openclawRoutes,
+      fbPublisherRoutes
     ];
     for (const router of routers) {
       const result = await router.handle(req, res, helpers);

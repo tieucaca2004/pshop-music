@@ -89,4 +89,20 @@ async function publishToFeed({ mockMode, pageId, message, attachedMedia, pageAcc
   return data;
 }
 
-module.exports = { exchangeCodeForToken, exchangeForLongLivedToken, getManagedPages, uploadPhoto, publishToFeed };
+// getPageInfo — đọc {id, name} của chính Page bằng page token (chỉ đọc, không đăng gì). Dùng để xác minh token còn
+// hiệu lực CHO ĐÚNG Page trước khi gửi bản xem trước/đăng và để hiện tên Page cho người duyệt. Token đi trong
+// header Authorization, không đưa vào URL/log.
+async function getPageInfo({ mockMode, pageId, pageAccessToken }) {
+  if (mockMode) return { id: pageId, name: '[MOCK] ' + pageId };
+  const r = await fetch(`https://graph.facebook.com/${GRAPH_VERSION}/${encodeURIComponent(pageId)}?fields=id,name`, {
+    headers: { Authorization: 'Bearer ' + pageAccessToken }
+  });
+  const data = await r.json();
+  if (!r.ok || !data.id) {
+    throw new Error((data.error && data.error.message) || 'Token không truy cập được Page này.');
+  }
+  if (String(data.id) !== String(pageId)) throw new Error('Token thuộc Page khác (' + data.id + ').');
+  return data;
+}
+
+module.exports = { exchangeCodeForToken, exchangeForLongLivedToken, getManagedPages, uploadPhoto, publishToFeed, getPageInfo };

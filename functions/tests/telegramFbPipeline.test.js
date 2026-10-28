@@ -1,0 +1,501 @@
+/*
+ * tests/telegramFbPipeline.test.js — luồng đăng Facebook qua Telegram (intake → AI → ảnh → xem trước → duyệt → đăng → kết quả).
+ *
+ * Chạy: node tests/telegramFbPipeline.test.js   (từ thư mục functions/)
+ * Không dùng Firebase/Telegram/Facebook/OpenAI thật: RTDB + Storage là bộ nhớ trong; fetch là mock cục bộ.
+ * Test tích hợp compositor chạy tiến trình Python THẬT (compositor_server + segmenter giả trong tools/compositor/
+ * test_server_stub.py) nếu có Python+Pillow+numpy (PSH_COMPOSITOR_PYTHON); nếu không → ghi rõ SKIPPED (không tính PASS).
+ */
+'use strict';
+const zlib = require('zlib');
+const fs = require('fs');
+const path = require('path');
+const { spawn } = require('child_process');
+
+// ── RTDB + Storage giả (trong bộ nhớ) ─────────────────────────────────────────
+let db = {};
+let storageFiles = {};
+const clone = (v) => (v === undefined ? null : JSON.parse(JSON.stringify(v)));
+function getPath(obj, p) {
+  let cur = obj;
+  for (const k of p.split('/').filter(Boolean)) { if (cur == null || typeof cur !== 'object') return null; cur = cur[k]; }
+  return cur === undefined ? null : cur;
+}
+function setPath(obj, p, val) {
+  const parts = p.split('/').filter(Boolean);
+  let cur = obj;
+  for (let i = 0; i < parts.length - 1; i++) { if (cur[parts[i]] == null || typeof cur[parts[i]] !== 'object') cur[parts[i]] = {}; cur = cur[parts[i]]; }
+  if (val === null) delete cur[parts[parts.length - 1]]; else cur[parts[parts.length - 1]] = val;
+}
+let keyCounter = 0;
+function mockRef(p) {
+  return {
+    once: async () => ({ exists: () => getPath(db, p) !== null, val: () => clone(getPath(db, p)) }),
+    set: async (v) => setPath(db, p, clone(v)),
+    update: async (ch) => { for (const k of Object.keys(ch)) setPath(db, p + '/' + k, ch[k] === null ? null : clone(ch[k])); },
+    push: () => { const key = 'k' + (++keyCounter) + 'x' + Math.random().toString(36).slice(2, 6); return { key, set: async (v) => setPath(db, p + '/' + key, clone(v)) }; },
+    transaction: async (fn) => {
+      const cur = getPath(db, p);
+      const next = fn(cur === null ? null : clone(cur));
+      if (next === undefined) return { committed: false, snapshot: { val: () => cur } };
+      setPath(db, p, clone(next));
+      return { committed: true, snapshot: { val: () => next } };
+    }
+  };
+}
+const mockAdmin = {
+  apps: [{}],
+  database: () => ({ ref: mockRef }),
+  storage: () => ({
+    bucket: () => ({
+      name: 'test-bucket',
+      file: (pth) => ({
+        save: async (buf, opts) => { storageFiles[pth] = { buf: Buffer.from(buf), opts }; },
+        download: async () => { if (!storageFiles[pth]) throw new Error('not found'); return [storageFiles[pth].buf]; }
+      })
+    })
+  })
+};
+mockAdmin.database.ServerValue = { TIMESTAMP: '__ts__' };
+
+let aiImpl = async (moduleId) => ({ content: { versions: [{ hook: 'AI hook', caption: 'AI caption cho sản phẩm', cta: 'Nhắn tin ngay', hashtags: ['pshop', '#dj'] }] } });
+const Module = require('module');
+const origLoad = Module._load;
+Module._load = function (request, parent) {
+  if (request === 'firebase-admin') return mockAdmin;
+  if (/(^|\/)aiGenerate$/.test(request)) return { generateForModule: (...a) => aiImpl(...a) };
+  return origLoad.apply(this, arguments);
+};
+
+// ── Fetch giả ────────────────────────────────────────────────────────────────
+const realFetch = global.fetch;
+let calls = []; let sentTg = []; let nPost = 0;
+let tgFileBytes = null; let tgGetFileFail = false; let tgSendFail = false;
+let graphInfoFail = false; let photoFail = false; let feedFail = false;
+let compositorHandler = null;
+const BOT = '123456:ABC-DEF_tokenTOKENtokenTOKENtoken12';
+const res = (body, ok = true, status = 200) => ({ ok, status, json: async () => body, arrayBuffer: async () => (Buffer.isBuffer(body) ? body : Buffer.from(JSON.stringify(body))) });
+global.fetch = async (url, opts) => {
+  url = String(url);
+  const body = opts && opts.body && typeof opts.body === 'string' ? opts.body : null;
+  calls.push({ url, method: (opts && opts.method) || 'GET', body });
+  if (url.startsWith('https://api.telegram.org/bot' + BOT + '/getFile')) return tgGetFileFail ? res({ ok: false }) : res({ ok: true, result: { file_path: 'photos/file_1.jpg', file_size: (tgFileBytes || []).length } });
+  if (url.startsWith('https://api.telegram.org/file/bot' + BOT + '/')) return res(tgFileBytes || Buffer.alloc(0));
+  if (/api\.telegram\.org\/bot[^/]+\/(sendMessage|sendPhoto|answerCallbackQuery)/.test(url)) {
+    const kind = url.match(/\/(sendMessage|sendPhoto|answerCallbackQuery)/)[1];
+    if (tgSendFail && kind !== 'answerCallbackQuery') return res({ ok: false, description: 'forbidden' });
+    const b = JSON.parse(body || '{}'); sentTg.push({ kind, ...b });
+    return res({ ok: true, result: { message_id: 1000 + sentTg.length } });
+  }
+  if (url.startsWith('https://graph.facebook.com/')) {
+    const m = url.match(/graph\.facebook\.com\/v19\.0\/([^/?]+)(\/photos|\/feed)?(\?fields=id,name)?/);
+    if (!m) return res({ error: { message: 'unexpected graph url' } }, false, 400);
+    if (m[3]) return graphInfoFail ? res({ error: { message: 'Invalid OAuth access token.' } }, false, 400) : res({ id: m[1], name: 'Fanpage Test' });
+    if (m[2] === '/photos') return photoFail ? res({ error: { message: 'Image rejected by Facebook' } }, false, 400) : res({ id: 'ph_' + (++nPost) });
+    if (m[2] === '/feed') return feedFail ? res({ error: { message: '(#200) Permissions error' } }, false, 403) : res({ id: m[1] + '_post' + (++nPost) });
+  }
+  if (url.startsWith('https://compositor.test/')) {
+    if (compositorHandler) return compositorHandler(url, opts);
+    return res({ ok: false, code: 'DOWN' }, false, 503);
+  }
+  return res({ error: 'unexpected fetch ' + url }, false, 500);
+};
+
+// Bắt console để chứng minh không lộ token
+const logs = [];
+for (const k of ['log', 'warn', 'error', 'info']) { const o = console[k]; console[k] = (...a) => { logs.push(a.map(String).join(' ')); }; console['_' + k] = o; }
+const out = (...a) => console._log(...a);
+
+// ── Nạp module sau khi đã mock ───────────────────────────────────────────────
+const orch = require('../shared/contentOrchestrator');
+const fbDraftStore = require('../shared/fbDraftStore');
+const { handleTelegramWebhook } = require('../shared/telegramWebhookRelay');
+const imageRouter = require('../shared/imageRouter');
+const media = require('../shared/telegramMedia');
+
+// ── Tiện ích test ────────────────────────────────────────────────────────────
+let passed = 0, failed = 0, skipped = 0; const failures = [];
+async function test(name, fn) {
+  try { await fn(); out('  ✓ ' + name); passed++; }
+  catch (e) { out('  ✗ ' + name + '\n    -> ' + e.message); failures.push(name); failed++; }
+}
+function skip(name, why) { out('  ○ SKIPPED: ' + name + ' — ' + why); skipped++; }
+function assert(c, m) { if (!c) throw new Error(m || 'assertion failed'); }
+function eq(a, b, m) { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error((m || 'not equal') + ': ' + JSON.stringify(a) + ' !== ' + JSON.stringify(b)); }
+
+function crc(buf) { return zlib.crc32(buf) >>> 0; }
+function chunk(type, data) { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const td = Buffer.concat([Buffer.from(type), data]); const c = Buffer.alloc(4); c.writeUInt32BE(crc(td)); return Buffer.concat([len, td, c]); }
+function makePng(w, h) { // PNG RGB hợp lệ, nội dung dải màu (nén được)
+  const raw = Buffer.alloc((w * 3 + 1) * h);
+  for (let y = 0; y < h; y++) { raw[y * (w * 3 + 1)] = 0; for (let x = 0; x < w; x++) { const o = y * (w * 3 + 1) + 1 + x * 3; raw[o] = (x * 255 / w) | 0; raw[o + 1] = (y * 255 / h) | 0; raw[o + 2] = ((x + y) * 7) & 255; } }
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(w, 0); ihdr.writeUInt32BE(h, 4); ihdr[8] = 8; ihdr[9] = 2;
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
+}
+const JPEG_BYTES = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(200, 7)]);
+const SECRET = 'tg-webhook-secret-for-tests';
+
+function resetAll(opts) {
+  db = {}; storageFiles = {}; calls = []; sentTg = []; nPost = 0; keyCounter = 0; logs.length = 0;
+  tgFileBytes = JPEG_BYTES; tgGetFileFail = false; tgSendFail = false; graphInfoFail = false; photoFail = false; feedFail = false; compositorHandler = null;
+  aiImpl = async () => ({ content: { versions: [{ hook: 'AI hook', caption: 'AI caption cho sản phẩm', cta: 'Nhắn tin ngay', hashtags: ['pshop', '#dj'] }] } });
+  setPath(db, 'telegramConfig', { token: BOT, chatId: '555', approverIds: ['777'], approverMap: { '777': 'uid_ok' } });
+  setPath(db, 'telegramWebhookSecret', SECRET);
+  setPath(db, 'roles/uid_ok', 'admin');
+  setPath(db, 'facebookConnection', { status: 'connected' });
+  setPath(db, 'facebookActiveToken', { pageId: 'page_1', accessToken: 'PAGE_TOKEN_SECRET', isMock: false, expiresAt: Date.now() + 1e9 });
+  if (opts && opts.router) setPath(db, 'imageRouterConfig', { providers: { compositor: Object.assign({ enabled: true, approvedForProductPhotos: true, url: 'https://compositor.test', secret: 'c'.repeat(32), timeoutMs: 2000 }, opts.router) } });
+}
+let updSeq = 100;
+function productUpdate(over) {
+  const o = over || {};
+  return { update_id: o.update_id || (++updSeq), message: {
+    message_id: 5, from: o.from || { id: 777, username: 'founder' }, chat: o.chat || { id: 555, type: 'private' },
+    caption: o.caption === undefined ? 'Tên: Pioneer DDJ-400\nGiá: 3.500.000\nTình trạng: Like new 95%' : o.caption,
+    photo: o.photo === undefined ? [{ file_id: 'SMALL', width: 90, height: 60, file_size: 100 }, { file_id: 'BIG', width: 1280, height: 960, file_size: 90000 }] : o.photo,
+    media_group_id: o.media_group_id
+  } };
+}
+function cbUpdate(action, draftId, v, from, chat) {
+  return { update_id: ++updSeq, callback_query: { id: 'cb' + updSeq, data: action + ':' + draftId + (v != null ? ':' + v : ''), from: from || { id: 777 }, message: { chat: chat || { id: 555 } } } };
+}
+async function webhook(update, secret) {
+  let status = null, json = null;
+  await handleTelegramWebhook({ method: 'POST', get: (h) => (h === 'X-Telegram-Bot-Api-Secret-Token' ? (secret === undefined ? SECRET : secret) : null), body: update },
+    { status(c) { status = c; return this; }, json(d) { json = d; return this; } });
+  return { status, json };
+}
+const drafts = () => Object.entries(getPath(db, 'fbPostDrafts') || {}).map(([id, d]) => Object.assign({ id }, d));
+const only = () => { const d = drafts(); assert(d.length === 1, 'cần đúng 1 draft, có ' + d.length); return d[0]; };
+const feedPosts = () => calls.filter((c) => c.method === 'POST' && /graph\.facebook\.com\/v19\.0\/[^/]+\/feed/.test(c.url));
+const photoPosts = () => calls.filter((c) => c.method === 'POST' && /\/photos/.test(c.url));
+const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind === 'sendMessage') && s.reply_markup).pop();
+
+(async () => {
+  // ═════ [1] Parse + nhận sản phẩm ═════
+  out('\n=== [1] Nhận ảnh + dữ liệu sản phẩm ===');
+  await test('parseProductCaption: đủ trường (nhãn không phân biệt dấu/hoa thường)', async () => {
+    const p = orch.parseProductCaption('TÊN: Sony A7\ngiá: 3tr5\nTinh trang: Mới 100%\nPage: 123_4');
+    assert(p.ok); eq(p.product, { name: 'Sony A7', price: 3500000, condition: 'Mới 100%' }); eq(p.pageHint, '123_4');
+  });
+  await test('parsePriceVnd: các dạng giá hợp lệ + bác bỏ giá vô lý', async () => {
+    eq(orch.parsePriceVnd('3.500.000'), 3500000); eq(orch.parsePriceVnd('3,500,000đ'), 3500000); eq(orch.parsePriceVnd('3tr'), 3000000);
+    eq(orch.parsePriceVnd('3tr5'), 3500000); eq(orch.parsePriceVnd('3.5tr'), 3500000); eq(orch.parsePriceVnd('850k'), 850000); eq(orch.parsePriceVnd('2500000'), 2500000);
+    for (const bad of ['', 'abc', '0', '-5', '12', '99999999999999', '3.5.5', 'miễn phí']) assert(orch.parsePriceVnd(bad) === null, 'phải từ chối: ' + bad);
+  });
+  await test('Luồng đầy đủ: ảnh+Tên/Giá/Tình trạng → ảnh lưu Storage (không URL Telegram) → bản nháp PENDING_APPROVAL → xem trước có nút', async () => {
+    resetAll();
+    const r = await orch.handleTelegramMessage(productUpdate());
+    assert(r.handled && r.result && r.result.status === 'PENDING_APPROVAL', JSON.stringify(r));
+    const d = only();
+    eq(d.status, 'PENDING_APPROVAL'); eq(d.product, { name: 'Pioneer DDJ-400', price: 3500000, condition: 'Like new 95%' });
+    eq(d.pageId, 'page_1'); eq(d.source, 'telegram'); eq(d.pshUid, 'uid_ok');
+    assert(storageFiles['fbDrafts/' + d.id + '/original.jpg'], 'ảnh gốc phải được lưu Storage');
+    assert(/^https:\/\/firebasestorage\.googleapis\.com\/v0\/b\/test-bucket\/o\//.test(d.imageUrls[0]), 'URL lâu dài của Firebase Storage');
+    assert(!JSON.stringify(d).includes('api.telegram.org') && !JSON.stringify(d).includes(BOT), 'draft không chứa URL/token Telegram');
+    // Ảnh lớn nhất được chọn
+    assert(calls.some((c) => c.url.includes('getFile?file_id=BIG')), 'phải chọn ảnh lớn nhất');
+    const pv = lastPreview(); assert(pv && pv.reply_markup.inline_keyboard[0].length === 2, 'xem trước phải có 2 nút');
+    eq(pv.reply_markup.inline_keyboard[0][0].callback_data, 'fb_approve:' + d.id + ':1'); eq(pv.reply_markup.inline_keyboard[0][1].callback_data, 'fb_cancel:' + d.id);
+    assert(!JSON.stringify(pv.reply_markup).includes(BOT), 'callback_data không chứa token');
+    const text = pv.caption || pv.text;
+    assert(text.includes('Fanpage Test') && text.includes('3.500.000đ') && text.includes('Like new 95%') && text.includes('page_1'), 'xem trước phải có Page, tên, giá, tình trạng');
+    assert(d.steps.intake.status === 'ok' && d.steps.content.status === 'ok' && d.steps.image.status === 'ok' && d.steps.preview.status === 'ok', 'steps phải được ghi nhận');
+    eq(feedPosts().length, 0); // CHƯA đăng gì
+  });
+  await test('Thiếu dữ liệu: thiếu giá / giá sai / thiếu tình trạng / thiếu tên → từ chối, không tạo draft, hướng dẫn mẫu', async () => {
+    for (const cap of ['Tên: A\nTình trạng: Mới', 'Tên: A\nGiá: abc\nTình trạng: Mới', 'Tên: A\nGiá: 1tr', 'Giá: 1tr\nTình trạng: Mới', null]) {
+      resetAll(); const r = await orch.handleTelegramMessage(productUpdate({ caption: cap }));
+      assert(r.rejected, 'phải rejected: ' + cap); eq(drafts().length, 0);
+      assert(sentTg.some((s) => s.kind === 'sendMessage' && /Mẫu chú thích/.test(s.text)), 'phải gửi mẫu hướng dẫn');
+    }
+  });
+  await test('Không có ảnh → nhắc gửi ảnh; không tạo draft', async () => {
+    resetAll(); const r = await orch.handleTelegramMessage(productUpdate({ photo: [] }));
+    eq(drafts().length, 0); assert(r.skipped);
+  });
+  await test('Ảnh lỗi: getFile thất bại / không phải ảnh / quá lớn → draft FAILED, báo lỗi, KHÔNG lộ token, không đăng', async () => {
+    resetAll(); tgGetFileFail = true; let r = await orch.handleTelegramMessage(productUpdate());
+    assert(r.failed && only().status === 'FAILED' && only().failStage === 'intake');
+    resetAll(); tgFileBytes = Buffer.from('<html>not an image at all, long enough........</html>'); r = await orch.handleTelegramMessage(productUpdate());
+    assert(r.failed && /JPEG\/PNG\/WEBP/.test(only().failReason));
+    resetAll(); tgFileBytes = Buffer.concat([JPEG_BYTES, Buffer.alloc(media.MAX_BYTES + 10, 1)]); r = await orch.handleTelegramMessage(productUpdate());
+    assert(r.failed && /quá lớn/.test(only().failReason));
+    assert(!JSON.stringify(db).replace(JSON.stringify(getPath(db, 'telegramConfig')), '').includes(BOT), 'token không được xuất hiện ngoài telegramConfig');
+    assert(!sentTg.some((s) => JSON.stringify(s).includes(BOT)) && !logs.some((l) => l.includes(BOT)), 'token không có trong tin nhắn/log');
+    eq(feedPosts().length, 0);
+  });
+  await test('Webhook gửi lặp (cùng update_id): chỉ 1 draft, 1 bản xem trước; gửi song song 2 request cũng chỉ 1', async () => {
+    resetAll(); const u = productUpdate({ update_id: 9001 });
+    const a = await orch.handleTelegramMessage(u); const b = await orch.handleTelegramMessage(u);
+    assert(a.result && b.duplicate, JSON.stringify(b)); eq(drafts().length, 1); eq(sentTg.filter((s) => s.reply_markup).length, 1);
+    resetAll(); const u2 = productUpdate({ update_id: 9002 });
+    const rs = await Promise.all([orch.handleTelegramMessage(u2), orch.handleTelegramMessage(u2)]);
+    eq(drafts().length, 1); assert(rs.filter((x) => x.duplicate).length === 1, 'đúng 1 request bị coi là trùng');
+  });
+  await test('Claim treo > 5 phút (function chết giữa chừng) → tiếp quản và chạy tiếp ĐÚNG draft cũ, không tạo draft mới', async () => {
+    resetAll(); const u = productUpdate({ update_id: 9003 });
+    // Giả lập: đã tạo draft + ảnh, chết trước bước nội dung
+    const d = await fbDraftStore.createDraft({ telegramUpdateId: 9003, pageId: 'page_1', caption: '', imageUrls: [], requestedBy: 'telegram:uid_ok', extra: { source: 'telegram', product: { name: 'X', price: 1500000, condition: 'Mới' }, pageName: 'Fanpage Test', steps: {}, notices: [] } });
+    await fbDraftStore.updateStatus(d.id, 'PROCESSING');
+    const sv = await media.saveToStorage('fbDrafts/' + d.id + '/original.jpg', JPEG_BYTES, 'image/jpeg');
+    await fbDraftStore.patchFields(d.id, { imageUrls: [sv.url], originalStoragePath: sv.path });
+    setPath(db, 'telegramUpdates/9003', { state: 'processing', startedAt: Date.now() - 6 * 60 * 1000, draftId: d.id });
+    const r = await orch.handleTelegramMessage(u);
+    assert(r.resumed && r.draftId === d.id, JSON.stringify(r)); eq(drafts().length, 1); eq(only().status, 'PENDING_APPROVAL');
+    // claim còn mới → không tiếp quản
+    resetAll(); setPath(db, 'telegramUpdates/9004', { state: 'processing', startedAt: Date.now() - 1000 });
+    const r2 = await orch.handleTelegramMessage(productUpdate({ update_id: 9004 })); assert(r2.duplicate); eq(drafts().length, 0);
+  });
+  await test('Album (media_group_id) không có chú thích bị bỏ qua im lặng', async () => {
+    resetAll(); const r2 = await orch.handleTelegramMessage(productUpdate({ caption: null, media_group_id: 'g1' }));
+    assert(r2.skipped && r2.reason === 'album_without_caption'); eq(drafts().length, 0);
+  });
+
+  // ═════ [2] AI nội dung ═════
+  out('\n=== [2] AI tạo nội dung ===');
+  await test('AI thành công: caption AI + khối Giá/Tình trạng do HỆ THỐNG chèn đúng dữ liệu người gửi; gọi đúng module với dữ liệu sản phẩm', async () => {
+    resetAll(); let seen = null; aiImpl = async (m, input) => { seen = { m, input }; return { content: { versions: [{ hook: 'H', caption: 'Giá chỉ 1.000đ!!', cta: 'C', hashtags: ['x'] }] } }; };
+    await orch.handleTelegramMessage(productUpdate()); const d = only();
+    eq(seen.m, 'facebook-post-generator'); assert(/Pioneer DDJ-400/.test(seen.input.topic) && /Like new 95%/.test(seen.input.topic));
+    assert(d.aiCaption.includes('💰 Giá: 3.500.000đ') && d.aiCaption.includes('📦 Tình trạng: Like new 95%'), 'sự thật về giá/tình trạng luôn đúng');
+    eq(d.contentSource, 'ai');
+  });
+  await test('AI lỗi: dùng nội dung mẫu + CẢNH BÁO cho người duyệt; luồng vẫn tiếp tục', async () => {
+    resetAll(); aiImpl = async () => { throw new Error('quota'); }; await orch.handleTelegramMessage(productUpdate()); const d = only();
+    eq(d.contentSource, 'template'); eq(d.status, 'PENDING_APPROVAL'); assert(d.notices.some((n) => /nội dung mẫu/.test(n)));
+    assert((lastPreview().caption || lastPreview().text).includes('⚠️'), 'cảnh báo phải hiện trong xem trước');
+  });
+  await test('Tên sản phẩm chứa ký tự điều khiển/quá dài bị làm sạch', async () => {
+    const p = orch.parseProductCaption('Tên: ' + 'A\u0000\u0007B'.repeat(100) + '\nGiá: 2tr\nTình trạng: Mới'); assert(p.ok && p.product.name.length <= 120 && !/[\u0000-\u001f]/.test(p.product.name));
+  });
+
+  // ═════ [3] Image Router ═════
+  out('\n=== [3] Image Router ===');
+  await test('Mặc định (chưa bật provider): bỏ qua ảnh, dùng ảnh GỐC và báo rõ; compositor KHÔNG nhận ảnh', async () => {
+    resetAll(); await orch.handleTelegramMessage(productUpdate()); const d = only();
+    eq(d.imageMode, 'original'); eq(d.publishImages, d.imageUrls); assert(d.notices.some((n) => /CHƯA được tạo/.test(n))); eq(d.steps.image.result, 'skipped');
+    assert(!calls.some((c) => c.url.startsWith('https://compositor.test')), 'không được gọi compositor');
+  });
+  await test('Provider bật nhưng CHƯA được duyệt nhận ảnh sản phẩm → blocked, ảnh sản phẩm KHÔNG rời hệ thống', async () => {
+    resetAll({ router: { approvedForProductPhotos: false } }); compositorHandler = async () => { throw new Error('không được gọi'); };
+    await orch.handleTelegramMessage(productUpdate()); eq(only().steps.image.result, 'blocked'); assert(!calls.some((c) => c.url.startsWith('https://compositor.test')));
+  });
+  await test('Cấu hình sai (URL http / thiếu secret) → blocked, không gửi ảnh', async () => {
+    for (const bad of [{ url: 'http://compositor.test' }, { secret: '' }]) { resetAll({ router: bad }); await orch.handleTelegramMessage(productUpdate()); eq(only().steps.image.result, 'blocked'); assert(!calls.some((c) => /compositor\.test/.test(c.url))); }
+  });
+  const okPng = makePng(64, 64);
+  const okResp = (over) => async () => res(Object.assign({ ok: true, image_b64: okPng.toString('base64'), report: { product_pixels_preserved: true, width: 64, height: 64, background: 'procedural:studio' } }, over || {}));
+  await test('Compositor thành công: ảnh quảng cáo lưu Storage, publishImages = ảnh quảng cáo; gửi đúng header secret + ảnh gốc base64', async () => {
+    resetAll({ router: {} }); let hdr = null, bodyObj = null;
+    compositorHandler = async (url, opts) => { hdr = opts.headers; bodyObj = JSON.parse(opts.body); return okResp()(); };
+    await orch.handleTelegramMessage(productUpdate()); const d = only();
+    eq(d.imageMode, 'composited'); assert(d.publishImages[0] === d.generatedImageUrl && /final\.png/.test(d.generatedImageUrl));
+    assert(storageFiles['fbDrafts/' + d.id + '/final.png'], 'ảnh kết quả phải lưu Storage');
+    eq(hdr['X-Compositor-Secret'], 'c'.repeat(32)); eq(Buffer.from(bodyObj.image_b64, 'base64').equals(JPEG_BYTES), true);
+    assert(!d.notices.length, 'không cần cảnh báo khi ảnh thành công');
+    assert(lastPreview().kind === 'sendPhoto' && lastPreview().photo === d.generatedImageUrl, 'xem trước phải là ảnh quảng cáo');
+  });
+  await test('Compositor lỗi (5xx / mạng / timeout / ảnh không hợp lệ / không cam kết giữ pixel / NO_SEGMENTATION) → quay về ảnh gốc + cảnh báo rõ', async () => {
+    const cases = {
+      '5xx': async () => res({ ok: false, code: 'INTERNAL' }, false, 500),
+      'mạng': async () => { throw new Error('ECONNREFUSED'); },
+      'timeout': (url, opts) => new Promise((_, rej) => { opts.signal.addEventListener('abort', () => { const e = new Error('aborted'); e.name = 'AbortError'; rej(e); }); }),
+      'ảnh rác': okResp({ image_b64: Buffer.from('not an image').toString('base64') }),
+      'không cam kết pixel': okResp({ report: { product_pixels_preserved: false } }),
+      'không có mô hình tách nền': async () => res({ ok: false, code: 'NO_SEGMENTATION', message: 'x' }, false, 422)
+    };
+    for (const [name, h] of Object.entries(cases)) {
+      resetAll({ router: { timeoutMs: 60 } }); compositorHandler = h; await orch.handleTelegramMessage(productUpdate()); const d = only();
+      eq(d.imageMode, name === 'x' ? 'composited' : 'original', name); eq(d.status, 'PENDING_APPROVAL', name);
+      assert(d.notices.some((n) => /ảnh GỐC/.test(n)), 'cảnh báo cho: ' + name); assert(!storageFiles['fbDrafts/' + d.id + '/final.png'], 'không lưu ảnh kết quả khi lỗi: ' + name);
+    }
+  });
+  await test('Nền AI (aiBackground) mặc định TẮT: không gọi image-generator; chỉ chạy khi chủ dự án bật, prompt KHÔNG chứa ảnh sản phẩm', async () => {
+    resetAll({ router: {} }); let imgCalls = 0; aiImpl = async (m) => { if (m === 'image-generator') { imgCalls++; return { content: { imageUrl: 'https://img.test/bg.png' } }; } return { content: { versions: [{ hook: 'h', caption: 'c', cta: 'x', hashtags: [] }] } }; };
+    compositorHandler = okResp(); await orch.handleTelegramMessage(productUpdate()); eq(imgCalls, 0);
+    resetAll({ router: {} }); setPath(db, 'imageRouterConfig/providers/aiBackground', { enabled: true, approvedForBackgrounds: true });
+    let imgInput = null; aiImpl = async (m, input) => { if (m === 'image-generator') { imgInput = input; return { content: { imageUrl: 'https://img.test/bg.png' } }; } return { content: { versions: [{ hook: 'h', caption: 'c', cta: 'x', hashtags: [] }] } }; };
+    const prevFetch = global.fetch; global.fetch = async (u, o) => (String(u) === 'https://img.test/bg.png' ? res(okPng) : prevFetch(u, o));
+    compositorHandler = async (u, o) => { const b = JSON.parse(o.body); assert(b.background_b64, 'phải gửi nền'); return okResp()(); };
+    await orch.handleTelegramMessage(productUpdate()); global.fetch = prevFetch;
+    assert(imgInput && !('imageUrl' in imgInput) && !/Pioneer/.test(JSON.stringify(imgInput)), 'prompt nền không chứa dữ liệu/ảnh sản phẩm'); eq(only().imageMode, 'composited');
+  });
+  // Tích hợp Python thật
+  const py = process.env.PSH_COMPOSITOR_PYTHON || 'D:/PshopMusicSite-release-artifacts/work/pyvenv/Scripts/python.exe';
+  const stub = path.join(__dirname, '..', '..', 'tools', 'compositor', 'test_server_stub.py');
+  let srv = null;
+  if (fs.existsSync(py) && fs.existsSync(stub)) {
+    try {
+      const secret = 'integration-secret-0123456789abcdef';
+      srv = spawn(py, [stub], { cwd: path.dirname(stub), env: Object.assign({}, process.env, { COMPOSITOR_SECRET: secret }) });
+      const port = await new Promise((ok, bad) => { let b = ''; srv.stdout.on('data', (d) => { b += d; const m = b.match(/^(\d+)\s/); if (m) ok(Number(m[1])); }); srv.on('error', bad); srv.on('exit', () => bad(new Error('compositor stub exited'))); setTimeout(() => bad(new Error('stub timeout')), 15000); });
+      await test('TÍCH HỢP (Python thật): Node→compositor_server→compose→PNG; báo cáo giữ pixel; ảnh kết quả là PNG hợp lệ lưu Storage', async () => {
+        resetAll({ router: { secret } });
+        compositorHandler = (url, opts) => realFetch(url.replace('https://compositor.test', 'http://127.0.0.1:' + port), opts);
+        tgFileBytes = makePng(600, 450);
+        await orch.handleTelegramMessage(productUpdate()); const d = only();
+        eq(d.imageMode, 'composited', JSON.stringify(d.notices)); const f = storageFiles['fbDrafts/' + d.id + '/final.png'];
+        assert(f && f.buf.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])), 'PNG hợp lệ');
+        assert(f.buf.readUInt32BE(16) >= 600 && f.buf.readUInt32BE(20) >= 450, 'khung không nhỏ hơn sản phẩm (không thu nhỏ sản phẩm)');
+        // Bộ nhớ: phần pixel gốc nằm nguyên trong ảnh kết quả được kiểm bởi test Python (core_pixels_mismatched == 0)
+      });
+      await test('TÍCH HỢP (Python thật): secret sai → 401 → quay về ảnh gốc + cảnh báo', async () => {
+        resetAll({ router: { secret: 'wrong-secret-wrong-secret-wrong-1' } });
+        compositorHandler = (url, opts) => realFetch(url.replace('https://compositor.test', 'http://127.0.0.1:' + port), opts);
+        tgFileBytes = makePng(600, 450); await orch.handleTelegramMessage(productUpdate()); eq(only().imageMode, 'original');
+      });
+    } catch (e) { skip('Tích hợp compositor Python thật', 'không khởi động được (' + e.message + ')'); }
+    finally { if (srv) srv.kill(); }
+  } else skip('Tích hợp compositor Python thật', 'không tìm thấy Python/Pillow (đặt PSH_COMPOSITOR_PYTHON). Test Python chạy riêng: tools/compositor `python -m unittest`');
+
+  // ═════ [4] Chọn Fanpage ═════
+  out('\n=== [4] Chọn Fanpage / xác thực Page ===');
+  await test('Mặc định dùng Page đang active; hiện tên Page lấy từ Graph', async () => {
+    resetAll(); await orch.handleTelegramMessage(productUpdate()); eq(only().pageId, 'page_1'); eq(only().pageName, 'Fanpage Test');
+  });
+  await test('pageId trong tin nhắn KHÔNG được tin: Page lạ / ký tự nguy hiểm / không có token → từ chối, không tạo draft', async () => {
+    for (const hint of ['page_999', '../facebookActiveToken', 'a/b', 'x'.repeat(80)]) {
+      resetAll(); const r = await orch.handleTelegramMessage(productUpdate({ caption: 'Tên: A\nGiá: 1tr\nTình trạng: Mới\nPage: ' + hint })); assert(r.rejected, hint); eq(drafts().length, 0);
+    }
+  });
+  await test('Page được chọn qua facebookPageTokens (đã kết nối) được chấp nhận; Page khác active vẫn phải có token', async () => {
+    resetAll(); setPath(db, 'facebookPageTokens/uidSuper/page_2', { accessToken: 'T2', isMock: false });
+    const r = await orch.handleTelegramMessage(productUpdate({ caption: 'Tên: A\nGiá: 1tr\nTình trạng: Mới\nPage: page_2' })); assert(r.result && r.result.ok); eq(only().pageId, 'page_2');
+  });
+  await test('Đã "Ngắt kết nối" (not_connected) hoặc chưa chọn Page → từ chối; token không hợp lệ với Page (Graph từ chối) → từ chối', async () => {
+    resetAll(); setPath(db, 'facebookConnection/status', 'not_connected'); let r = await orch.handleTelegramMessage(productUpdate()); assert(r.rejected); eq(drafts().length, 0);
+    resetAll(); setPath(db, 'facebookActiveToken', null); r = await orch.handleTelegramMessage(productUpdate()); assert(r.rejected); eq(drafts().length, 0);
+    resetAll(); graphInfoFail = true; r = await orch.handleTelegramMessage(productUpdate()); assert(r.rejected); eq(drafts().length, 0);
+    assert(sentTg.some((s) => /Token không truy cập/.test(s.text || '')), 'báo lỗi thật cho người dùng');
+  });
+
+  // ═════ [5] Quyền & Approval Gate ═════
+  out('\n=== [5] Quyền người duyệt / Approval Gate ===');
+  async function pending() { resetAll(); await orch.handleTelegramMessage(productUpdate()); return only(); }
+  await test('Người gửi không có quyền (ngoài approverIds / chưa ánh xạ / role không đủ / uid mất quyền) → không nhận sản phẩm; chat lạ im lặng', async () => {
+    resetAll(); let r = await orch.handleTelegramMessage(productUpdate({ from: { id: 888 } })); assert(r.skipped && r.reason === 'approver_not_allowed'); eq(drafts().length, 0);
+    resetAll(); setPath(db, 'telegramConfig/approverIds', ['777', '888']); r = await orch.handleTelegramMessage(productUpdate({ from: { id: 888 } })); eq(r.reason, 'approver_unmapped');
+    resetAll(); setPath(db, 'roles/uid_ok', 'agent'); r = await orch.handleTelegramMessage(productUpdate()); eq(r.reason, 'approver_role_not_allowed');
+    resetAll(); setPath(db, 'roles/uid_ok', null); r = await orch.handleTelegramMessage(productUpdate()); eq(r.reason, 'approver_role_not_allowed');
+    resetAll(); setPath(db, 'telegramConfig/approverMap', { '777': '../superAdmins' }); r = await orch.handleTelegramMessage(productUpdate()); eq(r.reason, 'approver_map_invalid');
+    resetAll(); sentTg.length = 0; r = await orch.handleTelegramMessage(productUpdate({ chat: { id: 4242 } })); eq(r.reason, 'chat_mismatch'); eq(sentTg.length, 0); eq(drafts().length, 0);
+    resetAll(); setPath(db, 'telegramConfig/approverIds', null); r = await orch.handleTelegramMessage(productUpdate()); eq(r.reason, 'approver_ids_not_configured'); eq(drafts().length, 0);
+  });
+  await test('super_admin (superAdmins/{uid}.role) được phép; role admin/editor mặc định được phép', async () => {
+    resetAll(); setPath(db, 'roles/uid_ok', null); setPath(db, 'superAdmins/uid_ok', { role: 'super_admin' }); let r = await orch.handleTelegramMessage(productUpdate()); assert(r.result && r.result.ok);
+    resetAll(); setPath(db, 'roles/uid_ok', 'editor'); r = await orch.handleTelegramMessage(productUpdate()); assert(r.result && r.result.ok);
+    resetAll(); setPath(db, 'superAdmins/uid_ok', { role: 'admin' }); setPath(db, 'roles/uid_ok', null); r = await orch.handleTelegramMessage(productUpdate()); eq(r.reason, 'approver_role_not_allowed');
+  });
+  await test('Người KHÔNG có quyền bấm DUYỆT/HỦY → không đăng, draft giữ PENDING_APPROVAL (kể cả cùng chat)', async () => {
+    const d = await pending();
+    for (const from of [{ id: 888 }, { id: 1 }]) {
+      const r = await webhook(cbUpdate('fb_approve', d.id, 1, from)); eq(r.status, 200);
+      await webhook(cbUpdate('fb_cancel', d.id, null, from));
+    }
+    setPath(db, 'telegramConfig/approverIds', ['777', '888']); await webhook(cbUpdate('fb_approve', d.id, 1, { id: 888 })); // trong approverIds nhưng chưa ánh xạ
+    setPath(db, 'roles/uid_ok', 'agent'); await webhook(cbUpdate('fb_approve', d.id, 1)); // đã ánh xạ nhưng mất quyền
+    await webhook(cbUpdate('fb_approve', d.id, 1, { id: 777 }, { id: 9999 })); // sai chat
+    eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'PENDING_APPROVAL'); eq(feedPosts().length, 0); eq(photoPosts().length, 0);
+  });
+  await test('Callback giả mạo: sai secret Telegram → bỏ qua; callback_data độc hại (path traversal) → bị từ chối; gọi thẳng gateway (không qua relay) không duyệt được', async () => {
+    const d = await pending();
+    let r = await webhook(cbUpdate('fb_approve', d.id, 1), 'sai-secret'); eq(r.json.reason, 'auth');
+    const evilSeen = []; for (const evil of ['../superAdmins', 'a/b', '.', 'x'.repeat(80), '$x']) { r = await webhook(cbUpdate('fb_approve', evil, 1)); evilSeen.push(r.status); }
+    assert(evilSeen.every((st) => st >= 200), 'webhook không được văng lỗi'); eq(getPath(db, 'superAdmins'), null); eq(getPath(db, 'fbPostDrafts/..'), null);
+    eq(feedPosts().length, 0); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'PENDING_APPROVAL');
+    const fbPublisher = require('../routes/fbPublisher'); let out2 = null;
+    await fbPublisher.handle({ method: 'POST', __pshPath: '/v1/facebook-publisher/callback', body: cbUpdate('fb_approve', d.id, 1), get: () => null },
+      { status() { return this; }, json(x) { out2 = x; } }, { sendSuccess: (r2, data) => r2.json({ success: true, data }), sendError: (r2, code) => r2.json({ success: false, code }), auth: { ok: false } });
+    assert(out2 && out2.success === false, 'không secret/không relay phải bị từ chối'); eq(feedPosts().length, 0);
+  });
+  await test('DUYỆT hợp lệ: đăng đúng Page + đúng nội dung/ảnh đã xem; lưu post id + người duyệt (uid PSH); Telegram nhận URL bài', async () => {
+    const d = await pending(); const r = await webhook(cbUpdate('fb_approve', d.id, 1)); eq(r.status, 200);
+    const x = getPath(db, 'fbPostDrafts/' + d.id); eq(x.status, 'PUBLISHED'); assert(/^page_1_post/.test(x.facebookPostId));
+    eq(x.approvedBy.pshUid, 'uid_ok'); eq(x.approvedBy.id, '777');
+    const feed = feedPosts(); eq(feed.length, 1); const fb = JSON.parse(feed[0].body);
+    eq(fb.message, x.aiCaption); assert(fb.attached_media && fb.attached_media.length === 1, 'đúng 1 ảnh');
+    const ph = JSON.parse(photoPosts()[0].body); eq(ph.url, x.publishImages[0]);
+    assert(/\/page_1\/(photos|feed)/.test(feed[0].url) && photoPosts().every((c) => c.url.includes('/page_1/')), 'đăng đúng Page đã chọn');
+    const msg = sentTg.filter((s) => s.kind === 'sendMessage').pop(); assert(msg.text.includes('https://www.facebook.com/' + x.facebookPostId), 'Telegram trả URL bài');
+    assert(!JSON.stringify(sentTg).includes('PAGE_TOKEN_SECRET') && !logs.join('\n').includes('PAGE_TOKEN_SECRET'), 'không lộ page token');
+  });
+  await test('Ảnh được đăng = ảnh quảng cáo người duyệt đã xem (publishImages), KHÔNG kèm ảnh gốc', async () => {
+    resetAll({ router: {} }); compositorHandler = okResp(); await orch.handleTelegramMessage(productUpdate()); const d = only();
+    await webhook(cbUpdate('fb_approve', d.id, 1)); const ph = photoPosts(); eq(ph.length, 1); eq(JSON.parse(ph[0].body).url, d.generatedImageUrl);
+  });
+  await test('DUYỆT hai lần (tuần tự và song song) → chỉ 1 bài; replay callback cũ không đăng thêm', async () => {
+    let d = await pending(); await webhook(cbUpdate('fb_approve', d.id, 1)); await webhook(cbUpdate('fb_approve', d.id, 1)); eq(feedPosts().length, 1);
+    d = await pending(); await Promise.all([webhook(cbUpdate('fb_approve', d.id, 1)), webhook(cbUpdate('fb_approve', d.id, 1)), webhook(cbUpdate('fb_approve', d.id, 1))]); eq(feedPosts().length, 1);
+    // gửi lại CHÍNH update (cùng update_id) cũng không đăng thêm
+    const u = cbUpdate('fb_approve', d.id, 1); await webhook(u); await webhook(u); eq(feedPosts().length, 1);
+  });
+  await test('HỦY: huỷ rồi duyệt → không đăng; duyệt rồi huỷ → huỷ bị từ chối, bài đăng đúng 1 lần; huỷ song song với duyệt → không thể cùng thắng', async () => {
+    let d = await pending(); await webhook(cbUpdate('fb_cancel', d.id)); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'CANCELLED'); await webhook(cbUpdate('fb_approve', d.id, 1)); eq(feedPosts().length, 0);
+    d = await pending(); await webhook(cbUpdate('fb_approve', d.id, 1)); await webhook(cbUpdate('fb_cancel', d.id)); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'PUBLISHED'); eq(feedPosts().length, 1);
+    for (let i = 0; i < 5; i++) { d = await pending(); const before = feedPosts().length; await Promise.all([webhook(cbUpdate('fb_approve', d.id, 1)), webhook(cbUpdate('fb_cancel', d.id))]);
+      const st = getPath(db, 'fbPostDrafts/' + d.id + '/status'); assert(st === 'PUBLISHED' || st === 'CANCELLED', st);
+      eq(feedPosts().length - before, st === 'PUBLISHED' ? 1 : 0, 'đăng khớp trạng thái'); }
+  });
+  await test('Nút Duyệt cũ (sai version) vô hiệu sau khi bản nháp được chỉnh sửa/duyệt lại', async () => {
+    const d = await pending(); await webhook(cbUpdate('fb_approve', d.id, 7)); eq(feedPosts().length, 0); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'PENDING_APPROVAL');
+  });
+
+  // ═════ [6] Lỗi Facebook + retry ═════
+  out('\n=== [6] Facebook lỗi / retry an toàn ===');
+  await test('Facebook từ chối ĐĂNG: draft FAILED(publish), Telegram nhận lỗi THẬT (không báo thành công giả); không có URL', async () => {
+    const d = await pending(); feedFail = true; await webhook(cbUpdate('fb_approve', d.id, 1));
+    const x = getPath(db, 'fbPostDrafts/' + d.id); eq(x.status, 'FAILED'); eq(x.failStage, 'publish'); assert(/Permissions error/.test(x.failReason) && !x.facebookPostId);
+    const msg = sentTg.filter((s) => s.kind === 'sendMessage').pop().text; assert(/THẤT BẠI/.test(msg) && /Permissions error/.test(msg) && !/Bài đã lên sóng|facebook\.com\//.test(msg));
+  });
+  await test('Facebook từ chối ẢNH: KHÔNG đăng "chỉ chữ"; FAILED; không có bài nào được tạo', async () => {
+    const d = await pending(); photoFail = true; await webhook(cbUpdate('fb_approve', d.id, 1));
+    eq(feedPosts().length, 0); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'FAILED'); assert(/Image rejected/.test(getPath(db, 'fbPostDrafts/' + d.id + '/failReason')));
+  });
+  await test('Token không còn hiệu lực cho Page lúc đăng (Graph kiểm tra) → dừng trước khi đăng, báo lỗi', async () => {
+    const d = await pending(); graphInfoFail = true; await webhook(cbUpdate('fb_approve', d.id, 1)); eq(feedPosts().length, 0); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'FAILED');
+  });
+  await test('Sau "Ngắt kết nối" giữa lúc xem trước và duyệt → không đăng', async () => {
+    const d = await pending(); setPath(db, 'facebookConnection/status', 'not_connected'); await webhook(cbUpdate('fb_approve', d.id, 1)); eq(feedPosts().length, 0); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'FAILED');
+  });
+  await test('/retry sau lỗi đăng: về PENDING_APPROVAL với version mới, nút cũ vô hiệu, duyệt lại đăng đúng 1 lần', async () => {
+    const d = await pending(); feedFail = true; await webhook(cbUpdate('fb_approve', d.id, 1)); feedFail = false;
+    const rr = await orch.handleTelegramMessage({ update_id: ++updSeq, message: { from: { id: 777 }, chat: { id: 555 }, text: '/retry ' + d.id } }); assert(rr.retried && rr.version === 2, JSON.stringify(rr));
+    eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'PENDING_APPROVAL'); const attemptsBefore = feedPosts().length; // 1 lần đăng bị Facebook từ chối
+    await webhook(cbUpdate('fb_approve', d.id, 1)); eq(feedPosts().length, attemptsBefore, 'nút Duyệt cũ (v1) không được gọi Facebook nữa');
+    eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'PENDING_APPROVAL');
+    await webhook(cbUpdate('fb_approve', d.id, 2)); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'PUBLISHED');
+    eq(feedPosts().length, attemptsBefore + 1, 'đúng 1 lần đăng thành công sau retry');
+  });
+  await test('/retry bị từ chối khi bài ĐÃ được Facebook ghi nhận, khi lỗi không ở bước đăng, hoặc bởi người không có quyền', async () => {
+    let d = await pending(); await webhook(cbUpdate('fb_approve', d.id, 1)); // PUBLISHED
+    let rr = await orch.handleTelegramMessage({ update_id: ++updSeq, message: { from: { id: 777 }, chat: { id: 555 }, text: '/retry ' + d.id } }); eq(rr.reason, 'not_failed');
+    setPath(db, 'fbPostDrafts/' + d.id + '/status', 'FAILED'); setPath(db, 'fbPostDrafts/' + d.id + '/failStage', 'publish'); setPath(db, 'fbPostDrafts/' + d.id + '/facebookPostId', 'x_1'); rr = await orch.handleTelegramMessage({ update_id: ++updSeq, message: { from: { id: 777 }, chat: { id: 555 }, text: '/retry ' + d.id } }); eq(rr.reason, 'already_posted');
+    setPath(db, 'fbPostDrafts/' + d.id + '/facebookPostId', null); setPath(db, 'fbPostDrafts/' + d.id + '/failStage', 'intake'); rr = await orch.handleTelegramMessage({ update_id: ++updSeq, message: { from: { id: 777 }, chat: { id: 555 }, text: '/retry ' + d.id } }); eq(rr.reason, 'not_publish_failure');
+    rr = await orch.handleTelegramMessage({ update_id: ++updSeq, message: { from: { id: 888 }, chat: { id: 555 }, text: '/retry ' + d.id } }); assert(rr.skipped);
+    rr = await orch.handleTelegramMessage({ update_id: ++updSeq, message: { from: { id: 777 }, chat: { id: 555 }, text: '/retry ../../x' } }); eq(rr.reason, 'bad_id');
+  });
+  await test('Gửi xem trước Telegram thất bại → draft KHÔNG treo ở PENDING (CANCELLED + lý do), không thể duyệt', async () => {
+    resetAll(); tgSendFail = true; const r = await orch.handleTelegramMessage(productUpdate()); assert(r.result && r.result.reason === 'preview_failed'); eq(only().status, 'CANCELLED'); eq(feedPosts().length, 0);
+  });
+
+  // ═════ [7] Qua webhook đầy đủ ═════
+  out('\n=== [7] Webhook end-to-end (secret → intake → duyệt → đăng → kết quả) ===');
+  await test('Telegram → webhook (có secret) → bản nháp → nút DUYỆT → đăng → tin nhắn kết quả có URL; sai secret bị chặn', async () => {
+    resetAll(); let r = await webhook(productUpdate(), 'sai'); eq(r.json.reason, 'auth'); eq(drafts().length, 0);
+    r = await webhook(productUpdate()); eq(r.status, 200); const d = only(); eq(d.status, 'PENDING_APPROVAL');
+    await webhook(cbUpdate('fb_approve', d.id, 1)); eq(only().status, 'PUBLISHED');
+    assert(sentTg.some((s) => s.kind === 'sendMessage' && /Bài đã lên sóng: https:\/\/www\.facebook\.com\//.test(s.text)));
+    // Telegram retry cùng update → vẫn 200, không thêm gì
+    const n = sentTg.length; const u = productUpdate({ update_id: 777001 }); await webhook(u); const c1 = drafts().length; await webhook(u); eq(drafts().length, c1); assert(sentTg.length >= n);
+  });
+  await test('Lỗi nội bộ trong handler không làm webhook trả non-200 và không lộ token trong log', async () => {
+    resetAll(); aiImpl = async () => { throw new Error('boom ' + BOT); }; const r = await webhook(productUpdate()); eq(r.status, 200);
+    assert(!logs.some((l) => l.includes(BOT)), 'log không chứa token');
+  });
+
+  out('\n─────────────────────────────────────────────');
+  out('PASSED: ' + passed + '  FAILED: ' + failed + '  SKIPPED: ' + skipped);
+  if (failed) { out('FAILURES: ' + failures.join(' | ')); process.exit(1); }
+  out('RESULT: PASS' + (skipped ? ' (có ' + skipped + ' test SKIPPED — xem ở trên)' : ''));
+  process.exit(0);
+})().catch((e) => { out('LỖI KHÔNG BẮT ĐƯỢC: ' + (e && e.stack || e)); process.exit(2); });
