@@ -300,7 +300,7 @@ async function handleTelegramMessage(update, depsIn) {
   // 1) Chat + người gửi (fail-closed). Chat lạ: im lặng.
   const who = checkApprover({ from: message.from, message: { chat: message.chat } }, tgConfig);
   if (!who.ok) {
-    if (who.reason === 'chat_mismatch' || who.reason === 'chat_not_configured' || who.reason === 'chat_config_invalid') return { handled: true, skipped: true, reason: who.reason };
+    if (who.reason === 'chat_mismatch' || who.reason === 'chat_not_configured' || who.reason === 'chat_config_invalid') { console.warn('[telegramWebhook] message skipped (im lặng): reason=' + who.reason); return { handled: true, skipped: true, reason: who.reason }; }
     await reply(tgConfig, message.chat.id, '⛔ Bạn không có quyền gửi sản phẩm / duyệt bài trong PSH.\nTelegram ID của bạn: ' + message.from.id + ' (gửi cho Founder để được cấp quyền).');
     return { handled: true, skipped: true, reason: who.reason };
   }

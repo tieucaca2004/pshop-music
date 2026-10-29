@@ -583,6 +583,23 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
     resetAll(); setPath(db, 'roles/uid_ok', 'editor'); r = await orch.handleTelegramMessage(productUpdate()); assert(r.result && r.result.ok);
     resetAll(); setPath(db, 'superAdmins/uid_ok', { role: 'admin' }); setPath(db, 'roles/uid_ok', null); r = await orch.handleTelegramMessage(productUpdate()); eq(r.reason, 'approver_role_not_allowed');
   });
+  await test('roles/{uid} dạng object {email,name,role} (CMS Users thật ghi): admin/editor được phép; agent/thiếu role/role không phải chuỗi/super_admin trong roles bị từ chối; DUYỆT vẫn đăng đúng 1 bài', async () => {
+    for (const ok of ['admin', 'editor']) { resetAll(); setPath(db, 'roles/uid_ok', { email: 'a@x', name: 'A', role: ok, createdAt: 1 }); const r = await orch.handleTelegramMessage(productUpdate()); assert(r.result && r.result.ok, ok); }
+    for (const bad of [{ role: 'agent' }, { email: 'a@x' }, { role: { x: 'admin' } }, { role: ['admin'] }, { role: 'super_admin' }]) { resetAll(); setPath(db, 'roles/uid_ok', bad); const r = await orch.handleTelegramMessage(productUpdate()); eq(r.reason, 'approver_role_not_allowed'); eq(drafts().length, 0); }
+    resetAll(); setPath(db, 'roles/uid_ok', { email: 'a@x', role: 'admin' }); const d = await pending(); await webhook(cbUpdate('fb_approve', d.id, 1)); eq(getPath(db, 'fbPostDrafts/' + d.id + '/status'), 'PUBLISHED');
+  });
+  await test('Cấu hình production hiện tại {dryRun:true} (thiếu chatId): bot IM LẶNG theo thiết kế (không tin nhắn, không draft, không Graph) nhưng log nêu mã lý do chat_not_configured, không lộ secret', async () => {
+    resetAll(); setPath(db, 'telegramConfig', { dryRun: true }); sentTg.length = 0; logs.length = 0;
+    const r = await webhook(productUpdate()); eq(r.status, 200);
+    eq(sentTg.length, 0); eq(drafts().length, 0); eq(calls.filter((c) => /graph\.facebook\.com/.test(c.url)).length, 0);
+    assert(logs.some((l) => /message skipped \(im lặng\): reason=chat_not_configured/.test(l)), 'log phải nêu reason');
+    assert(!logs.some((l) => l.includes(BOT) || l.includes(SECRET)), 'log không lộ secret');
+  });
+  await test('Webhook thiếu/sai secret header: bị từ chối (reason=auth), không xử lý, không tin nhắn, không ghi log (không để kẻ lạ làm ngập log)', async () => {
+    resetAll(); logs.length = 0; sentTg.length = 0;
+    for (const sec of ['', null, 'sai-secret']) { const r = await webhook(productUpdate(), sec); eq(r.status, 200); eq(r.json.reason, 'auth'); }
+    eq(drafts().length, 0); eq(sentTg.length, 0); eq(logs.length, 0);
+  });
   await test('Người KHÔNG có quyền bấm DUYỆT/HỦY → không đăng, draft giữ PENDING_APPROVAL (kể cả cùng chat)', async () => {
     const d = await pending();
     for (const from of [{ id: 888 }, { id: 1 }]) {

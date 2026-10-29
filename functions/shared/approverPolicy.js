@@ -18,6 +18,13 @@ const admin = require('firebase-admin');
 const DEFAULT_PUBLISH_ROLES = ['admin', 'editor'];
 const UID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 
+// roles/{uid}: CMS Users (admin-users.js, registration.js) ghi object {email,name,role,...}; dữ liệu cũ có thể là chuỗi.
+// Chỉ nhận chuỗi `role`; mọi dạng khác ⇒ null (từ chối).
+function extractRole(val) {
+  const r = val && typeof val === 'object' && !Array.isArray(val) ? val.role : val;
+  return typeof r === 'string' ? r : null;
+}
+
 async function resolvePshActor(telegramUserId, tgConfig) {
   const tid = telegramUserId == null ? '' : String(telegramUserId);
   if (!tid) return { ok: false, reason: 'telegram_user_missing' };
@@ -32,9 +39,9 @@ async function resolvePshActor(telegramUserId, tgConfig) {
   const allowed = Array.isArray(tgConfig.publishRoles) && tgConfig.publishRoles.length
     ? tgConfig.publishRoles.map(String) : DEFAULT_PUBLISH_ROLES;
   const roleSnap = await admin.database().ref('roles/' + uid).once('value');
-  const role = roleSnap.exists() ? roleSnap.val() : null;
+  const role = roleSnap.exists() ? extractRole(roleSnap.val()) : null;
   if (typeof role === 'string' && allowed.indexOf(role) >= 0 && role !== 'super_admin') return { ok: true, uid, role };
   return { ok: false, reason: 'approver_role_not_allowed', uid };
 }
 
-module.exports = { resolvePshActor, DEFAULT_PUBLISH_ROLES };
+module.exports = { resolvePshActor, extractRole, DEFAULT_PUBLISH_ROLES };
