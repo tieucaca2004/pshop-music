@@ -45,7 +45,12 @@ function updatePath(obj, path, changes) {
 // setPath(...); ở đây ánh xạ sang process.env để giữ nguyên kịch bản. RTDB chỉ nhận phần cấu hình KHÔNG bí mật.
 function _setEnv(k, v) { if (v === null || v === undefined || v === '') delete process.env[k]; else process.env[k] = String(v); }
 function _clearSecretEnv() { for (const k of ['TELEGRAM_BOT_TOKEN', 'TELEGRAM_WEBHOOK_SECRET', 'WEBHOOK_SIGNING_SECRET', 'COMPOSITOR_SECRET']) delete process.env[k]; }
+// Fixture cho kiem tra moi (Page cho phep o MOI duong tao draft + token rang buoc uid co quyen): moi Page ghi vao facebookPageTokens/<uid>/<page>
+// trong cac test cu duoc coi la Page cho phep (them vao allowedPageIds khi doc telegramConfig) va <uid> la super_admin (nguoi ket noi OAuth).
+let _legacyPages = [];
 function setPath(obj, path, val) {
+  const _m = path.match(/^facebookPageTokens\/([^/]+)\/([^/]+)$/);
+  if (_m) { _rawSetPath(obj, 'superAdmins/' + _m[1], { role: 'super_admin' }); if (_legacyPages.indexOf(_m[2]) < 0) _legacyPages.push(_m[2]); }
   if (path === 'webhookSigningSecret') { _setEnv('WEBHOOK_SIGNING_SECRET', val); return; }
   if (path === 'telegramWebhookSecret') { _setEnv('TELEGRAM_WEBHOOK_SECRET', val); return; }
   if (path === 'telegramConfig/token') { _setEnv('TELEGRAM_BOT_TOKEN', val); return; }
@@ -56,10 +61,11 @@ function setPath(obj, path, val) {
 let _keyCounter = 0;
 function mockRef(path) {
   return {
-    once: async () => ({
-      exists: () => getPath(dbData, path) !== null,
-      val: () => getPath(dbData, path)
-    }),
+    once: async () => {
+      let v = getPath(dbData, path);
+      if (path === 'telegramConfig' && v && typeof v === 'object') v = Object.assign({}, v, { allowedPageIds: (Array.isArray(v.allowedPageIds) ? v.allowedPageIds : []).concat(_legacyPages) });
+      return { exists: () => v !== null, val: () => v };
+    },
     set: async (val) => setPath(dbData, path, val),
     update: async (changes) => updatePath(dbData, path, changes),
     push: () => {
@@ -118,6 +124,8 @@ global.fetch = async (url) => {
   if (url && url.includes('graph.facebook.com')) {
     return { ok: true, json: async () => ({ id: 'mock_fb_post_' + Date.now() }) };
   }
+  // Anh test (SHA256 byte anh luc tao ban xem truoc / truoc khi upload): byte xac dinh theo URL.
+  if (url && /^https:\/\/[^ ]+\.(jpg|png)$/.test(String(url))) return { ok: true, status: 200, arrayBuffer: async () => Buffer.from('IMG:' + url) };
   return { ok: false, json: async () => ({ error: 'Unexpected fetch: ' + url }) };
 };
 
@@ -159,6 +167,7 @@ const TEST_TG_CONFIG = { chatId: '555', allowGatewayCallback: true, approverIds:
 function resetDb() {
   _clearSecretEnv();
   dbData = {};
+  _legacyPages = [];
   _keyCounter = 0;
   setPath(dbData, 'telegramConfig', Object.assign({}, TEST_TG_CONFIG));
   setPath(dbData, 'roles/uid_tg', 'admin');
@@ -1050,6 +1059,7 @@ await test('S14: Draft co generatedImageUrl → duoc su dung khi publish len Fac
   let uploadedUrl = null;
   const origFetch = global.fetch;
   global.fetch = async (url, opts) => {
+    if (url && /^https:\/\/[^ ]+\.(jpg|png)$/.test(String(url))) return { ok: true, status: 200, arrayBuffer: async () => Buffer.from('IMG:' + url) }; // byte anh de kiem toan ven
     if (url && url.includes('graph.facebook.com') && url.includes('fields=id,name')) {
       // getPageInfo (xác minh token đúng Page trước khi đăng)
       return { ok: true, json: async () => ({ id: 'page_s14', name: 'Page S14' }) };
@@ -1073,7 +1083,9 @@ await test('S14: Draft co generatedImageUrl → duoc su dung khi publish len Fac
   await updateStatus(draft.id, 'PROCESSING');
   await updateStatus(draft.id, 'PENDING_APPROVAL', {
     aiCaption: 'AI caption s14',
-    generatedImageUrl: 'https://ai-gen.test/s14.png'
+    generatedImageUrl: 'https://ai-gen.test/s14.png',
+    // Dang that: draft co anh PHAI co SHA256 byte anh luc xem truoc (route tao draft that tu tinh; test dung tay nen khai bao)
+    publishImageHashes: [{ url: 'https://ai-gen.test/s14.png', sha256: require('crypto').createHash('sha256').update(Buffer.from('IMG:https://ai-gen.test/s14.png')).digest('hex') }]
   });
 
   const { auth, res, sendSuccess, sendError } = makeMockHelpers();

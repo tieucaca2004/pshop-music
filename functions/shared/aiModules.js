@@ -19,7 +19,7 @@
 const listResource = require('./listResource');
 const AiModulesCore = require('./aiModulesCore');
 
-const { parseJsonResponse, stripCodeFence, escapeHtml, getYoutubeEmbedUrl, productCategoryLabels } = AiModulesCore;
+const { parseJsonResponse, stripCodeFence, escapeHtml, getYoutubeEmbedUrl, productCategoryLabels, sanitizeFacebookText, hasProductTypeHint, stripFactClaims, productFactsBlock, ensureProductName, dedupeProductNameStarts, dedupeProductMentions, stripCtaSentences, polishFacebookText } = AiModulesCore;
 
 async function productAndCategories(productId) {
   if (!productId) return {};
@@ -70,4 +70,4 @@ Object.keys(AiModulesCore.MODULES).forEach(id => {
   MODULES[id] = Object.assign({ loadContext: LOAD_CONTEXT[id] }, AiModulesCore.MODULES[id]);
 });
 
-module.exports = { MODULES, parseJsonResponse, stripCodeFence, escapeHtml, getYoutubeEmbedUrl, productCategoryLabels };
+module.exports = { MODULES, parseJsonResponse, stripCodeFence, escapeHtml, getYoutubeEmbedUrl, productCategoryLabels, sanitizeFacebookText, hasProductTypeHint, stripFactClaims, productFactsBlock, ensureProductName, dedupeProductNameStarts, dedupeProductMentions, stripCtaSentences, polishFacebookText };

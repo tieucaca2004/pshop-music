@@ -94,7 +94,7 @@ function reset() {
   dbData = {}; published = []; telegramCalls = []; keyCounter = 0;
   setPath(dbData, 'webhookSigningSecret', SECRET);       // secret gateway (WEBHOOK_SIGNING_SECRET)
   setPath(dbData, 'telegramWebhookSecret', SECRET);      // secret relay Telegram (TELEGRAM_WEBHOOK_SECRET)
-  setPath(dbData, 'facebookPageTokens/uid1/page1', { accessToken: 'mock_tok', isMock: true });
+  setPath(dbData, 'facebookActiveToken', { pageId: 'page1', accessToken: 'mock_tok', isMock: true });
   setPath(dbData, 'telegramConfig', { token: 'tg', chatId: '555', approverIds: ['1', '123', '777'], approverMap: { '1': 'uid_tg', '123': 'uid_tg', '777': 'uid_tg' } });
   setPath(dbData, 'roles/uid_tg', 'admin');
 }
@@ -392,15 +392,15 @@ const OK_CQ = { from: { id: 777, username: 'founder' }, message: { chat: { id: 5
     };
     // updateStatus dùng getDraft nội bộ (không qua store.getDraft) nên hook thêm ở đây: đảm bảo sửa-sau-duyệt
     // luôn xảy ra dù handler có đọc lại draft hay không.
-    const origUpdate = store.updateStatus;
-    store.updateStatus = async function (id, status) {
-      if (status === 'PUBLISHING' && !injected) {
+    const origMark = store.markPublishing; // PUBLISHING nay do markPublishing (transaction nguyen tu) dam nhiem
+    store.markPublishing = async function (id) {
+      if (!injected) {
         injected = true;
         await store.patchFields(id, { aiCaption: 'SUA SAU KHI DUYET', caption: 'SUA SAU KHI DUYET' });
       }
-      return origUpdate.apply(this, arguments);
+      return origMark.apply(this, arguments);
     };
-    try { await callback('fb_approve:' + d.id + ':1', OK_CQ); } finally { store.getDraft = origGet; store.updateStatus = origUpdate; }
+    try { await callback('fb_approve:' + d.id + ':1', OK_CQ); } finally { store.getDraft = origGet; store.markPublishing = origMark; }
     eq(injected, true, 'hook phải được kích hoạt');
     eq(published.length, 1); eq(published[0].message, 'Caption da duyet', 'phải đăng đúng nội dung đã duyệt');
   });
@@ -440,6 +440,46 @@ const OK_CQ = { from: { id: 777, username: 'founder' }, message: { chat: { id: 5
     await fbPublisher.handle({ method: 'POST', __pshPath: '/v1/facebook-publisher/drafts', body: { pageId: 'page1', caption: 'x', requestedBy: 'founder-uid' }, get: () => null }, h.res, h);
     const created = await store.getDraft(h.res.get().data.data.draftId);
     eq(created.requestedBy, 'founder-uid');
+  });
+
+  console.log('\n[5] Duyệt & đăng thật: hết hạn, ghi nhận kết quả, restart giữa chừng (Graph = spy, KHÔNG gọi Facebook thật)');
+  await test('draft quá 24 giờ → duyệt bị từ chối (expired), KHÔNG đăng, draft giữ nguyên PENDING_APPROVAL', async () => {
+    const d = await pendingDraft();
+    setPath(dbData, 'fbPostDrafts/' + d.id + '/createdAt', Date.now() - store.APPROVAL_TTL_MS - 60000);
+    const r = await callback('fb_approve:' + d.id + ':1', OK_CQ);
+    eq(r.data.data.skipped, true); eq(r.data.data.reason, 'expired');
+    eq(published.length, 0); eq((await store.getDraft(d.id)).status, 'PENDING_APPROVAL');
+  });
+  await test('draft còn trong hạn (23 giờ) → duyệt bình thường; draft cũ KHÔNG có createdAt → vẫn duyệt được (tương thích dữ liệu cũ)', async () => {
+    const d1 = await pendingDraft();
+    setPath(dbData, 'fbPostDrafts/' + d1.id + '/createdAt', Date.now() - 23 * 3600 * 1000);
+    await callback('fb_approve:' + d1.id + ':1', OK_CQ); eq(published.length, 1);
+    const d2 = await pendingDraft();
+    setPath(dbData, 'fbPostDrafts/' + d2.id + '/createdAt', null);
+    await callback('fb_approve:' + d2.id + ':1', OK_CQ); eq(published.length, 2);
+  });
+  await test('Facebook ĐÃ đăng nhưng ghi PUBLISHED thất bại → KHÔNG thành FAILED/retry; báo đúng Post ID; bấm lại không đăng trùng', async () => {
+    const d = await pendingDraft('Noi dung da duyet');
+    const origUpdate = store.updateStatus; const bodies = []; const origFetch = global.fetch; const oe = console.error; const errs = [];
+    console.error = (...a) => errs.push(a.join(' '));
+    global.fetch = async (url, opts) => { bodies.push(String(opts && opts.body || '')); return origFetch(url, opts); };
+    store.updateStatus = async function (id, status) { if (status === 'PUBLISHED') throw new Error('RTDB down'); return origUpdate.apply(this, arguments); };
+    let r;
+    try { r = await callback('fb_approve:' + d.id + ':1', OK_CQ); } finally { store.updateStatus = origUpdate; global.fetch = origFetch; console.error = oe; }
+    eq(published.length, 1); eq(r.data.data.recorded, false); eq(r.data.data.facebookPostId, 'post_1');
+    const after = await store.getDraft(d.id); eq(after.status, 'PUBLISHING', 'không được đánh dấu FAILED');
+    assert(bodies.some(b => b.indexOf('post_1') >= 0 && b.indexOf('KHÔNG đăng lại') >= 0), 'Telegram phải báo Post ID thật và "KHÔNG đăng lại"');
+    assert(!errs.join('\n').match(/tg|mock_tok/), 'log không chứa token');
+    eq((await store.retryFailedPublish(d.id)).committed, false);
+    await callback('fb_approve:' + d.id + ':1', OK_CQ); eq(published.length, 1, 'bấm lại không được đăng trùng');
+  });
+  await test('Function restart giữa lúc đăng (draft kẹt PUBLISHING): duyệt lại / huỷ / retry đều bị từ chối, không đăng', async () => {
+    const d = await pendingDraft();
+    await store.approveTransaction(d.id, { expectedVersion: 1 }); await store.updateStatus(d.id, 'PUBLISHING');
+    const a = await callback('fb_approve:' + d.id + ':1', OK_CQ); eq(a.data.data.skipped, true); eq(a.data.data.currentStatus, 'PUBLISHING');
+    const c = await callback('fb_cancel:' + d.id, OK_CQ); eq(c.data.data.skipped, true);
+    eq((await store.retryFailedPublish(d.id)).committed, false);
+    eq(published.length, 0); eq((await store.getDraft(d.id)).status, 'PUBLISHING');
   });
 
   console.log('\n' + (failed ? 'FAILED' : 'PASSED') + ': ' + passed + ' pass, ' + failed + ' fail');

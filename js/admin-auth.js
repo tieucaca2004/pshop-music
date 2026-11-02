@@ -39,6 +39,7 @@ const ADMIN_NAV = [
   { key: 'footer', label: 'Footer', href: '/admin/footer.html', icon: '&#11015;', role: 'admin' },
   { key: 'seo', label: 'SEO', href: '/admin/seo.html', icon: '&#128269;', role: 'admin' },
   { key: 'settings', label: 'Cài đặt', href: '/admin/settings.html', icon: '&#9881;', role: 'admin' },
+  { key: 'telegram-publisher', label: 'Telegram Publisher', href: '/admin/telegram-publisher.html', icon: '&#9992;', role: 'super_admin' },
   { key: 'facebook-settings', label: 'Facebook Configuration', href: '/admin/facebook-settings.html', icon: '&#128288;', role: 'admin' },
   { key: 'users', label: 'Người dùng', href: '/admin/users.html', icon: '&#128100;', role: 'admin' }
 ];
@@ -74,6 +75,7 @@ const FOUNDER_SMART_NAV = [
   { key: 'marketing-drafts', label: 'Marketing Drafts', href: '/admin/ai/drafts.html', icon: '&#128203;' },
   { key: 'social-media-center', label: 'Social Media Center', href: '/admin/social-media-center.html', icon: '&#128241;' },
   { key: 'settings', label: 'Cài đặt', href: '/admin/settings.html', icon: '&#9881;', role: 'admin' },
+  { key: 'telegram-publisher', label: 'Telegram Publisher', href: '/admin/telegram-publisher.html', icon: '&#9992;', role: 'super_admin' },
   { key: 'facebook-settings', label: 'Facebook Configuration', href: '/admin/facebook-settings.html', icon: '&#128288;', role: 'admin' }
 ];
 
@@ -131,7 +133,7 @@ const AdminAuth = (function () {
       // 'admin') o CA HAI che do - Smart Mode chi doi DANH SACH nav hien
       // thi, KHONG bao gio bo qua RBAC da co (vd Editor van khong thay
       // "Cai dat" du o Smart hay Advanced Mode).
-      const items = navSource.filter(i => !i.role || currentRole === 'admin' || currentRole === 'super_admin');
+      const items = navSource.filter(i => !i.role || currentRole === 'super_admin' || (i.role === 'admin' && currentRole === 'admin'));
       sidebar.innerHTML = `
         <div class="admin-brand">P<span>·</span>SHOP <span>ADMIN</span></div>
         <nav class="admin-nav">${items.map(i => navItemHtml(i, activePage)).join('')}</nav>

@@ -95,4 +95,39 @@ async function isPageAllowedForTelegram(pageId, tgConfig) {
   return list.indexOf(String(pageId)) >= 0;
 }
 
-module.exports = { getPageToken, listConnectedPages, isPageAllowedForTelegram };
+// getPageTokenForPublish — token DÙNG ĐỂ ĐĂNG (luồng Telegram + đối soát). Khác getPageToken (giữ nguyên cho nơi khác):
+//   1) facebookActiveToken khớp pageId — Page do Super Admin CHỌN ở trang quản trị (server-only);
+//   2) token "chờ chọn" trong facebookPageTokens/{uid}/{pageId} CHỈ nhận khi uid đó hiện là super_admin (người kết nối OAuth);
+//      nếu có NHIỀU token khác nhau cho cùng Page ⇒ mơ hồ ⇒ null (không lấy "token đầu tiên tìm thấy").
+// Trả { accessToken, expiresAt, isMock, uid, source } hoặc null (fail-closed).
+async function isConnectorAuthorized(uid) {
+  if (typeof uid !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(uid)) return false;
+  const sa = await admin.database().ref('superAdmins/' + uid).once('value');
+  return !!(sa.exists() && sa.val() && sa.val().role === 'super_admin');
+}
+async function getPageTokenForPublish(pageId) {
+  if (!pageId) return null;
+  const connSnap = await admin.database().ref('facebookConnection/status').once('value');
+  if (connSnap.exists() && connSnap.val() === 'not_connected') return null;
+
+  const activeSnap = await admin.database().ref('facebookActiveToken').once('value');
+  const active = activeSnap.val();
+  if (active && active.accessToken && String(active.pageId) === String(pageId)) {
+    return { accessToken: active.accessToken, expiresAt: active.expiresAt || null, isMock: !!active.isMock, uid: null, source: 'active' };
+  }
+
+  const snap = await admin.database().ref('facebookPageTokens').once('value');
+  if (!snap.exists()) return null;
+  const all = snap.val() || {};
+  const candidates = [];
+  for (const uid of Object.keys(all)) {
+    const d = all[uid] && all[uid][pageId];
+    if (d && d.accessToken && await isConnectorAuthorized(uid)) candidates.push({ accessToken: d.accessToken, expiresAt: d.expiresAt || null, isMock: !!d.isMock, uid, source: 'pending' });
+  }
+  if (candidates.length === 0) return null;
+  const distinct = new Set(candidates.map((c) => c.accessToken));
+  if (distinct.size > 1) return null;
+  return candidates[0];
+}
+
+module.exports = { getPageToken, getPageTokenForPublish, listConnectedPages, isPageAllowedForTelegram };

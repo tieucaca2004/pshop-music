@@ -29,6 +29,23 @@ async function tgFetch(url, opts) {
   try { return await fetch(url, Object.assign({}, opts, { signal: ctrl.signal })); } finally { clearTimeout(t); }
 }
 
+// logTg — log AN TOÀN cho mỗi lần gọi Telegram (trước đây thất bại hoàn toàn im lặng nên không biết bot có trả lời hay không).
+// Chỉ ghi: hành động, chat id (đã lọc ký tự), message_id (số), HTTP status, error_code, mô tả lỗi đã che token. KHÔNG ghi token/URL/nội dung tin nhắn.
+function safeId(v) { return String(v == null ? '' : v).replace(/[^0-9A-Za-z@_-]/g, '').slice(0, 40) || '?'; }
+function logTg(action, chatId, status, data, token) {
+  if (data && data.ok) {
+    const mid = data.result && data.result.message_id != null ? String(data.result.message_id).replace(/\D/g, '').slice(0, 20) : '';
+    console.log('[telegram] ' + action + ' ok chat=' + safeId(chatId) + (mid ? ' message_id=' + mid : ''));
+    return;
+  }
+  const code = data && data.error_code != null ? String(data.error_code).replace(/\D/g, '').slice(0, 6) : '?';
+  const desc = redactTg(data && data.description, token).replace(/https?:\/\/\S+/g, '<url>').replace(/\s+/g, ' ').slice(0, 200);
+  console.warn('[telegram] ' + action + ' FAILED chat=' + safeId(chatId) + ' http=' + status + ' code=' + code + ' desc=' + desc);
+}
+function logTgNetErr(action, chatId, err, token) {
+  console.warn('[telegram] ' + action + ' FAILED chat=' + safeId(chatId) + ' network_error=' + redactTg(err && err.message, token).replace(/https?:\/\/\S+/g, '<url>').replace(/\s+/g, ' ').slice(0, 160));
+}
+
 async function sendMessage({ token, chatId, text, replyMarkup }) {
   if (!token || !chatId || !text) {
     return { ok: false, error: 'Missing token/chatId/text' };
@@ -42,8 +59,10 @@ async function sendMessage({ token, chatId, text, replyMarkup }) {
       body: JSON.stringify(body)
     });
     const data = await r.json();
+    logTg('sendMessage', chatId, r.status, data, token);
     return { ok: !!data.ok, result: data };
   } catch (e) {
+    logTgNetErr('sendMessage', chatId, e, token);
     return { ok: false, error: redactTg(e && e.message, token) };
   }
 }
@@ -64,8 +83,10 @@ async function sendPhoto({ token, chatId, photo, caption, replyMarkup }) {
       body: JSON.stringify(body)
     });
     const data = await r.json();
+    logTg('sendPhoto', chatId, r.status, data, token);
     return { ok: !!data.ok, result: data };
   } catch (e) {
+    logTgNetErr('sendPhoto', chatId, e, token);
     return { ok: false, error: redactTg(e && e.message, token) };
   }
 }
@@ -85,8 +106,10 @@ async function answerCallbackQuery({ token, callbackQueryId, text }) {
       body: JSON.stringify(body)
     });
     const data = await r.json();
+    logTg('answerCallbackQuery', 'cbq', r.status, data, token);
     return { ok: !!data.ok, result: data };
   } catch (e) {
+    logTgNetErr('answerCallbackQuery', 'cbq', e, token);
     return { ok: false, error: redactTg(e && e.message, token) };
   }
 }

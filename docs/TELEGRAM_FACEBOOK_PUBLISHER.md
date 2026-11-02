@@ -2,7 +2,7 @@
 
 Luồng: `Telegram (ảnh + Tên/Giá/Tình trạng) → telegramWebhook → intake → lưu bản nháp + ảnh (Storage) → AI viết nội dung → IMAGE ROUTER / COMPOSITOR thay nền (giữ pixel sản phẩm) → xem trước Telegram → DUYỆT/HỦY → đăng đúng Fanpage → Telegram nhận kết quả + URL`.
 
-Không có hệ thống riêng: tái dùng `routes/fbPublisher.js`, `shared/fbDraftStore.js`, `shared/fbPageConfig.js`, `shared/aiGenerate.js`, `shared/telegram.js`, `facebook-graph-api.js` (Graph **v19**, không đổi).
+Không có hệ thống riêng: tái dùng `routes/fbPublisher.js`, `shared/fbDraftStore.js`, `shared/fbPageConfig.js`, `shared/aiGenerate.js`, `shared/telegram.js`, `facebook-graph-api.js` (Graph **v25.0**).
 
 ## 1. Thành phần
 | Thành phần | File | Việc |
@@ -82,3 +82,14 @@ Test: `python -m unittest -v` trong `tools/compositor`.
 
 ## 7. Rollback
 Gỡ webhook (`deleteWebhook`) hoặc xoá `telegramConfig.token` → luồng dừng ngay; rollback `apiGateway`/`telegramWebhook` về revision trước; xoá `imageRouterConfig` → quay về ảnh gốc. Bài đã đăng lên Facebook không tự gỡ (xoá thủ công trên Facebook).
+
+## 8. Graph API — phiên bản và phần CHƯA xác minh với Meta thật
+Phiên bản Graph dùng cho đường đăng và đối soát là **v25.0** (`functions/facebook-graph-api.js`, `functions/shared/fbReconcileRead.js`). Các URL hộp thoại OAuth (`routes/facebook.js`, `js/admin-facebook-connect.js`, `fb-comment-agent/src/index.js`) không nằm trên đường đăng và vẫn là v19.0.
+
+Các lệnh gọi dưới đây được kiểm thử bằng mock/giả lập trong repo, **CHƯA được xác minh với Meta thật** — chưa có bằng chứng chúng hoạt động thực tế:
+- `attached_media`: gửi dạng JSON body khi `POST /{page}/feed` (kèm ảnh đã tải lên bằng `POST /{page}/photos` với `published:false`).
+- `published_posts`: đọc bài của Page theo cửa sổ thời gian (`since`/`until`) và `limit=1` khi kiểm tra token đọc được (`probeReadable`).
+- `getPost`: `GET /{postId}?fields=id,message,created_time,from{id}` dùng để xác nhận Post ID khi Founder Recovery.
+- `probeReadable`: `GET /{page}/published_posts?fields=id&limit=1`.
+
+Bài đăng thật có kiểm soát đầu tiên (`dryRun=false`, một bài) là lần xác minh thực tế đầu tiên cho các lệnh này. Trước đó không được coi là đã hoạt động.

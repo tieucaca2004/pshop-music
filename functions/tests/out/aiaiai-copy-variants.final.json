@@ -1,0 +1,32 @@
+{
+  "product": "AIAIAI TMA-2 DJ",
+  "facts": {
+    "driver": "40mm",
+    "maxSpl": "120dB @ 1kHz",
+    "price": "5.000.000đ",
+    "condition": "Hàng mới",
+    "warranty": "1 năm"
+  },
+  "sources": [
+    "https://aiaiai.audio/headphones/tma-2-dj",
+    "https://aiaiai.audio/headphones/dj-headphones",
+    "https://aiaiai.audio/headphones/tma-2"
+  ],
+  "versions": [
+    {
+      "id": 1,
+      "angle": "Thông số + thiết kế modular",
+      "copy": "Tai nghe AIAIAI TMA-2 DJ với thiết kế modular chuyên nghiệp.\n\nDriver đường kính 40mm và Max SPL 120dB @ 1kHz là thông số của mẫu tai nghe DJ này; thiết kế modular cho phép thay thế các bộ phận khi cần.\n\nLiên hệ Pshop Music để được tư vấn thêm.\n\nGiá: 5.000.000đ\nTình trạng: Hàng mới\nBảo hành: 1 năm\n\n#PshopMusic #TaiNgheDJ #ThietBiAmThanh"
+    },
+    {
+      "id": 2,
+      "angle": "Modular — bảo trì / thay bộ phận",
+      "copy": "Tai nghe AIAIAI TMA-2 DJ\n\nVới thiết kế modular, bạn có thể thay đổi các bộ phận để phù hợp với nhu cầu sử dụng.\n\nThông số: Driver 40mm · Max SPL 120dB @ 1kHz\n\nGhé Pshop Music để tìm hiểu thêm nhé.\n\nGiá: 5.000.000đ\nTình trạng: Hàng mới\nBảo hành: 1 năm\n\n#PshopMusic #TaiNgheDJ #DJEquipment"
+    },
+    {
+      "id": 3,
+      "angle": "Cách âm — tập trung khi diễn",
+      "copy": "Tai nghe AIAIAI TMA-2 DJ\n\nVới khả năng cách âm tốt, mẫu tai nghe này giúp bạn tập trung vào âm nhạc trong buổi diễn.\n\nThông số: Driver 40mm · Max SPL 120dB @ 1kHz\n\nĐến Pshop Music để trải nghiệm sản phẩm này.\n\nGiá: 5.000.000đ\nTình trạng: Hàng mới\nBảo hành: 1 năm\n\n#PshopMusic #ThietBiAmThanh #DJ"
+    }
+  ]
+}

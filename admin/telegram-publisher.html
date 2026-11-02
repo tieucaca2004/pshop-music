@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Telegram Publisher - Pshop Music Admin</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="adminSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-wrap">
+      <p class="small-muted" style="margin-bottom:1.5rem">Cấu hình người được gửi sản phẩm và duyệt bài đăng Facebook qua Telegram. Trang này KHÔNG chứa và KHÔNG hiển thị token hay secret; token Telegram nằm ở Firebase Functions secret.</p>
+
+      <div class="panel" id="tgNotice" style="display:none;margin-bottom:1.5rem"></div>
+
+      <div class="panel" id="tgModeCard" style="margin-bottom:1.5rem">
+        <h3>🧪 Chế độ đăng bài</h3>
+        <p id="tgModeText">Đang tải…</p>
+        <p class="small-muted">Giai đoạn này CMS chỉ giữ chế độ <strong>DRY-RUN</strong> (duyệt bài nhưng KHÔNG đăng lên Facebook). Mỗi lần lưu luôn ghi dryRun = true.</p>
+      </div>
+
+      <div class="panel" id="tgPageCard" style="margin-bottom:1.5rem">
+        <h3>📘 Fanpage đang được chọn</h3>
+        <p id="tgPageText">Đang tải…</p>
+        <p class="small-muted">Publisher chỉ đăng lên Fanpage này. Đổi Fanpage tại <a href="facebook-settings.html" style="color:var(--gold-ink)">Facebook Configuration</a>.</p>
+      </div>
+
+      <div class="panel" id="tgFormCard" style="margin-bottom:1.5rem">
+        <h3>⚙️ Cấu hình Telegram</h3>
+        <div class="form-group full">
+          <label for="tgChatId">Chat ID được phép</label>
+          <input type="text" id="tgChatId" placeholder="VD: -1001234567890 hoặc @ten_kenh" autocomplete="off">
+        </div>
+
+        <h4 style="margin:1rem 0 0.4rem">Người duyệt</h4>
+        <p class="small-muted">Mỗi dòng: Telegram user ID → Firebase UID tài khoản PSH. UID phải thuộc tài khoản đã có quyền Super Admin, Admin hoặc Editor; trang này không cấp hay sửa quyền.</p>
+        <div id="tgApproverRows"></div>
+        <div class="admin-actions">
+          <button type="button" class="btn-secondary" id="tgAddRowBtn">+ Thêm người duyệt</button>
+        </div>
+
+        <div id="tgErrors" style="display:none;margin:1rem 0;color:#b00020"></div>
+        <div class="admin-actions">
+          <button type="button" class="submit-btn" id="tgSaveBtn">LƯU CẤU HÌNH</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/products-seed.js"></script>
+<script src="../js/site-content-seed.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/cms-db.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script src="../js/admin-telegram-publisher.js"></script>
+<script>
+  AdminAuth.init({ page: 'telegram-publisher', title: 'TELEGRAM PUBLISHER', requiredRole: 'admin' }).then(() => AdminTelegramPublisher.init());
+</script>
+</body>
+</html>

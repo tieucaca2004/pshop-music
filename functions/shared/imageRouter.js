@@ -24,7 +24,39 @@ const DEFAULT_TIMEOUT_MS = 45000;
 
 async function loadConfig() {
   const snap = await admin.database().ref('imageRouterConfig').once('value');
-  return snap.val() || {};
+  return snap.val();
+}
+
+// normalizeConfig — RTDB là JSON tự do: một lần ghi sai có thể biến node thành chuỗi ("null", "[]"…).
+// Phân biệt RÕ "chưa bật" với "cấu hình sai kiểu" để preview không báo sai nguyên nhân.
+// Chấp nhận cả chuỗi JSON chứa object (tương thích dữ liệu cũ), nhưng object là dạng đúng.
+function configShapeError(cfg) {
+  if (cfg.providers != null && (typeof cfg.providers !== 'object' || Array.isArray(cfg.providers))) return 'imageRouterConfig.providers phải là object.';
+  const comp = cfg.providers && cfg.providers.compositor;
+  if (comp != null && (typeof comp !== 'object' || Array.isArray(comp))) return 'imageRouterConfig.providers.compositor phải là object.';
+  return null;
+}
+function normalizeConfig(raw) {
+  if (raw == null) return { cfg: {}, invalid: null };
+  if (typeof raw === 'string') {
+    const s = raw.trim();
+    if (!s) return { cfg: {}, invalid: 'imageRouterConfig là chuỗi rỗng — cần object { providers: { compositor: {...} } }.' };
+    try {
+      const parsed = JSON.parse(s);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        return { cfg: {}, invalid: 'imageRouterConfig là chuỗi JSON nhưng không phải object (' + (parsed === null ? 'null' : Array.isArray(parsed) ? 'array' : typeof parsed) + ') — cần object.' };
+      }
+      const shape = configShapeError(parsed);
+      return shape ? { cfg: {}, invalid: shape } : { cfg: parsed, invalid: null };
+    } catch (e) {
+      return { cfg: {}, invalid: 'imageRouterConfig là chuỗi không phải JSON — cần object { providers: { compositor: {...} } }.' };
+    }
+  }
+  if (typeof raw !== 'object' || Array.isArray(raw)) {
+    return { cfg: {}, invalid: 'imageRouterConfig sai kiểu (' + (Array.isArray(raw) ? 'array' : typeof raw) + ') — cần object { providers: { compositor: {...} } }.' };
+  }
+  const shape = configShapeError(raw);
+  return shape ? { cfg: {}, invalid: shape } : { cfg: raw, invalid: null };
 }
 
 function isHttpsUrl(u) {
@@ -55,8 +87,13 @@ async function maybeBackground(cfg, deps, draft) {
 async function routeImage(draft, originalBuffer, deps) {
   const d = Object.assign({ fetch: global.fetch, generateForModule: async () => { throw new Error('generateForModule chưa được cấp'); }, uid: null, email: null }, deps || {});
   let cfg;
-  try { cfg = await loadConfig(); } catch (e) { return { status: 'failed', provider: null, note: 'Không đọc được imageRouterConfig.' }; }
-  const comp = secrets.withCompositorSecret(cfg.providers && cfg.providers.compositor); // secret từ COMPOSITOR_SECRET, không từ RTDB
+  try {
+    const loaded = normalizeConfig(await loadConfig());
+    if (loaded.invalid) return { status: 'blocked', provider: null, note: loaded.invalid + ' Dùng ảnh gốc.' };
+    cfg = loaded.cfg;
+  } catch (e) { return { status: 'failed', provider: null, note: 'Không đọc được imageRouterConfig.' }; }
+  const providers = cfg.providers && typeof cfg.providers === 'object' && !Array.isArray(cfg.providers) ? cfg.providers : {};
+  const comp = secrets.withCompositorSecret(providers.compositor); // secret từ COMPOSITOR_SECRET, không từ RTDB
   if (!comp || comp.enabled !== true) {
     return { status: 'skipped', provider: null, note: 'Chưa bật provider ghép nền (imageRouterConfig.providers.compositor). Dùng ảnh gốc.' };
   }
@@ -93,11 +130,11 @@ async function routeImage(draft, originalBuffer, deps) {
       body: JSON.stringify(payload),
       signal: ctrl.signal
     });
-    body = await resp.json();
   } catch (e) {
     const timedOut = e && (e.name === 'AbortError' || /abort/i.test(String(e.message)));
     return { status: 'failed', provider: 'compositor', note: timedOut ? 'Compositor quá thời gian chờ. Dùng ảnh gốc.' : 'Compositor không khả dụng. Dùng ảnh gốc.' };
   } finally { clearTimeout(timer); }
+  try { body = await resp.json(); } catch (e) { return { status: 'failed', provider: 'compositor', note: 'Compositor trả dữ liệu không phải JSON. Dùng ảnh gốc.' }; }
 
   if (!resp.ok || !body || body.ok !== true) {
     const code = body && body.code;
@@ -112,9 +149,14 @@ async function routeImage(draft, originalBuffer, deps) {
   try { out = Buffer.from(String(body.image_b64 || ''), 'base64'); } catch (e) { out = null; }
   const kind = out && out.length ? media.sniffImage(out) : null;
   if (!kind || out.length > media.MAX_BYTES) return { status: 'failed', provider: 'compositor', note: 'Compositor trả ảnh không hợp lệ. Dùng ảnh gốc.' };
-  const report = body.report || {};
-  if (report.product_pixels_preserved !== true) {
-    return { status: 'failed', provider: 'compositor', note: 'Compositor không xác nhận giữ nguyên pixel sản phẩm. Dùng ảnh gốc.' };
+  const report = body.report && typeof body.report === 'object' ? body.report : {};
+  const corePixels = Number(report.core_pixels);
+  const coreMismatch = Number(report.core_pixels_mismatched);
+  if (report.product_pixels_preserved !== true || (Number.isFinite(corePixels) && corePixels <= 0) || (Number.isFinite(coreMismatch) && coreMismatch > 0)) {
+    const why = Number.isFinite(coreMismatch) && coreMismatch > 0
+      ? 'báo lệch ' + coreMismatch + ' pixel lõi'
+      : (Number.isFinite(corePixels) && corePixels <= 0 ? 'không có pixel lõi để đối chiếu' : 'không xác nhận giữ nguyên pixel');
+    return { status: 'failed', provider: 'compositor', note: 'Compositor ' + why + ' — KHÔNG dùng ảnh kết quả. Dùng ảnh gốc.' };
   }
   try {
     const saved = await media.saveToStorage('fbDrafts/' + draft.id + '/final.' + kind.ext, out, kind.mime);

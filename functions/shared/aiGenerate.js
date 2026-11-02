@@ -53,16 +53,37 @@ const { MODULES, parseJsonResponse } = require('./aiModules');
 const OPENAI_API_KEY = defineSecret('OPENAI_API_KEY');
 const IMAGE_SIZE_MAP = { '1:1': '1024x1024', '4:5': '1024x1792', '16:9': '1792x1024' };
 
-async function callOpenAiText(prompt) {
+async function callOpenAiText(prompt, opts) {
   const r = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + OPENAI_API_KEY.value() },
-    body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], temperature: 0.7 })
+    body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'user', content: prompt }], temperature: 0.7 }),
+    signal: opts && opts.signal
   });
   const data = await r.json();
   if (!r.ok) throw new Error((data.error && data.error.message) || 'OpenAI API lỗi.');
   const text = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
   return { text: (text || '').trim(), raw: data };
+}
+
+// callOpenAiChat — hội thoại ngắn cho bot Telegram (1 lượt: system + user). Dùng CÙNG OPENAI_API_KEY và model như callOpenAiText;
+// khác ở chỗ có max_tokens + signal (timeout do bên gọi điều khiển) và lỗi có mã (`code`: no_key | api_error) để bên gọi báo người dùng
+// RÕ RÀNG thay vì im lặng. KHÔNG ghi log nội dung/khoá. Thiếu khoá ⇒ ném no_key (không giả vờ AI chạy).
+async function callOpenAiChat({ system, user, maxTokens, signal }) {
+  let key = '';
+  try { key = String(OPENAI_API_KEY.value() || '').trim(); } catch (e) { key = ''; }
+  if (!key) { const e = new Error('OPENAI_API_KEY chưa được cấu hình'); e.code = 'no_key'; throw e; }
+  const r = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + key },
+    body: JSON.stringify({ model: 'gpt-4o-mini', messages: [{ role: 'system', content: String(system || '') }, { role: 'user', content: String(user || '') }], temperature: 0.5, max_tokens: Number(maxTokens) > 0 ? Number(maxTokens) : 500 }),
+    signal
+  });
+  let data = null;
+  try { data = await r.json(); } catch (e) { data = null; }
+  if (!r.ok) { const e = new Error('OpenAI API lỗi (HTTP ' + r.status + ')'); e.code = 'api_error'; e.status = r.status; throw e; }
+  const text = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+  return { text: (text || '').trim() };
 }
 
 // callOpenAiImage — CÙNG hành vi action "generate_image" của openaiProxy
@@ -141,4 +162,4 @@ async function queueGeneration(moduleId, inputParams, uid) {
   return asyncJob.createJob({ uid, type: 'ai-generate:' + moduleId, payload: { inputParams, moduleId, async: true } });
 }
 
-module.exports = { generateForModule, queueGeneration, runGeneration, callOpenAiText, callOpenAiImage, OPENAI_API_KEY };
+module.exports = { generateForModule, queueGeneration, runGeneration, callOpenAiText, callOpenAiChat, callOpenAiImage, OPENAI_API_KEY };

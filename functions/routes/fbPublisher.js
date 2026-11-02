@@ -50,6 +50,7 @@ const { isRelayTrusted } = require('../shared/relayTrust');
 const { resolvePshActor } = require('../shared/approverPolicy');
 const secrets = require('../shared/telegramSecrets');
 const { resolvePublishMode, describeMode } = require('../shared/publishMode');
+const imageHash = require('../shared/imageHash');
 
 // ── Helpers đọc config từ RTDB (server-only nodes) ───────────────────────────
 
@@ -199,8 +200,8 @@ async function handle(req, res, helpers) {
       }
     }
 
-    // Verify pageId có token (mock hoặc thật)
-    const pageToken = await fbPageConfig.getPageToken(pageId);
+    // Verify pageId có token (mock hoặc thật) — token ràng buộc với uid có quyền (không lấy "token đầu tiên tìm thấy").
+    const pageToken = await fbPageConfig.getPageTokenForPublish(pageId);
     if (!pageToken) {
       return sendError(res, 'NOT_FOUND',
         'Fanpage "' + pageId + '" chưa kết nối hoặc không có token. ' +
@@ -208,6 +209,13 @@ async function handle(req, res, helpers) {
       );
     }
 
+    // Page đích phải là Page đang được chọn (hoặc nằm trong telegramConfig.allowedPageIds) — áp dụng cho MỌI đường tạo draft,
+    // không chỉ draft sinh từ Telegram.
+    const tgConfigForPage = await getTelegramConfig();
+    if (!(await fbPageConfig.isPageAllowedForTelegram(pageId, tgConfigForPage))) {
+      return sendError(res, 'PERMISSION_DENIED',
+        'Fanpage "' + pageId + '" không phải Page đang được chọn trong trang quản trị và chưa nằm trong telegramConfig.allowedPageIds.');
+    }
     // Tạo draft ở RECEIVED
     const draft = await fbDraftStore.createDraft({
       telegramUpdateId: telegramUpdateId != null ? Number(telegramUpdateId) : null,
@@ -247,9 +255,13 @@ async function handle(req, res, helpers) {
           generatedImageUrl = await generateAiImage(body, finalCaption, auth.uid, auth.email);
         }
 
+        // SHA256 byte ảnh ngay lúc chốt bản xem trước (lỗi tải ảnh ⇒ KHÔNG tạo bản duyệt được).
+        const aiImages = fbDraftStore.publishImageList({ imageUrls: Array.isArray(imageUrls) ? imageUrls : [], generatedImageUrl });
+        const aiHashes = await imageHash.hashList(aiImages);
         await fbDraftStore.updateStatus(draft.id, 'PENDING_APPROVAL', {
           aiCaption: finalCaption,
-          generatedImageUrl: generatedImageUrl || null
+          generatedImageUrl: generatedImageUrl || null,
+          publishImageHashes: aiHashes
         });
       } catch (err) {
         await fbDraftStore.updateStatus(draft.id, 'FAILED', { failReason: 'AI generate lỗi: ' + err.message });
@@ -259,7 +271,13 @@ async function handle(req, res, helpers) {
       // Non-AI path: caption đến thẳng từ user, vẫn cần PROCESSING trước PENDING_APPROVAL
       finalCaption = caption;
       await fbDraftStore.updateStatus(draft.id, 'PROCESSING');
-      await fbDraftStore.updateStatus(draft.id, 'PENDING_APPROVAL');
+      try {
+        const plainHashes = await imageHash.hashList(fbDraftStore.publishImageList({ imageUrls: Array.isArray(imageUrls) ? imageUrls : [], generatedImageUrl: null }));
+        await fbDraftStore.updateStatus(draft.id, 'PENDING_APPROVAL', { publishImageHashes: plainHashes });
+      } catch (err) {
+        await fbDraftStore.updateStatus(draft.id, 'FAILED', { failReason: 'Không kiểm tra được ảnh: ' + err.message, failStage: 'preview' });
+        return sendError(res, 'UPSTREAM_ERROR', 'Không tải được ảnh để kiểm tra toàn vẹn: ' + err.message);
+      }
     }
 
     // Gửi preview Telegram (best-effort)
@@ -353,6 +371,15 @@ async function handle(req, res, helpers) {
       if (newImg) {
         newGeneratedImageUrl = newImg;
         patches.generatedImageUrl = newImg;
+      }
+    }
+
+    // Ảnh đổi ⇒ tính lại SHA256 byte ảnh (cùng patch/transaction với nội dung & version). Lỗi tải ảnh ⇒ không sửa.
+    if (patches.imageUrls || patches.generatedImageUrl) {
+      try {
+        patches.publishImageHashes = await imageHash.hashList(fbDraftStore.publishImageList({ publishImages: draft.publishImages, generatedImageUrl: newGeneratedImageUrl, imageUrls: newImageUrls }));
+      } catch (err) {
+        return sendError(res, 'UPSTREAM_ERROR', 'Không tải được ảnh để kiểm tra toàn vẹn: ' + err.message);
       }
     }
 
@@ -496,7 +523,9 @@ async function handle(req, res, helpers) {
       // RTDB transaction để ngăn double-approve (hai click đồng thời) VÀ kiểm version ngay trong
       // transaction (G1O) — kiểm version ở bước đọc phía trên có thể lỗi thời nếu có người sửa draft.
       const expectedVersion = (versionInCallback !== null && !isNaN(versionInCallback)) ? versionInCallback : null;
-      const txn = await fbDraftStore.approveTransaction(draftId, { expectedVersion, approvedBy: approver.approvedBy });
+      // F2: chế độ quyết định TRƯỚC khi duyệt — đăng thật thì draft PHẢI có fingerprint (và hash ảnh) hợp lệ.
+      const publishMode = resolvePublishMode(tgConfig);
+      const txn = await fbDraftStore.approveTransaction(draftId, { expectedVersion, approvedBy: approver.approvedBy, requireFingerprint: publishMode.live });
       const { committed, currentStatus } = txn;
       if (!committed && txn.reason === 'version_mismatch') {
         if (tgConfig.token && callbackQueryId) {
@@ -506,6 +535,26 @@ async function handle(req, res, helpers) {
           });
         }
         return sendSuccess(res, { handled: true, draftId, action, skipped: true, reason: 'version_mismatch', callbackVersion: versionInCallback });
+      }
+      if (!committed && (txn.reason === 'fingerprint_missing' || txn.reason === 'image_hash_missing')) {
+        if (tgConfig.token && callbackQueryId) {
+          await answerCallbackQuery({ token: tgConfig.token, callbackQueryId, text: '⛔ Bản nháp thiếu dấu xác thực nội dung — không đăng.' });
+        }
+        await notifyChat(tgConfig, '⛔ Không đăng: bản nháp ' + draftId + ' thiếu dấu xác thực nội dung/ảnh (' + txn.reason + '). Gửi lại sản phẩm để tạo bản nháp MỚI.');
+        return sendSuccess(res, { handled: true, draftId, action, skipped: true, reason: txn.reason });
+      }
+      if (!committed && txn.reason === 'content_mismatch') {
+        if (tgConfig.token && callbackQueryId) {
+          await answerCallbackQuery({ token: tgConfig.token, callbackQueryId, text: '⛔ Nội dung/ảnh/Page không còn khớp bản xem trước — không đăng.' });
+        }
+        await notifyChat(tgConfig, '⛔ Không đăng: nội dung, ảnh hoặc Page của bản nháp ' + draftId + ' không còn khớp bản đã xem trước. Gửi lại sản phẩm để tạo bản nháp mới.');
+        return sendSuccess(res, { handled: true, draftId, action, skipped: true, reason: 'content_mismatch' });
+      }
+      if (!committed && txn.reason === 'expired') {
+        if (tgConfig.token && callbackQueryId) {
+          await answerCallbackQuery({ token: tgConfig.token, callbackQueryId, text: '⌛ Bản xem trước đã quá 24 giờ, không còn duyệt được. Hãy gửi lại sản phẩm để tạo bản mới.' });
+        }
+        return sendSuccess(res, { handled: true, draftId, action, skipped: true, reason: 'expired' });
       }
       if (!committed) {
         // Draft không ở PENDING_APPROVAL (đã được xử lý bởi request song song khác)
@@ -521,11 +570,16 @@ async function handle(req, res, helpers) {
       // Transaction thành công → APPROVED, tiếp tục publish
       // Nội dung đăng = bản ghi tại ĐÚNG thời điểm duyệt (snapshot của transaction), không đọc lại.
       const approvedDraft = txn.draft;
-      await fbDraftStore.updateStatus(draftId, 'PUBLISHING');
+      // APPROVED → PUBLISHING nguyên tử. KHÔNG gọi Facebook nếu không chiếm được trạng thái này.
+      const mark = await fbDraftStore.markPublishing(draftId);
+      if (!mark.committed) {
+        if (tgConfig.token && callbackQueryId) await answerCallbackQuery({ token: tgConfig.token, callbackQueryId, text: 'Draft đã được xử lý rồi.' });
+        return sendSuccess(res, { handled: true, draftId, action, skipped: true, reason: 'not_approved' });
+      }
 
       // Bản nháp từ Telegram: Page đích phải VẪN là Page đang được chọn (hoặc nằm trong allowedPageIds) tại lúc đăng — nếu Super Admin
       // đã đổi Page giữa lúc xem trước và lúc duyệt, KHÔNG đăng (kể cả khi còn token chờ chọn của Page cũ).
-      if (approvedDraft.source === 'telegram' && !(await fbPageConfig.isPageAllowedForTelegram(approvedDraft.pageId, tgConfig))) {
+      if (!(await fbPageConfig.isPageAllowedForTelegram(approvedDraft.pageId, tgConfig))) {
         await fbDraftStore.updateStatus(draftId, 'FAILED', { failReason: 'Page đích không còn là Page đang được chọn: ' + approvedDraft.pageId, failStage: 'publish' });
         if (tgConfig.token && callbackQueryId) {
           await answerCallbackQuery({ token: tgConfig.token, callbackQueryId, text: '⛔ Page đích không còn là Page đang chọn — không đăng.' });
@@ -538,7 +592,6 @@ async function handle(req, res, helpers) {
       // duyệt nhưng KHÔNG gọi Facebook (không upload ảnh, không đăng). Dùng để thử đầu-cuối trên Telegram/Storage/AI thật
       // mà không tạo bài công khai. Bản nháp ghi dryRun:true, facebookPostId rỗng; Telegram báo rõ "không đăng".
       // F2 (Phase 8): FAIL-SAFE — chỉ đăng thật khi telegramConfig.dryRun === false (boolean, tường minh). Thiếu/null/sai kiểu/true/cấu hình hỏng ⇒ dry-run.
-      const publishMode = resolvePublishMode(tgConfig);
       if (!publishMode.live) {
         await fbDraftStore.updateStatus(draftId, 'PUBLISHED', { publishedAt: Date.now(), dryRun: true, dryRunReason: publishMode.reason, facebookPostId: null });
         if (tgConfig.token && callbackQueryId) {
@@ -548,7 +601,7 @@ async function handle(req, res, helpers) {
         return sendSuccess(res, { handled: true, draftId, action, dryRun: true });
       }
 
-      const pageToken = await fbPageConfig.getPageToken(approvedDraft.pageId);
+      const pageToken = await fbPageConfig.getPageTokenForPublish(approvedDraft.pageId);
       if (!pageToken) {
         await fbDraftStore.updateStatus(draftId, 'FAILED', { failReason: 'Không tìm thấy page token cho pageId: ' + approvedDraft.pageId, failStage: 'publish' });
         await notifyChat(tgConfig, '❌ Không đăng được: không còn token cho Page ' + approvedDraft.pageId + '. Dùng /retry ' + draftId + ' sau khi Super Admin kết nối lại Page.');
@@ -560,6 +613,29 @@ async function handle(req, res, helpers) {
 
       const messageToPost = approvedDraft.aiCaption || approvedDraft.caption;
       const mockMode = pageToken.isMock;
+      // Token đã hết hạn (nếu có expiresAt hợp lệ) ⇒ dừng TRƯỚC khi gọi Facebook; chưa có request đăng nào ⇒ an toàn để /retry.
+      if (!mockMode && typeof pageToken.expiresAt === 'number' && isFinite(pageToken.expiresAt) && pageToken.expiresAt > 0 && pageToken.expiresAt < Date.now()) {
+        await fbDraftStore.updateStatus(draftId, 'FAILED', { failReason: 'Page token đã hết hạn.', failStage: 'publish' });
+        if (tgConfig.token && callbackQueryId) {
+          await answerCallbackQuery({ token: tgConfig.token, callbackQueryId, text: '❌ Page token đã hết hạn.' });
+        }
+        await notifyChat(tgConfig, '❌ Không đăng được: Page token đã hết hạn (chưa gọi Facebook). Super Admin kết nối lại Page rồi /retry ' + draftId + '.');
+        return sendSuccess(res, { handled: true, draftId, action, skipped: true, reason: 'token_expired' });
+      }
+
+      // TOÀN VẸN ẢNH (Page thật): tải lại đúng URL sẽ đăng, tính SHA256 và so với hash đã lưu lúc xem trước — TRƯỚC mọi lệnh gọi Facebook.
+      // Lỗi tải ảnh KHÔNG được bỏ qua kiểm tra: không xác minh được ⇒ không đăng.
+      const imagesToPublish = fbDraftStore.publishImageList(approvedDraft);
+      if (!mockMode && imagesToPublish.length > 0) {
+        const chk = await imageHash.verifyAgainst(imagesToPublish, approvedDraft.publishImageHashes);
+        if (!chk.ok) {
+          const changed = chk.reason === 'image_changed';
+          await fbDraftStore.updateStatus(draftId, 'FAILED', { failReason: 'Kiểm tra toàn vẹn ảnh thất bại: ' + chk.reason, failStage: changed || chk.reason === 'hash_list_mismatch' || chk.reason === 'hash_missing' ? 'image_integrity' : 'publish' });
+          if (tgConfig.token && callbackQueryId) await answerCallbackQuery({ token: tgConfig.token, callbackQueryId, text: '⛔ Ảnh không còn khớp bản xem trước — không đăng.' });
+          await notifyChat(tgConfig, '⛔ Không đăng (chưa gọi Facebook): ' + (changed ? 'ảnh đã THAY ĐỔI so với bản xem trước.' : chk.reason === 'image_unreadable' ? 'không tải lại được ảnh để kiểm tra (có thể /retry ' + draftId + ' khi ảnh truy cập được).' : 'thiếu/lệch dữ liệu hash ảnh.') + ' Mã: ' + draftId);
+          return sendSuccess(res, { handled: true, draftId, action, skipped: true, reason: chk.reason });
+        }
+      }
 
       try {
         let publishResult;
@@ -618,14 +694,39 @@ async function handle(req, res, helpers) {
         }
 
         const facebookPostId = publishResult.id;
-        await fbDraftStore.updateStatus(draftId, 'PUBLISHED', {
-          publishedAt: Date.now(),
-          facebookPostId
-        });
-
         const postUrl = !mockMode
           ? 'https://www.facebook.com/' + facebookPostId
           : null;
+        // Facebook ĐÃ tạo bài. Nếu ghi trạng thái PUBLISHED thất bại, KHÔNG được rơi xuống catch bên dưới (sẽ đánh dấu
+        // FAILED(publish) và báo "chưa tạo bài" ⇒ /retry đăng trùng). Draft giữ PUBLISHING (không duyệt/retry/huỷ được), báo Post ID thật.
+        // Ghi PUBLISHED có thử lại. Mỗi lần lỗi đều ĐỌC LẠI draft: nếu bản ghi đã là PUBLISHED với đúng Post ID (lần ghi trước
+        // thành công, chỉ bước đọc lại/ack lỗi) thì coi là đã ghi — KHÔNG báo "chưa ghi nhận".
+        const isRecorded = async () => {
+          try { const cur = await fbDraftStore.getDraft(draftId); return !!(cur && cur.status === 'PUBLISHED' && String(cur.facebookPostId) === String(facebookPostId)); }
+          catch (_) { return false; }
+        };
+        try {
+          let lastErr = null;
+          for (let attempt = 0; attempt < 3; attempt++) {
+            try {
+              await fbDraftStore.updateStatus(draftId, 'PUBLISHED', { publishedAt: Date.now(), facebookPostId });
+              lastErr = null; break;
+            } catch (e) {
+              if (await isRecorded()) { lastErr = null; break; }
+              lastErr = e; if (attempt < 2) await new Promise(r => setTimeout(r, 150 * (attempt + 1)));
+            }
+          }
+          if (lastErr) throw lastErr;
+        } catch (recordErr) {
+          // Cố ghi RIÊNG Post ID (không qua state machine) để /reconcile chốt PUBLISHED sau này mà không cần hỏi lại Facebook.
+          try { await fbDraftStore.patchFields(draftId, { facebookPostId, publishRecordFailed: true }); } catch (_) { /* ghi không được: /reconcile sẽ đối soát với Fanpage */ }
+          console.error('[fbPublisher] Facebook ĐÃ đăng nhưng không ghi được trạng thái PUBLISHED (draft giữ PUBLISHING, không retry).');
+          if (tgConfig.token && callbackQueryId) {
+            await answerCallbackQuery({ token: tgConfig.token, callbackQueryId, text: '⚠️ Bài ĐÃ được đăng nhưng chưa ghi nhận được trạng thái.' });
+          }
+          await notifyChat(tgConfig, '⚠️ Bài ĐÃ được đăng lên Facebook nhưng hệ thống không ghi nhận được trạng thái. KHÔNG đăng lại.\nPost ID: ' + facebookPostId + (postUrl ? '\n' + postUrl : '') + '\nMã bản nháp: ' + draftId);
+          return sendSuccess(res, { handled: true, draftId, action, facebookPostId, postUrl, mockMode, recorded: false });
+        }
 
         const successText = mockMode
           ? '✅ [MOCK] Đăng bài thành công (mock mode). Post ID: ' + facebookPostId

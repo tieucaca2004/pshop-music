@@ -15,7 +15,7 @@
  * giả/thật, xoá Mock Mode sau này chỉ cần xoá đúng 5 nhánh `if (mockMode)`
  * bên dưới, không đổi bất kỳ file nào khác.
  */
-const GRAPH_VERSION = 'v19.0';
+const GRAPH_VERSION = 'v25.0';
 
 // timedFetch — CHỈ dùng khi caller truyền guard:true (luồng Telegram Publisher). Mặc định (guard không đặt) uploadPhoto/publishToFeed
 // giữ NGUYÊN hành vi G1: fetch thường, không timeout riêng, lỗi mạng ném nguyên văn (có test vi phân với bản G1).

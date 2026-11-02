@@ -56,8 +56,18 @@ service firebase.storage {
       allow get: if !resource.name.matches("^businesses/.*");
       allow list: if request.auth != null
         && !(allPaths.size() > 0 && allPaths[0] == 'businesses');
+      // Real Publish (fbDrafts) — LOẠI TRỪ fbDrafts NGAY TRONG điều kiện của rule rộng này:
+      //  • Security Rules OR mọi `allow` khớp request, nên KHÔNG thể chặn fbDrafts bằng một match con `allow write: if false`
+      //    — rule rộng này vẫn khớp fbDrafts/** và vẫn cấp quyền. Điều kiện phải sửa ở CHÍNH rule rộng.
+      //  • Ảnh của bản nháp Facebook (fbDrafts/{draftId}/*) chỉ được ghi bởi Cloud Functions (Admin SDK bỏ qua Rules). Người dùng
+      //    đã đăng nhập KHÔNG được tạo/ghi đè/xoá — nếu không, ảnh có thể bị thay giữa lúc người duyệt xem trước và lúc Facebook
+      //    tải URL (hash ảnh chỉ kiểm được TRƯỚC khi upload).
+      //  • Điều kiện mới = điều kiện cũ AND thêm một vế dùng CÙNG biến resource.name ⇒ với mọi đường dẫn KHÁC fbDrafts kết quả
+      //    của create/update/delete GIỮ NGUYÊN (vế mới luôn đúng); với fbDrafts, kể cả khi resource.name không đánh giá được
+      //    (create) thì rule vẫn không cấp quyền.
       allow write: if request.auth != null
-        && !resource.name.matches("^businesses/.*");
+        && !resource.name.matches("^businesses/.*")
+        && !resource.name.matches("^fbDrafts/.*");
     }
   }
 }

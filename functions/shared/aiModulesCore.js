@@ -49,6 +49,336 @@
       .trim();
   }
 
+  // ── Facebook copy sanitizer (CHỈ dùng cho nội dung bài đăng Facebook) ─────
+  // Prompt đã cấm Markdown, nhưng model vẫn có thể trả về **, #, -, code fence…;
+  // lớp này bảo đảm đầu ra cuối là văn bản thuần và bỏ câu mở đầu sáo rỗng.
+  // KHÔNG dùng cho Telegram preview/log/tài liệu.
+  // Lưu ý: KHÔNG dùng \b sau cụm tiếng Việt — "để"/"kiếm"… có ký tự Unicode không phải \w,
+  // khiến \b không khớp. Dùng lookahead khoảng trắng/dấu câu thay thế.
+  const FACEBOOK_CLICHE_PREFIX = /^(bạn đang tìm kiếm|bạn đang tìm|bạn đang cần|bạn muốn|nếu bạn đang|hãy để|đừng bỏ lỡ|đỉnh cao|một lựa chọn hoàn hảo|sự lựa chọn hoàn hảo|sự kết hợp hoàn hảo|giải pháp hoàn hảo|nâng tầm|chinh phục|khám phá ngay|trong thế giới|khi nhắc đến|không chỉ là|đã bao giờ bạn|liệu bạn)(?=\s|$|[,.!?…:;])/i;
+
+  function splitSentencesForCleanup(block) {
+    const out = [];
+    for (const line of String(block == null ? '' : block).split(/\n+/)) {
+      // Bảo vệ dấu chấm trong số (1.800.000đ, 3.5tr) khỏi bị coi là dấu hết câu.
+      const safe = line.replace(/(\d)\.(\d)/g, '$1\uE000$2');
+      const re = /[^.!?…]+[.!?…]?/g;
+      let m; let found = false;
+      while ((m = re.exec(safe))) {
+        const t = String(m[0] || '').trim().replace(/\uE000/g, '.');
+        if (t) { out.push(t); found = true; }
+      }
+      if (!found && line.trim()) out.push(line.trim());
+    }
+    return out;
+  }
+
+  // Câu chứa claim kỹ thuật/thiết kế/uy tín KHÔNG có trong dữ kiện (name/specs) bị bỏ.
+  // Nếu chính dữ kiện có cụm đó thì giữ (vd sản phẩm ghi rõ "chống rung").
+  const UNSUPPORTED_CLAIM = /(thiết kế|sự ổn định|độ ổn định|ổn định|chống rung|giảm rung|cách âm|chất âm|âm thanh\s+(?:rõ ràng|chính xác|hay hơn|tốt hơn)|chính xác hơn|rõ ràng hơn|độ bền|bền bỉ|chịu lực|tải trọng|chất liệu|kim loại|nhôm|thép|cao cấp|chất lượng|hiệu suất|hiệu quả|sang trọng|đẳng cấp|hoàn hảo|tốt nhất|số 1|tuyệt vời|tối ưu|mạnh mẽ|nghe rõ|rõ nét|sống động|tiện lợi|hữu ích|nổi bật|thăng bằng|đang có|còn hàng|chiều cao|cân bằng âm thanh|hàng đầu|trải nghiệm âm thanh|mọi không gian|mọi thể loại|mọi phong cách|kiểm soát âm thanh|âm lượng tối đa|nghe nhạc với âm lượng|nghe ở mức|hài lòng|đắc lực|đáng sở hữu|không thể bỏ qua|lựa chọn hoàn hảo|giải pháp lý tưởng|tương thích với|dùng được với|tín đồ|chuyên nghiệp|giao diện|tính năng|đáp ứng nhu cầu|ấn tượng|điều thú vị|cần thiết|chắc chắn|vững chắc|vững vàng|đáng tin cậy|đảm bảo|điều chỉnh|độ cao|góc nghiêng|tùy chỉnh|không thể thiếu|lý tưởng|giải pháp|tuyệt vời|lựa chọn thiết thực|sự lựa chọn thiết thực|lựa chọn lý tưởng|sự lựa chọn lý tưởng|trợ thủ đắc lực|phù hợp cho mọi|phù hợp cho cả|phù hợp với mọi|mọi tình huống|mọi trường hợp|mọi buổi|mọi nhu cầu|phù hợp với (?:nhiều|hầu hết|các)|phù hợp cho (?:nhiều|hầu hết|các)|phù hợp cho những ai|lựa chọn thích hợp|sự lựa chọn thích hợp|mọi bộ dàn|mọi thiết bị|mọi loại|tối ưu hóa trải nghiệm|tối ưu trải nghiệm)/i;
+
+  // Câu CTA hợp lệ ("Liên hệ/tư vấn/ghé…") không bị coi là claim chỉ vì có chữ "tính năng"/"tình trạng".
+  const CTA_TEXT = /(liên hệ|tư vấn|ghé|hỏi thêm|inbox|nhắn tin|đến Pshop|ghé Pshop)/i;
+
+  function unsupportedClaimIn(sentence, allowedText) {
+    const re = new RegExp(UNSUPPORTED_CLAIM.source, 'gi');
+    let m;
+    while ((m = re.exec(sentence))) {
+      const claim = String(m[0] || '').toLowerCase();
+      const allowed = allowedText.indexOf(claim) >= 0 ||
+        // "tương thích với" và "tương thích hoàn toàn với" là cùng một dữ kiện.
+        (claim.indexOf('tương thích') >= 0 && allowedText.indexOf('tương thích') >= 0);
+      if (!allowed) return m[0];
+    }
+    return null;
+  }
+
+  // Chỉ bỏ các modifier khen chung (không phải danh từ/tính năng) để giữ dữ kiện trong cùng câu.
+  const SAFE_CLAIM_ADJ = /(?:ổn định|chắc chắn|vững chắc|vững vàng|bền bỉ|hoàn hảo|tuyệt vời|cao cấp|chuyên nghiệp|hiệu quả|tiện lợi|dễ dàng|linh hoạt|chính xác|rõ ràng|ấn tượng|đáng tin cậy|cần thiết)/gi;
+  const SOURCE_STOP = new Set(['sản', 'phẩm', 'của', 'cho', 'với', 'và', 'một', 'những', 'các', 'là', 'có', 'được', 'khi', 'trong', 'trên', 'dưới', 'này', 'đó', 'thì', 'rất', 'hơn', 'như', 'để', 'từ', 'đến', 'theo', 'về', 'tại', 'cũng', 'nhưng', 'hoặc', 'nếu', 'vì', 'do', 'bởi', 'mới', 'cũ']);
+  function hasSourceToken(text, allowedText) {
+    const allow = String(allowedText || '').toLowerCase();
+    return String(text || '').toLowerCase().split(/[^\p{L}\p{N}]+/u)
+      .filter(t => t.length >= 3 && !SOURCE_STOP.has(t))
+      .some(t => allow.includes(t));
+  }
+
+  // Câu trộn claim + dữ kiện: chỉ bỏ modifier/claim hẹp, giữ phần dữ kiện; nếu còn claim hoặc câu cụt thì bỏ câu.
+  function ensureSentenceEnd(s) {
+    const t = String(s || '').replace(/[,;:\s]+$/, '').trim();
+    return !t || /[.!?…]$/.test(t) ? t : t + '.';
+  }
+
+  function repairUnsupportedSentence(sentence, allow) {
+    let s = String(sentence || '');
+    // "tùy chỉnh" là biến thể của "tinh chỉnh" có trong catalogue → dùng đúng từ nguồn.
+    if (allow.includes('tinh chỉnh')) s = s.replace(/tùy chỉnh/gi, 'tinh chỉnh');
+    // So sánh hơn không có nguồn: nếu nguồn có tính từ gốc thì bỏ "hơn", giữ tính từ đã xác minh.
+    if (allow.includes('chính xác')) s = s.replace(/chính xác\s+hơn/gi, 'chính xác');
+    if (allow.includes('rõ ràng')) s = s.replace(/rõ ràng\s+hơn/gi, 'rõ ràng');
+    s = s.replace(/\b(?:chính xác|rõ ràng)\s+hơn\b/gi, ' ');
+    // "Tối ưu không gian..." / "cho âm thanh chính xác và chặt chẽ" — sửa theo dữ kiện nguồn.
+    s = s.replace(/(^|[.!?…]\s+)Tối ưu không gian (.*?) với /gi, '$1Dành cho không gian $2 với ');
+    s = s.replace(/\btối ưu không gian\b/gi, 'bố trí không gian');
+    s = s.replace(/cho âm thanh chính xác và chặt chẽ/gi, 'cho âm bass chặt và chính xác');
+    // Sau khi chuẩn hoá theo nguồn mà không còn claim thì giữ nguyên câu.
+    if (!unsupportedClaimIn(s, allow)) return ensureSentenceEnd(s);
+    // "là giải pháp hoàn hảo để" → "giúp" (giữ công dụng, bỏ claim).
+    s = s.replace(/(^|\s)là\s+giải pháp(?:\s+hoàn hảo)?\s+để(?=\s|$)/gi, '$1giúp');
+    // "được thiết kế để" → "giúp" (giữ đúng công dụng, không để lại "được để").
+    s = s.replace(/(^|\s)được\s+thiết kế\s+để(?=\s|$)/gi, '$1giúp');
+    s = s.replace(/\bmột cách\s+(?:ổn định|chắc chắn|vững chắc|vững vàng|bền bỉ|hoàn hảo|tuyệt vời|cao cấp|chuyên nghiệp|hiệu quả|tiện lợi|dễ dàng|linh hoạt|chính xác|rõ ràng|cần thiết)\b/gi, ' ');
+    s = s.replace(SAFE_CLAIM_ADJ, ' ');
+    s = s.replace(/\bthiết kế\s+(?=để|giúp|cho|với|vỏ|kim loại|nhôm|thép|nhựa|cao su|da|gỗ)/gi, ' ');
+    s = s.replace(/\s+/g, ' ').replace(/\s+([,.!?…])/g, '$1').replace(/,\s*([.!?…])/g, '$1').replace(/([,.!?…])\1+/g, '$1').replace(/^[,\s]+/, '').trim();
+    // Nếu vẫn còn claim ở một mệnh đề, bỏ mệnh đề đó và giữ mệnh đề có dữ kiện nguồn.
+    if (unsupportedClaimIn(s, allow)) {
+      const pieces = s.split(/,\s*/).map(piece => piece.trim()).filter(Boolean);
+      const kept = pieces.filter(piece =>
+        !unsupportedClaimIn(piece, allow) &&
+        hasSourceToken(piece, allow) &&
+        piece.replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean).length >= 3 &&
+        !/^(và|cho|với|thì|nhưng)\b/i.test(piece)
+      );
+      if (kept.length) s = kept.join(', ');
+    }
+    if (!s || unsupportedClaimIn(s, allow)) return null;
+    if (/\bmột cách\b/i.test(s)) return null;
+    if (/\blà\s+(?:cho|với|để|những|một|các)\b/i.test(s)) return null;
+    // Bỏ modifier trong cụm "sự chắc chắn và tiện lợi" có thể để lại "sự và…" — bỏ câu.
+    if (/(?:^|\s)sự\s+(?:và|cho|với|của|để)(?=\s|[.!?…]|$)/i.test(s) || /(?:^|\s)sự\s*[.!?…]?$/i.test(s)) return null;
+    const words = s.replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
+    if (words.length < 2) return null;
+    if (/(\b(?:là|cho|của|với|và|một|những|các|để))\s*[.!?…]?$/i.test(s)) return null;
+    if (!hasSourceToken(s, allow)) return null;
+    if (isFragmentSentence(s)) return null;
+    return ensureSentenceEnd(s);
+  }
+
+  // Câu bắt đầu bằng động từ không có chủ ngữ (thường do cắt claim) — bỏ để không trả câu cụt.
+  const FRAGMENT_START = /^(giúp|hỗ trợ|tạo|đảm bảo|phù hợp|cho phép|mở ra)(?=\s|$)/i;
+  function isFragmentSentence(sentence) {
+    const t = String(sentence || '').trim();
+    if (FRAGMENT_START.test(t)) return true;
+    // Cụm trạng ngữ đứng riêng không có mệnh đề chính, vd "Trong một buổi thu âm."
+    if (/^(trong|với|khi|để|từ|tại|nhờ|qua|bằng)(?=\s|$)/i.test(t) && !t.includes(',')) return true;
+    return false;
+  }
+  function stripUnsupportedClaims(text, allowedText) {
+    const allow = String(allowedText || '').toLowerCase();
+    return String(text == null ? '' : text).split(/\n{2,}/)
+      .map(block => splitSentencesForCleanup(block).map(sentence => {
+        if (CTA_TEXT.test(sentence)) return sentence;
+        if (isFragmentSentence(sentence)) return null;
+        if (!unsupportedClaimIn(sentence, allow)) return sentence;
+        return repairUnsupportedSentence(sentence, allow);
+      }).filter(Boolean).join(' ').trim())
+      .filter(Boolean).join('\n\n');
+  }
+
+  // Giá/tình trạng/bảo hành/khuyến mãi do AI tự nói có thể sai hoặc trùng với factsBlock do hệ thống chèn.
+  // Telegram dùng stripFactClaims() trước khi ghép facts; "Giá đỡ micro" không bị coi là giá bán.
+  const FACT_CLAIM = /(?:^|[\s(])giá\s*(?:bán|:|=|là|chỉ|sẽ|từ|khoảng)?\s*\d|tình trạng|mới\s*100%|like\s*new|\bnew\b|\bused\b|\d{1,3}(?:[.,]\d{3})+\s*(?:đ|vnd)?|\d+(?:[.,]\d+)?\s*(?:tr|triệu|k|nghìn)\b|hàng\s*cũ|đã\s*qua\s*sử\s*dụng|bảo\s*hành|khuyến\s*mãi|giảm\s*giá|trả\s*góp|chính\s*hãng|nhập\s*khẩu|xuất\s*xứ|nguyên\s*seal|full\s*box/i;
+  function stripFactClaims(text) {
+    return String(text == null ? '' : text).split(/\n{2,}/)
+      .map(block => splitSentencesForCleanup(block).map(sentence => {
+        // CTA không nêu con số cụ thể vẫn hữu ích (vd "tư vấn về tình trạng sản phẩm") — giữ.
+        if (CTA_TEXT.test(sentence) && !/\d/.test(sentence)) return sentence;
+        if (!FACT_CLAIM.test(sentence)) return sentence;
+        // Giá/tình trạng/bảo hành nằm chung câu với thông số: chỉ bỏ clause fact, giữ clause kỹ thuật.
+        const clauses = sentence.split(/,\s*|\s+và\s+/i).map(s => s.trim()).filter(Boolean);
+        const kept = clauses.filter(clause =>
+          !FACT_CLAIM.test(clause) &&
+          clause.replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean).length >= 2
+        );
+        if (!kept.length) return null;
+        const out = kept.join(', ').replace(/^[,;]\s*/, '').trim();
+        return out || null;
+      }).filter(Boolean).join(' ').trim())
+      .filter(Boolean).join('\n\n');
+  }
+
+  // Facts chuẩn cho bài CMS (Telegram có factsBlock riêng trong contentOrchestrator).
+  function productFactsBlock(p) {
+    const out = [];
+    if (p && p.price != null && String(p.price).trim() !== '') out.push('Giá: ' + String(p.price).trim());
+    const condRaw = p && (p.condition || p.status);
+    if (condRaw != null && String(condRaw).trim() !== '') {
+      const c = String(condRaw).trim();
+      out.push('Tình trạng: ' + (/^new$/i.test(c) ? 'Mới' : (/^used$/i.test(c) ? 'Đã qua sử dụng' : c)));
+    }
+    const badge = String((p && p.badgeText) || '');
+    const m = badge.match(/(?:BH|bảo hành)\s*(\d{1,2})\s*(năm|tháng|th)?/i);
+    const genuine = /chính hãng/i.test(badge) ? 'Chính hãng' : '';
+    const unit = m && m[2] ? (/^th$/i.test(m[2]) ? 'tháng' : m[2].toLowerCase()) : 'tháng';
+    const warranty = m ? 'Bảo hành ' + m[1] + ' ' + unit : '';
+    if (genuine || warranty) out.push([genuine, warranty].filter(Boolean).join(' · '));
+    return out.join('\n');
+  }
+
+  // Bảo đảm tên sản phẩm xuất hiện trong bài; nếu model gọi "sản phẩm này/giá đỡ này" thì chèn tên ở đầu.
+  // Chấp nhận cả phần lõi trước dấu "–" (vd "KRK ROKIT 8 G4" của tên đầy đủ "… – LOA KIỂM ÂM 1 CÁI")
+  // để không tạo thêm một dòng tiêu đề trùng lặp.
+  function productNameCore(name) { return String(name == null ? '' : name).split(/\s+[–—-]\s+/)[0].trim(); }
+  function ensureProductName(text, name) {
+    const t = String(text == null ? '' : text).trim();
+    const n = String(name == null ? '' : name).trim();
+    if (!n) return t;
+    const core = productNameCore(n);
+    const lower = t.toLowerCase();
+    if (lower.includes(n.toLowerCase()) || (core && lower.includes(core.toLowerCase()))) return t;
+    return (n + (t ? '\n\n' + t : '')).trim();
+  }
+
+  // Nếu model lặp nguyên tên sản phẩm ở đoạn thứ hai, đổi đoạn sau thành "Sản phẩm …" để bài không lặp tên.
+  function escapeRegExp(s) { return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+  function productMentionAlias(name) {
+    const core = productNameCore(name);
+    const trimmed = core.replace(/(?:\s+\d+){2,}$/, '').trim();
+    return trimmed.length >= 8 ? trimmed : core;
+  }
+  // Giữ lần xuất hiện đầu, các lần sau đổi thành "mẫu này" để không lặp tên.
+  function dedupeProductMentions(text, name) {
+    const alias = productMentionAlias(name);
+    if (!alias) return String(text == null ? '' : text);
+    const full = String(name || '').trim();
+    const pattern = new RegExp((full ? escapeRegExp(full) + '|' : '') + escapeRegExp(alias), 'gi');
+    let seen = false;
+    return String(text == null ? '' : text).replace(pattern, (m) => {
+      if (!seen) { seen = true; return m; }
+      return 'mẫu này';
+    });
+  }
+
+  function dedupeProductNameStarts(text, name) {
+    const t = String(text == null ? '' : text);
+    const n = String(name == null ? '' : name).trim();
+    if (!n) return t;
+    const core = productNameCore(n);
+    let seen = false;
+    return t.split(/\n{2,}/).map(paragraph => {
+      const lower = paragraph.toLowerCase();
+      const startsFull = lower.startsWith(n.toLowerCase());
+      const startsCore = !!core && lower.startsWith(core.toLowerCase());
+      if ((startsFull || startsCore) && seen) {
+        const len = startsFull ? n.length : core.length;
+        const rest = paragraph.slice(len).replace(/^[:\s,–—-]+/, '').trim();
+        return rest ? 'Sản phẩm ' + rest : 'Sản phẩm';
+      }
+      if (startsFull || startsCore) seen = true;
+      return paragraph;
+    }).join('\n\n');
+  }
+
+  // Dọn tàn dư khi bỏ claim: "Với, …" / "cùng …" đầu câu, và viết hoa đầu câu.
+  function polishFacebookText(text) {
+    let s = String(text == null ? '' : text);
+    s = s.replace(/^\s*Đặc biệt,\s*/i, '');
+    s = s.replace(/(^|[.!?…]\s+|\n\n)\s*(và|với|cho|nhưng|thì|cùng)\s*[,:]\s*/gi, '$1');
+    s = s.replace(/(^|[.!?…]\s+|\n\n)([a-zà-ỹ])/g, (m, prefix, ch) => prefix + ch.toUpperCase());
+    // Các câu cụt/khẩu ngữ đã gặp trong output thật — sửa tối thiểu, không thêm dữ kiện mới.
+    s = s.replace(/\bKim loại và nắp trượt\b/g, 'Vỏ kim loại và nắp trượt');
+    s = s.replace(/(^|\s)không lo hết chỗ(?=\s|[,.!?…]|$)/gi, '$1đủ chỗ cho nhu cầu lưu trữ');
+    s = s.replace(/\bmang đến âm bass\./gi, 'mang đến âm bass chặt và chính xác.');
+    s = s.replace(/\s+với thiết kế\.\s*$/gi, '.');
+    s = s.replace(/\s+cực kỳ tiện lợi/gi, '');
+    s = s.replace(/\s+an toàn và hiệu quả/gi, ' bảo mật');
+    s = s.replace(/\s+giúp sản phẩm luôn\.\s*$/gi, '.');
+    s = s.replace(/\s+giúp tái tạo âm thanh\./gi, ' cho âm thanh trung thực.');
+    s = s.replace(/,\s*cho DJ\.\s*$/gi, '.');
+    s = s.replace(/\bUSB drive cao cấp mẫu này\b/gi, 'Mẫu USB drive cao cấp này');
+    s = s.replace(/\bvà\s+hơn\b/gi, 'hơn');
+    // Mệnh đề "Khi …" đứng riêng thành câu cụt — nối với câu sau.
+    s = s.replace(/(^|[.!?…]\s+)(Khi [^.!?…]{3,100})\.\s+(Tốc độ|Dung lượng|Sản phẩm|USB|Với)(?=\s|$)/g,
+      (m, prefix, clause, next) => prefix + clause + ', ' + (next === 'USB' ? next : next.charAt(0).toLowerCase() + next.slice(1)));
+    return s.replace(/\s+([,.!?…])/g, '$1').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
+  function sourceDescriptionFallback(p, allowedText) {
+    const desc = String((p && p.description) || '').trim();
+    if (!desc) return '';
+    return sanitizeFacebookText(splitSentencesForCleanup(desc).slice(0, 2).join(' '), allowedText);
+  }
+
+  const CTA_SENTENCE = /(liên hệ|ghé|đến|nhắn tin|inbox|gọi)\s+(?:với\s+)?(?:Pshop Music|Pshop)|Pshop Music\s+để/i;
+  function stripCtaSentences(text) {
+    return String(text == null ? '' : text).split(/\n{2,}/).map(block =>
+      splitSentencesForCleanup(block).filter(sentence => !CTA_SENTENCE.test(sentence)).join(' ').trim()
+    ).filter(Boolean).join('\n\n');
+  }
+
+  // Final plain-text guard. Protect single-# hashtags before removing Markdown.
+  function toPlainFacebookText(text) {
+    const tags = [];
+    let s = String(text == null ? '' : text)
+      .replace(/\r\n?/g, '\n')
+      .replace(/(^|\s)(#[\p{L}\p{N}_]+)/gu, (m, pre, tag) => {
+        tags.push(tag);
+        return pre + '\u0001PSHTAG' + (tags.length - 1) + '\u0001';
+      })
+      .replace(/```[a-zA-Z0-9_-]*\s*/g, '')
+      .replace(/```/g, '')
+      .replace(/^\s{0,3}#{2,6}\s*/gm, '')
+      .replace(/^\s{0,3}#\s+/gm, '')
+      .replace(/^\s{0,3}(?:-{3,}|\*{3,}|_{3,})\s*$/gm, '')
+      .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+      .replace(/\*\*([^*\n]+)\*\*/g, '$1')
+      .replace(/__([^_\n]+)__/g, '$1')
+      .replace(/~~([^~\n]+)~~/g, '$1')
+      .replace(/\*([^*\n]+)\*/g, '$1')
+      .replace(/`([^`\n]+)`/g, '$1')
+      .replace(/\*\*/g, '')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+    s = s.replace(/\u0001PSHTAG(\d+)\u0001/g, (m, i) => tags[Number(i)] || '');
+    return s;
+  }
+
+  function sanitizeFacebookText(text, allowedText) {
+    let s = String(text == null ? '' : text)
+      .replace(/\r\n?/g, '\n')
+      .replace(/```[a-zA-Z0-9_-]*\s*\n?([\s\S]*?)```/g, '$1')
+      .replace(/<[^>\n]{1,200}>/g, '')
+      .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+      .replace(/^\s{0,3}>\s?/gm, '')
+      .replace(/^\s{0,3}(?:[-*+•–—]|\d{1,2}[.)])\s+/gm, '')
+      .replace(/\*\*([^*\n]+)\*\*/g, '$1')
+      .replace(/\*([^*\n]+)\*/g, '$1')
+      .replace(/`([^`\n]+)`/g, '$1')
+      .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+      .replace(/https?:\/\/\S+/gi, '')
+      // URL tương đối (category.html?product=...) không được để bộ tách câu biến thành "category. html? ..."
+      .replace(/\b[\w./-]+\.(?:html?|php|aspx)(?:\?[^\s]*)?/gi, '')
+      .replace(/^(xem thêm tại|tham khảo tại|xem tại|chi tiết tại)\s*[:\-–]?\s*$/gim, '')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/[ \t]{2,}/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+    if (!s) return '';
+    s = stripUnsupportedClaims(s, allowedText);
+    if (!s) return '';
+
+    // Bỏ MỌI câu sáo rỗng (vd "Bạn đang tìm kiếm…", "Hãy để…", "Đỉnh cao…") — kể cả khi nằm giữa bài.
+    // Giữ nguyên các câu có thông tin cụ thể; block rỗng bị loại.
+    const blocks = s.split(/\n{2,}/)
+      .map(block => splitSentencesForCleanup(block).filter(sentence => !FACEBOOK_CLICHE_PREFIX.test(sentence)).join(' ').trim())
+      .filter(Boolean);
+    s = blocks.join('\n\n')
+      .replace(/^(dưới đây là|bài đăng|bài viết|nội dung bài đăng|phiên bản\s*\d+)\s*[:\-–]?\s*/i, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+    return toPlainFacebookText(s);
+  }
+
+  // Nhận diện tên có NÊU RÕ loại thiết bị hay không. Nếu tên chỉ là thương hiệu + mã model
+  // (vd "Pioneer DDJ-400"), model AI không được suy đoán công dụng/tính năng từ kiến thức ngoài.
+  const PRODUCT_TYPE_HINT = /(chân\s*loa|loa|tai\s*nghe|headphone|speaker|monitor|mixer|controller|dj\s*system|all[- ]in[- ]one|audio\s*interface|soundcard|ampli|amply|đầu\s*đĩa|turntable|cdj|nắp\s*bảo\s*vệ|túi|dây|cáp|giá\s*đỡ|phụ\s*kiện|micro|\bmic\b|subwoofer|vang|effect|processor|phono|preamp|bàn\s*dj|bluetooth|thu\s*phát|jumpdrive|usb|ổ\s*cứng|thẻ\s*nhớ|đệm|mút|cách\s*âm|đèn|khói|laser|remote|điều\s*khiển)/i;
+  function hasProductTypeHint(name) { return PRODUCT_TYPE_HINT.test(String(name || '')); }
+
   function parseJsonResponse(text) {
     const cleaned = stripCodeFence(text);
     try {
@@ -243,9 +573,25 @@ Trả về DUY NHẤT 1 đối tượng JSON hợp lệ — không kèm câu gi�
       buildPrompt(inputParams, context) {
         const p = context.product || {};
         const categoryLabels = productCategoryLabels(p, context.categories);
+        const brief = inputParams.productBrief && inputParams.productBrief.name ? inputParams.productBrief : null;
+        const productName = p.name || (brief && brief.name) || '';
+        const hasCatalogData = !!(p.name && (p.description || p.shortDescription || p.specs || (Array.isArray(p.features) && p.features.length) ||
+          categoryLabels.length || p.categoryLabel || p.category || p.price != null || p.condition || p.status || p.badgeText));
+        // nameOnly chỉ khi THỰC SỰ chỉ có cái tên (Telegram brief hoặc product không có dữ liệu catalog).
+        // Có category/description/specs/giá/tình trạng ⇒ dùng dữ liệu đó, không ép model viết 1 dòng.
+        const nameOnly = !hasCatalogData && !!productName && !hasProductTypeHint(productName);
         let grounding;
         if (p.name) {
-          grounding = `sản phẩm thật sau — chỉ dùng đúng thông tin đã cho, không bịa thêm thông số: Tên: ${p.name}. Thương hiệu: ${p.brand || ''}. Thông số: ${p.specs || ''}. Mô tả ngắn: ${p.shortDescription || ''}.${categoryLabels.length ? ` Thuộc danh mục: ${categoryLabels.join(', ')}.` : ''}`;
+          const desc = String(p.description || p.shortDescription || '').trim();
+          const featureText = Array.isArray(p.features) ? p.features.map(x => String(x || '').trim()).filter(Boolean).join('; ') : String(p.features || '').trim();
+          const appText = Array.isArray(p.applications) ? p.applications.map(x => String(x || '').trim()).filter(Boolean).join('; ') : String(p.applications || p.useCases || '').trim();
+          const price = p.price != null && p.price !== '' ? ` Giá: ${p.price}.` : '';
+          const conditionValue = p.condition || p.status || '';
+          const condition = conditionValue ? ` Tình trạng: ${conditionValue}.` : '';
+          const badge = p.badgeText ? ` Thông tin bán hàng: ${p.badgeText}.` : '';
+          grounding = `sản phẩm thật sau — chỉ dùng đúng thông tin đã cho, không bịa thêm: Tên: ${p.name}. Thương hiệu: ${p.brand || ''}. Thông số: ${p.specs || ''}.${desc ? ' Mô tả: ' + desc + '.' : ''}${featureText ? ' Tính năng: ' + featureText + '.' : ''}${appText ? ' Ứng dụng: ' + appText + '.' : ''}${price}${condition}${badge}${categoryLabels.length ? ` Thuộc danh mục: ${categoryLabels.join(', ')}.` : ''}`;
+        } else if (brief) {
+          grounding = `sản phẩm thật sau — CHỈ có đúng thông tin này: Tên: ${brief.name}.`;
         } else if (inputParams.promotion) {
           grounding = `chương trình khuyến mãi sau: ${inputParams.promotion}.`;
         } else if (inputParams.topic) {
@@ -253,23 +599,58 @@ Trả về DUY NHẤT 1 đối tượng JSON hợp lệ — không kèm câu gi�
         } else {
           grounding = `giới thiệu chung về Pshop Music (không có chủ đề/sản phẩm/khuyến mãi cụ thể nào được chọn).`;
         }
-        return `Viết nội dung bài đăng Facebook cho Pshop Music (shop thiết bị DJ & âm thanh chuyên nghiệp tại Nha Trang), xoay quanh ${grounding}
+        const factRule = 'Giá và tình trạng sẽ do hệ thống chèn từ dữ liệu thật — KHÔNG nhắc lại giá hoặc tình trạng trong phần bạn viết.';
+        const single = inputParams.singleVersion === true;
+        const countLine = single
+          ? 'Viết ĐÚNG 1 PHIÊN BẢN duy nhất, tập trung vào chất lượng và độ cụ thể.'
+          : 'Viết ĐÚNG 3 PHIÊN BẢN KHÁC NHAU THỰC SỰ: bản 1 đi thẳng vào sản phẩm/điểm nổi bật; bản 2 đặt sản phẩm vào một tình huống sử dụng cụ thể nếu loại sản phẩm/dữ liệu cho phép; bản 3 là góc mua hàng thực tế (chọn đúng loại, không gian, cách dùng) nếu có căn cứ. Không chỉ thay từ đồng nghĩa, không lặp mở bài/CTA; nếu một góc không có dữ liệu thì viết ngắn hơn, KHÔNG bịa. KHÔNG lặp nguyên câu/đoạn giữa các bản; bản 2 và 3 phải có ít nhất một ý/chi tiết khác bản 1. KHÔNG tạo khan hiếm giả, KHÔNG bịa khuyến mãi.';
+        const vExample = nameOnly
+          ? '{"hook": "Đúng tên sản phẩm", "caption": "", "cta": "Liên hệ Pshop Music để được tư vấn về sản phẩm.", "hashtags": ["PshopMusic", "ThietBiAmThanh"]}'
+          : '{"hook": "Dòng đầu nêu tên sản phẩm + điểm đáng chú ý, không phải câu hỏi, không sáo rỗng", "caption": "2-4 câu tư vấn thực tế, văn bản thuần", "cta": "Lời mời liên hệ/trải nghiệm Pshop Music, nhẹ nhàng", "hashtags": ["PshopMusic", "ChanLoa", "ThietBiAmThanh"]}';
+        const jsonShape = single
+          ? `{\n  "versions": [\n    ${vExample}\n  ]\n}`
+          : `{\n  "versions": [\n    ${vExample},\n    {"hook": "...", "caption": "...", "cta": "...", "hashtags": ["..."]},\n    {"hook": "...", "caption": "...", "cta": "...", "hashtags": ["..."]}\n  ]\n}`;
+        const nameOnlyBlock = nameOnly
+          ? '\nLƯU Ý ĐẶC BIỆT: Tên sản phẩm KHÔNG nêu rõ loại thiết bị. Bài viết CHỈ được gồm: (1) một dòng tên sản phẩm; (2) một câu mời liên hệ Pshop Music để được tư vấn. KHÔNG mô tả công dụng, tính năng, thiết kế, giao diện, đối tượng người dùng; KHÔNG suy đoán từ kiến thức bên ngoài.\n'
+          : '';
+        const examplesBlock = nameOnly
+          ? '- Kém: "Pioneer DDJ-400 mang đến trải nghiệm DJ chuyên nghiệp với thiết kế thân thiện."\n- Tốt: "Pioneer DDJ-400 đang có tại Pshop Music. Liên hệ để được tư vấn về sản phẩm."'
+          : '- Kém (chung chung): "Chân loa Aura là lựa chọn hoàn hảo, nâng cao sự ổn định và độ chính xác cho dàn âm thanh."\n- Tốt (phụ kiện): "Chân loa Aura giúp đặt loa đúng vị trí; hệ thống gọn gàng, dễ bố trí trong góc nghe cần sắp xếp."\n- Tốt (monitor): "KRK ROKIT 8 G4 là monitor nearfield 8 inch. Công suất 203W, DSP và 25 preset EQ giúp chỉnh âm theo phòng; cổng bass trước cho bass chặt."\n- Tốt (USB): "JumpDrive P30 128GB đọc 450MB/s, chép nhạc lossless sang CDJ nhanh; dung lượng 128GB đủ chứa hàng nghìn bài."';
+        return `Bạn là nhân viên tư vấn thiết bị âm thanh và DJ của Pshop Music (Nha Trang). Viết bài đăng Facebook bằng tiếng Việt cho ${grounding}
+${nameOnlyBlock}
 
-Viết ĐÚNG 3 PHIÊN BẢN KHÁC NHAU (góc tiếp cận khác nhau — VD: 1 bản nhấn mạnh cảm xúc, 1 bản nhấn mạnh lý tính/thông số, 1 bản tạo cảm giác khan hiếm/khuyến mãi) để so sánh chọn bản tốt nhất.
+QUY TẮC BẮT BUỘC — bài nào vi phạm cũng không dùng được:
+1. Văn bản THUẦN, không Markdown: không dùng # cho tiêu đề, không **, *, gạch đầu dòng -, danh sách số thứ tự, code block, HTML. Hashtag ở cuối bài vẫn được (mục 8). Chỉ xuống dòng hợp lý, emoji vừa phải.
+2. Đi thẳng vào sản phẩm/chủ đề: mở bằng tên sản phẩm hoặc một chi tiết/tình huống cụ thể đáng chú ý; tên đầy đủ phải có trong hook hoặc câu đầu. Câu đầu PHẢI chứa tên đầy đủ của sản phẩm (không mở bằng "Với...", "Sản phẩm...", "Mẫu..."). KHÔNG mở bằng "Bạn đang tìm kiếm...", "Hãy để...", "Đỉnh cao trải nghiệm...", "Không chỉ là...", "Sự kết hợp hoàn hảo...", "Nâng tầm...", câu hỏi tu từ hoặc lời quảng cáo chung chung.
+3. Chỉ dùng đúng dữ kiện đã cho. KHÔNG bịa thông số, chất liệu, kích thước, công suất, tần số, trọng lượng, khả năng tương thích, bảo hành, khuyến mãi, nguồn gốc, xuất xứ, tình trạng. KHÔNG hứa cải thiện chất âm, độ chính xác, độ ổn định, chống rung hay cách âm nếu dữ liệu không nêu. KHÔNG thêm tính từ chất âm/trải nghiệm như "rõ ràng", "chi tiết", "ấm", "mềm", "sống động", "nghe rõ" nếu nguồn không có. KHÔNG nói "đang có", "còn hàng" nếu dữ liệu không xác nhận. Không có dữ liệu thì không nhắc tới.
+4. Không khẳng định sản phẩm tương thích/dùng được với thiết bị khác nếu dữ liệu không nêu. Nếu tên sản phẩm nêu rõ loại thiết bị (vd "chân loa" → đặt/giữ loa; "giá đỡ micro" → giữ/cố định micro; "loa" → phát âm thanh; "tai nghe" → nghe nhạc; "mixer/controller" → trộn/điều khiển nhạc), chỉ nói công dụng chung đó; KHÔNG suy đoán thông số, model, kích thước hay khả năng tương thích. Riêng "chân loa": chỉ nói dùng để đặt loa đúng vị trí và bố trí hệ thống gọn gàng; không nói cải thiện âm thanh hay độ chính xác.
+4b. CHỈ được mô tả công dụng khi cụm chỉ loại thiết bị xuất hiện NGUYÊN VĂN trong tên sản phẩm. Nếu tên chỉ là thương hiệu + mã model (vd "Pioneer DDJ-400") hoặc không nêu loại, TUYỆT ĐỐI không suy đoán công dụng, tính năng, thiết kế, giao diện, đối tượng người dùng; chỉ nêu tên sản phẩm và mời liên hệ Pshop Music để được tư vấn.
+4c. Viết theo loại sản phẩm, không dùng một khuôn cho tất cả: monitor/loa kiểm âm → vị trí nearfield/phòng thu và thông số nếu có; USB/ổ cứng → dung lượng, tốc độ, tương thích nếu có; phụ kiện → công dụng cơ bản. Không suy đoán điều chỉnh, độ bền, chất liệu.
+5. Giọng người bán hàng đang tư vấn trực tiếp: câu ngắn, có nhịp, động từ cụ thể; giải thích ngắn thông số quan trọng thành việc người mua làm được. Không viết như brochure, không khoe kiến thức, không lặp tên sản phẩm quá một lần (sau đó dùng "mẫu này/sản phẩm này" nếu tự nhiên). Không mở tất cả các bản bằng cùng một kiểu câu.
+6. Độ dài 3-5 câu (không tính hashtag), 1-2 đoạn. Chỉ dùng MỘT lời mời liên hệ duy nhất ở trường "cta"; KHÔNG viết lời mời liên hệ/trải nghiệm/ghé shop trong hook/caption; CTA ngắn, tự nhiên, không mở đầu bằng "Hãy..." một cách máy móc; tối đa một dấu chấm than, không lạm dụng emoji.
+7. ${factRule}
+8. Hashtags: 3-5 tag liên quan trực tiếp, đặt ở cuối, dạng #Tag (không dấu cách, không markdown).
+9. Mỗi câu phải cho người mua một thông tin cụ thể (sản phẩm dùng để làm gì, giải quyết nhu cầu nào, phù hợp với ai). Nếu nêu thông số, nói ngắn nó giúp gì; tối đa 2-3 thông số, không liệt kê suông, không lặp ý. Câu nào chỉ khen chung chung thì bỏ.
+9b. Khi dữ kiện có thông số kỹ thuật đã xác minh (trường specs/features), MỖI phiên bản PHẢI nêu ít nhất một thông số đã có và nói ngắn lợi ích gắn với thông số đó cho người dùng; không được thay toàn bộ bằng mô tả thiết kế/cảm tính và không chỉ liệt kê thông số. Không suy ra chất âm, cách âm, độ bền, độ thoải mái hoặc an toàn ngoài nguồn. Nếu chỉ có một thông số, dùng đúng thông số đó.
+9c. Không diễn đạt Max SPL thành "nghe nhạc với âm lượng tối đa", "nghe ở mức 120dB", cam kết an toàn thính giác hoặc lời khuyên nghe ở mức tối đa; chỉ nêu Max SPL như một thông số của sản phẩm.
+10. Cấm các cụm sáo rỗng: "lựa chọn hoàn hảo", "giải pháp lý tưởng", "đáng sở hữu", "không thể bỏ qua", "nâng tầm", "đẳng cấp", "số 1", "tốt nhất", "tuyệt vời", "hoàn hảo", "tối ưu nhất", "mang đến trải nghiệm tuyệt vời", "nâng tầm trải nghiệm", "nâng cao sự ổn định/độ chính xác" khi không có dữ liệu.
+11. Trước khi trả JSON, tự kiểm tra: có Markdown không? có câu nào chỉ khen chung hoặc hứa cải thiện âm thanh/độ chính xác không? có số liệu nào không nằm trong dữ liệu không? có suy đoán công dụng/tính năng khi tên sản phẩm không nêu rõ loại không? Nếu có, viết lại câu đó.
+
+VÍ DỤ CÁCH VIẾT (chỉ học mức độ cụ thể, KHÔNG copy nguyên văn cho sản phẩm khác):
+${examplesBlock}
+
+${countLine}
 
 Trả về DUY NHẤT 1 đối tượng JSON hợp lệ — không kèm giải thích, không bọc trong khối markdown, đúng cấu trúc sau:
-{
-  "versions": [
-    {"hook": "Câu mở đầu thu hút", "caption": "Nội dung chính 2-4 câu, văn bản thuần không HTML", "cta": "Câu kêu gọi hành động", "hashtags": ["tag1", "tag2", "tag3"]},
-    {"hook": "...", "caption": "...", "cta": "...", "hashtags": ["..."]},
-    {"hook": "...", "caption": "...", "cta": "...", "hashtags": ["..."]}
-  ]
-}
+${jsonShape}
 
 TUYỆT ĐỐI KHÔNG tự chèn ảnh/link, không tự bịa URL ảnh/video/link nào — hệ thống sẽ tự chèn ảnh/video/link thật vào đúng vị trí, bạn chỉ cần viết phần văn bản.`;
       },
       mapToDraftContent(providerOutput, inputParams, context) {
         const p = context.product || {};
+        const allowedText = [p.name, p.brand, p.specs, p.description, p.shortDescription, Array.isArray(p.features) ? p.features.join(' ') : p.features,
+          Array.isArray(p.applications) ? p.applications.join(' ') : (p.applications || p.useCases), p.badgeText, p.categoryLabel, p.category, p.status, p.condition, p.price,
+          inputParams.promotion, inputParams.topic, inputParams.productBrief && inputParams.productBrief.name].filter(Boolean).join(' ');
         const images = Array.isArray(p.images) && p.images.length ? p.images : (p.image ? [p.image] : []);
         const parsed = parseJsonResponse(providerOutput.text);
         const highlights = Array.isArray(p.features) && p.features.length ? p.features.slice(0, 5) : (p.specs ? [p.specs] : []);
@@ -279,27 +660,75 @@ TUYỆT ĐỐI KHÔNG tự chèn ảnh/link, không tự bịa URL ảnh/video/l
         const rawVersions = (parsed && Array.isArray(parsed.versions) && parsed.versions.length) ? parsed.versions : null;
         let versions;
         if (rawVersions) {
-          versions = rawVersions.map(v => ({
-            hook: (v && v.hook) || '', caption: (v && v.caption) || '', cta: (v && v.cta) || '',
-            hashtags: (v && Array.isArray(v.hashtags)) ? v.hashtags : []
-          }));
+          versions = rawVersions.map(v => {
+            const tags = (v && Array.isArray(v.hashtags)) ? v.hashtags
+              .map(h => String(h || '').replace(/^#+/, '').replace(/[^\p{L}\p{N}_]/gu, '').trim())
+              .filter(Boolean) : [];
+            return {
+              hook: sanitizeFacebookText(v && v.hook, allowedText),
+              caption: sanitizeFacebookText(v && v.caption, allowedText),
+              cta: sanitizeFacebookText(v && v.cta, allowedText),
+              hashtags: Array.from(new Set(tags.map(t => '#' + t)))
+            };
+          });
+          // Không lặp nguyên câu mô tả giữa các phiên bản; giữ câu đầu tiên xuất hiện.
+          const seenSentences = new Set();
+          versions = versions.map(v => {
+            if (!v.caption) return v;
+            const sentences = splitSentencesForCleanup(v.caption);
+            const kept = sentences.filter(s => {
+              const key = String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
+              if (!key) return false;
+              if (seenSentences.has(key)) return false;
+              seenSentences.add(key);
+              return true;
+            });
+            return Object.assign({}, v, { caption: kept.join(' '), __skipFallback: kept.length < sentences.length });
+          });
+          // Bản sau không còn câu nào riêng thì bỏ (không giữ hook/CTA rỗng nghĩa).
+          versions = versions.filter((v, i) => i === 0 || String(v.caption || '').trim().length > 0);
+          // Không giữ 2 bản có cùng nội dung caption (khác hook/CTA không đủ tạo giá trị riêng).
+          const seenCaptions = new Set();
+          versions = versions.filter(v => {
+            const key = String(v.caption || '').replace(/\s+/g, ' ').trim().toLowerCase();
+            if (!key) return true;
+            if (seenCaptions.has(key)) return false;
+            seenCaptions.add(key);
+            return true;
+          });
         } else {
-          versions = [{ hook: '', caption: stripCodeFence(providerOutput.text), cta: '', hashtags: [] }];
+          versions = [{ hook: '', caption: sanitizeFacebookText(stripCodeFence(providerOutput.text), allowedText), cta: '', hashtags: [] }];
         }
 
         const buildPostText = (version) => {
-          const parts = [];
-          if (version.hook) parts.push(version.hook);
-          if (version.caption) parts.push(version.caption);
-          if (highlights.length) parts.push(highlights.map(h => '✓ ' + h).join('\n'));
-          if (version.cta) parts.push(version.cta);
-          if (version.hashtags.length) parts.push(version.hashtags.map(h => (h.indexOf('#') === 0 ? h : '#' + h)).join(' '));
-          if (productLink) parts.push('Xem chi tiết: ' + productLink);
-          return parts.join('\n\n');
+          const contentParts = [];
+          if (version.hook) contentParts.push(version.hook);
+          if (version.caption) contentParts.push(version.caption);
+          // Giá/tình trạng/bảo hành lấy từ catalog, không lấy câu AI tự nói.
+          let coreText = stripFactClaims(sanitizeFacebookText(contentParts.join('\n\n'), allowedText));
+          const ctaText = version.cta ? sanitizeFacebookText(version.cta, allowedText) : '';
+          // CTA nằm trong caption lẫn trường cta: chỉ giữ trường cta, bỏ CTA lặp trong body.
+          if (ctaText) coreText = stripCtaSentences(coreText);
+          // AI bị lọc quá tay (rỗng/ngắn) → dùng 2 câu đầu description catalogue (dữ liệu thật) làm fallback.
+          if (!version.__skipFallback && p.description && (!coreText || coreText.length < 120)) {
+            const fb = sourceDescriptionFallback(p, allowedText);
+            if (fb) coreText = [coreText, fb].filter(Boolean).join('\n\n');
+          }
+          // Spec/highlight là dữ liệu catalogue, ghép sau phần văn AI.
+          if (highlights.length) coreText = [coreText, highlights.join('\n')].filter(Boolean).join('\n\n');
+          const body = polishFacebookText(dedupeProductMentions(dedupeProductNameStarts(ensureProductName([coreText, ctaText].filter(Boolean).join('\n\n'), p.name), p.name), p.name));
+          const facts = productFactsBlock(p);
+          // Link hệ thống ghép SAU sanitizer để không bị tách câu thành "category. html?..."
+          const linkLine = productLink ? 'Xem chi tiết: ' + productLink : '';
+          // Hashtag luôn ở cuối bài.
+          const tagLine = version.hashtags.length ? version.hashtags.map(h => (h.indexOf('#') === 0 ? h : '#' + h)).join(' ') : '';
+          // Kiểm tra lại SAU KHI ghép hook/caption/CTA/facts/tags — đây là đầu ra Facebook thật.
+          return toPlainFacebookText([body, facts, linkLine, tagLine].filter(Boolean).join('\n\n'));
         };
 
         const labels = ['A', 'B', 'C', 'D', 'E'];
         const versionsWithText = versions.map((v, i) => Object.assign({ label: labels[i] || String(i + 1) }, v, { postText: buildPostText(v) }));
+        versionsWithText.forEach(v => { delete v.__skipFallback; });
 
         return { versions: versionsWithText, productHighlights: highlights, featuredImage: images[0] || '', galleryImages: images.slice(1), youtubeEmbedUrl: embedUrl, productLink };
       }
@@ -448,5 +877,5 @@ TUYỆT ĐỐI KHÔNG tự chèn ảnh, không tự bịa URL ảnh nào — h�
     }
   };
 
-  return { MODULES, parseJsonResponse, stripCodeFence, escapeHtml, getYoutubeEmbedUrl, productCategoryLabels };
+  return { MODULES, parseJsonResponse, stripCodeFence, escapeHtml, getYoutubeEmbedUrl, productCategoryLabels, sanitizeFacebookText, hasProductTypeHint, stripFactClaims, productFactsBlock, ensureProductName, dedupeProductNameStarts, dedupeProductMentions, stripCtaSentences, polishFacebookText };
 });

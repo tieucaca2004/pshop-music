@@ -22,7 +22,7 @@
  * ngay sẽ vỡ link khi Founder xem lại Draft sau.
  */
 const { onRequest } = require('firebase-functions/v2/https');
-const { defineSecret } = require('firebase-functions/params');
+const { defineSecret, defineString } = require('firebase-functions/params');
 const admin = require('firebase-admin');
 const fbConn = require('./shared/fbConnectionPatch');
 // validateImageUrlOrigin — SSRF fix (Sprint 15 Phase 1, Security Audit
@@ -52,6 +52,11 @@ const OPENAI_API_KEY = defineSecret('OPENAI_API_KEY');
 const TELEGRAM_BOT_TOKEN = defineSecret('TELEGRAM_BOT_TOKEN');
 const TELEGRAM_WEBHOOK_SECRET = defineSecret('TELEGRAM_WEBHOOK_SECRET');
 const COMPOSITOR_SECRET = defineSecret('COMPOSITOR_SECRET');
+// Product research runtime config (không phải secret). Mặc định rỗng để deploy an toàn;
+// Founder cấu hình PSH_RESEARCH_PROVIDER=tavily + official domains khi nghiệm thu.
+const PSH_RESEARCH_PROVIDER = defineString('PSH_RESEARCH_PROVIDER', { default: '' });
+const PSH_RESEARCH_OFFICIAL_DOMAINS = defineString('PSH_RESEARCH_OFFICIAL_DOMAINS', { default: '' });
+const PSH_RESEARCH_TIMEOUT_MS = defineString('PSH_RESEARCH_TIMEOUT_MS', { default: '15000' });
 
 // Sprint 12 — Facebook Integration V1. App ID KHÔNG hardcode (khác quyết
 // định tạm thời ở Facebook AI V5 trước đó) — đọc từ node Firebase
@@ -653,8 +658,24 @@ if (!getApps().length) { admin.initializeApp(); }
 // (git grep trên e31beac: chỉ nhãn/chú thích), nên apiGateway giữ ĐÚNG cấu hình G1 và không phụ thuộc secret mới. Toàn bộ luồng
 // Telegram→Facebook (nhận sản phẩm, xem trước, nút DUYỆT/HỦY, đăng, báo kết quả) chạy trong telegramWebhook.
 exports.telegramWebhook = onRequest({ secrets: [OPENAI_API_KEY, TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, COMPOSITOR_SECRET], cors: false, timeoutSeconds: 120, memory: '512MiB' }, async (req, res) => {
+  // Firebase params → productResearch.configFromEnv(). Không ghi đè env nếu param rỗng.
+  const providerParam = PSH_RESEARCH_PROVIDER.value();
+  const domainsParam = PSH_RESEARCH_OFFICIAL_DOMAINS.value();
+  const timeoutParam = PSH_RESEARCH_TIMEOUT_MS.value();
+  if (providerParam) process.env.PSH_RESEARCH_PROVIDER = providerParam;
+  if (domainsParam) process.env.PSH_RESEARCH_OFFICIAL_DOMAINS = domainsParam;
+  if (timeoutParam) process.env.PSH_RESEARCH_TIMEOUT_MS = timeoutParam;
   const { handleTelegramWebhook } = require('./shared/telegramWebhookRelay');
   return handleTelegramWebhook(req, res);
+});
+
+/*
+ * telegramPublisherConfig — CMS (admin/telegram-publisher.html) xem/sửa cấu hình KHÔNG bí mật của Telegram Publisher.
+ * CHỈ super_admin (guardSuperAdmin kiểm phía server). Không bind secret nào; không bao giờ trả/ghi token; CMS chỉ giữ dryRun:true.
+ * Logic + validation: shared/telegramConfigAdmin.js.
+ */
+exports.telegramPublisherConfig = onRequest({ cors: ALLOWED_ORIGINS }, async (req, res) => {
+  return require('./shared/telegramConfigAdmin').handle(req, res, { guardSuperAdmin: fbConn.guardSuperAdmin, audit: auditLog.logSimple });
 });
 
 exports.apiGateway = onRequest({ secrets: [OPENAI_API_KEY, WEBHOOK_SIGNING_SECRET], cors: ALLOWED_ORIGINS, timeoutSeconds: 120 }, async (req, res) => {
