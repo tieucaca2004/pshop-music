@@ -8,6 +8,33 @@ As of 2026-10-31:
 - The provider is **not activated by default** and is not bound to `telegramWebhook`; production still reports `unconfigured`.
 - The repository's `agentTools.js` `research-product` uses AI knowledge only, not the Internet; it is **not** used as web research.
 
+## Behaviour after the Research → Writer change (code + mocked tests only)
+
+**Not verified against the real Internet or production.** Everything below is implemented and covered by mocked tests; real Tavily behaviour (in particular whether *keyless* mode accepts `include_raw_content`) has not been exercised since this change. Production configuration is unchanged and still has to be set by the Founder.
+
+Flow: caption → `parseProductCaption` → research (by SKU/model **or by name only**) → `applyResearchProduct` → `buildProductBrief` → writer prompt (`richBrief`) → claim filter → Telegram preview.
+
+- **Name-only lookup.** If the caption has no SKU and no model, research still runs with the product name (`contentOrchestrator.js`). It is best-effort: no draft is rejected because research failed, and `product.sku` is never created from research.
+- **Page content.** The Tavily request asks for `include_raw_content`. If Tavily answers HTTP 400/422 the adapter retries once without it and the result is marked `contentLevel: "snippet"` (no features/applications/description can be extracted from a snippet that lacks them). `contentLevel: "page"` means at least one accepted source returned page text.
+- **Verification from evidence in the source, not from the query.** A result is accepted only if its **title or URL** contains the model as a contiguous token run (`ddj 400` or `ddj400`, with exact token boundaries, so DDJ-400 ≠ DDJ-1000/DDJ-4000/DDJ-FLX4; "Generation 4" = G4). Variant words (wireless/xe/studio…), generation tokens (G3 vs G4, Mk) and comparison/"vs"/"best" titles are rejected. If a brand was supplied it must appear in the source. `matchedSku`/`product.model` are the string found **in the source**; `verification.evidence` lists url / where / matched text. A custom HTTP provider still supplies its own `matchedSku`.
+- **Unverifiable queries are not searched.** Names with no model-like token (no digit and fewer than 2 identifying words, e.g. "Giá đỡ micro") return `rejected / unverifiable_query` without any network call; if nothing matches, `rejected / no_matching_source`. The writer then receives only the product name (unchanged safe behaviour).
+- **Extracted content (verbatim from the source page, no inference):** `specs` (`Key: value` lines and table rows), `features` (bullet lines), `applications` (sentences with usage cues such as "designed for / ideal for / for DJs/studio"), `description` (first descriptive paragraph), `claims` (up to 30 clean lines per source). Text after "Related products / You may also like / Compare…" is cut off, and price/cart/shipping/cookie lines are dropped. Up to 4 sources, official ones first.
+- **Writer input.** `buildProductBrief` carries brand, model, type, specs, description, features, applications and up to 24 `referenceNotes` (English source text is rephrased in Vietnamese by the writer) plus the verification level. The claim filter's allowed text includes all of these, so a faithful paraphrase survives while unsourced claims (and unsourced venue/audience claims) are still removed. The filter itself was not loosened.
+- **Cache.** Results carry `schema: 2`. Older cache entries (no schema; snippet-only or query-verified) are ignored and re-researched. Verified results with no usable content (no specs/features/applications/description/≥3 claim lines) are not cached. No Firebase data is deleted; old entries simply age out/are overwritten.
+
+### Bài Facebook từ dữ liệu research (Content Engine)
+- **Chỉ có tên / không có nguồn khớp:** không gọi AI. Bài = mở bài ("Pshop Music giới thiệu <tên>.") → giá/tình trạng Founder cấp → lời mời liên hệ → hashtag. Telegram Preview liệt kê "Thông tin còn thiếu" (không nằm trong bài đăng).
+- **Có research:** Writer nhận mô tả/tính năng/công dụng/tài liệu tham khảo; bộ lọc claim loại câu không nguồn, kể cả **thông số số học tự bịa** (mọi "số + đơn vị" như W/Hz/dB/inch/mm/kg phải có trong nguồn).
+- **Bảng thông số kỹ thuật** do CODE ghép nguyên văn từ research khi status \`verified\` (nguồn hãng theo \`PSH_RESEARCH_OFFICIAL_DOMAINS\`); không in khi \`partial\`/\`rejected\`. Thứ tự bài: nội dung → thông số → giá/tình trạng → CTA → hashtag.
+- **Preview** hiển thị toàn bộ bài (tách nhiều tin Telegram nếu > ~3800 ký tự, nút DUYỆT/HỦY ở tin cuối). Publisher đăng nguyên văn \`aiCaption\`; thân bài giới hạn an toàn 6000 ký tự (cắt theo đoạn) so với giới hạn 63.206 của Facebook.
+
+### Limits that remain
+- Only Tavily is wired (no extra provider/service was added). Whether keyless mode returns `raw_content` is unconfirmed; the snippet fallback is the safety net.
+- Verification relies on the title/URL token match. A page that is titled with the right model but whose body mixes other models can still contribute lines (mitigated, not eliminated, by the "related products" cut-off).
+- Official-source status needs `PSH_RESEARCH_OFFICIAL_DOMAINS`; otherwise the status is `partial`. Only `krkmusic.com` is a Founder-confirmed domain; `pioneerdj.com` etc. appear only in tests.
+- Extraction works on English-style pages; sparse pages yield sparse data and the writer stays short on purpose.
+- Names that are purely Vietnamese/generic are not searched (by design).
+
 ## Provider recommendation
 
 Recommended: **Tavily Search API — keyless mode**.
@@ -115,6 +142,7 @@ Rules enforced by PSH:
 
 ## Intake behavior
 
+- Name only (no SKU/model): research runs by name; verified data is merged, otherwise the writer gets only the name.
 - SKU found in PSH catalogue: catalogue remains primary; verified research fills missing fields and is shown with sources.
 - SKU not in catalogue + verified research: draft product is created from research name/specs; submitted price is kept.
 - SKU not in catalogue + unconfigured/error/timeout: **no draft**; user is told research is unavailable.

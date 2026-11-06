@@ -62,6 +62,10 @@ const mockAdmin = {
 };
 mockAdmin.database.ServerValue = { TIMESTAMP: '__ts__' };
 
+// Bước kiểm chứng câu (facebook-claim-verifier) mặc định: DUYỆT mọi câu với trích dẫn lấy từ chính dữ kiện nguồn; test cụ thể ghi đè verifierImpl.
+const quoteOf = (ev) => String(ev || '').split(/\n/).map(x => x.trim()).sort((a, b) => b.length - a.length)[0].split(/\s+/).slice(0, 8).join(' ');
+const approveAll = async (m, input) => ({ content: { results: (input.sentences || []).map((x, i) => ({ i, label: 'feature', evidence: quoteOf(input.evidenceText) })) } });
+let verifierImpl = approveAll;
 let aiImpl = async (moduleId) => ({ content: { versions: [{ hook: 'AI hook', caption: 'AI caption cho sản phẩm', cta: 'Nhắn tin ngay', hashtags: ['pshop', '#dj'] }] } });
 const Module = require('module');
 const origLoad = Module._load;
@@ -70,7 +74,7 @@ let _realAg = null;
 const realAiGenerate = () => _realAg || (_realAg = origLoad.call(Module, require('path').join(__dirname, '..', 'shared', 'aiGenerate.js'), module));
 Module._load = function (request, parent) {
   if (request === 'firebase-admin') return mockAdmin;
-  if (/(^|\/)aiGenerate$/.test(request)) return { generateForModule: (...a) => aiImpl(...a), callOpenAiChat: (...a) => realAiGenerate().callOpenAiChat(...a) };
+  if (/(^|\/)aiGenerate$/.test(request)) return { generateForModule: (m, ...a) => (m === 'facebook-claim-verifier' ? verifierImpl(m, ...a) : aiImpl(m, ...a)), callOpenAiChat: (...a) => realAiGenerate().callOpenAiChat(...a) };
   return origLoad.apply(this, arguments);
 };
 
@@ -151,6 +155,7 @@ const SECRET = 'tg-webhook-secret-for-tests';
 function resetAll(opts) {
   storageFetchFail = false; db = {}; storageFiles = {}; calls = []; sentTg = []; nPost = 0; keyCounter = 0; logs.length = 0;
   tgFileBytes = JPEG_BYTES; tgGetFileFail = false; tgSendFail = false; graphInfoFail = false; photoFail = false; feedFail = false; feedNetErr = false; feedOverride = null; failRead = null; compositorHandler = null;
+  verifierImpl = approveAll;
   aiImpl = async () => ({ content: { versions: [{ hook: 'AI hook', caption: 'AI caption cho sản phẩm', cta: 'Nhắn tin ngay', hashtags: ['pshop', '#dj'] }] } });
   // Phase 5: secret = Functions secret (env), KHÔNG ở RTDB; RTDB chỉ có cấu hình không bí mật.
   process.env.TELEGRAM_BOT_TOKEN = BOT; process.env.TELEGRAM_WEBHOOK_SECRET = SECRET; delete process.env.COMPOSITOR_SECRET;
@@ -240,7 +245,9 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
     eq(d.product.price, 5000000);
     eq(d.product.warrantyMonths, 12);
     assert(!d.product.model);
-    assert(!d.research, 'không đủ model/SKU thì không chạy research');
+    // Từ Product Research → Writer: chỉ có tên vẫn được tra theo tên, nhưng chưa cấu hình/chưa xác minh thì KHÔNG có dữ kiện nào được dùng.
+    assert(!d.research || (d.research.status !== 'verified' && d.research.status !== 'partial'), 'không được coi là đã xác minh: ' + JSON.stringify(d.research));
+    assert(!d.product.description && !(d.product.features || []).length, 'không dữ kiện bịa');
     assert(d.notices.some(n => /Chưa xác định chính xác model/.test(n)), JSON.stringify(d.notices));
     const text = lastPreview().caption || lastPreview().text;
     assert(/Tai nghe AIAIAI/.test(text) && /5\.000\.000đ/.test(text) && /12 tháng|1 năm/.test(text), text);
@@ -266,7 +273,8 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
     eq(d.product.visionModel, 'TMA-2');
     assert(d.notices.some(n => /CHƯA xác minh/.test(n)), JSON.stringify(d.notices));
     const text = lastPreview().caption || lastPreview().text;
-    assert(/Loại: Tai nghe chụp tai DJ/.test(text) && /Thương hiệu: AIAIAI/.test(text), text);
+    assert(!/Loại:|Thương hiệu:|Model gợi ý|Mức xác minh|Phiên bản/.test(text), 'preview không lộ metadata nội bộ: ' + text);
+    eq(d.product.productType, 'Tai nghe chụp tai DJ'); // vẫn lưu trong draft (trạng thái quản trị)
   });
   await test('Vision lỗi/thiếu dữ liệu → không chặn intake, có cảnh báo và không bịa', async () => {
     resetAll();
@@ -314,7 +322,8 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
     eq(d.research.status, 'catalog-only');
     assert(/web research/i.test(d.research.warning), 'phải cảnh báo web research chưa cấu hình');
     const text = lastPreview().caption || lastPreview().text;
-    assert(text.includes('SKU: KRK-R8-G4') && text.includes('203W · 8 inch') && text.includes('PSH catalog'), text);
+    assert(text.includes('SKU: KRK-R8-G4') && !/Nguồn:|PSH catalog|Mức xác minh|Phiên bản/.test(text), text);
+    assert(String(d.product.specs || '').includes('203W · 8 inch'), 'thông số vẫn nằm trong draft: ' + d.product.specs);
     assert(text.includes('8.500.000đ'), text);
   });
   await test('SKU ngoài catalogue + web research verified → tạo draft từ nguồn, giữ giá người gửi, preview có URL nguồn', async () => {
@@ -334,7 +343,8 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
     eq(d.research.status, 'verified');
     assert(d.product.specs.includes('203W') && d.product.specs.includes('36Hz'), d.product.specs);
     const text = lastPreview().caption || lastPreview().text;
-    assert(text.includes('https://www.krkmusic.com/rokit-g4'), text);
+    assert(!text.includes('Nguồn:') && !/Mức xác minh|Phiên bản/.test(text), 'nguồn/metadata không hiện trong preview: ' + text);
+    assert(JSON.stringify(d.research.sources).includes('https://www.krkmusic.com/rokit-g4'), 'URL nguồn vẫn lưu trong draft');
     assert(text.includes('8.500.000đ'), text);
   });
   await test('SKU ngoài catalogue + research lỗi/timeout → từ chối, không tạo draft', async () => {
@@ -342,6 +352,160 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
     const r = await orch.handleTelegramMessage(productUpdate({ caption: 'SKU: KRK-R8-G4\nGiá: 8.500.000' }), { researchProduct: async () => ({ status: 'timeout', warnings: ['timeout'], sources: [] }) });
     assert(r.rejected && r.reason === 'sku_research_unavailable', JSON.stringify(r));
     eq(drafts().length, 0);
+  });
+  // ── Product Research → Writer (mô phỏng, không Internet/model thật) ──
+  const tavilyCfg = { provider: 'tavily', configured: true, officialDomains: ['pioneerdj.com'], timeoutMs: 1000 };
+  const DDJ_PAGE = ['The DDJ-400 is a compact controller designed for beginner DJs who want to learn mixing with rekordbox dj.',
+    '- Performance pads for hot cues, beat loops and samples', '- Built-in USB audio interface with a headphone output', '| Weight | 2.0 kg |'].join('\n');
+  const ddjResults = [{ title: 'DDJ-400 | Pioneer DJ', url: 'https://www.pioneerdj.com/en/product/ddj-400/', content: '', raw_content: DDJ_PAGE }];
+  const ddjResearch = (log) => (q) => { if (log) log.push(q); return productResearch.researchProduct(q, { config: tavilyCfg, cache: null,
+    provider: (x) => productResearch.tavilyProvider(x, tavilyCfg, async () => ({ ok: true, status: 200, json: async () => ({ results: ddjResults }) })) }); };
+  const RICH = { status: 'partial', matchedSku: 'DDJ 400', verification: { verified: true, evidence: [] }, contentLevel: 'page', schema: 2,
+    product: { name: 'DDJ-400', model: 'DDJ 400', description: 'The DDJ-400 is a 2-channel DJ controller for rekordbox dj.' }, specs: {}, features: ['Plug and play: connect the controller to your computer with the USB cable.'], applications: [],
+    sources: [{ title: 'DDJ-400', url: 'https://www.pioneerdj.com/en/product/dj-controllers/ddj-400', type: 'other', claims: [] }], warnings: [] };
+  const withData = { researchProduct: async () => RICH };
+  await test('Chỉ có TÊN (không SKU/model): research vẫn chạy theo tên; dữ kiện nguồn vào product + brief + prompt writer; không tạo SKU', async () => {
+    resetAll(); const log = []; let seenBrief = null;
+    aiImpl = async (m, input) => { seenBrief = input.productBrief; return { content: { versions: [{ hook: 'Pioneer DDJ-400 dành cho DJ mới bắt đầu.', caption: 'Bộ điều khiển nhỏ gọn, có performance pads và giao diện âm thanh USB tích hợp.', cta: 'Liên hệ Pshop Music để được tư vấn.', hashtags: ['PshopMusic'] }] } }; };
+    const r = await orch.handleTelegramMessage(productUpdate({ caption: 'Tên: Pioneer DDJ-400\nGiá: 3.500.000\nTình trạng: Mới' }), { researchProduct: ddjResearch(log) });
+    assert(r.handled && r.result && r.result.status === 'PENDING_APPROVAL', JSON.stringify(r));
+    assert(log.length === 1 && !log[0].sku && /DDJ/.test(log[0].name), 'research phải được gọi theo tên: ' + JSON.stringify(log));
+    const d = only();
+    assert(!Object.keys(log[0]).includes('price') && !JSON.stringify(log[0]).includes('3500000'), 'giá Founder cấp không được đưa vào truy vấn research: ' + JSON.stringify(log[0]));
+    eq(d.product.price, 3500000); // giá Founder giữ nguyên
+    eq(d.research.status, 'verified');
+    assert(!d.product.sku, 'tra theo tên không được tạo SKU');
+    assert(/designed for beginner DJs/.test(d.product.description || ''), JSON.stringify(d.product.description));
+    assert((d.product.features || []).some(f => /Performance pads/.test(f)) && /2\.0 kg/.test(d.product.specs || ''), JSON.stringify(d.product));
+    // Writer nhận brief có dữ kiện nguồn (không chỉ tên) và prompt chứa dữ kiện đó.
+    assert(seenBrief && /designed for beginner DJs/.test(seenBrief.description) && (seenBrief.features || []).length && /2\.0 kg/.test(seenBrief.specs) && (seenBrief.referenceNotes || []).length, JSON.stringify(seenBrief));
+    const prompt = require('../shared/aiModulesCore').MODULES['facebook-post-generator'].buildPrompt({ productBrief: seenBrief }, { product: {}, categories: [] });
+    assert(/designed for beginner DJs/.test(prompt) && /Performance pads/.test(prompt) && /2\.0 kg/.test(prompt) && /TÀI LIỆU THAM KHẢO/.test(prompt), prompt.slice(0, 600));
+    assert(!/CHỈ có đúng thông tin này: Tên:/.test(prompt), 'không được rơi về nhánh chỉ-có-tên');
+    // Claim filter: câu diễn đạt lại đúng nguồn được giữ; giá/tình trạng do hệ thống chèn.
+    const cap = d.aiCaption || d.caption || '';
+    assert(/performance pads/i.test(cap) && /giao diện âm thanh USB/i.test(cap), cap);
+  });
+  await test('Chỉ có TÊN, research rejected/unconfigured: writer chỉ nhận tên (không bịa), vẫn tạo bản nháp', async () => {
+    for (const res of [{ status: 'rejected', reason: 'unverifiable_query', sources: [], warnings: ['Tên/mã quá chung'] }, { status: 'unconfigured', sources: [], warnings: ['Chưa cấu hình'] }]) {
+      resetAll(); let seenBrief = null;
+      aiImpl = async (m, input) => { seenBrief = input.productBrief; return { content: { versions: [{ hook: 'Pioneer DDJ controller', caption: '', cta: 'Liên hệ Pshop Music để được tư vấn.', hashtags: ['PshopMusic'] }] } }; };
+      const r = await orch.handleTelegramMessage(productUpdate({ caption: 'Tên: Pioneer DDJ-400\nGiá: 3.500.000\nTình trạng: Mới' }), { researchProduct: async () => res });
+      assert(r.handled && r.result && r.result.status === 'PENDING_APPROVAL', JSON.stringify(r));
+      eq(seenBrief, null, 'chỉ có tên: KHÔNG gọi AI'); eq(only().contentSource, 'name-only');
+      assert(!only().product.description && !(only().product.features || []).length, JSON.stringify(only().product));
+      assert(/^Pshop Music giới thiệu Pioneer DDJ-400\.\n\nGiá: 3\.500\.000đ[\s\S]*Liên hệ Pshop Music để được tư vấn thêm\./.test(only().aiCaption), only().aiCaption);
+    }
+  });
+  await test('Claim filter trên bài có research: giữ thông tin có nguồn, loại claim không nguồn', async () => {
+    resetAll();
+    aiImpl = async () => ({ content: { versions: [{ hook: 'Pioneer DDJ-400 dành cho DJ mới bắt đầu.', caption: 'Có performance pads cho hot cue. Thiết kế sang trọng, chất âm tuyệt vời, dùng được tại nhà.', cta: 'Liên hệ Pshop Music.', hashtags: ['PshopMusic'] }] } });
+    await orch.handleTelegramMessage(productUpdate({ caption: 'Tên: Pioneer DDJ-400\nGiá: 3.500.000\nTình trạng: Mới' }), { researchProduct: ddjResearch() });
+    const cap = only().aiCaption || only().caption || '';
+    assert(/performance pads/i.test(cap), cap);
+    assert(!/sang trọng|chất âm|tại nhà/i.test(cap), 'claim không nguồn lọt qua: ' + cap);
+  });
+  await test('REGRESSION preview KRK Rokit Gen 2 màu xanh 12.000.000đ: không AI, không mô tả/thông số bịa, câu hoàn chỉnh, không lộ metadata nội bộ', async () => {
+    resetAll(); sentTg.length = 0; let aiCalled = 0; aiImpl = async () => { aiCalled++; return { content: { versions: [{ hook: 'Mẫu loa này được thiết kế cho việc kiểm âm.', caption: 'Với kích thước phù hợp, công suất 100W.', cta: 'Liên hệ', hashtags: ['x'] }] } }; };
+    const r = await orch.handleTelegramMessage(productUpdate({ caption: 'Loa kiểm âm KRK Rokit Gen 2 màu xanh giá 12.000.000đ' }),
+      { researchProduct: async () => ({ status: 'unconfigured', sources: [], warnings: ['Chưa cấu hình research'] }) });
+    eq(aiCalled, 0, 'chỉ có tên: không gọi AI để lấp chỗ trống');
+    assert(r.handled && r.result && r.result.status === 'PENDING_APPROVAL', JSON.stringify(r));
+    const d = only(); const cap = d.aiCaption;
+    assert(/^Pshop Music giới thiệu Loa kiểm âm KRK Rokit Gen 2 màu xanh\.\n\nGiá: 12\.000\.000đ\n\nLiên hệ Pshop Music để được tư vấn thêm\.\n\n#PshopMusic/.test(cap), cap);
+    assert(cap.includes('Giá: 12.000.000đ'), 'giá Founder giữ nguyên: ' + cap);
+    assert(!/Tình trạng:/.test(cap), 'Founder không cấp tình trạng ⇒ không tự thêm: ' + cap);
+    assert(!/được cho|kích thước|công suất|100W|thiết kế|chính hãng|Gen 2 chính hãng/i.test(cap), 'không bịa/không câu sai ngữ pháp: ' + cap);
+    const text = lastPreview().caption || lastPreview().text;
+    assert(!/Mức xác minh|Phiên bản|v1|CHƯA XÁC MINH|MỘT PHẦN|Nguồn:|Chưa cấu hình|⚠️|Loại:|Thương hiệu:|Model/.test(text), 'preview lộ metadata nội bộ: ' + text);
+    assert(text.includes(cap), 'preview chứa đúng nội dung sẽ đăng');
+    eq(d.research.status, 'unconfigured'); // cảnh báo nội bộ vẫn lưu ở draft (trạng thái quản trị)
+    assert(!/Liên hệ Pshop Music để được tư vấn thêm\.[\s\S]*Liên hệ Pshop Music/.test(cap), 'chỉ một CTA');
+  });
+  await test('Preview có research: vẫn không lộ mức xác minh/phiên bản/nguồn/cảnh báo; nội dung đăng = aiCaption', async () => {
+    resetAll(); sentTg.length = 0;
+    aiImpl = async () => ({ content: { versions: [{ hook: 'Pioneer DJ DDJ-400 là controller DJ 2 kênh.', caption: 'Dùng cáp USB để kết nối với máy tính.', cta: 'Liên hệ Pshop Music để được tư vấn.', hashtags: ['PshopMusic'] }] } });
+    await orch.handleTelegramMessage(productUpdate(), withData); const d = only();
+    const text = lastPreview().caption || lastPreview().text;
+    assert(!/Mức xác minh|Phiên bản|MỘT PHẦN|ĐÃ XÁC MINH|Nguồn:|pioneerdj\.com|⚠️|Model/.test(text), text);
+    assert(text.includes(d.aiCaption), 'preview chứa nguyên văn bài sẽ đăng');
+    assert(d.research.sources.length === 1 && d.notices.length >= 0, 'metadata vẫn lưu trong draft');
+  });
+  const KRK_V = { status: 'verified', matchedSku: 'ROKIT 8 G4', verification: { verified: true, evidence: [] }, contentLevel: 'page', schema: 2,
+    product: { name: 'ROKIT 8 G4', model: 'ROKIT 8 G4', description: 'The ROKIT 8 G4 is a powered studio monitor for tracking and mixing.' },
+    specs: { 'Wattage': '203 Watts', 'Power Output': '203 Watts', 'Frequency Response': '36Hz - 40KHz', 'Max SPL': '111 dB' },
+    features: ['DSP-driven EQ: 25 EQ settings tune the monitor to your room.'], applications: [],
+    sources: [{ title: 'ROKIT 8 G4 | KRK', url: 'https://www.krkmusic.com/products/rokit-8-g4', type: 'official', claims: ['25 EQ settings tune the monitor to your room.'] }], warnings: [] };
+  await test('END-TO-END: Telegram intake → Research (KRK, nguồn hãng) → Writer → Preview ĐẦY ĐỦ → DUYỆT → Facebook nhận ĐÚNG nguyên văn bài đã duyệt', async () => {
+    resetAll(); sentTg.length = 0;
+    aiImpl = async () => ({ content: { versions: [{ hook: 'KRK ROKIT 8 G4 là loa kiểm âm dùng cho ghi âm và phối nhạc.', caption: 'Bộ EQ điều khiển bằng DSP có 25 thiết lập giúp chỉnh loa theo phòng của bạn.\n\nCông suất 203W cùng dải tần 36Hz–40kHz phục vụ công việc phối nhạc. Công suất lên tới 500W.', cta: 'Liên hệ Pshop Music để được tư vấn.', hashtags: ['PshopMusic'] }] } });
+    await orch.handleTelegramMessage(productUpdate({ caption: 'Loa kiểm âm KRK ROKIT 8 G4 giá 8.500.000đ' }), { researchProduct: async () => KRK_V });
+    const d = only(); const cap = d.aiCaption;
+    assert(/25 thiết lập/.test(cap) && cap.includes('Thông số kỹ thuật (theo krkmusic.com):') && cap.includes('• Mức SPL tối đa: 111 dB') && cap.includes('Giá: 8.500.000đ') && !/500W/.test(cap), cap);
+    const pv = lastPreview(); const txt = pv.caption || pv.text;
+    assert(txt.includes(cap), 'Preview phải chứa TOÀN BỘ bài sẽ đăng');
+    assert(pv.reply_markup && /fb_approve/.test(JSON.stringify(pv.reply_markup)), 'nút DUYỆT đúng pipeline');
+    assert(/crop|original|Ảnh đăng: ẢNH GỐC/.test(txt), 'ảnh gốc');
+    await webhook(cbUpdate('fb_approve', d.id, 1));
+    eq(feedPosts().length, 1, 'đúng 1 bài đăng lên feed');
+    eq(JSON.parse(feedPosts()[0].body).message, cap); // đăng NGUYÊN VĂN, không rút gọn
+  });
+  await test('Bài dài (> 4000 ký tự): Preview tách nhiều tin KHÔNG cắt nội dung (nút duyệt ở tin cuối); Facebook nhận đủ nguyên văn', async () => {
+    resetAll(); sentTg.length = 0;
+    const long = Array.from({ length: 80 }, (_, i) => 'Mục ' + (i + 1) + ': cổng k' + (i + 1) + ' kênh q' + (i + 1) + ' nhóm z' + (i + 1) + ' ghi chú v' + (i + 1) + ' cáp USB đi kèm.').join('\n\n');
+    aiImpl = async () => ({ content: { versions: [{ hook: 'Pioneer DDJ-400 kết nối máy tính bằng cáp USB.', caption: long + '\n\nMục cuối cùng: kết thúc bài.', cta: 'Liên hệ Pshop Music để được tư vấn.', hashtags: ['PshopMusic'] }] } });
+    await orch.handleTelegramMessage(productUpdate(), withData);
+    const d = only(); const cap = d.aiCaption;
+    assert(cap.length > 4000 && /Mục cuối cùng: kết thúc bài\./.test(cap), 'bài dài phải được giữ nguyên trong draft: ' + cap.length);
+    const msgs = sentTg.filter((x) => x.kind === 'sendMessage');
+    assert(msgs.length >= 2, 'phải tách nhiều tin: ' + msgs.length);
+    assert(msgs.every((m) => m.text.length <= 4096), 'mỗi tin <= 4096');
+    const joined = msgs.map((m) => m.text.replace(/^\(\d+\/\d+\) /, '')).join('\n\n');
+    assert(joined.includes('Mục cuối cùng: kết thúc bài.') && joined.includes('Mục 1:') && joined.includes('Mục 80:'), 'Preview phải chứa toàn bộ bài, không bị cắt');
+    assert(msgs.slice(0, -1).every((m) => !m.reply_markup) && msgs[msgs.length - 1].reply_markup, 'nút duyệt chỉ ở tin cuối');
+    await webhook(cbUpdate('fb_approve', d.id, 1));
+    eq(feedPosts().length, 1);
+    eq(JSON.parse(feedPosts()[0].body).message, cap);
+  });
+  await test('Preview ghi rõ thông tin còn thiếu khi chưa có nguồn (chỉ ở tin Telegram, KHÔNG nằm trong bài đăng)', async () => {
+    resetAll(); sentTg.length = 0;
+    await orch.handleTelegramMessage(productUpdate({ caption: 'Loa kiểm âm KRK Rokit Gen 2 màu xanh giá 12.000.000đ' }), { researchProduct: async () => ({ status: 'rejected', reason: 'no_matching_source', sources: [], warnings: ['x'] }) });
+    const d = only(); const txt = lastPreview().caption || lastPreview().text;
+    assert(/ℹ️ Thông tin còn thiếu/.test(txt) && /Chưa tìm được nguồn khớp/.test(txt) && /Tình trạng sản phẩm/.test(txt), txt);
+    assert(!/Thông tin còn thiếu|Chưa tìm được nguồn/.test(d.aiCaption), 'ghi chú thiếu dữ liệu không được vào bài đăng');
+  });
+  await test('PIPELINE + kiểm chứng câu: câu không căn cứ bị loại, Preview ghi rõ số câu đã loại (ngoài bài đăng); bài vẫn đủ nội dung có nguồn', async () => {
+    resetAll(); sentTg.length = 0;
+    aiImpl = async () => ({ content: { versions: [{ hook: 'KRK ROKIT 8 G4 là loa kiểm âm dùng cho ghi âm và phối nhạc.', caption: 'Bộ EQ điều khiển bằng DSP có 25 thiết lập giúp chỉnh loa theo phòng của bạn.\n\nĐây là loa vượt trội hơn mọi đối thủ.', cta: 'Liên hệ Pshop Music để được tư vấn.', hashtags: ['PshopMusic'] }] } });
+    verifierImpl = async (m, input) => ({ content: { results: input.sentences.map((t, i) => ({ i, label: /vượt trội/.test(t) ? 'unsupported' : 'feature', evidence: /vượt trội/.test(t) ? '' : quoteOf(input.evidenceText) })) } });
+    await orch.handleTelegramMessage(productUpdate({ caption: 'Loa kiểm âm KRK ROKIT 8 G4 giá 8.500.000đ' }), { researchProduct: async () => KRK_V });
+    const d = only(); const cap = d.aiCaption; const txt = lastPreview().caption || lastPreview().text;
+    assert(/25 thiết lập/.test(cap) && !/vượt trội|đối thủ/.test(cap), cap);
+    eq(d.claimDropped, 1);
+    assert(/Đã loại 1 câu của Writer vì không có căn cứ/.test(txt) && !/Đã loại 1 câu/.test(cap), 'ghi chú chỉ ở preview: ' + txt);
+  });
+  await test('PIPELINE + verifier lỗi: vẫn tạo bản nháp chờ duyệt (không đăng tự động), bài không chứa lời Writer, Preview báo bước kiểm chứng lỗi', async () => {
+    resetAll(); sentTg.length = 0;
+    aiImpl = async () => ({ content: { versions: [{ hook: 'KRK ROKIT 8 G4 là loa tuyệt vời nhất.', caption: 'Âm thanh đỉnh cao.', cta: 'Liên hệ Pshop Music.', hashtags: ['x'] }] } });
+    verifierImpl = async () => { throw new Error('openai down'); };
+    const r = await orch.handleTelegramMessage(productUpdate({ caption: 'Loa kiểm âm KRK ROKIT 8 G4 giá 8.500.000đ' }), { researchProduct: async () => KRK_V });
+    assert(r.handled && r.result && r.result.status === 'PENDING_APPROVAL', JSON.stringify(r));
+    const d = only(); const txt = lastPreview().caption || lastPreview().text;
+    eq(d.contentSource, 'verifier-unavailable'); assert(!/tuyệt vời|đỉnh cao/.test(d.aiCaption), d.aiCaption);
+    assert(/Bước kiểm chứng nội dung bị lỗi/.test(txt) && !/Bước kiểm chứng/.test(d.aiCaption), txt);
+    eq(feedPosts().length, 0, 'không tự đăng');
+  });
+  await test('Research chỉ có snippet: writer chỉ nhận đúng dữ kiện snippet (thông số), KHÔNG có mô tả/tính năng/công dụng', async () => {
+    resetAll(); let seenBrief = null;
+    aiImpl = async (m, input) => { seenBrief = input.productBrief; return { content: { versions: [{ hook: 'Pioneer DDJ-400', caption: '', cta: 'Liên hệ Pshop Music.', hashtags: ['PshopMusic'] }] } }; };
+    const snippetOnly = [{ title: 'DDJ-400 | Pioneer DJ', url: 'https://www.pioneerdj.com/en/product/ddj-400/', content: 'DDJ-400\nWeight: 2.0 kg' }];
+    const research = (q) => productResearch.researchProduct(q, { config: tavilyCfg, cache: null,
+      provider: (x) => productResearch.tavilyProvider(x, tavilyCfg, async () => ({ ok: true, status: 200, json: async () => ({ results: snippetOnly }) })) });
+    await orch.handleTelegramMessage(productUpdate({ caption: 'Tên: Pioneer DDJ-400\nGiá: 3.500.000\nTình trạng: Mới' }), { researchProduct: research });
+    const d = only();
+    eq(d.research.contentLevel, 'snippet');
+    assert(seenBrief && /2\.0 kg/.test(seenBrief.specs || ''), JSON.stringify(seenBrief));
+    assert(!seenBrief.description && !(seenBrief.features || []).length && !(seenBrief.applications || []).length, 'không được có dữ kiện ngoài snippet: ' + JSON.stringify(seenBrief));
   });
   if (process.env.PSH_REAL_RESEARCH === '1') {
     await test('REAL integration (Tavily keyless via realFetch): research → content → preview, official URL preserved', async () => {
@@ -375,7 +539,8 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
     eq(d.product.name, 'KRK ROKIT 8 G4');
     eq(d.research.status, 'timeout');
     const text = lastPreview().caption || lastPreview().text;
-    assert(/quá thời gian chờ/.test(text), text);
+    assert(!/quá thời gian chờ|⚠️/.test(text), 'cảnh báo research không hiện trong preview: ' + text);
+    assert(d.research.warnings.some((w) => /quá thời gian chờ/.test(w)), 'cảnh báo research vẫn lưu trong draft');
   });
   await test('SKU không có trong catalogue → từ chối, không tạo draft, nói rõ chưa có web research', async () => {
     resetAll();
@@ -513,7 +678,7 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
   out('\n=== [2] AI tạo nội dung ===');
   await test('AI thành công: caption AI + khối Giá/Tình trạng do HỆ THỐNG chèn đúng dữ liệu người gửi; gọi đúng module với dữ liệu sản phẩm', async () => {
     resetAll(); let seen = null; aiImpl = async (m, input) => { seen = { m, input }; return { content: { versions: [{ hook: 'H', caption: 'Giá chỉ 1.000đ!!', cta: 'C', hashtags: ['x'] }] } }; };
-    await orch.handleTelegramMessage(productUpdate()); const d = only();
+    await orch.handleTelegramMessage(productUpdate(), withData); const d = only();
     eq(seen.m, 'facebook-post-generator'); assert(seen.input.productBrief && seen.input.productBrief.name === 'Pioneer DDJ-400', JSON.stringify(seen.input));
     assert(d.aiCaption.includes('Giá: 3.500.000đ') && d.aiCaption.includes('Tình trạng: Like new 95%'), 'sự thật về giá/tình trạng luôn đúng');
     assert(!/1\.000đ/.test(d.aiCaption), 'giá AI tự bịa phải bị bỏ, chỉ dùng factsBlock: ' + d.aiCaption);
@@ -527,7 +692,7 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
       cta: 'Hãy để Pshop Music tư vấn!',
       hashtags: ['#ChanLoa', 'ThietBiAmThanh']
     }] } });
-    await orch.handleTelegramMessage(productUpdate()); const d = only(); const c = d.aiCaption;
+    await orch.handleTelegramMessage(productUpdate(), withData); const d = only(); const c = d.aiCaption;
     assert(!/^\s*#{1,6}\s+/m.test(c), 'không heading markdown: ' + c);
     assert(!/\*\*|__|`/.test(c), 'không bold/code markdown: ' + c);
     assert(!/^\s*[-*+•]\s+/m.test(c), 'không bullet markdown: ' + c);
@@ -539,13 +704,13 @@ const lastPreview = () => sentTg.filter((s) => (s.kind === 'sendPhoto' || s.kind
     assert(lastPreview().caption && /📋 Xem trước/.test(lastPreview().caption), 'Telegram preview giữ định dạng riêng');
   });
   await test('AI lỗi: dùng nội dung mẫu + CẢNH BÁO cho người duyệt; luồng vẫn tiếp tục', async () => {
-    resetAll(); aiImpl = async () => { throw new Error('quota'); }; await orch.handleTelegramMessage(productUpdate()); const d = only();
+    resetAll(); aiImpl = async () => { throw new Error('quota'); }; await orch.handleTelegramMessage(productUpdate(), withData); const d = only();
     eq(d.contentSource, 'template'); eq(d.status, 'PENDING_APPROVAL'); assert(d.notices.some((n) => /nội dung mẫu/.test(n)));
     assert((lastPreview().caption || lastPreview().text).includes('⚠️'), 'cảnh báo phải hiện trong xem trước');
   });
   await test('AI treo quá thời hạn → nội dung mẫu + cảnh báo (không treo webhook)', async () => {
     resetAll(); aiImpl = () => new Promise(() => {}); // không bao giờ trả
-    const t0 = Date.now(); await orch.handleTelegramMessage(productUpdate(), { aiTimeoutMs: 80 }); const d = only();
+    const t0 = Date.now(); await orch.handleTelegramMessage(productUpdate(), { aiTimeoutMs: 80, researchProduct: async () => RICH }); const d = only();
     assert(Date.now() - t0 < 5000, 'không được chờ vô hạn'); eq(d.contentSource, 'template'); assert(d.notices.some((n) => /nội dung mẫu/.test(n)));
   });
   await test('telegramWebhook được bind secret OPENAI_API_KEY (aiGenerate đọc OPENAI_API_KEY.value(); thiếu ⇒ AI luôn lỗi âm thầm)', async () => {

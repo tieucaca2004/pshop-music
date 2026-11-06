@@ -127,8 +127,9 @@ test('câu có thông tin cụ thể mở bằng "Khám phá/Mang đến/Với t
   assert(/Khám phá 25 preset EQ/.test(a), a);
   const b = Core.sanitizeFacebookText('Mang đến 25 preset EQ và vỏ kim loại chắc chắn.', src);
   assert(/Mang đến 25 preset EQ/.test(b), b);
-  const c = Core.sanitizeFacebookText('Với thiết kế vỏ kim loại, sản phẩm phù hợp phòng thu.', src);
-  assert(/Với thiết kế vỏ kim loại/.test(c), c);
+  // "phòng thu" phải có trong nguồn mới được giữ (claim địa điểm không nguồn bị loại — xem mục địa điểm/tình huống bên dưới).
+  const c = Core.sanitizeFacebookText('Với thiết kế vỏ kim loại, sản phẩm phù hợp phòng thu.', src + ' phòng thu');
+  assert(/Với thiết kế vỏ kim loại/.test(c) && /phòng thu/.test(c), c);
 });
 test('câu khen chung "cần thiết/chắc chắn/lựa chọn thiết thực" bị bỏ khi không có trong dữ kiện; giữ nếu nguồn có', () => {
   const clean = Core.sanitizeFacebookText('Giá đỡ micro Pro là sản phẩm cần thiết. Giúp cố định microphone chắc chắn. Đây là lựa chọn thiết thực.', 'Giá đỡ micro Pro Mới 100%');
@@ -306,6 +307,16 @@ test('các phiên bản trùng caption bị gộp, không giữ 3 bản chỉ kh
   ] }) }, { productBrief: { name: 'Sản phẩm A' } }, { product: {} });
   assert(out.versions.length <= 1, 'phải gộp bản trùng caption, còn ' + out.versions.length);
 });
+test('dedupeProductMentions: tên lần sau đứng ngay sau danh từ mô tả (đồng vị) bị bỏ, KHÔNG thành "…cao cấp mẫu này"', () => {
+  const name = 'LEXAR JUMPDRIVE P30 128GB – USB 3.2';
+  const out = Core.dedupeProductMentions('LEXAR JUMPDRIVE P30 128GB – USB 3.2, tốc độ đọc đến 450MB/s.\n\nĐây là USB drive cao cấp Lexar JumpDrive P30 128GB, chuẩn USB 3.2 Gen 1.', name);
+  assert(/Đây là USB drive cao cấp, chuẩn USB 3\.2 Gen 1\./.test(out), out);
+  assert(!/mẫu này/.test(out), out);
+  // Sau giới từ/từ chức năng vẫn đổi thành "mẫu này" như cũ.
+  const out2 = Core.dedupeProductMentions('LEXAR JUMPDRIVE P30 128GB – USB 3.2 đọc nhanh. Tốc độ của LEXAR JUMPDRIVE P30 128GB – USB 3.2 là 450MB/s.', name);
+  assert(/Tốc độ của mẫu này là 450MB\/s\./.test(out2), out2);
+});
+
 test('dedupeProductMentions giữ tên lần đầu, lần sau đổi thành "mẫu này"', () => {
   const name = 'Chân loa Aura 1 2 3 4';
   const out = Core.dedupeProductMentions(name + ' giúp đặt loa. ' + name + ' giúp bố trí gọn gàng.', name);
@@ -445,6 +456,174 @@ test('đầu ra cuối cùng sau facts/CTA/tags vẫn là plain text, giá/tình
   assert(/Hàng mới/.test(post), 'tình trạng bị đổi: ' + post);
   assert(/Bảo hành 1 năm/.test(post), 'bảo hành bị đổi: ' + post);
   assert(/40mm/.test(post) && /120dB/.test(post), 'spec bị đổi: ' + post);
+});
+
+console.log('\n=== Sản phẩm ít dữ liệu: giá đỡ micro (scenario E) ===');
+test('prompt tên-chỉ có rule riêng "giá đỡ micro": chỉ công dụng giữ/cố định, cấm chắc chắn/di chuyển/điều chỉnh', () => {
+  const prompt = mod.buildPrompt({ productBrief: { name: 'Giá đỡ micro Pro' } }, { product: {}, categories: [] });
+  assert(/Riêng "giá đỡ micro": chỉ nói dùng để giữ\/cố định micro/.test(prompt), 'thiếu rule giá đỡ micro');
+  assert(/Riêng "chân loa"/.test(prompt), 'rule chân loa bị mất');
+});
+test('câu công dụng chung hợp lệ được giữ; câu thêm claim (chắc chắn/di chuyển/thiết kế/điều chỉnh) vẫn bị loại', () => {
+  const allowed = 'Giá đỡ micro Pro';
+  eq(Core.sanitizeFacebookText('Giá đỡ micro Pro dùng để giữ micro.', allowed), 'Giá đỡ micro Pro dùng để giữ micro.');
+  const bad = Core.sanitizeFacebookText('Mẫu này đảm bảo bạn có thể tự do di chuyển mà không lo mất vị trí micro. Thiết kế chắc chắn, dễ điều chỉnh giúp bạn tập trung vào màn trình diễn.', allowed);
+  assert(!/thiết kế|chắc chắn|điều chỉnh|đảm bảo/i.test(bad), 'claim không nguồn lọt qua: ' + bad);
+});
+test('sản phẩm chỉ brand+model (không nêu loại): prompt vẫn chỉ cho phép tên + CTA, không bịa công dụng', () => {
+  const prompt = mod.buildPrompt({ productBrief: { name: 'Pioneer DDJ-400' } }, { product: {}, categories: [] });
+  assert(/chỉ nêu tên sản phẩm và mời liên hệ/.test(prompt), 'mất ràng buộc name-only');
+});
+
+console.log('\n=== Địa điểm / môi trường / tình huống sử dụng không có nguồn ===');
+const CL = 'Chân loa Aura 1 2 3 4';
+test('1. "không gian biểu diễn hoặc tại nhà" không có nguồn: cụm địa điểm bị loại, công dụng "bố trí loa" còn lại', () => {
+  const o = Core.sanitizeFacebookText('Mẫu này rất phù hợp cho việc bố trí loa trong không gian biểu diễn hoặc tại nhà.', CL);
+  assert(!/biểu diễn|tại nhà|không gian/i.test(o), 'claim địa điểm lọt qua: ' + o);
+  assert(/bố trí loa/.test(o), 'mất công dụng cơ bản: ' + o);
+  eq(Core.sanitizeFacebookText('Phù hợp dùng tại nhà.', CL), '');
+  eq(Core.sanitizeFacebookText('Dành cho quán bar và sân khấu.', CL), '');
+});
+test('2. công dụng có nguồn xác nhận được giữ nguyên (kể cả địa điểm khi nguồn nêu)', () => {
+  const src = CL + ' dùng để đặt loa đúng vị trí. Loa kiểm âm cho phòng thu và tại nhà.';
+  const o = Core.sanitizeFacebookText('Chân loa dùng để đặt loa đúng vị trí. Mẫu này dùng cho phòng thu và tại nhà.', src);
+  assert(/đặt loa đúng vị trí/.test(o) && /phòng thu/.test(o) && /tại nhà/.test(o), o);
+  const e = Core.sanitizeFacebookText('Giá đỡ micro Pro dùng để giữ micro.', 'Giá đỡ micro Pro');
+  eq(e, 'Giá đỡ micro Pro dùng để giữ micro.');
+});
+test('3. thông số/công dụng đã xác minh không bị sanitizer xoá nhầm', () => {
+  const src = 'KRK ROKIT 8 G4 loa kiểm âm nearfield 8 inch 203W Class D driver Kevlar 36Hz–40kHz DSP 25 preset EQ';
+  const o = Core.sanitizeFacebookText('Loa kiểm âm nearfield 8 inch, công suất 203W Class D. Driver Kevlar, dải tần 36Hz–40kHz. DSP có 25 preset EQ.', src);
+  assert(/nearfield 8 inch/.test(o) && /203W/.test(o) && /Kevlar/.test(o) && /36Hz–40kHz/.test(o) && /25 preset EQ/.test(o), o);
+  const mixed = Core.sanitizeFacebookText('Driver Kevlar 203W dùng được tại nhà hoặc trên sân khấu.', src);
+  assert(/Kevlar 203W/.test(mixed) && !/tại nhà|sân khấu/.test(mixed), 'phải giữ thông số, bỏ địa điểm: ' + mixed);
+});
+test('3b. cụm địa điểm có mạo từ ("tại các câu lạc bộ") bị bỏ gọn, không để lại "tại các." cụt', () => {
+  const src = 'Pioneer DJ DDJ-400 layout professional setup club-style layout';
+  const o = Core.sanitizeFacebookText('Giúp bạn làm quen với bố cục tương tự như tại các câu lạc bộ.', src);
+  assert(!/câu lạc bộ|tại các|\bcác\.?$/.test(o), 'còn tàn dư: ' + o);
+  assert(/bố cục tương tự/.test(o) || o === '', o);
+});
+console.log('\n=== Câu cụt do stripFactClaims + toàn vẹn JSON của prompt ===');
+test('"2 kênh"/"3 trục" không bị coi là giá "2k"/"3tr" (\\b của JS chỉ ASCII); viết tắt tiền thật vẫn bị bỏ', () => {
+  eq(Core.stripFactClaims('Mẫu này có 2 kênh và 4 pad.'), 'Mẫu này có 2 kênh và 4 pad.');
+  eq(Core.stripFactClaims('Máy có 3 trục xoay.'), 'Máy có 3 trục xoay.');
+  eq(Core.stripFactClaims('Giá chỉ 7k đó.'), '');
+  eq(Core.stripFactClaims('Giá 8tr rẻ.'), '');
+  eq(Core.stripFactClaims('Chỉ 5 triệu thôi.'), '');
+  assert(!/8\.500\.000/.test(Core.stripFactClaims('Loa 8 inch giá 8.500.000đ.')), 'giá đầy đủ phải bị bỏ');
+});
+test('bỏ clause giá mà phần còn lại mất chủ ngữ → bỏ cả câu, không để "Giúp …" cụt', () => {
+  eq(Core.stripFactClaims('Giá 8tr, giúp bạn làm quen với DJ.'), '');
+  // clause giá ở cuối: phần đầu còn nguyên chủ ngữ thì giữ
+  eq(Core.stripFactClaims('Controller 2 kênh có 8 pad, giá 8tr.'), 'Controller 2 kênh có 8 pad');
+});
+test('câu thực tế "…2 kênh…, giúp người dùng…" giữ NGUYÊN câu (không còn "Giúp người dùng làm quen, phát triển kỹ năng.")', () => {
+  const src = 'Pioneer DJ DDJ-400 2-channel DJ controller Develop your skills';
+  const o = Core.stripFactClaims(Core.sanitizeFacebookText('Mẫu này là controller DJ 2 kênh, giúp người dùng làm quen và phát triển kỹ năng.', src));
+  assert(/2 kênh/.test(o) && /^Mẫu này là controller/.test(o), o);
+  assert(!/^Giúp/.test(o), o);
+});
+test('mệnh đề ĐẦU chứa claim không nguồn → bỏ cả câu, không để lại "Những người muốn học hỏi…" cụt', () => {
+  const src = 'Pioneer DJ DDJ-400 first-time DJs learn skills thiết kế lightweight';
+  eq(Core.sanitizeFacebookText('Sản phẩm này lý tưởng cho những DJ mới vào nghề, những người muốn học hỏi và cải thiện kỹ năng DJ của mình.', src), '');
+  // mệnh đề đầu có nguồn thì vẫn giữ, chỉ bỏ phần claim không nguồn phía sau
+  // Bỏ claim không nguồn mà chỉ còn mẩu 2-4 từ ("Thiết kế nhẹ.") → không đủ thành câu hoàn chỉnh → bỏ cả câu.
+  eq(Core.sanitizeFacebookText('Thiết kế nhẹ, rất phù hợp cho những ai thường xuyên di chuyển.', src), '');
+  eq(Core.sanitizeFacebookText('Thiết kế nhẹ, dễ dàng mang theo và có tay cầm thuận tiện, rất phù hợp cho những ai thường xuyên di chuyển.', src), '');
+  // Cắt được phần ĐUÔI mà phần đầu vẫn là câu đầy đủ (>= 5 từ) thì giữ phần đầu.
+  const kept = Core.sanitizeFacebookText('Mẫu này là controller DJ nhẹ với bố cục tương tự thiết bị hãng, rất phù hợp cho những ai thường xuyên di chuyển.', src + ' controller bố cục');
+  assert(/^Mẫu này là controller DJ nhẹ với bố cục tương tự thiết bị hãng\.$/.test(kept) || kept === '', kept);
+  assert(!/di chuyển/.test(kept), kept);
+});
+test('hook DDJ-400 thật: "…ngay tại nhà bạn!" (địa điểm không nguồn GIỮA câu) → bỏ cả câu, KHÔNG còn "ngay bạn"', () => {
+  const src = 'Pioneer DJ DDJ-400 2-channel DJ controller for rekordbox professional setup';
+  const hook = 'Pioneer DJ DDJ-400 mang đến trải nghiệm DJ chuyên nghiệp ngay tại nhà bạn!';
+  const o = Core.sanitizeFacebookText(hook, src);
+  assert(!/ngay bạn|tại nhà|ngay\s*[.!?]/i.test(o), 'câu sai ngữ pháp còn sót: ' + o);
+  eq(o, '');
+  // các biến thể: địa điểm giữa câu, trước dấu phẩy, kèm từ nối
+  for (const t of ['Controller này dùng ngay tại nhà bạn rất dễ.', 'Bạn có thể luyện tập tại nhà, giúp làm quen nhanh với controller.', 'Pioneer DJ DDJ-400 cho DJ ở nhà bạn mỗi ngày.']) {
+    eq(Core.sanitizeFacebookText(t, src), '', t);
+  }
+});
+test('địa điểm không nguồn Ở CUỐI câu vẫn được cắt gọn, không để từ nối lửng ("ngay", "trên")', () => {
+  const src = 'Pioneer DJ DDJ-400 2-channel DJ controller rekordbox';
+  const a = Core.sanitizeFacebookText('Pioneer DJ DDJ-400 là controller DJ 2 kênh cho rekordbox dùng ngay tại nhà.', src);
+  assert(/^Pioneer DJ DDJ-400 là controller DJ 2 kênh cho rekordbox dùng\.$/.test(a) || a === '', a);
+  assert(!/ngay\.?$|tại nhà/.test(a), a);
+  const b = Core.sanitizeFacebookText('Pioneer DJ DDJ-400 là controller DJ 2 kênh cho rekordbox, dùng được trên sân khấu.', src);
+  assert(!/sân khấu|trên\.?$/.test(b), b);
+  // địa điểm CÓ trong nguồn thì giữ nguyên
+  eq(Core.sanitizeFacebookText('Controller này dùng ngay tại nhà bạn rất dễ.', src + ' tại nhà'), 'Controller này dùng ngay tại nhà bạn rất dễ.');
+});
+test('Preview Founder: "được thiết kế cho việc kiểm âm" không còn thành "được cho việc kiểm âm" (sai ngữ pháp)', () => {
+  const src = 'Loa kiểm âm KRK Rokit Gen 2 màu xanh';
+  const o = Core.sanitizeFacebookText('Mẫu loa này được thiết kế cho việc kiểm âm.', src);
+  assert(!/được cho/.test(o), 'sai ngữ pháp: ' + o);
+  eq(o, 'Mẫu loa này dùng cho việc kiểm âm.');
+});
+test('"Với kích thước phù hợp…" (lấp chỗ trống) bị loại khi nguồn không có kích thước; có nguồn thì giữ', () => {
+  const src = 'Loa kiểm âm KRK Rokit Gen 2 màu xanh';
+  eq(Core.sanitizeFacebookText('Với kích thước phù hợp, loa dễ đặt trên bàn.', src), '');
+  eq(Core.sanitizeFacebookText('Loa có kích thước 8 inch.', src + ' kích thước 8 inch'), 'Loa có kích thước 8 inch.');
+});
+test('(từ OpenAI thật) gỡ tính từ khen không để lại "rất cho việc…": mệnh đề mất vị ngữ bị bỏ, phần đúng của câu giữ; câu chỉ còn vỏ thì bỏ cả câu', () => {
+  const src = 'Pioneer DJ DDJ-400 Rekordbox DJ controller';
+  const o = Core.sanitizeFacebookText('Pioneer DJ DDJ-400 là bộ điều khiển Rekordbox DJ hai kênh, rất tiện lợi cho việc sử dụng hằng ngày.', src);
+  assert(!/rất cho|cho việc sử dụng|tiện lợi/.test(o), o);
+  assert(/^Pioneer DJ DDJ-400 là bộ điều khiển Rekordbox DJ hai kênh\.?$/.test(o), 'phần đúng phải giữ: ' + o);
+  eq(Core.sanitizeFacebookText('Sản phẩm rất tiện lợi.', src), '');
+  eq(Core.sanitizeFacebookText('Mẫu này rất tiện lợi, giúp bạn học.', src), '');
+});
+test('(từ OpenAI thật) số làm tròn/ước chừng Writer tự thêm ("gần 8 inch", "khoảng 203W") bị loại; số chính xác của nguồn giữ nguyên; nguồn dùng chính từ đó thì được phép', () => {
+  const al = 'Loa kiểm âm KRK ROKIT 8 G4 LF Driver: 8" Wattage: 203 Watts Max SPL: 111 dB';
+  eq(Core.sanitizeFacebookText('Loa kiểm âm gần 8 inch đem đến âm nhạc.', al), '');
+  eq(Core.sanitizeFacebookText('Công suất khoảng 203W.', al), '');
+  eq(Core.sanitizeFacebookText('Loa 8 inch cho bass sâu.', al), 'Loa 8 inch cho bass sâu.');
+  eq(Core.sanitizeFacebookText('Mức SPL tối đa 111 dB.', al), 'Mức SPL tối đa 111 dB.');
+  eq(Core.sanitizeFacebookText('Công suất hơn 200W.', al + ' hơn 200W'), 'Công suất hơn 200W.');
+});
+test('ensureProductName: không chèn dòng tên khi văn bản đã nêu tên bỏ tiền tố loại; vẫn chèn khi chưa nêu', () => {
+  eq(Core.ensureProductName('KRK ROKIT 8 G4 là loa kiểm âm.', 'Loa kiểm âm KRK ROKIT 8 G4'), 'KRK ROKIT 8 G4 là loa kiểm âm.');
+  eq(Core.ensureProductName('Một chiếc loa monitor.', 'Loa kiểm âm KRK ROKIT 8 G4'), 'Loa kiểm âm KRK ROKIT 8 G4\n\nMột chiếc loa monitor.');
+  eq(Core.ensureProductName('Tai nghe AIAIAI TMA-2 DJ cho DJ.', 'Tai nghe AIAIAI TMA-2 DJ'), 'Tai nghe AIAIAI TMA-2 DJ cho DJ.');
+  eq(Core.ensureProductName('Bài viết về sản phẩm.', 'Pioneer DDJ-400'), 'Pioneer DDJ-400\n\nBài viết về sản phẩm.');
+});
+test('prompt Writer: đúng MỘT yêu cầu JSON, mỗi khóa hook/caption/cta/hashtags đúng một lần mỗi version, JSON mẫu hợp lệ (mọi biến thể)', () => {
+  const rich = { name: 'Pioneer DJ DDJ-400', brand: 'Pioneer DJ', model: 'DDJ 400', description: 'The layout of the DDJ-400.', features: ['Beat FX: Apply FX.'], referenceNotes: ['[Nguồn khác] The DDJ-400 is a controller for rekordbox dj software.'] };
+  const cases = [
+    [{ productBrief: rich, singleVersion: true }, { product: {}, categories: [] }, 1],
+    [{ productBrief: rich }, { product: {}, categories: [] }, 3],
+    [{ productBrief: { name: 'Pioneer DDJ-400' }, singleVersion: true }, { product: {}, categories: [] }, 1],
+    [{}, { product: { name: 'KRK ROKIT 8 G4', specs: '203W', description: 'Loa kiểm âm.' }, categories: [] }, 3]
+  ];
+  for (const [input, ctx, nVer] of cases) {
+    const p = mod.buildPrompt(input, ctx);
+    eq((p.match(/Trả về DUY NHẤT/g) || []).length, 1, 'phải có đúng 1 yêu cầu trả JSON');
+    assert(/chỉ xuất hiện ĐÚNG MỘT LẦN/.test(p), 'thiếu quy tắc mỗi khóa một lần');
+    const tail = p.slice(p.lastIndexOf('Trả về DUY NHẤT'));
+    const shape = tail.slice(tail.indexOf('{'), tail.lastIndexOf('}') + 1);
+    const parsed = JSON.parse(shape); // ném lỗi nếu JSON mẫu hỏng
+    eq(parsed.versions.length, nVer);
+    for (const v of parsed.versions) eq(Object.keys(v), ['hook', 'caption', 'cta', 'hashtags']);
+    // JSON.parse không báo khóa trùng — đếm trực tiếp trên văn bản mẫu.
+    eq((shape.match(/"caption"\s*:/g) || []).length, nVer, 'mỗi version đúng 1 khóa caption');
+    eq((shape.match(/"hook"\s*:/g) || []).length, nVer);
+    eq((shape.match(/"cta"\s*:/g) || []).length, nVer);
+    eq((shape.match(/"hashtags"\s*:/g) || []).length, nVer);
+  }
+  const rp = mod.buildPrompt({ productBrief: rich, singleVersion: true }, { product: {}, categories: [] });
+  assert(/MỘT chuỗi duy nhất gồm nhiều đoạn/.test(rp), 'richBrief phải nói caption là MỘT chuỗi nhiều đoạn');
+});
+test('4. rule giá đỡ micro và chân loa trong prompt vẫn còn', () => {
+  const p1 = mod.buildPrompt({ productBrief: { name: 'Giá đỡ micro Pro' } }, { product: {}, categories: [] });
+  const p2 = mod.buildPrompt({ productBrief: { name: CL } }, { product: {}, categories: [] });
+  assert(/Riêng "giá đỡ micro": chỉ nói dùng để giữ\/cố định micro/.test(p1) && /Riêng "chân loa": chỉ nói dùng để đặt loa/.test(p2));
+});
+test('5. giá, tình trạng và dữ kiện nguồn không bị mất (facts do hệ thống chèn, không đi qua claim filter)', () => {
+  const facts = Core.productFactsBlock({ price: '1.800.000đ', condition: 'Mới 100%', badgeText: 'Chính hãng · BH 12 tháng' });
+  assert(/Giá: 1\.800\.000đ/.test(facts) && /Tình trạng: Mới 100%/.test(facts) && /Bảo hành 12 tháng/.test(facts), facts);
 });
 
 console.log('\n=== Đồng bộ client/server ===');

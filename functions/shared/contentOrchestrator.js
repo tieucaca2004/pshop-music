@@ -29,7 +29,7 @@ const productResearch = require('./productResearch');
 const { resolvePshActor } = require('./approverPolicy');
 const secrets = require('./telegramSecrets');
 const { resolvePublishMode, describeMode } = require('./publishMode');
-const { sanitizeFacebookText, stripFactClaims, ensureProductName, dedupeProductNameStarts, dedupeProductMentions, stripCtaSentences, polishFacebookText } = require('./aiModulesCore');
+const { sanitizeFacebookText, stripFactClaims, ensureProductName, dedupeProductNameStarts, dedupeProductMentions, stripCtaSentences, polishFacebookText, splitSentencesForCleanup } = require('./aiModulesCore');
 
 const CLAIM_STALE_MS = 5 * 60 * 1000;
 const MAX_MESSAGE_AGE_S = 60 * 60;      // tin nhắn cũ hơn 1 giờ bị coi là phát lại và bỏ qua
@@ -481,15 +481,228 @@ function factsBlock(product) {
   if (product.badgeText && String(product.badgeText).trim()) lines.push(String(product.badgeText).trim());
   return lines.join('\n');
 }
-function templateCaption(product) {
-  return product.name + '\n\n' + 'Sản phẩm sẵn tại Pshop Music. Liên hệ để được tư vấn và xem hàng trực tiếp.' + '\n\n' + factsBlock(product);
+// Bài khi KHÔNG có dữ kiện nguồn nào ngoài tên Founder cấp: một câu mở bài + lời mời liên hệ. Không mô tả, không thông số,
+// không "sẵn hàng"/"xem hàng". Giá/tình trạng do factsBlock chèn từ dữ liệu Founder.
+function nameOnlyBody(product) {
+  return 'Pshop Music giới thiệu ' + String(product.name || '').trim().replace(/[.\s]+$/, '') + '.';
 }
+// ── Bảng thông số kỹ thuật: CODE ghép nguyên văn từ research có nguồn HÃNG (status 'verified'); AI không viết/không sửa. ──
+const SPEC_LABELS = [
+  [/^(wattage|power output|output power|power)$/i, 'Công suất', 1], [/frequency response|^frequency$/i, 'Dải tần đáp ứng', 2],
+  [/max(imum)? spl/i, 'Mức SPL tối đa', 3], [/^lf driver|woofer/i, 'Loa trầm (LF)', 4], [/^hf driver|tweeter/i, 'Loa treble (HF)', 5],
+  [/input impedance/i, 'Trở kháng ngõ vào', 6], [/input|connect|port|interface/i, 'Kết nối', 7],
+  [/height/i, 'Chiều cao', 8], [/width/i, 'Chiều rộng', 9], [/depth/i, 'Chiều sâu', 10], [/weight/i, 'Trọng lượng', 11]
+];
+function hostOf(url) { try { return new URL(url).hostname.replace(/^www\./, ''); } catch (e) { return ''; } }
+function specSheet(research) {
+  if (!research || research.status !== 'verified' || !research.specs || typeof research.specs !== 'object') return '';
+  const official = (research.sources || []).find(x => x && x.type === 'official' && x.url);
+  const rows = []; const seenVal = new Set(); const seenLabel = new Set();
+  for (const key of Object.keys(research.specs)) {
+    const val = String(research.specs[key] == null ? '' : research.specs[key]).replace(/\s+/g, ' ').trim();
+    if (!key || !val || val.length > 120 || /[$€£₫]|price|giá/i.test(key + ' ' + val)) continue;
+    const m = SPEC_LABELS.find(x => x[0].test(key));
+    const label = m ? m[1] : String(key).trim();
+    const order = m ? m[2] : 50;
+    const dedupe = label + '|' + val.toLowerCase();
+    if (seenVal.has(dedupe) || (m && seenLabel.has(label))) continue;
+    seenVal.add(dedupe); if (m) seenLabel.add(label);
+    rows.push({ order, line: '• ' + label + ': ' + val });
+  }
+  if (!rows.length) return '';
+  rows.sort((a, b) => a.order - b.order);
+  const host = official ? hostOf(official.url) : '';
+  return 'Thông số kỹ thuật' + (host ? ' (theo ' + host + ')' : '') + ':\n' + rows.slice(0, 14).map(r => r.line).join('\n');
+}
+function templateCaption(product) {
+  return [nameOnlyBody(product), factsBlock(product), DEFAULT_CTA].filter(Boolean).join('\n\n');
+}
+// Brief chỉ có tên (không research/mô tả/thông số có nguồn): không gọi AI — mọi câu mô tả đều sẽ là câu lấp chỗ không căn cứ.
+function isNameOnlyBrief(brief) {
+  return !!brief && Object.keys(brief).every(k => k === 'name');
+}
+// Nguồn tiếng Anh → bài tiếng Việt: bộ lọc claim so khớp từ Việt với dữ kiện, nên một từ khoá nguồn có thật
+// (vd "aluminum") phải được coi là cho phép từ Việt tương ứng ("nhôm"). Chỉ thêm khi nguồn thật sự có từ đó.
+const CLAIM_ALIASES = [
+  [/\bdesign(?:ed)?\b/i, 'thiết kế'], [/\balumin(?:um|ium)\b/i, 'nhôm'], [/\bsteel\b/i, 'thép'], [/\bmetal\b/i, 'kim loại'],
+  [/\bprofessional\b/i, 'chuyên nghiệp'], [/\bdurab(?:le|ility)\b/i, 'bền bỉ độ bền'], [/\bfeatures?\b/i, 'tính năng'],
+  [/\binterface\b/i, 'giao diện'], [/\badjust(?:able|ment)?\b/i, 'điều chỉnh'], [/\bpremium\b/i, 'cao cấp'],
+  [/\bstab(?:le|ility)\b/i, 'ổn định'], [/\bconvenient\b/i, 'tiện lợi'], [/\bcompatib(?:le|ility)\b/i, 'tương thích'],
+  [/\bvibration\b/i, 'rung'], [/\bstudio\b/i, 'phòng thu'],
+  [/\bartists?\b/i, 'nghệ sĩ'], [/\bproducers?\b/i, 'nhà sản xuất'], [/\bengineers?\b/i, 'kỹ sư'], [/\bmusicians?\b/i, 'nhạc sĩ'],
+  [/\b(?:beginners?|new djs?|first-time|novice)\b/i, 'người mới'], [/\bgenres?\b/i, 'thể loại'], [/\b(?:singers?|vocalists?)\b/i, 'ca sĩ'], [/\bstreamers?\b/i, 'streamer'], [/\bdimensions?\b|\bsize\b/i, 'kích thước']
+];
+function claimAliasesFor(text) {
+  const t = String(text || '');
+  return CLAIM_ALIASES.filter(a => a[0].test(t)).map(a => a[1]).join(' ');
+}
+// Dòng trích từ trang web thật có thể là menu/giá/vận chuyển — bỏ trước khi đưa vào prompt.
+const NOISE_NOTE = /\$|price|giá|shipping|add to cart|subtotal|checkout|cookie|newsletter|sign in|log in|©|copyright|privacy|terms|quantity|sku/i;
+function referenceNotesFrom(research) {
+  if (!research || (research.status !== 'verified' && research.status !== 'partial') || !Array.isArray(research.sources)) return [];
+  const sources = research.sources.slice().sort((a, b) => (a.type === 'official' ? 0 : 1) - (b.type === 'official' ? 0 : 1)).slice(0, 4);
+  const out = [];
+  for (const s of sources) {
+    for (const c of (s.claims || [])) {
+      const t = String(c || '').replace(/\s+/g, ' ').trim();
+      if (t.length < 25 || t.length > 500 || NOISE_NOTE.test(t) || out.indexOf(t) >= 0) continue;
+      out.push((s.type === 'official' ? '[Nguồn hãng] ' : '[Nguồn khác] ') + t);
+      if (out.length >= 24) return out;
+    }
+  }
+  return out;
+}
+// Số "dữ kiện mô tả" độc lập (mô tả, tính năng, công dụng, dòng tài liệu nguồn): ít hơn 4 ⇒ dữ liệu mỏng, không đủ cho bài chuyên sâu.
+function researchDepth(brief, research) {
+  const r = research || {};
+  const n = Math.max((brief.description ? 1 : 0) + (brief.features || []).length + (brief.applications || []).length + (brief.referenceNotes || []).length,
+    ((r.product && r.product.description) ? 1 : 0) + (r.features || []).length + (r.applications || []).length + referenceNotesFrom(r).length);
+  return n >= 4 ? 'rich' : 'thin';
+}
+// Brief đưa cho AI: CHỈ dữ kiện thật (nhận diện + research đã khớp model). Không có research ⇒ chỉ tên (hành vi cũ, không bịa).
+function buildProductBrief(draft) {
+  const p = draft.product || {};
+  const brief = { name: p.name };
+  const research = draft.research;
+  const usable = research && (research.status === 'verified' || research.status === 'partial');
+  if (!usable) return brief;
+  const list = (v) => Array.isArray(v) ? v.filter(Boolean) : (v ? [v] : []);
+  if (p.brand) brief.brand = p.brand;
+  if (p.model) brief.model = p.model;
+  if (p.productType) brief.productType = p.productType;
+  if (p.specs) brief.specs = String(p.specs).slice(0, 1200);
+  if (p.description) brief.description = String(p.description).slice(0, 1500);
+  if (list(p.features).length) brief.features = list(p.features).slice(0, 12);
+  if (list(p.applications).length) brief.applications = list(p.applications).slice(0, 12);
+  const notes = referenceNotesFrom(research);
+  if (notes.length) brief.referenceNotes = notes;
+  brief.verification = research.status === 'verified' ? 'đã xác minh bằng nguồn hãng chính thức' : 'xác minh một phần (chưa có nguồn hãng) — chỉ viết điều chắc chắn';
+  brief.dataDepth = researchDepth(brief, research) === 'rich' ? 'đủ để viết bài mô tả chi tiết' : 'mỏng — chỉ viết ngắn phần có căn cứ';
+  const unverified = [];
+  if (p.visionModel && !p.model) unverified.push('model gợi ý từ ảnh "' + p.visionModel + '"');
+  if (Array.isArray(research.warnings)) for (const w of research.warnings.slice(0, 4)) unverified.push(String(w).slice(0, 160));
+  if (unverified.length) brief.unverified = unverified;
+  return brief;
+}
+// ── Kiểm chứng TỪNG CÂU của Writer với dữ kiện nguồn (second pass) ──
+// Bộ lọc từ khóa/số học chỉ chặn được những gì nó biết trước. Ở đây mỗi câu phải được gắn nhãn
+// spec | feature | benefit | unsupported kèm TRÍCH DẪN nguyên văn từ dữ kiện nguồn; CODE kiểm lại trích dẫn có thật trong nguồn.
+// Câu unsupported, hoặc trích dẫn không có trong nguồn ⇒ loại cả câu. Không thêm chữ nào vào câu.
+function foldTokensForQuote(s) {
+  return String(s == null ? '' : s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/gi, 'd').toLowerCase()
+    .split(/[^a-z0-9]+/).filter(t => t.length >= 3 || /\d/.test(t));
+}
+function quoteInEvidence(quote, evidenceTokenSet) {
+  // Dạng cũ (tập token): chỉ còn để tương thích; đường chính dùng quoteLineMatch (khớp có THỨ TỰ trong MỘT dòng nguồn).
+  const toks = foldTokensForQuote(quote);
+  if (toks.length < 2) return false;
+  const hit = toks.filter(t => evidenceTokenSet.has(t)).length;
+  return hit / toks.length >= 0.8;
+}
+// Trích dẫn phải là đoạn trích thật từ MỘT dòng nguồn: các token của trích dẫn xuất hiện ĐÚNG THỨ TỰ trong dòng đó (>= 85%).
+// Khác túi-từ toàn nguồn: một trích dẫn ghép từ các từ rời rạc ("âm thanh", "đầy đủ"...) lấy khắp nơi không còn qua được.
+function orderedHitRatio(qTokens, lineTokens) {
+  let j = 0; let hit = 0;
+  for (const t of qTokens) {
+    const k = lineTokens.indexOf(t, j);
+    if (k >= 0) { hit++; j = k + 1; }
+  }
+  return hit / qTokens.length;
+}
+function quoteLineMatch(quote, evidenceLines) {
+  const q = foldTokensForQuote(quote);
+  // Dòng thông số rất ngắn ("Max SPL: 111 dB") hợp lệ: ≥3 token, hoặc ≥2 token trong đó có số. Một từ đơn không phải trích dẫn.
+  if (q.length < 3 && !(q.length === 2 && q.some(t => /\d/.test(t)))) return null;
+  for (const ln of evidenceLines) {
+    if (ln.tokens.length >= 2 && orderedHitRatio(q, ln.tokens) >= 0.85) return ln;
+  }
+  return null;
+}
+function buildEvidenceLines(evidenceText, identityText) {
+  const ident = new Set(String(identityText || '').split('\n').map(x => x.trim().toLowerCase()).filter(Boolean));
+  return String(evidenceText || '').split('\n').map(x => x.trim()).filter(Boolean)
+    .map(text => ({ text, tokens: foldTokensForQuote(text), identity: ident.has(text.toLowerCase()) }));
+}
+function evidenceTextFor(draft, brief) {
+  const p = draft.product || {}; const r = draft.research || {};
+  const list = (v) => Array.isArray(v) ? v.join('\n') : (v || '');
+  return [p.name, p.productType, p.brand, p.model, p.description, p.shortDescription, list(p.features), list(p.applications),
+    researchSpecsText(r), p.specs, (brief && brief.referenceNotes || []).join('\n')].filter(Boolean).join('\n');
+}
+async function verifyBody(body, evidenceText, deps, timeoutMs, identityText) {
+  const paras = String(body || '').split(/\n{2,}/).map(pa => splitSentencesForCleanup(pa));
+  const flat = []; paras.forEach((ss, pi) => ss.forEach(text => flat.push({ pi, text })));
+  if (!flat.length) return { body: '', dropped: 0 };
+  let timer = null; let res;
+  try {
+    res = await Promise.race([
+      deps.generateForModule('facebook-claim-verifier', { sentences: flat.map(x => x.text), evidenceText }, deps.uid, deps.email),
+      new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('verifier timeout')), timeoutMs); })
+    ]);
+  } finally { if (timer) clearTimeout(timer); }
+  const content = (res && (res.content || res)) || {};
+  if (!Array.isArray(content.results)) throw new Error('verifier trả dữ liệu không hợp lệ');
+  const evLines = buildEvidenceLines(evidenceText, identityText);
+  const keep = flat.map((x, i) => {
+    const r = content.results.find(y => y && Number(y.i) === i);
+    if (!r || ['spec', 'feature', 'benefit'].indexOf(String(r.label)) < 0) return false;
+    if (String(r.unsupported_phrase || '').trim().length >= 2) return false; // model chỉ ra cụm thêm thắt không có trong nguồn ⇒ loại cả câu
+    const hit = quoteLineMatch(r.evidence, evLines);
+    if (!hit) return false;
+    // Dòng "tên/loại/hãng/model" chỉ chứng minh sản phẩm LÀ GÌ (câu giới thiệu); không thể làm căn cứ cho lợi ích/thông số/tính năng.
+    if (hit.identity && String(r.label) !== 'feature') return false;
+    // Lợi ích phải do CHÍNH đoạn nguồn nêu: benefit_quote là cụm nguyên văn nằm trong dòng nguồn đã khớp.
+    if (String(r.label) === 'benefit') {
+      const bq = foldTokensForQuote(r.benefit_quote);
+      if (bq.length < 2 || orderedHitRatio(bq, hit.tokens) < 0.85) return false;
+    }
+    return true;
+  });
+  const outParas = []; let dropped = 0;
+  paras.forEach((ss, pi) => {
+    const kept = [];
+    flat.forEach((x, i) => { if (x.pi === pi) { if (keep[i]) kept.push(x.text); else dropped++; } });
+    if (kept.length) outParas.push(kept.join(' '));
+  });
+  return { body: outParas.join('\n\n'), dropped };
+}
+
+// Telegram có nguồn: câu có claim không nguồn bị LOẠI, không bị viết lại bằng regex (tránh đổi nghĩa/ghép sai từ).
+const NO_REPAIR = { noRepair: true };
+// Writer lặp lại cùng một ý (kể cả diễn đạt gần giống) chỉ để kéo dài bài: giữ lần đầu, bỏ các câu sau có >= 70% từ trùng.
+function dedupeRepeatedSentences(body, productName) {
+  const seen = [];
+  const outParas = [];
+  // Token của chính tên sản phẩm không phải "ý lặp": hook và câu giới thiệu đều nêu tên nên luôn trùng ~70% mà ý khác hẳn.
+  const nameToks = new Set(foldTokensForQuote(productName));
+  for (const para of String(body || '').split(/\n{2,}/)) {
+    const kept = [];
+    for (const sent of splitSentencesForCleanup(para)) {
+      const toks = new Set(foldTokensForQuote(sent).filter(t => !nameToks.has(t)));
+      // Bỏ token tên làm tập câu trước nhỏ lại: câu trước chỉ còn <4 token riêng thì không đủ để coi là "ý đã nói" (mẫu số min() sẽ phóng đại độ trùng).
+      const dup = toks.size >= 4 && seen.some(prev => {
+        if (nameToks.size && prev.size < 4) return false;
+        let hit = 0; toks.forEach(t => { if (prev.has(t)) hit++; });
+        return hit / Math.min(toks.size, prev.size) >= 0.7;
+      });
+      if (dup) continue;
+      seen.push(toks); kept.push(sent);
+    }
+    if (kept.length) outParas.push(kept.join(' '));
+  }
+  return outParas.join('\n\n');
+}
+const BODY_MAX_CHARS = 6000;
+const DEFAULT_CTA = 'Liên hệ Pshop Music để được tư vấn thêm.';
 async function generateCaption(draft, deps) {
   const p = draft.product;
-  // productBrief: nguồn dữ kiện THẬT cho prompt (tên sản phẩm); giá/tình trạng do factsBlock chèn sau,
+  // productBrief: nguồn dữ kiện THẬT cho prompt; giá/tình trạng do factsBlock chèn sau,
   // nên prompt không cần và không được tự bịa/đoán. `topic` giữ làm fallback tương thích.
   const topic = 'Sản phẩm: ' + p.name + '.';
-  const productBrief = { name: p.name };
+  const productBrief = buildProductBrief(draft);
+  if (isNameOnlyBrief(productBrief)) {
+    return { caption: [nameOnlyBody(p), factsBlock(p), DEFAULT_CTA, '#PshopMusic #ThietBiAmThanh'].filter(Boolean).join('\n\n'), source: 'name-only', note: null };
+  }
   let timer = null;
   try {
     const timeoutMs = Number(deps.aiTimeoutMs) > 0 ? Number(deps.aiTimeoutMs) : AI_TIMEOUT_MS;
@@ -500,27 +713,41 @@ async function generateCaption(draft, deps) {
     const content = (ai && (ai.content || ai)) || {};
     const v = content.versions && content.versions[0];
     const allowedText = [p.name, p.brand, p.sku, p.model, p.productType, p.specs, p.description, p.shortDescription,
+      (productBrief.referenceNotes || []).join(' '), researchSpecsText(draft.research),
       Array.isArray(p.features) ? p.features.join(' ') : p.features,
       Array.isArray(p.applications) ? p.applications.join(' ') : (p.applications || p.useCases),
       p.badgeText, p.categoryLabel, p.category, p.condition, p.status, String(p.price || '')].filter(Boolean).join(' ');
+    const allowedAll = allowedText + ' ' + claimAliasesFor(allowedText);
     const parts = [];
-    const cta = v && v.cta ? sanitizeFacebookText(v.cta, allowedText) : '';
+    const cta = v && v.cta ? sanitizeFacebookText(v.cta, allowedAll) : '';
     if (v) {
-      if (v.hook) parts.push(sanitizeFacebookText(v.hook, allowedText));
-      if (v.caption) parts.push(sanitizeFacebookText(v.caption, allowedText));
-    } else if (content.caption) parts.push(sanitizeFacebookText(content.caption, allowedText));
+      if (v.hook) parts.push(sanitizeFacebookText(v.hook, allowedAll, NO_REPAIR));
+      if (v.caption) parts.push(sanitizeFacebookText(v.caption, allowedAll, NO_REPAIR));
+    } else if (content.caption) parts.push(sanitizeFacebookText(content.caption, allowedAll, NO_REPAIR));
     // Bỏ câu AI tự nói giá/tình trạng/bảo hành/khuyến mãi — factsBlock bên dưới là nguồn duy nhất.
-    let body = stripFactClaims(sanitizeFacebookText(parts.join('\n\n'), allowedText));
+    let body = stripFactClaims(sanitizeFacebookText(parts.join('\n\n'), allowedAll, NO_REPAIR), { dropSentence: true });
     // Chỉ một CTA: nếu caption cũng chứa CTA, bỏ khỏi body và dùng trường cta.
     if (cta) body = stripCtaSentences(body);
-    body = polishFacebookText(dedupeProductMentions(dedupeProductNameStarts(ensureProductName([body, cta].filter(Boolean).join('\n\n'), p.name), p.name), p.name));
-    body = cleanTextKeepLines(body, 1500);
+    let dropped = 0; let verifierDown = false;
+    if (body.trim()) {
+      try { const vr = await verifyBody(body, evidenceTextFor(draft, productBrief), deps, timeoutMs, [p.name, p.productType, p.brand, p.model].filter(Boolean).join('\n')); body = dedupeRepeatedSentences(vr.body, p.name); dropped = vr.dropped; }
+      catch (e) { verifierDown = true; body = ''; } // không kiểm chứng được ⇒ KHÔNG đăng lời Writer chưa kiểm
+    }
+    if (verifierDown) body = nameOnlyBody(p);
+    body = polishFacebookText(dedupeProductMentions(dedupeProductNameStarts(ensureProductName(body, p.name), p.name), p.name));
+    body = cleanTextKeepLines(body, 20000);
+    if (body.length > BODY_MAX_CHARS) { // giới hạn an toàn << giới hạn Facebook (63.206): cắt ở ranh giới đoạn
+      const cut = body.lastIndexOf('\n\n', BODY_MAX_CHARS);
+      body = (cut > BODY_MAX_CHARS * 0.5 ? body.slice(0, cut) : body.slice(0, BODY_MAX_CHARS)).trim();
+    }
     if (!body) throw new Error('AI trả nội dung rỗng');
     const tags = v && Array.isArray(v.hashtags)
       ? Array.from(new Set(v.hashtags.map(t => String(t).replace(/^#+/, '').replace(/[^\p{L}\p{N}_]/gu, '').trim()).filter(Boolean))).slice(0, 6).map(t => '#' + t).join(' ')
       : '';
     // Giá + tình trạng luôn do hệ thống chèn từ dữ liệu người gửi — AI không thể làm sai lệch.
-    return { caption: body + '\n\n' + factsBlock(p) + (tags ? '\n\n' + tags : ''), source: 'ai', note: null };
+    return { caption: [body, specSheet(draft.research), factsBlock(p), cta || DEFAULT_CTA, tags].filter(Boolean).join('\n\n'),
+      source: verifierDown ? 'verifier-unavailable' : 'ai', dropped,
+      note: verifierDown ? 'Không kiểm chứng được nội dung Writer (lỗi bước kiểm chứng) — bài chỉ giữ thông tin đã có nguồn.' : null };
   } catch (e) {
     return { caption: templateCaption(p), source: 'template', note: 'AI tạo nội dung lỗi/không khả dụng — đang dùng nội dung mẫu, hãy kiểm tra kỹ trước khi duyệt.' };
   } finally { if (timer) clearTimeout(timer); }
@@ -546,37 +773,82 @@ function recognitionReply(product) {
   return lines.join('\n');
 }
 
+// Thông tin sản phẩm CHƯA có dữ liệu thật — hiển thị cho Founder khi xem trước (không đưa vào bài đăng).
+function missingInfoNotes(draft) {
+  const p = draft.product || {};
+  const r = draft.research || {};
+  const out = [];
+  const usable = r.status === 'verified' || r.status === 'partial';
+  if (!usable) out.push('Chưa tìm được nguồn khớp đúng sản phẩm: bài chỉ có tên, giá và lời mời liên hệ (không mô tả, không thông số).');
+  else {
+    if (r.status !== 'verified') out.push('Chưa có trang chính thức của hãng được xác nhận: không in bảng thông số kỹ thuật.');
+    if (!r.specs || !Object.keys(r.specs).length) out.push('Nguồn chưa có thông số kỹ thuật.');
+    if (!(r.features || []).length && !(r.product && r.product.description)) out.push('Nguồn chưa có mô tả/tính năng.');
+    if (researchDepth(buildProductBrief(draft), r) === 'thin') out.push('Dữ liệu nguồn còn mỏng: chưa đủ để viết bài mô tả chuyên sâu — bài chỉ gồm phần có căn cứ.');
+  }
+  if (!usable && (r.reason === 'no_matching_source' || r.reason === 'unverifiable_query')) out.push('Tên chưa nêu rõ model/cỡ cụ thể để tra nguồn (không tự đoán): hãy gửi lại tên kèm model/cỡ chính xác nếu muốn bài có thông số.');
+  if (draft.claimDropped > 0) out.push('Đã loại ' + draft.claimDropped + ' câu của Writer vì không có căn cứ trong dữ liệu nguồn.');
+  if (draft.contentSource === 'verifier-unavailable') out.push('Bước kiểm chứng nội dung bị lỗi: lời Writer không được đưa vào bài.');
+  if (!conditionLabelOf(p) && !p.condition) out.push('Tình trạng sản phẩm (bạn chưa cung cấp).');
+  return out;
+}
 function buildPreviewText(draft, mode) {
   const p = draft.product || {};
   const lines = ['📋 Xem trước bài đăng Facebook', 'Fanpage: ' + (draft.pageName || draft.pageId) + ' (' + draft.pageId + ')'];
   const productLine = [p.name || '', p.sku ? 'SKU: ' + p.sku : '', p.price != null ? formatVnd(p.price) : '', conditionLabelOf(p) || p.condition || '', p.warrantyText ? 'Bảo hành ' + p.warrantyText : ''].filter(Boolean).join(' — ');
   if (productLine) lines.push('Sản phẩm: ' + productLine);
-  if (p.productType) lines.push('Loại: ' + p.productType);
-  if (p.brand) lines.push('Thương hiệu: ' + p.brand);
-  if (p.model) lines.push('Model: ' + p.model);
-  if (p.visionColor) lines.push('Màu (theo ảnh): ' + p.visionColor);
-  if (p.specs) lines.push('Thông số: ' + String(p.specs).slice(0, 500));
-  lines.push('Phiên bản: v' + (draft.version || 1), '');
+  lines.push('');
+  // Đúng nội dung sẽ đăng (aiCaption). Mức xác minh, phiên bản, nguồn research, cảnh báo phân loại/research, thông tin debug
+  // KHÔNG hiển thị ở đây: chúng nằm trong draft (research, notices) và log quản trị (xem adminPreviewInfo).
   lines.push(draft.aiCaption || draft.caption || '');
-  const notices = Array.isArray(draft.notices) ? draft.notices : [];
-  if (draft.research) {
-    const src = Array.isArray(draft.research.sources) ? draft.research.sources.map(s => s.title ? s.title + (s.url ? ' — ' + s.url : '') : (s.label || s.url)).filter(Boolean) : [];
-    lines.push(''); lines.push('Nguồn: ' + (src.join(' | ') || 'PSH catalog'));
-    const warnings = Array.isArray(draft.research.warnings) ? draft.research.warnings : (draft.research.warning ? [draft.research.warning] : []);
-    for (const w of warnings) lines.push('⚠️ ' + w);
-  }
-  if (notices.length) { lines.push(''); for (const n of notices) lines.push('⚠️ ' + n); }
+  const missing = missingInfoNotes(draft);
+  if (missing.length) { lines.push(''); lines.push('ℹ️ Thông tin còn thiếu (không có trong bài, không được bịa):'); for (const m of missing) lines.push('- ' + m); }
+  if (draft.contentSource === 'template') { lines.push(''); lines.push('⚠️ AI tạo nội dung lỗi/không khả dụng — đang dùng nội dung mẫu, hãy kiểm tra kỹ trước khi duyệt.'); }
+  // Cảnh báo VẬN HÀNH về ảnh (nền AI lỗi → nền tự tạo, ghép nền thất bại → đăng ảnh gốc...): lấy từ dữ liệu có cấu trúc steps.image
+  // (note do bước ảnh ghi). KHÔNG hiển thị draft.notices (research/phân loại/debug) và không đụng bài đăng.
+  const imgStep = draft.steps && draft.steps.image;
+  // Chỉ báo kết quả thật của bước ghép nền (ok kèm ghi chú nền AI lỗi / blocked / failed). 'skipped' = provider chưa bật (không phải sự cố) và 'original' = không ghép nền ⇒ không cảnh báo.
+  if (imgStep && typeof imgStep.note === 'string' && imgStep.note.trim() && ['ok', 'failed', 'blocked'].indexOf(imgStep.result) >= 0) { lines.push(''); lines.push('⚠️ Ảnh: ' + imgStep.note.trim()); }
   if (mode) { lines.push(''); lines.push((mode.live ? '📣 Chế độ: ' : '🧪 Chế độ: ') + describeMode(mode) + (mode.live ? ' — DUYỆT sẽ ĐĂNG lên Fanpage' : ' — DUYỆT sẽ KHÔNG đăng lên Facebook')); }
   lines.push(''); lines.push('Ảnh đăng: ' + (draft.imageMode === 'composited' ? 'ảnh quảng cáo (nền mới, sản phẩm giữ nguyên pixel gốc)' : 'ẢNH GỐC (chưa ghép nền)'));
   return lines.join('\n');
 }
+// Thông tin quản trị của preview (mức xác minh, nguồn, cảnh báo) — chỉ để log/kiểm tra, không đưa vào tin Telegram hay bài đăng. Không chứa secret.
+function adminPreviewInfo(draft) {
+  const r = draft.research || null;
+  return {
+    draftId: draft.id || null, version: draft.version || 1, contentSource: draft.contentSource || null,
+    researchStatus: r ? r.status || null : null, researchContentLevel: r ? r.contentLevel || null : null,
+    sourceCount: r && Array.isArray(r.sources) ? r.sources.length : 0,
+    researchWarningCount: r && Array.isArray(r.warnings) ? r.warnings.length : 0,
+    noticeCount: Array.isArray(draft.notices) ? draft.notices.length : 0
+  };
+}
 
+// Telegram giới hạn 4096 ký tự/tin: bài dài được tách theo đoạn, KHÔNG cắt bỏ nội dung.
+function splitForTelegram(text, max) {
+  const limit = max || 3800; const parts = []; let cur = '';
+  const push = () => { if (cur.trim()) parts.push(cur.replace(/\s+$/, '')); cur = ''; };
+  for (const para of String(text).split(/\n{2,}/)) {
+    let chunk = para;
+    while (chunk.length > limit) { // đoạn quá dài: cắt theo dòng, nếu không được thì theo độ dài
+      let cut = chunk.lastIndexOf('\n', limit); if (cut < limit * 0.5) cut = limit;
+      if ((cur + '\n\n' + chunk.slice(0, cut)).length > limit) push();
+      cur += (cur ? '\n\n' : '') + chunk.slice(0, cut); push(); chunk = chunk.slice(cut).replace(/^\n+/, '');
+    }
+    if ((cur ? cur.length + 2 : 0) + chunk.length > limit) push();
+    cur += (cur ? '\n\n' : '') + chunk;
+  }
+  push();
+  return parts.length ? parts : [''];
+}
 async function sendPreview(tgConfig, draft) {
   const v = draft.version || 1;
   const replyMarkup = { inline_keyboard: [[
     { text: '✅ DUYỆT & ĐĂNG', callback_data: 'fb_approve:' + draft.id + ':' + v },
     { text: '❌ HỦY', callback_data: 'fb_cancel:' + draft.id }
   ]] };
+  try { console.log('[preview] ' + JSON.stringify(adminPreviewInfo(draft))); } catch (e) { /* log phụ */ }
   const text = buildPreviewText(draft, resolvePublishMode(tgConfig));
   const img = Array.isArray(draft.publishImages) && draft.publishImages[0];
   if (img && text.length <= 1000) {
@@ -586,7 +858,15 @@ async function sendPreview(tgConfig, draft) {
     const ph = await telegram.sendPhoto({ token: tgConfig.token, chatId: tgConfig.chatId, photo: img, caption: 'Ảnh sẽ đăng — ' + ((draft.product && draft.product.name) || '') });
     if (!ph || !ph.ok) return ph;
   }
-  return telegram.sendMessage({ token: tgConfig.token, chatId: tgConfig.chatId, text: text.slice(0, 3900), replyMarkup });
+  const parts = splitForTelegram(text);
+  let last = null;
+  for (let i = 0; i < parts.length; i++) {
+    const isLast = i === parts.length - 1;
+    last = await telegram.sendMessage({ token: tgConfig.token, chatId: tgConfig.chatId,
+      text: (parts.length > 1 ? '(' + (i + 1) + '/' + parts.length + ') ' : '') + parts[i], replyMarkup: isLast ? replyMarkup : undefined });
+    if (!last || !last.ok) return last;
+  }
+  return last;
 }
 
 // ── Pipeline ─────────────────────────────────────────────────────────────────
@@ -608,7 +888,7 @@ async function runPipeline(draftId, deps) {
   if (!done('content')) {
     const cap = await generateCaption(draft, deps);
     if (cap.note) addNotice(cap.note);
-    await fbDraftStore.patchFields(draftId, { aiCaption: cap.caption, contentSource: cap.source, notices });
+    await fbDraftStore.patchFields(draftId, { aiCaption: cap.caption, contentSource: cap.source, claimDropped: cap.dropped || 0, notices });
     markStep(steps, 'content', 'ok', cap.source); await saveSteps(draftId, steps);
     draft = await fbDraftStore.getDraft(draftId);
   }
@@ -945,6 +1225,7 @@ async function handleTelegramMessage(update, depsIn) {
       research = await deps.researchProduct({
         sku: product.sku || product.model,
         name: product.name || (catalogProduct && catalogProduct.name) || null,
+        brand: product.brand || (catalogProduct && catalogProduct.brand) || null,
         category: product.category || (catalogProduct && catalogProduct.category) || null,
         specs: product.specs || (catalogProduct && catalogProduct.specs) || ''
       });
@@ -974,6 +1255,21 @@ async function handleTelegramMessage(update, depsIn) {
         });
       }
       product = applyResearchProduct(product, research);
+    }
+  }
+
+  // Chỉ có TÊN sản phẩm (không SKU/model): vẫn tra Internet theo tên. Không bắt buộc thành công — thiếu/không xác minh được
+  // thì giữ hành vi cũ (writer chỉ nhận tên, không bịa). Provider tự từ chối tên quá chung (rejected: unverifiable_query).
+  if (!product.sku && !product.model && product.name && typeof deps.researchProduct === 'function') {
+    try {
+      research = await deps.researchProduct({ sku: null, name: product.name, brand: product.brand || null, category: product.category || null, specs: product.specs || '' });
+    } catch (e) {
+      research = { status: 'error', sources: [], warnings: ['Web research lỗi: ' + String(e && e.message || e).slice(0, 160)] };
+    }
+    const usable = research && (research.status === 'verified' || research.status === 'partial') && Array.isArray(research.sources) && research.sources.length > 0;
+    if (usable) {
+      product = applyResearchProduct(product, research);
+      delete product.sku; // tra theo tên: không tự tạo SKU xác nhận
     }
   }
 
@@ -1215,5 +1511,5 @@ async function handleConfirmNotPosted(draftId, tgConfig, message, actor, depsIn)
 module.exports = {
   handleConfirmPosted, handleConfirmNotPosted,
   handleReconcile, parseProductCaption, parsePriceVnd, formatVnd, generateCaption, handleTelegramMessage, runPipeline, resolveTargetPage,
-  claimUpdate, buildPreviewText, sendPreview, TEMPLATE
+  claimUpdate, verifyBody, quoteInEvidence, quoteLineMatch, buildEvidenceLines, evidenceTextFor, buildPreviewText, adminPreviewInfo, missingInfoNotes, specSheet, splitForTelegram, sendPreview, buildProductBrief, TEMPLATE
 };

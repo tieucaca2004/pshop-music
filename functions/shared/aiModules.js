@@ -58,7 +58,8 @@ const LOAD_CONTEXT = {
     const media = (product && Array.isArray(product.images) && product.images.length) ? product.images : (product && product.image ? [product.image] : []);
     return { product: product || {}, media };
   },
-  'faq-generator': async () => ({})
+  'faq-generator': async () => ({}),
+  'facebook-claim-verifier': async () => ({})
 };
 
 // MODULES — same public shape as before this refactor (targetCollection/
