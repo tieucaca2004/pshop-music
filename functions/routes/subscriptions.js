@@ -9,10 +9,10 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  * Uses shared/subscriptionValidator.js for plan data and validation.
  *
  * Uses production middleware:
- *   verifyAuth() → requireBusiness() → requireRole()
+ *   authenticate() → authorizeBusiness() → authorizeBusiness()
  */
 const admin = require('firebase-admin');
-const { verifyAuth, requireBusiness, requireRole } = require('../shared/auth');
+const { authenticate, authorizeBusiness, authorizeBusiness } = require('../shared/middleware');
 const { getPlan, listPlans, DEFAULT_PLANS } = require('../shared/subscriptionValidator');
 
 const ROLE_READ = ['super_admin', 'business_admin', 'business_editor', 'business_viewer'];
@@ -38,10 +38,10 @@ async function handle(req, res, helpers) {
 
   if (path.indexOf('/v1/businesses/') !== 0) return null;
 
-  const authRes = await verifyAuth(req);
+  const authRes = await authenticate(req);
   if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
 
-  const bizRes = await requireBusiness(req);
+  const bizRes = await authorizeBusiness(req);
   if (!bizRes.ok) return sendError(res, bizRes.code, bizRes.error);
 
   const businessId = req.tenant.businessId;
@@ -59,7 +59,7 @@ async function handle(req, res, helpers) {
 
   // ─── GET /.../subscription — Read current subscription ────────────
   if (subMatch && req.method === 'GET') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const snap = await db.ref('businesses/' + businessId + '/subscription').once('value');
@@ -69,7 +69,7 @@ async function handle(req, res, helpers) {
 
   // ─── POST /.../subscription — Create / Upgrade / Renew ────────────
   if (subMatch && req.method === 'POST') {
-    const roleRes = await requireRole(req, ROLE_MANAGE);
+    const roleRes = await authorizeBusiness(req, ROLE_MANAGE);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const body = req.body || {};
@@ -206,7 +206,7 @@ async function handle(req, res, helpers) {
 
   // ─── PATCH /.../subscription — Update subscription settings ──────
   if (subMatch && req.method === 'PATCH') {
-    const roleRes = await requireRole(req, ROLE_MANAGE);
+    const roleRes = await authorizeBusiness(req, ROLE_MANAGE);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const body = req.body || {};
@@ -227,7 +227,7 @@ async function handle(req, res, helpers) {
 
   // ─── GET /.../billing — List billing history ─────────────────────
   if (billMatch && req.method === 'GET') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const snap = await db.ref('businesses/' + businessId + '/billing').once('value');
@@ -241,7 +241,7 @@ async function handle(req, res, helpers) {
 
   // ─── GET /.../billing/{id} — Read billing entry ──────────────────
   if (billItemMatch && req.method === 'GET') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const snap = await db.ref('businesses/' + businessId + '/billing/' + billItemMatch[2]).once('value');

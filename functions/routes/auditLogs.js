@@ -9,10 +9,10 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  * Supports filtering, search by date/user/action/resource, and CSV export.
  *
  * Uses production middleware:
- *   verifyAuth() → requireBusiness() → requireRole()
+ *   authenticate() → authorizeBusiness() → authorizeBusiness()
  */
 const admin = require('firebase-admin');
-const { verifyAuth, requireBusiness, requireRole } = require('../shared/auth');
+const { authenticate, authorizeBusiness, authorizeBusiness } = require('../shared/middleware');
 
 const ROLE_OWN = ['super_admin', 'business_admin', 'business_editor'];
 const ROLE_FULL = ['super_admin', 'business_admin'];
@@ -23,10 +23,10 @@ async function handle(req, res, helpers) {
 
   if (path.indexOf('/v1/businesses/') !== 0) return null;
 
-  const authRes = await verifyAuth(req);
+  const authRes = await authenticate(req);
   if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
 
-  const bizRes = await requireBusiness(req);
+  const bizRes = await authorizeBusiness(req);
   if (!bizRes.ok) return sendError(res, bizRes.code, bizRes.error);
 
   const businessId = req.tenant.businessId;
@@ -44,7 +44,7 @@ async function handle(req, res, helpers) {
 
   // ─── POST /.../audit-logs — Create audit entry ──────────────────────
   if (listMatch && req.method === 'POST') {
-    const roleRes = await requireRole(req, ROLE_OWN);
+    const roleRes = await authorizeBusiness(req, ROLE_OWN);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const body = req.body || {};
@@ -80,7 +80,7 @@ async function handle(req, res, helpers) {
       return sendSuccess(res, []);
     }
 
-    const roleRes = await requireRole(req, ROLE_FULL);
+    const roleRes = await authorizeBusiness(req, ROLE_FULL);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const snap = await db.ref(auditPath).once('value');
@@ -167,7 +167,7 @@ async function handle(req, res, helpers) {
 
   // ─── GET /.../audit-logs/{id} — Read One ──────────────────────────
   if (itemMatch && req.method === 'GET') {
-    const roleRes = await requireRole(req, ROLE_FULL);
+    const roleRes = await authorizeBusiness(req, ROLE_FULL);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const snap = await db.ref(auditPath + '/' + itemMatch[2]).once('value');

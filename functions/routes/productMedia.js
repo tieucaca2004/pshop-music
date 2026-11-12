@@ -9,13 +9,13 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  *   /businesses/{businessId}/products/{productId}/{filename}
  *
  * Uses production middleware:
- *   verifyAuth() → requireBusiness() → requireRole()
+ *   authenticate() → authorizeBusiness() → authorizeBusiness()
  *
  * Media metadata stored in RTDB at:
  *   /businesses/{businessId}/products/{productId}/media/{mediaId}
  */
 const admin = require('firebase-admin');
-const { verifyAuth, requireBusiness, requireRole } = require('../shared/auth');
+const { authenticate, authorizeBusiness, authorizeBusiness } = require('../shared/middleware');
 const crypto = require('crypto');
 
 function extractBase64(body) {
@@ -53,10 +53,10 @@ async function handle(req, res, helpers) {
   if (!listMatch && !itemMatch) return null;
 
   // ─── Authentication & Tenant Context ────────────────────────────────
-  const authRes = await verifyAuth(req);
+  const authRes = await authenticate(req);
   if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
 
-  const bizRes = await requireBusiness(req);
+  const bizRes = await authorizeBusiness(req);
   if (!bizRes.ok) return sendError(res, bizRes.code, bizRes.error);
 
   const businessId = req.tenant.businessId;
@@ -65,7 +65,7 @@ async function handle(req, res, helpers) {
 
   // ─── POST /.../products/{pid}/media — Upload image ──────────────────
   if (listMatch && req.method === 'POST') {
-    const roleRes = await requireRole(req, ROLE_WRITE);
+    const roleRes = await authorizeBusiness(req, ROLE_WRITE);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const productId = listMatch[2];
@@ -112,7 +112,7 @@ async function handle(req, res, helpers) {
 
   // ─── GET /.../products/{pid}/media — List images ────────────────────
   if (listMatch && req.method === 'GET') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const productId = listMatch[2];
@@ -130,7 +130,7 @@ async function handle(req, res, helpers) {
 
   // ─── DELETE /.../products/{pid}/media/{mid} — Delete image ──────────
   if (itemMatch && req.method === 'DELETE') {
-    const roleRes = await requireRole(req, ROLE_ADMIN);
+    const roleRes = await authorizeBusiness(req, ROLE_ADMIN);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const productId = itemMatch[2];

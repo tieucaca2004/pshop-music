@@ -11,7 +11,7 @@
  */
 const admin = require('firebase-admin');
 const { resolveBusinessId } = require('../shared/tenant');
-const { verifyAuth, requireBusiness, requireRole, requireSuperAdmin } = require('../shared/auth');
+const { authenticate, authorizeBusiness, authorizeBusiness, authorizeBusiness } = require('../shared/middleware');
 
 const VALID_PLANS = ['free', 'starter', 'pro', 'enterprise'];
 const DEFAULT_TZ = 'Asia/Bangkok';
@@ -84,14 +84,14 @@ async function handle(req, res, helpers) {
   const profileMatch = path.match(/^\/v1\/businesses\/([^/]+)\/profile$/);
   if (profileMatch) {
     // Authenticate and resolve tenant context
-    const authRes = await verifyAuth(req);
+    const authRes = await authenticate(req);
     if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
 
-    const bizRes = await requireBusiness(req);
+    const bizRes = await authorizeBusiness(req);
     if (!bizRes.ok) return sendError(res, bizRes.code, bizRes.error);
 
     // Business admin role required (owner/administrator)
-    const roleRes = await requireRole(req, ['super_admin', 'business_admin']);
+    const roleRes = await authorizeBusiness(req, ['super_admin', 'business_admin']);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const businessId = req.tenant.businessId;
@@ -139,10 +139,10 @@ async function handle(req, res, helpers) {
   }
 
   // All business operations require super_admin — use production middleware
-  // verifyAuth() must run first so req.user is populated for requireSuperAdmin()'s
+  // authenticate() must run first so req.user is populated for authorizeBusiness()'s
   // superAdmins/{uid} RTDB check (otherwise req.user is undefined and the check
   // silently never runs, always falling through to the 403 branch below).
-  const authCheck = await verifyAuth(req);
+  const authCheck = await authenticate(req);
   if (!authCheck.ok) {
     if (path.indexOf('/v1/businesses') === 0) {
       return sendError(res, authCheck.code, authCheck.error);
@@ -150,7 +150,7 @@ async function handle(req, res, helpers) {
     return null;
   }
 
-  const superCheck = await requireSuperAdmin(req);
+  const superCheck = await authorizeBusiness(req);
   if (!superCheck.ok) {
     if (path.indexOf('/v1/businesses') === 0) {
       return sendError(res, superCheck.code, superCheck.error);

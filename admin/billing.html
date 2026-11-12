@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Billing & Subscription — PSH Console</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Be+Vietnam+Pro:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body>
+<div class="admin-shell">
+  <aside class="admin-sidebar" id="adminSidebar"></aside>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-wrap">
+      <div id="billingContent" style="padding:0">
+        <div class="panel" style="text-align:center;padding:2rem">
+          <div class="dash-num" style="font-size:1rem">Loading subscription...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="../js/firebase-config.js"></script>
+<script src="../js/business-context.js"></script>
+<script src="../js/subscription-middleware.js"></script>
+<script src="../js/admin-auth.js"></script>
+<script>
+(function(){
+'use strict';
+
+var PLAN_INFO = {
+  trial: {
+    name: 'Trial', icon: '⭐', color: '#f59e0b',
+    price: 'Miễn phí', period: '14 ngày',
+    features: [
+      'Tối đa 10 sản phẩm',
+      'Tối đa 5 bài viết blog',
+      'Tối đa 3 banner',
+      'Tối đa 3 slider',
+      '50 media files',
+      '1 người dùng'
+    ]
+  },
+  starter: {
+    name: 'Starter', icon: '🚀', color: '#4F46E5',
+    price: '0₫', period: 'tháng',
+    features: [
+      'Tối đa 50 sản phẩm',
+      'Tối đa 20 bài viết blog',
+      'Tối đa 10 banner',
+      'Tối đa 10 slider',
+      '200 media files',
+      '3 người dùng'
+    ]
+  },
+  pro: {
+    name: 'Pro', icon: '💎', color: '#10b981',
+    price: '$29', period: 'tháng',
+    features: [
+      'Không giới hạn sản phẩm',
+      'Không giới hạn blog',
+      'Không giới hạn banner',
+      'Không giới hạn slider',
+      'Không giới hạn media',
+      '10 người dùng'
+    ]
+  },
+  enterprise: {
+    name: 'Enterprise', icon: '👑', color: '#8b5cf6',
+    price: '$99', period: 'tháng',
+    features: [
+      'Không giới hạn mọi thứ',
+      'API & webhook',
+      'Support 24/7',
+      'Custom integration',
+      'Không giới hạn người dùng'
+    ]
+  }
+};
+
+function init() {
+  AdminAuth.init({ page: 'billing', title: 'BILLING & SUBSCRIPTION' }).then(function() {
+    var businessId = null;
+    if (typeof BusinessContext !== 'undefined') {
+      businessId = BusinessContext.getCurrentBusinessId();
+    }
+    if (!businessId) {
+      document.getElementById('billingContent').innerHTML =
+        '<div class="panel" style="text-align:center;padding:2rem"><p>No business context found. Please ensure you are logged in.</p></div>';
+      return;
+    }
+
+    Subscription.get(businessId).then(function(sub) {
+      if (!sub) {
+        // Create trial automatically
+        return Subscription.createTrial(businessId).then(function() {
+          return Subscription.get(businessId);
+        });
+      }
+      return sub;
+    }).then(function(sub) {
+      if (!sub) {
+        document.getElementById('billingContent').innerHTML =
+          '<div class="panel" style="text-align:center;padding:2rem"><p>Could not load subscription.</p></div>';
+        return;
+      }
+      renderBilling(businessId, sub);
+    });
+  });
+}
+
+function renderBilling(businessId, sub) {
+  var plan = PLAN_INFO[sub.plan] || PLAN_INFO.trial;
+  var statusInfo = Subscription.getStatus(sub);
+  var daysLeft = Subscription.getDaysRemaining(sub);
+  var limits = Subscription.getFeatureLimits(sub);
+  var alerts = Subscription.getAlerts(sub);
+
+  var statusClassMap = {
+    trial: 'badge' + (daysLeft !== null && daysLeft <= 3 ? ' warn' : ' info'),
+    active: 'badge success',
+    expired: 'badge danger',
+    suspended: 'badge warn',
+    cancelled: 'badge danger'
+  };
+
+  var html = '';
+
+  // Alerts
+  alerts.forEach(function(a) {
+    var color = a.type === 'error' ? '#fef2f2' : a.type === 'warning' ? '#fffbeb' : '#eef2ff';
+    var textColor = a.type === 'error' ? '#991b1b' : a.type === 'warning' ? '#92400e' : '#1e40af';
+    html += '<div style="padding:.65rem .85rem;border-radius:8px;background:' + color + ';color:' + textColor + ';font-size:.82rem;margin-bottom:.75rem;display:flex;align-items:center;gap:.5rem">' +
+      '<span>' + a.icon + '</span><span>' + a.message + '</span></div>';
+  });
+
+  // Current Plan Card
+  html +=
+    '<div class="panel" style="padding:2rem;text-align:center">' +
+      '<div style="font-size:3rem;margin-bottom:.5rem">' + plan.icon + '</div>' +
+      '<div style="font-size:1.3rem;font-weight:700;color:' + plan.color + '">' + plan.name + '</div>' +
+      '<div style="font-size:2rem;font-weight:800;margin:.25rem 0"><span style="font-size:.9rem;color:#6b7280;font-weight:400">' + plan.price + '</span></div>' +
+      (sub.plan === 'trial'
+        ? '<div style="font-size:.85rem;color:#6b7280">' + daysLeft + ' ngày còn lại trong gói dùng thử</div>'
+        : '<div style="font-size:.85rem;color:#6b7280">' + plan.price + ' / ' + plan.period + '</div>') +
+      '<div style="margin-top:.75rem"><span class="' + (statusInfo.status === 'active' ? 'badge success' : statusInfo.status === 'trial' ? 'badge info' : 'badge warn') + '" style="font-size:.75rem">' + statusInfo.label + '</span></div>' +
+    '</div>';
+
+  // Subscription Details
+  html +=
+    '<div class="panel">' +
+      '<h3 style="margin-bottom:.75rem">Subscription Details</h3>' +
+      '<table class="field-list" style="width:100%">' +
+        '<tr><td style="padding:.35rem .5rem;color:#6b7280;font-size:.8rem">Plan</td><td style="padding:.35rem .5rem;font-weight:500">' + Subscription.getPlanLabel(sub.plan) + '</td></tr>' +
+        '<tr><td style="padding:.35rem .5rem;color:#6b7280;font-size:.8rem">Status</td><td style="padding:.35rem .5rem"><span class="' + Subscription.getStatusClass(sub.status) + '">' + Subscription.getStatusLabel(sub.status) + '</span></td></tr>' +
+        '<tr><td style="padding:.35rem .5rem;color:#6b7280;font-size:.8rem">Trial Start</td><td style="padding:.35rem .5rem">' + (sub.trialStart ? new Date(sub.trialStart).toLocaleDateString('vi-VN') : '-') + '</td></tr>' +
+        '<tr><td style="padding:.35rem .5rem;color:#6b7280;font-size:.8rem">Trial End</td><td style="padding:.35rem .5rem">' + (sub.trialEnd ? new Date(sub.trialEnd).toLocaleDateString('vi-VN') : '-') + (' (còn ' + daysLeft + ' ngày)') + '</td></tr>' +
+        '<tr><td style="padding:.35rem .5rem;color:#6b7280;font-size:.8rem">Billing Cycle</td><td style="padding:.35rem .5rem">' + (sub.billingCycle || '—') + '</td></tr>' +
+        '<tr><td style="padding:.35rem .5rem;color:#6b7280;font-size:.8rem">Renewal Date</td><td style="padding:.35rem .5rem">' + (sub.renewalDate ? new Date(sub.renewalDate).toLocaleDateString('vi-VN') : '-') + '</td></tr>' +
+      '</table>' +
+    '</div>';
+
+  // Feature Limits
+  html +=
+    '<div class="panel">' +
+      '<h3 style="margin-bottom:.75rem">Feature Limits</h3>' +
+      '<table class="field-list" style="width:100%">' +
+        '<tr><td style="padding:.35rem .5rem;color:#6b7280;font-size:.8rem">Products</td><td style="padding:.35rem .5rem;font-weight:500;text-align:right">' + (limits.products === -1 ? 'Unlimited' : limits.products) + '</td></tr>' +
+        '<tr><td style="padding:.35rem .5rem;color:#6b7280;font-size:.8rem">Blog Posts</td><td style="padding:.35rem .5rem;font-weight:500;text-align:right">' + (limits.blog === -1 ? 'Unlimited' : limits.blog) + '</td></tr>' +
+        '<tr><td style="padding:.35rem .5rem;color:#6b7280;font-size:.8rem">Banners</td><td style="padding:.35rem .5rem;font-weight:500;text-align:right">' + (limits.banners === -1 ? 'Unlimited' : limits.banners) + '</td></tr>' +
+        '<tr><td style="padding:.35rem .5rem;color:#6b7280;font-size:.8rem">Sliders</td><td style="padding:.35rem .5rem;font-weight:500;text-align:right">' + (limits.sliders === -1 ? 'Unlimited' : limits.sliders) + '</td></tr>' +
+        '<tr><td style="padding:.35rem .5rem;color:#6b7280;font-size:.8rem">Media Files</td><td style="padding:.35rem .5rem;font-weight:500;text-align:right">' + (limits.media === -1 ? 'Unlimited' : limits.media) + '</td></tr>' +
+        '<tr><td style="padding:.35rem .5rem;color:#6b7280;font-size:.8rem">AI Tools</td><td style="padding:.35rem .5rem;font-weight:500;text-align:right">' + (limits.ai ? 'Enabled' : 'Disabled') + '</td></tr>' +
+        '<tr><td style="padding:.35rem .5rem;color:#6b7280;font-size:.8rem">Users</td><td style="padding:.35rem .5rem;font-weight:500;text-align:right">' + (limits.users === -1 ? 'Unlimited' : limits.users) + '</td></tr>' +
+      '</table>' +
+    '</div>';
+
+  // Plan options
+  html +=
+    '<div class="panel">' +
+      '<h3 style="margin-bottom:.75rem">Available Plans</h3>' +
+      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:.75rem">' +
+        Object.keys(PLAN_INFO).filter(function(p) { return p !== sub.plan && p !== 'trial'; }).map(function(p) {
+          var pi = PLAN_INFO[p];
+          return '<div style="padding:1rem;border:1px solid #e5e7eb;border-radius:8px;text-align:center;cursor:pointer" onclick="alert(\'Payment gateway not yet integrated. Please contact support.\')">' +
+            '<div style="font-size:1.5rem;margin-bottom:.35rem">' + pi.icon + '</div>' +
+            '<div style="font-weight:600;font-size:.85rem">' + pi.name + '</div>' +
+            '<div style="font-size:.75rem;color:#6b7280">' + pi.price + ' / ' + pi.period + '</div>' +
+            '<div style="margin-top:.5rem;font-size:.75rem;background:#eef2ff;color:#4F46E5;padding:.2rem .5rem;border-radius:4px;font-weight:500">Contact Support</div>' +
+          '</div>';
+        }).join('') +
+      '</div>' +
+    '</div>';
+
+  // Super Admin Management (shown if user is super admin)
+  html +=
+    '<div class="panel" id="saPanel" style="display:none;border:2px solid #f59e0b">' +
+      '<h3 style="margin-bottom:.75rem;color:#f59e0b">🔧 Admin Management</h3>' +
+      '<div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem">' +
+        '<button class="btn-secondary" onclick="changePlan(\'' + businessId + '\',\'starter\')">Set Starter</button>' +
+        '<button class="btn-secondary" onclick="changePlan(\'' + businessId + '\',\'pro\')">Set Pro</button>' +
+        '<button class="btn-secondary" onclick="changePlan(\'' + businessId + '\',\'enterprise\')">Set Enterprise</button>' +
+      '</div>' +
+      '<div style="display:flex;gap:.5rem;flex-wrap:wrap">' +
+        '<button class="btn-secondary" onclick="extendTrial(\'' + businessId + '\')">+7 Days Trial</button>' +
+        '<button class="btn-secondary" onclick="setStatus(\'' + businessId + '\',\'active\')">Activate</button>' +
+        '<button class="btn-secondary" onclick="setStatus(\'' + businessId + '\',\'suspended\')" style="border-color:#ef4444;color:#ef4444">Suspend</button>' +
+      '</div>' +
+    '</div>';
+
+  document.getElementById('billingContent').innerHTML = html;
+
+  // Check if user is super admin and show management panel
+  if (typeof AuthContext !== 'undefined' && typeof AuthContext.isSuperAdmin === 'function') {
+    AuthContext.isSuperAdmin().then(function(isSA) {
+      if (isSA) {
+        document.getElementById('saPanel').style.display = 'block';
+      }
+    });
+  }
+  // Also check superAdmins path directly
+  firebase.auth().onAuthStateChanged(function(u) {
+    if (u) {
+      firebase.database().ref('superAdmins/' + u.uid).once('value').then(function(snap) {
+        if (snap.exists()) {
+          document.getElementById('saPanel').style.display = 'block';
+        }
+      });
+    }
+  });
+}
+
+window.changePlan = function(bizId, plan) {
+  if (confirm('Change plan to ' + plan + '?')) {
+    Subscription.changePlan(bizId, plan, 'active').then(function() {
+      location.reload();
+    }).catch(function(err) { alert('Error: ' + err.message); });
+  }
+};
+
+window.extendTrial = function(bizId) {
+  if (confirm('Extend trial by 7 days?')) {
+    Subscription.extendTrial(bizId, 7).then(function() {
+      location.reload();
+    }).catch(function(err) { alert('Error: ' + err.message); });
+  }
+};
+
+window.setStatus = function(bizId, status) {
+  var label = status === 'active' ? 'activate' : 'suspend';
+  if (confirm('Are you sure you want to ' + label + ' this subscription?')) {
+    Subscription.setStatus(bizId, status).then(function() {
+      location.reload();
+    }).catch(function(err) { alert('Error: ' + err.message); });
+  }
+};
+
+init();
+})();
+</script>
+</body>
+</html>

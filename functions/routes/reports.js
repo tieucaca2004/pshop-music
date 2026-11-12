@@ -10,10 +10,10 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  * /businesses/{businessId}/reports/{type}/{period}.
  *
  * Uses production middleware:
- *   verifyAuth() → requireBusiness() → requireRole()
+ *   authenticate() → authorizeBusiness() → authorizeBusiness()
  */
 const admin = require('firebase-admin');
-const { verifyAuth, requireBusiness, requireRole } = require('../shared/auth');
+const { authenticate, authorizeBusiness, authorizeBusiness } = require('../shared/middleware');
 
 const ROLE_READ = ['super_admin', 'business_admin', 'business_editor', 'business_viewer'];
 
@@ -349,13 +349,13 @@ async function handle(req, res, helpers) {
 
   if (path.indexOf('/v1/businesses/') !== 0) return null;
 
-  const authRes = await verifyAuth(req);
+  const authRes = await authenticate(req);
   if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
 
-  const bizRes = await requireBusiness(req);
+  const bizRes = await authorizeBusiness(req);
   if (!bizRes.ok) return sendError(res, bizRes.code, bizRes.error);
 
-  const roleRes = await requireRole(req, ROLE_READ);
+  const roleRes = await authorizeBusiness(req, ROLE_READ);
   if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
   const businessId = req.tenant.businessId;

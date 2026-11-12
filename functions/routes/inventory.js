@@ -9,10 +9,10 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  *   before, after, action, quantity, note, createdBy.
  *
  * Prevents negative stock — all decrements check current stock first.
- * Uses production middleware: verifyAuth() → requireBusiness() → requireRole()
+ * Uses production middleware: authenticate() → authorizeBusiness() → authorizeBusiness()
  */
 const admin = require('firebase-admin');
-const { verifyAuth, requireBusiness, requireRole } = require('../shared/auth');
+const { authenticate, authorizeBusiness, authorizeBusiness } = require('../shared/middleware');
 
 const ROLE_READ = ['super_admin', 'business_admin', 'business_editor', 'business_viewer'];
 const ROLE_WRITE = ['super_admin', 'business_admin', 'business_editor'];
@@ -24,10 +24,10 @@ async function handle(req, res, helpers) {
 
   if (path.indexOf('/v1/businesses/') !== 0) return null;
 
-  const authRes = await verifyAuth(req);
+  const authRes = await authenticate(req);
   if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
 
-  const bizRes = await requireBusiness(req);
+  const bizRes = await authorizeBusiness(req);
   if (!bizRes.ok) return sendError(res, bizRes.code, bizRes.error);
 
   const businessId = req.tenant.businessId;
@@ -47,7 +47,7 @@ async function handle(req, res, helpers) {
 
   // ─── GET /.../inventory — List all stock ────────────────────────────
   if (listMatch && req.method === 'GET') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const snap = await db.ref('businesses/' + businessId + '/inventory').once('value');
@@ -60,7 +60,7 @@ async function handle(req, res, helpers) {
 
   // ─── POST /.../inventory — Add stock item ──────────────────────────
   if (listMatch && req.method === 'POST') {
-    const roleRes = await requireRole(req, ROLE_WRITE);
+    const roleRes = await authorizeBusiness(req, ROLE_WRITE);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const body = req.body || {};
@@ -103,7 +103,7 @@ async function handle(req, res, helpers) {
 
   // ─── GET /.../inventory/{id} — Read one stock item ─────────────────
   if (itemMatch && req.method === 'GET') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const snap = await db.ref('businesses/' + businessId + '/inventory/' + itemMatch[2]).once('value');
@@ -113,7 +113,7 @@ async function handle(req, res, helpers) {
 
   // ─── PATCH /.../inventory/{id} — Update stock item ─────────────────
   if (itemMatch && req.method === 'PATCH') {
-    const roleRes = await requireRole(req, ROLE_ADMIN);
+    const roleRes = await authorizeBusiness(req, ROLE_ADMIN);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const id = itemMatch[2];
@@ -134,7 +134,7 @@ async function handle(req, res, helpers) {
 
   // ─── POST /.../inventory/{id}/adjust — Stock adjustment ────────────
   if (adjMatch && req.method === 'POST') {
-    const roleRes = await requireRole(req, ROLE_WRITE);
+    const roleRes = await authorizeBusiness(req, ROLE_WRITE);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const id = adjMatch[2];
@@ -209,7 +209,7 @@ async function handle(req, res, helpers) {
 
   // ─── DELETE /.../inventory/{id} — Remove stock item ────────────────
   if (itemMatch && req.method === 'DELETE') {
-    const roleRes = await requireRole(req, ROLE_ADMIN);
+    const roleRes = await authorizeBusiness(req, ROLE_ADMIN);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const id = itemMatch[2];

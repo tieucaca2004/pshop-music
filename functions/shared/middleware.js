@@ -1,26 +1,36 @@
+/**
+ * shared/middleware.js — Standardized middleware cho PSH Business Platform.
+ * Thay thế hoàn toàn shared/auth.js cho các route đã chuyển đổi.
+ */
 const admin = require('firebase-admin');
 const db = admin.database();
 
-function authenticate(req) {
+async function authenticate(req) {
   const auth = req.get('Authorization') || '';
   const match = auth.match(/^Bearer (.+)$/);
-  if (!match) return { ok: false, code: 401, error: 'Thiếu Authorization Bearer token.' };
-  return admin.auth().verifyIdToken(match[1]).then(decoded => {
+  if (!match) return { ok: false, code: 401, error: 'Thi\u1ebfu Authorization Bearer token.' };
+  try {
+    const decoded = await admin.auth().verifyIdToken(match[1]);
     return { ok: true, uid: decoded.uid, email: decoded.email || '' };
-  }).catch(() => ({ ok: false, code: 401, error: 'Token không hợp lệ.' }));
+  } catch (err) {
+    return { ok: false, code: 401, error: 'Token kh\u00f4ng h\u1ee3p l\u1ec7.' };
+  }
 }
 
-async function authorizeBusiness(authUid, businessId) {
-  if (!authUid || !businessId) return { ok: false, code: 403, error: 'Không có quyền.' };
+async function authorizeBusiness(authUid, businessId, allowedRoles) {
+  if (!authUid || !businessId) return { ok: false, code: 403, error: 'Thi\u1ebfu uid ho\u1eb7c businessId.' };
   if (businessId === 'pshop-music') {
     const snap = await db.ref('roles/' + authUid + '/role').once('value');
-    if (snap.val()) return { ok: true, role: snap.val() };
-    return { ok: false, code: 403, error: 'Không có quyền trong pshop-music.' };
+    const role = snap.val();
+    if (!role) return { ok: false, code: 403, error: 'Kh\u00f4ng c\u00f3 quy\u1ec1n trong pshop-music.' };
+    if (allowedRoles && allowedRoles.indexOf(role) < 0) return { ok: false, code: 403, error: 'Kh\u00f4ng \u0111\u1ee7 quy\u1ec1n.' };
+    return { ok: true, role: role, businessId: 'pshop-music' };
   }
   const snap = await db.ref('businessMembers/' + businessId + '/' + authUid).once('value');
   const member = snap.val();
-  if (!member) return { ok: false, code: 403, error: 'Không có quyền trong doanh nghiệp này.' };
-  return { ok: true, role: member.role };
+  if (!member) return { ok: false, code: 403, error: 'Kh\u00f4ng c\u00f3 quy\u1ec1n trong doanh nghi\u1ec7p n\u00e0y.' };
+  if (allowedRoles && allowedRoles.indexOf(member.role) < 0) return { ok: false, code: 403, error: 'Kh\u00f4ng \u0111\u1ee7 quy\u1ec1n.' };
+  return { ok: true, role: member.role, businessId: businessId };
 }
 
 function sendSuccess(res, data, opts) {
@@ -28,7 +38,8 @@ function sendSuccess(res, data, opts) {
 }
 
 function sendError(res, code, message, details) {
-  return res.status(code === 'UNAUTHENTICATED' ? 401 : code === 'PERMISSION_DENIED' ? 403 : code === 'NOT_FOUND' ? 404 : code === 'CONFLICT' ? 409 : 400).json({ success: false, error: { code, message, details: details || null } });
+  var statusMap = { UNAUTHENTICATED: 401, PERMISSION_DENIED: 403, NOT_FOUND: 404, CONFLICT: 409, INVALID_REQUEST: 400 };
+  return res.status(statusMap[code] || 400).json({ success: false, error: { code: code, message: message, details: details || null } });
 }
 
 module.exports = { authenticate, authorizeBusiness, sendSuccess, sendError };

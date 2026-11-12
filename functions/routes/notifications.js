@@ -10,10 +10,10 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  * and delivery preferences (in-app, email, telegram, webhook).
  *
  * Uses production middleware:
- *   verifyAuth() → requireBusiness() → requireRole()
+ *   authenticate() → authorizeBusiness() → authorizeBusiness()
  */
 const admin = require('firebase-admin');
-const { verifyAuth, requireBusiness, requireRole } = require('../shared/auth');
+const { authenticate, authorizeBusiness, authorizeBusiness } = require('../shared/middleware');
 
 const ROLE_READ = ['super_admin', 'business_admin', 'business_editor', 'business_viewer'];
 const ROLE_MANAGE = ['super_admin', 'business_admin'];
@@ -52,10 +52,10 @@ async function handle(req, res, helpers) {
 
   if (path.indexOf('/v1/businesses/') !== 0) return null;
 
-  const authRes = await verifyAuth(req);
+  const authRes = await authenticate(req);
   if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
 
-  const bizRes = await requireBusiness(req);
+  const bizRes = await authorizeBusiness(req);
   if (!bizRes.ok) return sendError(res, bizRes.code, bizRes.error);
 
   const businessId = req.tenant.businessId;
@@ -75,7 +75,7 @@ async function handle(req, res, helpers) {
 
   // ─── POST /.../notifications — Create (system/broadcast) ──────────
   if (listMatch && req.method === 'POST') {
-    const roleRes = await requireRole(req, ROLE_MANAGE);
+    const roleRes = await authorizeBusiness(req, ROLE_MANAGE);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const body = req.body || {};
@@ -105,7 +105,7 @@ async function handle(req, res, helpers) {
 
   // ─── POST /.../notifications/read-all — Mark all as read ──────────
   if (readAllMatch && req.method === 'POST') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const now = admin.database.ServerValue.TIMESTAMP;
@@ -133,7 +133,7 @@ async function handle(req, res, helpers) {
 
   // ─── GET /.../notifications — List ─────────────────────────────────
   if (listMatch && req.method === 'GET') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const snap = await db.ref(notifPath).once('value');
@@ -170,7 +170,7 @@ async function handle(req, res, helpers) {
 
   // ─── GET /.../notifications/{id} — Read One ──────────────────────
   if (itemMatch && req.method === 'GET') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const snap = await db.ref(notifPath + '/' + itemMatch[2]).once('value');
@@ -180,7 +180,7 @@ async function handle(req, res, helpers) {
 
   // ─── PATCH /.../notifications/{id} — Mark read/unread ─────────────
   if (itemMatch && req.method === 'PATCH') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const id = itemMatch[2];
@@ -207,7 +207,7 @@ async function handle(req, res, helpers) {
 
   // ─── DELETE /.../notifications/{id} — Delete ─────────────────────
   if (itemMatch && req.method === 'DELETE') {
-    const roleRes = await requireRole(req, ROLE_MANAGE);
+    const roleRes = await authorizeBusiness(req, ROLE_MANAGE);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const id = itemMatch[2];

@@ -17,6 +17,7 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  */
 const listResource = require('../shared/listResource');
 const { validateSchema } = require('../shared/validation');
+const { hasApiPermission } = require('../shared/apiKeyAuth');
 
 function activeFilter(items) {
   return items.filter(i => i.active !== false);
@@ -50,16 +51,26 @@ function isStaffRole(role) {
   return role === 'admin' || role === 'editor';
 }
 
+// API keys are scoped to one business by apiGateway. The flat /v1/products
+// collection belongs only to the legacy PShop tenant, so a key for another
+// tenant can never be used against this route.
+function hasProductApiPermission(auth, permission) {
+  return !!(auth && auth.type === 'api_key' && auth.businessId === 'pshop-music' &&
+    hasApiPermission(auth.apiKey, permission));
+}
+
 async function handle(req, res, helpers) {
   const { sendSuccess, sendError, auth } = helpers;
   const route = matchRoute(req.__pshPath);
   if (!route) return null; // not handled by this router
   const { moduleKey, itemKey, config } = route;
   const staff = auth.ok && isStaffRole(auth.role);
+  const apiCanReadProducts = moduleKey === 'products' && hasProductApiPermission(auth, 'products.read');
+  const apiCanWriteProducts = moduleKey === 'products' && hasProductApiPermission(auth, 'products.write');
 
   if (req.method === 'GET' && !itemKey) {
     let items = await listResource.getAll(config.node);
-    if (!staff && config.publicFilter) items = config.publicFilter(items);
+    if (!staff && !apiCanReadProducts && config.publicFilter) items = config.publicFilter(items);
     return sendSuccess(res, items);
   }
 
@@ -70,23 +81,28 @@ async function handle(req, res, helpers) {
       item = all.find(i => i.slug === itemKey) || null;
     }
     if (!item) return sendError(res, 'NOT_FOUND', moduleKey + ' không tồn tại.');
-    if (!staff && config.publicFilter && config.publicFilter([item]).length === 0) {
+    if (!staff && !apiCanReadProducts && config.publicFilter && config.publicFilter([item]).length === 0) {
       return sendError(res, 'NOT_FOUND', moduleKey + ' không tồn tại.');
     }
     return sendSuccess(res, item);
   }
 
   if (req.method === 'POST' && !itemKey) {
-    if (!staff) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin/Editor được tạo mới.');
+    if (!staff && !apiCanWriteProducts) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin/Editor hoặc API key có products.write được tạo mới.');
     const check = validateSchema(req.body, config.createSchema);
     if (!check.valid) return sendError(res, 'INVALID_REQUEST', check.issues.join(' '));
-    const created = await listResource.add(config.node, req.body || {});
+    // OpenClaw's service key is intentionally draft-only. Human staff retain
+    // the existing CMS behaviour; the integration cannot publish by accident.
+    const payload = apiCanWriteProducts
+      ? Object.assign({}, req.body || {}, { pubStatus: 'draft' })
+      : (req.body || {});
+    const created = await listResource.add(config.node, payload);
     return sendSuccess(res, created, { status: 201 });
   }
 
   if (req.method === 'PATCH' && itemKey) {
     if (!config.patchable) return sendError(res, 'METHOD_NOT_ALLOWED', moduleKey + ' không hỗ trợ PATCH.');
-    if (!staff) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin/Editor được sửa.');
+    if (!staff && !apiCanWriteProducts) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin/Editor hoặc API key có products.write được sửa.');
     const updated = await listResource.update(config.node, itemKey, req.body || {});
     if (!updated) return sendError(res, 'NOT_FOUND', moduleKey + ' không tồn tại.');
     return sendSuccess(res, updated);

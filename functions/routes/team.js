@@ -9,10 +9,10 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  * within their own tenant. Members receive business_editor or business_viewer role.
  *
  * Uses production middleware:
- *   verifyAuth() → requireBusiness() → requireRole()
+ *   authenticate() → authorizeBusiness() → authorizeBusiness()
  */
 const admin = require('firebase-admin');
-const { verifyAuth, requireBusiness, requireRole } = require('../shared/auth');
+const { authenticate, authorizeBusiness, authorizeBusiness } = require('../shared/middleware');
 
 const ALLOWED_ROLES = ['business_editor', 'business_viewer'];
 const ROLE_MANAGE = ['super_admin', 'business_admin'];
@@ -24,10 +24,10 @@ async function handle(req, res, helpers) {
   // Only handle team paths
   if (path.indexOf('/v1/businesses/') !== 0) return null;
 
-  const authRes = await verifyAuth(req);
+  const authRes = await authenticate(req);
   if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
 
-  const bizRes = await requireBusiness(req);
+  const bizRes = await authorizeBusiness(req);
   if (!bizRes.ok) return sendError(res, bizRes.code, bizRes.error);
 
   // ─── Route patterns ──────────────────────────────────────────────
@@ -43,7 +43,7 @@ async function handle(req, res, helpers) {
   if (!inviteMatch && !listMatch && !memberMatch) return null;
 
   // Team management requires business_admin or super_admin
-  const roleRes = await requireRole(req, ROLE_MANAGE);
+  const roleRes = await authorizeBusiness(req, ROLE_MANAGE);
   if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
   const businessId = req.tenant.businessId;

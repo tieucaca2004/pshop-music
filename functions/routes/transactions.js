@@ -12,10 +12,10 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  * Invoices: billing documents with auto-incrementing numbers.
  *
  * Uses production middleware:
- *   verifyAuth() → requireBusiness() → requireRole()
+ *   authenticate() → authorizeBusiness() → authorizeBusiness()
  */
 const admin = require('firebase-admin');
-const { verifyAuth, requireBusiness, requireRole } = require('../shared/auth');
+const { authenticate, authorizeBusiness, authorizeBusiness } = require('../shared/middleware');
 
 const ROLE_READ = ['super_admin', 'business_admin', 'business_editor', 'business_viewer'];
 const ROLE_WRITE = ['super_admin', 'business_admin', 'business_editor'];
@@ -32,10 +32,10 @@ async function handle(req, res, helpers) {
 
   if (path.indexOf('/v1/businesses/') !== 0) return null;
 
-  const authRes = await verifyAuth(req);
+  const authRes = await authenticate(req);
   if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
 
-  const bizRes = await requireBusiness(req);
+  const bizRes = await authorizeBusiness(req);
   if (!bizRes.ok) return sendError(res, bizRes.code, bizRes.error);
 
   const businessId = req.tenant.businessId;
@@ -63,7 +63,7 @@ async function handle(req, res, helpers) {
 
   // GET /.../transactions — List
   if (txList && req.method === 'GET') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const snap = await db.ref(basePath).once('value');
@@ -80,7 +80,7 @@ async function handle(req, res, helpers) {
 
   // POST /.../transactions — Create
   if (txList && req.method === 'POST') {
-    const roleRes = await requireRole(req, ROLE_WRITE);
+    const roleRes = await authorizeBusiness(req, ROLE_WRITE);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const body = req.body || {};
@@ -116,7 +116,7 @@ async function handle(req, res, helpers) {
 
   // GET /.../transactions/{id}
   if (txItem && req.method === 'GET') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const snap = await db.ref(basePath + '/' + txItem[2]).once('value');
@@ -126,7 +126,7 @@ async function handle(req, res, helpers) {
 
   // PATCH /.../transactions/{id} — Update status
   if (txItem && req.method === 'PATCH') {
-    const roleRes = await requireRole(req, ROLE_ADMIN);
+    const roleRes = await authorizeBusiness(req, ROLE_ADMIN);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const id = txItem[2];
@@ -184,7 +184,7 @@ async function handle(req, res, helpers) {
 
   // GET /.../invoices — List
   if (invList && req.method === 'GET') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const snap = await db.ref(basePath).once('value');
@@ -200,7 +200,7 @@ async function handle(req, res, helpers) {
 
   // POST /.../invoices — Create
   if (invList && req.method === 'POST') {
-    const roleRes = await requireRole(req, ROLE_WRITE);
+    const roleRes = await authorizeBusiness(req, ROLE_WRITE);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const body = req.body || {};
@@ -244,7 +244,7 @@ async function handle(req, res, helpers) {
 
   // GET /.../invoices/{id}
   if (invItem && req.method === 'GET') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const snap = await db.ref(basePath + '/' + invItem[2]).once('value');
@@ -254,7 +254,7 @@ async function handle(req, res, helpers) {
 
   // PATCH /.../invoices/{id} — Update
   if (invItem && req.method === 'PATCH') {
-    const roleRes = await requireRole(req, ROLE_WRITE);
+    const roleRes = await authorizeBusiness(req, ROLE_WRITE);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const id = invItem[2];

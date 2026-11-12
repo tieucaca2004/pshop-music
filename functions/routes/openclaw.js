@@ -25,6 +25,7 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  * kỳ nhóm nào — vẫn luôn true như trước, chỉ agent thấy chính xác hơn.
  */
 const { hasPermission, canAccess } = require('../shared/permissions');
+const { hasApiPermission } = require('../shared/apiKeyAuth');
 
 const CAPABILITY_GROUPS = [
   { group: 'Read CMS', endpoints: ['GET /v1/products', 'GET /v1/categories', 'GET /v1/blog', 'GET /v1/banners', 'GET /v1/sliders', 'GET /v1/videos'], requires: null },
@@ -56,7 +57,10 @@ async function handle(req, res, helpers) {
     let available;
     if (g.requires === null) available = true;
     else if (g.requires === 'admin') available = auth.role === 'admin';
-    else if (g.requires === 'staff') available = isStaff(auth);
+    else if (g.requires === 'staff') {
+      available = isStaff(auth) || (auth.type === 'api_key' && auth.businessId === 'pshop-music' &&
+        hasApiPermission(auth.apiKey, 'products.write'));
+    }
     else if (g.requires === 'agent-media') {
       // 1 cờ cho 3 permission khác nhau (Blog/Image/Image-Prompt) — agent chỉ
       // cần 1 trong 3 để thấy nhóm này "available", đúng cách route thật

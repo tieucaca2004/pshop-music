@@ -14,11 +14,11 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  * primitives the legacy flat cmsLists.js already uses, scoped to
  * businesses/{businessId}/cms/{collection} instead of a flat node.
  *
- * Uses production middleware: verifyAuth() → requireBusiness() → requireRole()
+ * Uses production middleware: authenticate() → authorizeBusiness() → authorizeBusiness()
  */
 const listResource = require('../shared/listResource');
 const { validateSchema } = require('../shared/validation');
-const { verifyAuth, requireBusiness, requireRole } = require('../shared/auth');
+const { authenticate, authorizeBusiness, authorizeBusiness } = require('../shared/middleware');
 
 const ROLE_READ = ['super_admin', 'business_admin', 'business_editor', 'business_viewer'];
 const ROLE_WRITE = ['super_admin', 'business_admin', 'business_editor'];
@@ -43,10 +43,10 @@ async function handle(req, res, helpers) {
   const config = COLLECTIONS[collection];
   if (!config) return null; // not one of ours — not a real 404 here, let other routers/fallback handle it
 
-  const authRes = await verifyAuth(req);
+  const authRes = await authenticate(req);
   if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
 
-  const bizRes = await requireBusiness(req);
+  const bizRes = await authorizeBusiness(req);
   if (!bizRes.ok) return sendError(res, bizRes.code, bizRes.error);
 
   const businessId = req.tenant.businessId;
@@ -55,14 +55,14 @@ async function handle(req, res, helpers) {
 
   // ─── GET .../cms/{collection} — List ────────────────────────────────
   if (!itemId && req.method === 'GET') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
     return sendSuccess(res, await listResource.getAll(node));
   }
 
   // ─── POST .../cms/{collection} — Create ─────────────────────────────
   if (!itemId && req.method === 'POST') {
-    const roleRes = await requireRole(req, ROLE_WRITE);
+    const roleRes = await authorizeBusiness(req, ROLE_WRITE);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const check = validateSchema(req.body, config.createSchema);
@@ -74,7 +74,7 @@ async function handle(req, res, helpers) {
 
   // ─── GET .../cms/{collection}/{id} — Read One ───────────────────────
   if (itemId && req.method === 'GET') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const item = await listResource.getOne(node, itemId);
@@ -84,7 +84,7 @@ async function handle(req, res, helpers) {
 
   // ─── PATCH .../cms/{collection}/{id} — Update ───────────────────────
   if (itemId && req.method === 'PATCH') {
-    const roleRes = await requireRole(req, ROLE_WRITE);
+    const roleRes = await authorizeBusiness(req, ROLE_WRITE);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const updated = await listResource.update(node, itemId, req.body || {});
@@ -94,7 +94,7 @@ async function handle(req, res, helpers) {
 
   // ─── DELETE .../cms/{collection}/{id} — Delete ──────────────────────
   if (itemId && req.method === 'DELETE') {
-    const roleRes = await requireRole(req, ROLE_ADMIN);
+    const roleRes = await authorizeBusiness(req, ROLE_ADMIN);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const deleted = await listResource.remove(node, itemId);

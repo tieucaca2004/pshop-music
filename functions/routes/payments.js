@@ -12,10 +12,10 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  * Real API integration can be swapped in without changing business logic.
  *
  * Uses production middleware:
- *   verifyAuth() → requireBusiness() → requireRole()
+ *   authenticate() → authorizeBusiness() → authorizeBusiness()
  */
 const admin = require('firebase-admin');
-const { verifyAuth, requireBusiness, requireRole } = require('../shared/auth');
+const { authenticate, authorizeBusiness, authorizeBusiness } = require('../shared/middleware');
 const { getAdapter, listProviders } = require('../shared/paymentAdapters');
 
 const ROLE_READ = ['super_admin', 'business_admin', 'business_editor', 'business_viewer'];
@@ -28,10 +28,10 @@ async function handle(req, res, helpers) {
 
   if (path.indexOf('/v1/businesses/') !== 0) return null;
 
-  const authRes = await verifyAuth(req);
+  const authRes = await authenticate(req);
   if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
 
-  const bizRes = await requireBusiness(req);
+  const bizRes = await authorizeBusiness(req);
   if (!bizRes.ok) return sendError(res, bizRes.code, bizRes.error);
 
   const businessId = req.tenant.businessId;
@@ -55,7 +55,7 @@ async function handle(req, res, helpers) {
 
   // ─── GET /.../payments — List ───────────────────────────────────────
   if (listMatch && req.method === 'GET') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const snap = await db.ref(paymentsPath).once('value');
@@ -69,7 +69,7 @@ async function handle(req, res, helpers) {
 
   // ─── POST /.../payments — Create Payment ───────────────────────────
   if (listMatch && req.method === 'POST') {
-    const roleRes = await requireRole(req, ROLE_WRITE);
+    const roleRes = await authorizeBusiness(req, ROLE_WRITE);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const body = req.body || {};
@@ -234,7 +234,7 @@ async function handle(req, res, helpers) {
 
   // ─── GET /.../payments/{id} — Read One ─────────────────────────────
   if (itemMatch && req.method === 'GET') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const snap = await db.ref(paymentsPath + '/' + itemMatch[2]).once('value');
@@ -244,7 +244,7 @@ async function handle(req, res, helpers) {
 
   // ─── PATCH /.../payments/{id} — Update (status changes) ───────────
   if (itemMatch && req.method === 'PATCH') {
-    const roleRes = await requireRole(req, ROLE_ADMIN);
+    const roleRes = await authorizeBusiness(req, ROLE_ADMIN);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const id = itemMatch[2];
@@ -270,7 +270,7 @@ async function handle(req, res, helpers) {
 
   // ─── POST /.../payments/{id}/refund — Refund ──────────────────────
   if (itemMatch && req.method === 'POST' && req.query && req.query.action === 'refund') {
-    const roleRes = await requireRole(req, ROLE_ADMIN);
+    const roleRes = await authorizeBusiness(req, ROLE_ADMIN);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const id = itemMatch[2];

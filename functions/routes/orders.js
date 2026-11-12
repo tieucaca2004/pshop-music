@@ -13,10 +13,10 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  * Customer totalOrders/totalSpent/lastOrderAt updated automatically.
  *
  * Uses production middleware:
- *   verifyAuth() → requireBusiness() → requireRole()
+ *   authenticate() → authorizeBusiness() → authorizeBusiness()
  */
 const admin = require('firebase-admin');
-const { verifyAuth, requireBusiness, requireRole } = require('../shared/auth');
+const { authenticate, authorizeBusiness, authorizeBusiness } = require('../shared/middleware');
 
 const ROLE_READ = ['super_admin', 'business_admin', 'business_editor', 'business_viewer'];
 const ROLE_WRITE = ['super_admin', 'business_admin', 'business_editor'];
@@ -34,10 +34,10 @@ async function handle(req, res, helpers) {
 
   if (path.indexOf('/v1/businesses/') !== 0) return null;
 
-  const authRes = await verifyAuth(req);
+  const authRes = await authenticate(req);
   if (!authRes.ok) return sendError(res, authRes.code, authRes.error);
 
-  const bizRes = await requireBusiness(req);
+  const bizRes = await authorizeBusiness(req);
   if (!bizRes.ok) return sendError(res, bizRes.code, bizRes.error);
 
   const businessId = req.tenant.businessId;
@@ -54,7 +54,7 @@ async function handle(req, res, helpers) {
 
   // ─── GET /.../orders — List / Search ─────────────────────────────────
   if (listMatch && req.method === 'GET') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const snap = await db.ref(ordersPath).once('value');
@@ -85,7 +85,7 @@ async function handle(req, res, helpers) {
 
   // ─── POST /.../orders — Create Order ────────────────────────────────
   if (listMatch && req.method === 'POST') {
-    const roleRes = await requireRole(req, ROLE_WRITE);
+    const roleRes = await authorizeBusiness(req, ROLE_WRITE);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const body = req.body || {};
@@ -231,7 +231,7 @@ async function handle(req, res, helpers) {
 
   // ─── GET /.../orders/{id} — Read One ────────────────────────────────
   if (itemMatch && req.method === 'GET') {
-    const roleRes = await requireRole(req, ROLE_READ);
+    const roleRes = await authorizeBusiness(req, ROLE_READ);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const snap = await db.ref(ordersPath + '/' + itemMatch[2]).once('value');
@@ -241,7 +241,7 @@ async function handle(req, res, helpers) {
 
   // ─── PATCH /.../orders/{id} — Update ────────────────────────────────
   if (itemMatch && req.method === 'PATCH') {
-    const roleRes = await requireRole(req, ROLE_WRITE);
+    const roleRes = await authorizeBusiness(req, ROLE_WRITE);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const id = itemMatch[2];
@@ -275,7 +275,7 @@ async function handle(req, res, helpers) {
 
   // ─── PATCH /.../orders/{id}?action=cancel — Cancel Order ──────────
   if (itemMatch && req.method === 'PATCH' && req.query && req.query.action === 'cancel') {
-    const roleRes = await requireRole(req, ROLE_ADMIN);
+    const roleRes = await authorizeBusiness(req, ROLE_ADMIN);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const id = itemMatch[2];
@@ -351,7 +351,7 @@ async function handle(req, res, helpers) {
   // ─── DELETE /.../orders/{id} — Cancel (same as cancel) ─────────────
   if (itemMatch && req.method === 'DELETE') {
     // Redirect to cancel — we don't hard-delete orders
-    const roleRes = await requireRole(req, ROLE_ADMIN);
+    const roleRes = await authorizeBusiness(req, ROLE_ADMIN);
     if (!roleRes.ok) return sendError(res, roleRes.code, roleRes.error);
 
     const id = itemMatch[2];

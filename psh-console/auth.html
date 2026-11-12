@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Đăng nhập / Đăng ký — PSH Console</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f8f9fb;--surface:#fff;--border:#e6e8ec;--border-light:#f0f1f3;--text:#13161c;--text-secondary:#6b7280;--text-tertiary:#9ca3af;--primary:#4F46E5;--primary-hover:#4338CA;--primary-light:#eef2ff;--accent:#8b5cf6;--success:#10b981;--success-bg:#ecfdf5;--danger:#ef4444;--danger-bg:#fef2f2;--radius:12px;--radius-sm:8px;--radius-lg:16px;--shadow:0 1px 3px rgba(0,0,0,.04);--shadow-md:0 4px 12px rgba(0,0,0,.07);--shadow-lg:0 10px 40px rgba(0,0,0,.1);--transition:.2s ease;--font:Inter,system-ui,sans-serif}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;}
+body{font-family:var(--font);color:var(--text);background:var(--bg);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1rem}
+.auth-shell{width:100%;max-width:440px;background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:2.5rem;box-shadow:var(--shadow-lg)}
+.auth-brand{text-align:center;margin-bottom:1.5rem}
+.auth-logo{width:48px;height:48px;background:linear-gradient(135deg,var(--primary),var(--accent));border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1rem;margin:0 auto .5rem}
+.auth-brand-text{font-weight:700;font-size:1.15rem}
+.auth-brand-sub{font-size:.78rem;color:var(--text-secondary);margin-top:.15rem}
+/* Tabs */
+.tab-bar{display:flex;margin-bottom:1.5rem;border-radius:var(--radius-sm);background:var(--bg);padding:3px}
+.tab{flex:1;padding:.5rem;text-align:center;font-size:.82rem;font-weight:600;cursor:pointer;border:none;background:none;font-family:var(--font);border-radius:6px;color:var(--text-secondary);transition:var(--transition)}
+.tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.tab:hover:not(.active){color:var(--text)}
+/* Forms */
+.auth-form{display:none}
+.auth-form.active{display:block}
+.form-group{margin-bottom:1rem}
+.form-group label{display:block;font-size:.75rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:.3rem}
+.form-group input{width:100%;padding:.65rem .8rem;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:.9rem;font-family:var(--font);transition:var(--transition)}
+.form-group input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+.form-group .input-error{border-color:var(--danger)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+.form-error{font-size:.75rem;color:var(--danger);margin-top:.25rem;display:none}
+.form-error.show{display:block}
+/* Buttons */
+.btn-primary{width:100%;padding:.7rem;border:none;border-radius:var(--radius-sm);background:var(--primary);color:#fff;font-size:.88rem;font-weight:600;font-family:var(--font);cursor:pointer;transition:var(--transition)}
+.btn-primary:hover{background:var(--primary-hover);box-shadow:var(--shadow-md);transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-link{background:none;border:none;color:var(--primary);font-size:.82rem;font-family:var(--font);cursor:pointer;padding:0;text-decoration:none;font-weight:500}
+.btn-link:hover{text-decoration:underline}
+/* Messages */
+.auth-message{padding:.65rem .85rem;border-radius:var(--radius-sm);font-size:.82rem;margin-bottom:1rem;display:none}
+.auth-message.error{display:block;background:var(--danger-bg);color:#991b1b;border:1px solid #fecaca}
+.auth-message.success{display:block;background:var(--success-bg);color:#065f46;border:1px solid #a7f3d0}
+.auth-divider{text-align:center;font-size:.78rem;color:var(--text-tertiary);margin:.75rem 0;position:relative}
+.auth-divider::before,.auth-divider::after{content:'';position:absolute;top:50%;width:42%;height:1px;background:var(--border)}
+.auth-divider::before{left:0}.auth-divider::after{right:0}
+.auth-footer{text-align:center;margin-top:1.25rem;font-size:.82rem;color:var(--text-secondary)}
+.auth-footer a{color:var(--primary);text-decoration:none;font-weight:500;cursor:pointer}
+.auth-footer a:hover{text-decoration:underline}
+.password-hint{font-size:.72rem;color:var(--text-tertiary);margin-top:.2rem}
+/* Loading */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .5s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* Back link */
+.back-link{display:inline-flex;align-items:center;gap:.35rem;font-size:.8rem;color:var(--text-secondary);text-decoration:none;margin-bottom:1.25rem;cursor:pointer}
+.back-link:hover{color:var(--primary)}
+@media(max-width:480px){.auth-shell{padding:1.5rem}.form-row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="auth-shell">
+<div class="auth-brand">
+<div class="auth-logo">C</div>
+<div class="auth-brand-text">PSH Console</div>
+<div class="auth-brand-sub">Nền tảng quản trị doanh nghiệp</div>
+</div>
+
+<!-- Tab Bar -->
+<div class="tab-bar">
+<button class="tab active" onclick="switchTab('login')">Đăng nhập</button>
+<button class="tab" onclick="switchTab('register')">Đăng ký</button>
+</div>
+
+<!-- Message -->
+<div class="auth-message" id="authMessage"></div>
+
+<!-- ====== LOGIN FORM ====== -->
+<form class="auth-form active" id="loginForm" onsubmit="return handleLogin(event)">
+<div class="form-group">
+<label>Email</label>
+<input type="email" id="loginEmail" placeholder="email@domain.com" required>
+</div>
+<div class="form-group">
+<label>Mật khẩu</label>
+<input type="password" id="loginPassword" placeholder="••••••••" required>
+</div>
+<button type="submit" class="btn-primary" id="loginBtn">Đăng nhập</button>
+<div class="auth-divider">hoặc</div>
+<div class="auth-footer">
+Chưa có tài khoản? <a onclick="switchTab('register')">Đăng ký ngay</a>
+</div>
+<div class="auth-footer" style="margin-top:.5rem">
+<a onclick="showForgotPassword()" class="btn-link">Quên mật khẩu?</a>
+</div>
+</form>
+
+<!-- ====== REGISTER FORM ====== -->
+<form class="auth-form" id="registerForm" onsubmit="return handleRegister(event)">
+<div class="form-row">
+<div class="form-group">
+<label>Tên</label>
+<input type="text" id="regName" placeholder="Nguyễn Văn A" required>
+</div>
+<div class="form-group">
+<label>Tên doanh nghiệp</label>
+<input type="text" id="regBizName" placeholder="Công ty XYZ" required>
+</div>
+</div>
+<div class="form-group">
+<label>Email</label>
+<input type="email" id="regEmail" placeholder="email@domain.com" required>
+</div>
+<div class="form-group">
+<label>Mật khẩu</label>
+<input type="password" id="regPassword" placeholder="Tối thiểu 6 ký tự" minlength="6" required>
+<div class="password-hint">Ít nhất 6 ký tự</div>
+</div>
+<div class="form-group">
+<label>Xác nhận mật khẩu</label>
+<input type="password" id="regConfirm" placeholder="Nhập lại mật khẩu" required>
+</div>
+<button type="submit" class="btn-primary" id="registerBtn">Tạo tài khoản miễn phí</button>
+<div class="auth-footer" style="margin-top:1rem">
+Đã có tài khoản? <a onclick="switchTab('login')">Đăng nhập</a>
+</div>
+</form>
+
+<!-- ====== FORGOT PASSWORD ====== -->
+<form class="auth-form" id="forgotForm" onsubmit="return handleForgot(event)">
+<div class="back-link" onclick="switchTab('login')">← Quay lại đăng nhập</div>
+<div class="form-group">
+<label>Email</label>
+<input type="email" id="forgotEmail" placeholder="email@domain.com" required>
+</div>
+<button type="submit" class="btn-primary" id="forgotBtn">Gửi yêu cầu</button>
+<div class="auth-footer" style="margin-top:1rem">
+<div class="password-hint">Chúng tôi sẽ gửi link đặt lại mật khẩu đến email của bạn.</div>
+</div>
+</form>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+
+<script>
+(function(){
+'use strict';
+
+var currentTab='login';
+var $=function(id){return document.getElementById(id)};
+
+/* ─── Tab Switching ─── */
+window.switchTab=function(tab){
+currentTab=tab;
+document.querySelectorAll('.tab').forEach(function(t){t.classList.toggle('active',t.textContent.includes(tab==='login'?'Đăng nhập':'Đăng ký'))});
+document.querySelectorAll('.auth-form').forEach(function(f){f.classList.remove('active')});
+$('authMessage').className='auth-message';
+$('authMessage').style.display='none';
+if(tab==='login')$('loginForm').classList.add('active');
+else if(tab==='register')$('registerForm').classList.add('active');
+else if(tab==='forgot')$('forgotForm').classList.add('active');
+};
+
+window.showForgotPassword=function(){
+document.querySelectorAll('.auth-form').forEach(function(f){f.classList.remove('active')});
+$('forgotForm').classList.add('active');
+document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('active')});
+$('authMessage').className='auth-message';
+$('authMessage').style.display='none';
+};
+
+/* ─── Show Error ─── */
+function showError(msg){
+var el=$('authMessage');
+el.textContent=msg;
+el.className='auth-message error';
+el.style.display='block';
+}
+
+function showSuccess(msg){
+var el=$('authMessage');
+el.textContent=msg;
+el.className='auth-message success';
+el.style.display='block';
+}
+
+/* ─── Login ─── */
+window.handleLogin=function(e){
+e.preventDefault();
+var email=$('loginEmail').value.trim();
+var pass=$('loginPassword').value;
+var btn=$('loginBtn');
+btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Đang đăng nhập...';
+
+firebase.auth().signInWithEmailAndPassword(email,pass)
+.then(function(){
+// Route to existing admin dashboard
+window.location.href='/psh/';
+})
+.catch(function(err){
+btn.disabled=false;btn.textContent='Đăng nhập';
+var msg='';
+switch(err.code){
+case'auth/user-not-found':msg='Email chưa được đăng ký.';break;
+case'auth/wrong-password':msg='Sai mật khẩu.';break;
+case'auth/invalid-email':msg='Email không hợp lệ.';break;
+case'auth/user-disabled':msg='Tài khoản đã bị vô hiệu hóa.';break;
+default:msg=err.message;
+}
+showError(msg);
+});
+return false;
+};
+
+/* ─── Register ─── */
+window.handleRegister=function(e){
+e.preventDefault();
+var name=$('regName').value.trim();
+var bizName=$('regBizName').value.trim();
+var email=$('regEmail').value.trim();
+var pass=$('regPassword').value;
+var confirm=$('regConfirm').value;
+var btn=$('registerBtn');
+
+// Validation
+if(!name||!bizName||!email||!pass){showError('Vui lòng điền đầy đủ thông tin.');return false;}
+if(pass.length<6){showError('Mật khẩu phải có ít nhất 6 ký tự.');return false;}
+if(pass!==confirm){showError('Mật khẩu xác nhận không khớp.');return false;}
+
+btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Đang tạo tài khoản...';
+
+// Step 1: Create Firebase Auth account
+firebase.auth().createUserWithEmailAndPassword(email,pass)
+.then(function(cred){
+var uid=cred.user.uid;
+// Update display name
+cred.user.updateProfile({displayName:name});
+
+// Step 2: Auto-create business
+var bizId='biz-'+Date.now();
+var slug=bizName.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'business';
+var now=Date.now();
+
+var updates={};
+updates['businesses/'+bizId+'/info']={
+businessId:bizId,displayName:bizName,slug:slug,
+status:'active',plan:'starter',timezone:'Asia/Ho_Chi_Minh',
+currency:'VND',country:'VN',language:'vi',
+type:'other',createdAt:now,updatedAt:now,
+ownerUid:uid,ownerEmail:email,ownerName:name
+};
+updates['businesses/'+bizId+'/settings/general']={};
+updates['businesses/'+bizId+'/subscription']={
+plan:'trial',status:'trial',trialStart:now,trialEnd:now+(14*24*60*60*1000),
+billingCycle:'monthly',renewalDate:now+(14*24*60*60*1000),createdAt:now,updatedAt:now
+};
+updates['businessMembers/'+bizId+'/'+uid]={
+role:'owner',email:email,name:name,
+assignedAt:now,status:'active'
+};
+updates['registry/'+bizId]={
+name:bizName,slug:slug,created:now,ownerEmail:email
+};
+
+return firebase.database().ref().update(updates).then(function(){
+// Step 3: Set pending business for Business Context
+if (typeof BusinessContext !== 'undefined' && BusinessContext.setPendingBusiness) {
+  BusinessContext.setPendingBusiness(bizId);
+}
+// Also store in localStorage for fallback
+localStorage.setItem('psh_pending_business', bizId);
+// Step 4: Redirect to existing admin dashboard
+showSuccess('✓ Tài khoản và doanh nghiệp đã được tạo! Đang chuyển hướng...');
+setTimeout(function(){
+window.location.href='/psh/';
+},1000);
+});
+})
+.catch(function(err){
+btn.disabled=false;btn.textContent='Tạo tài khoản miễn phí';
+var msg='';
+switch(err.code){
+case'auth/email-already-in-use':msg='Email này đã được sử dụng. Vui lòng đăng nhập.';break;
+case'auth/weak-password':msg='Mật khẩu quá yếu. Vui lòng chọn mật khẩu mạnh hơn.';break;
+case'auth/invalid-email':msg='Email không hợp lệ.';break;
+case'auth/operation-not-allowed':msg='Đăng ký email/mật khẩu chưa được kích hoạt.';break;
+default:msg=err.message;
+}
+showError(msg);
+});
+return false;
+};
+
+/* ─── Forgot Password ─── */
+window.handleForgot=function(e){
+e.preventDefault();
+var email=$('forgotEmail').value.trim();
+var btn=$('forgotBtn');
+if(!email){showError('Vui lòng nhập email.');return false;}
+btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Đang gửi...';
+firebase.auth().sendPasswordResetEmail(email)
+.then(function(){
+btn.disabled=false;btn.textContent='Gửi yêu cầu';
+showSuccess('✓ Link đặt lại mật khẩu đã được gửi đến '+email);
+})
+.catch(function(err){
+btn.disabled=false;btn.textContent='Gửi yêu cầu';
+var msg='';
+switch(err.code){
+case'auth/user-not-found':msg='Email chưa được đăng ký.';break;
+case'auth/invalid-email':msg='Email không hợp lệ.';break;
+default:msg=err.message;
+}
+showError(msg);
+});
+return false;
+};
+
+/* ─── Auth State Check: if already logged in, go to admin ─── */
+firebase.auth().onAuthStateChanged(function(user){
+if(user){
+// Already signed in — redirect to admin
+window.location.href='/psh/';
+}
+});
+
+})();
+</script>
+</body>
+</html>
