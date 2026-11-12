@@ -314,9 +314,21 @@ async function refreshActiveToken({ uid, appSecret, graphApi }) {
     accessToken: freshUserToken, obtainedAt: Date.now(), expiresAt, isMock: mockMode, obtainedBy: uid
   });
   await db().ref('facebookActiveToken').update({
-    accessToken: matchingPage.access_token, obtainedAt: Date.now(), expiresAt
+    accessToken: matchingPage.access_token, obtainedAt: Date.now(), expiresAt, isMock: mockMode
   });
-  await db().ref('facebookConnection').update({ tokenExpiresAt: expiresAt });
+
+  // SYNC-FIX: đọc lại facebookActiveToken SAU khi ghi rồi mới quyết định có báo
+  // facebookConnection.status = 'connected' hay không — tránh để Admin hiện "Đã
+  // kết nối" trong khi facebookPublish (đọc facebookActiveToken) thực ra thiếu
+  // accessToken/pageId (hai node lệch nhau).
+  const activeAfterSnap = await db().ref('facebookActiveToken').once('value');
+  const activeAfter = activeAfterSnap.val();
+  if (!activeAfter || !activeAfter.accessToken || !activeAfter.pageId) {
+    throw new Error('Làm mới token xong nhưng facebookActiveToken vẫn thiếu accessToken/pageId — vui lòng "Kết nối lại".');
+  }
+  await db().ref('facebookConnection').update({
+    status: 'connected', pageId: activeAfter.pageId, tokenExpiresAt: expiresAt, isMock: mockMode
+  });
   return { status: 200, body: { success: true, tokenExpiresAt: expiresAt } };
 }
 

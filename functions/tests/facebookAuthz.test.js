@@ -455,14 +455,31 @@ function seedState(state, data) { dbData.facebookOAuthState = Object.assign(dbDa
   await test('refreshActiveToken: chưa từng kết nối → 400, không ghi', async () => {
     eq((await fbConn.refreshActiveToken({ uid: 'u-super', appSecret: 's', graphApi: graphStub() })).status, 400); eq(tokenWrites().length, 0);
   });
-  await test('refreshActiveToken: thành công cập nhật 3 node', async () => {
+  await test('refreshActiveToken: thành công cập nhật 3 node, facebookConnection đồng bộ theo facebookActiveToken', async () => {
     dbData.facebookUserToken = { accessToken: 'U', expiresAt: Date.now() + 1e6, isMock: true };
     dbData.facebookActiveToken = { pageId: 'p1', accessToken: 'old' };
-    dbData.facebookConnection = { status: 'connected' };
+    dbData.facebookConnection = { status: 'token_expiring' };
     const r = await fbConn.refreshActiveToken({ uid: 'u-super', appSecret: 's', graphApi: graphStub() });
     eq(r.status, 200);
     eq(getPath(dbData, 'facebookActiveToken/accessToken'), 'PAGE-TOKEN-1');
     eq(getPath(dbData, 'facebookUserToken/obtainedBy'), 'u-super');
+    // SYNC-FIX: facebookConnection phải được sửa thành 'connected' (trước đây chỉ
+    // tokenExpiresAt được cập nhật, status cũ bị bỏ sót).
+    eq(getPath(dbData, 'facebookConnection/status'), 'connected');
+    eq(getPath(dbData, 'facebookConnection/pageId'), 'p1');
+  });
+  await test('refreshActiveToken: Graph trả page thiếu access_token → KHÔNG báo connected, ném lỗi', async () => {
+    dbData.facebookUserToken = { accessToken: 'U', expiresAt: Date.now() + 1e6, isMock: true };
+    dbData.facebookActiveToken = { pageId: 'p1', accessToken: 'old' };
+    dbData.facebookConnection = { status: 'token_expiring' };
+    const badStub = graphStub({
+      getManagedPages: async () => ({ data: [{ id: 'p1', access_token: '' }] })
+    });
+    await rejects(
+      () => fbConn.refreshActiveToken({ uid: 'u-super', appSecret: 's', graphApi: badStub }),
+      /thiếu accessToken\/pageId/
+    );
+    eq(getPath(dbData, 'facebookConnection/status'), 'token_expiring');
   });
 
   // ═══ 5. App ID / disconnect ════════════════════════════════════════════════
