@@ -16,6 +16,20 @@
  * `unconfigured`; callers must not invent facts.
  *
  * No price field is read from research. User-submitted price is authoritative.
+ *
+ * Built-in providers (PSH_RESEARCH_PROVIDER):
+ *   - "tavily": see tavilyProvider.
+ *   - "google": see googleProvider. Uses "Grounding with Google Search" (the
+ *     Gemini Developer API, generativelanguage.googleapis.com) to DISCOVER
+ *     candidate source URLs only — Gemini's own generated text is never used
+ *     as a fact source (same policy as model knowledge, see above). Each
+ *     discovered URL is then fetched directly and run through the SAME
+ *     extractFromPage/matchEvidence/caching/claim-grounding pipeline used by
+ *     every other provider, so verified facts always come from the fetched
+ *     page, never from the model. Needs PSH_RESEARCH_API_KEY (a Gemini API
+ *     key). Google's older Custom Search JSON API is closed to new customers
+ *     (per developers.google.com/custom-search/v1/overview as of 2026) and is
+ *     not used here.
  */
 'use strict';
 const admin = require('firebase-admin');
@@ -54,8 +68,12 @@ function configFromEnv() {
   const provider = String(process.env.PSH_RESEARCH_PROVIDER || '').trim().toLowerCase();
   const officialDomains = String(process.env.PSH_RESEARCH_OFFICIAL_DOMAINS || '').split(',').map(normalizeHost).filter(Boolean);
   const timeoutMs = Number(process.env.PSH_RESEARCH_TIMEOUT_MS) > 0 ? Number(process.env.PSH_RESEARCH_TIMEOUT_MS) : DEFAULT_TIMEOUT_MS;
+  // Tên model Gemini dùng cho Grounding with Google Search — override qua env để
+  // không phải sửa code khi Google đổi/khai tử phiên bản model.
+  const googleModel = String(process.env.PSH_RESEARCH_GOOGLE_MODEL || '').trim() || 'gemini-2.0-flash';
   const tavily = provider === 'tavily';
-  return { url, key, provider, officialDomains, timeoutMs, configured: tavily || (!!url && !!key && !!safeUrl(url)) };
+  const google = provider === 'google';
+  return { url, key, provider, officialDomains, timeoutMs, googleModel, configured: tavily || (google && !!key) || (!!url && !!key && !!safeUrl(url)) };
 }
 
 function domainOf(url) { try { return new URL(url).hostname.toLowerCase(); } catch (e) { return ''; } }
@@ -333,8 +351,152 @@ async function tavilyProvider(query, cfg, fetchImpl) {
   };
 }
 
+// ── Google provider: Grounding with Google Search (Gemini Developer API) ──
+// Dùng để TÌM url, không dùng câu trả lời của Gemini làm dữ kiện (xem đầu file).
+// Mỗi url tìm được sẽ bị tải lại và chạy qua extractFromPage/matchEvidence như
+// mọi provider khác — dữ kiện verified luôn lấy từ trang thật, không từ model.
+const GOOGLE_GENERATE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/';
+const GOOGLE_PAGE_FETCH_TIMEOUT_MS = 8000;
+
+async function googleGroundedSearch(q, cfg, doFetch) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), cfg.timeoutMs);
+  try {
+    const url = GOOGLE_GENERATE_URL + encodeURIComponent(cfg.googleModel) + ':generateContent?key=' + encodeURIComponent(cfg.key);
+    const body = { contents: [{ parts: [{ text: q }] }], tools: [{ google_search: {} }] };
+    const r = await doFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, signal: ctrl.signal, body: JSON.stringify(body) });
+    let data = null; try { data = await r.json(); } catch (e) { data = null; }
+    if (!r.ok || !data) {
+      const e = new Error((data && data.error && data.error.message) || ('google HTTP ' + r.status)); e.code = 'provider_error'; e.status = r.status; throw e;
+    }
+    return extractGroundedUrls(data);
+  } finally { clearTimeout(timer); }
+}
+
+// Chịu được 2 dạng phản hồi đã thấy trong tài liệu Google (groundingChunks kiểu
+// Vertex/Gemini generateContent cũ, và url_citation annotations kiểu Interactions
+// API mới hơn) — CHƯA XÁC MINH bằng API key thật, xem ghi chú trong báo cáo.
+function extractGroundedUrls(data) {
+  const out = [];
+  const seen = new Set();
+  const add = (uri, title) => {
+    const safe = safeUrl(uri);
+    if (!safe || seen.has(safe)) return;
+    seen.add(safe);
+    out.push({ title: String(title || '').trim(), url: safe });
+  };
+  const candidates = Array.isArray(data && data.candidates) ? data.candidates : [];
+  for (const c of candidates) {
+    const chunks = c && c.groundingMetadata && Array.isArray(c.groundingMetadata.groundingChunks) ? c.groundingMetadata.groundingChunks : [];
+    for (const ch of chunks) {
+      const web = ch && ch.web;
+      if (web && web.uri) add(web.uri, web.title);
+    }
+    const parts = c && c.content && Array.isArray(c.content.parts) ? c.content.parts : [];
+    for (const p of parts) {
+      const anns = Array.isArray(p && p.annotations) ? p.annotations : [];
+      for (const a of anns) {
+        const cite = a && a.url_citation;
+        if (cite && cite.url) add(cite.url, cite.title);
+      }
+    }
+  }
+  // Dạng Interactions API thay thế (steps-based) — kiểm thêm phòng khi response ở dạng này.
+  const steps = Array.isArray(data && data.output) ? data.output : [];
+  for (const s of steps) {
+    const anns = Array.isArray(s && s.content) ? s.content : [];
+    for (const block of anns) {
+      const cites = Array.isArray(block && block.annotations) ? block.annotations : [];
+      for (const a of cites) {
+        const cite = a && a.url_citation;
+        if (cite && cite.url) add(cite.url, cite.title);
+      }
+    }
+  }
+  return out;
+}
+
+async function fetchPageForExtraction(url, doFetch) {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), GOOGLE_PAGE_FETCH_TIMEOUT_MS);
+  try {
+    const r = await doFetch(url, { method: 'GET', signal: ctrl.signal });
+    if (!r || !r.ok) return '';
+    const text = await r.text();
+    return htmlToText(text);
+  } catch (e) {
+    return ''; // Một nguồn tải lỗi không chặn các nguồn khác — extractFromPage vẫn nhận chuỗi rỗng an toàn.
+  } finally { clearTimeout(timer); }
+}
+
+// Cắt bớt <script>/<style>/comment trước khi đưa vào pageLines (đã tự strip tag
+// còn lại) — tránh JS/CSS lẫn vào claims/specs khi tải HTML thô (khác Tavily, vốn
+// tự trả content đã làm sạch).
+function htmlToText(html) {
+  return String(html || '')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<\/(p|div|li|h[1-6]|br|tr)>/gi, '\n')
+    .slice(0, 60000);
+}
+
+async function googleProvider(query, cfg, fetchImpl) {
+  const doFetch = fetchImpl || fetch;
+  const cands = candidateSets(query);
+  if (!cands.length) {
+    return { matchedSku: '', rejectReason: 'unverifiable_query', sources: [],
+      warnings: ['Tên/mã quá chung để xác minh đúng sản phẩm (cần model có số hoặc ít nhất 2 từ nhận diện) — chưa tra cứu.'] };
+  }
+  const idPart = [query.sku, query.name].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(' ');
+  const q = (idPart + ' official specifications features').slice(0, 380);
+  const found = await googleGroundedSearch(q, cfg, doFetch);
+  if (!found.length) {
+    return { matchedSku: '', rejectReason: 'no_matching_source', sources: [],
+      warnings: ['Google Search không trả về nguồn nào cho "' + (query.sku || query.name) + '".'] };
+  }
+  // Tải tối đa 6 url đầu (cùng giới hạn với Tavily) rồi chạy qua đúng pipeline chấp nhận/loại chung.
+  const candidates = found.slice(0, 6);
+  const pages = await Promise.all(candidates.map((c) => fetchPageForExtraction(c.url, doFetch)));
+  const results = candidates.map((c, i) => ({ title: c.title, url: c.url, content: pages[i], raw_content: pages[i] }));
+
+  const accepted = [];
+  let rejected = 0;
+  for (const x of results) {
+    if (!x.url || !relevantToQuery(x, query)) { rejected++; continue; }
+    const ev = matchEvidence(x, cands, query);
+    if (!ev) { rejected++; continue; }
+    accepted.push({ x, ev, official: isOfficialUrl(x.url, cfg.officialDomains) });
+  }
+  if (!accepted.length) {
+    return { matchedSku: '', rejectReason: 'no_matching_source', sources: [],
+      warnings: ['Không nguồn nào có tiêu đề/URL khớp đúng model "' + (query.sku || query.name) + '" (đã loại ' + rejected + ' kết quả khác model/thế hệ/biến thể).'] };
+  }
+  accepted.sort((a, b) => (a.official ? 0 : 1) - (b.official ? 0 : 1) || (a.ev.where === 'title' ? 0 : 1) - (b.ev.where === 'title' ? 0 : 1));
+  const extracted = accepted.map((a) => {
+    const ex = extractFromPage(a.x.raw_content, a.x.content, { title: a.x.title, cands });
+    const richness = Object.keys(ex.specs).length * 3 + ex.features.length * 2 + ex.applications.length * 2 + (ex.description ? 3 : 0) + Math.min(ex.claims.length, 10);
+    return Object.assign({}, a, { ex, richness });
+  });
+  extracted.sort((a, b) => (a.official ? 0 : 1) - (b.official ? 0 : 1) || b.richness - a.richness);
+  const top = extracted.slice(0, 4);
+  const sources = top.map(({ x, official, ex }) => ({ title: String(x.title || x.url).trim(), url: x.url, type: official ? 'official' : 'other',
+    claims: ex.claims, specs: ex.specs, features: ex.features, applications: ex.applications, description: ex.description }));
+  const best = top[0];
+  const title = String(best.x.title || '').replace(/\s*[–|]\s*.*$/, '').replace(/\s*-\s*(White|Black|Single|Pair)$/i, '').trim();
+  const descSrc = sources.find(s => s.description);
+  return {
+    matchedSku: best.ev.model,
+    verification: { verified: true, evidence: top.map(t => ({ url: t.x.url, where: t.ev.where, matched: t.ev.matched })) },
+    contentLevel: top.some(t => typeof t.x.raw_content === 'string' && t.x.raw_content.length > 200) ? 'page' : 'snippet',
+    product: { name: title || query.name || null, model: best.ev.model, brand: query.brand || null, category: query.category || null, description: descSrc ? descSrc.description : null },
+    sources
+  };
+}
+
 async function defaultProvider(query, cfg, fetchImpl) {
   if (cfg.provider === 'tavily') return tavilyProvider(query, cfg, fetchImpl);
+  if (cfg.provider === 'google') return googleProvider(query, cfg, fetchImpl);
   if (!cfg.configured) {
     const e = new Error('web research chưa được cấu hình');
     e.code = 'unconfigured';
@@ -511,4 +673,4 @@ async function researchProduct(query, depsIn) {
   return out;
 }
 
-module.exports = { RESEARCH_SCHEMA, candidateSets, matchEvidence, extractFromPage, hasUsableContent, researchProduct, configFromEnv, normalizeResearch, genTokens, normalize, tavilyProvider, isOfficialUrl };
+module.exports = { RESEARCH_SCHEMA, candidateSets, matchEvidence, extractFromPage, hasUsableContent, researchProduct, configFromEnv, normalizeResearch, genTokens, normalize, tavilyProvider, googleProvider, extractGroundedUrls, isOfficialUrl };
