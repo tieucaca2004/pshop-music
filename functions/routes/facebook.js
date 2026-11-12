@@ -1,7 +1,6 @@
 // MT-enabled
 const { sendSuccess, sendError } = require("../shared/middleware");
 const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter");
-
 /*
  * routes/facebook.js — Sprint 14 Phase 3 (FINAL mục 17.21). `connection`/
  * `health`/`oauth/start` đọc/ghi trực tiếp RTDB (đúng node đã xác nhận:
@@ -22,6 +21,7 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  * thế" đã áp dụng cho shared/auth.js ở Phase 1.
  */
 const admin = require('firebase-admin');
+const { isFacebookSuperAdmin } = require('../shared/facebookSuperAdmin');
 
 const FACEBOOK_OAUTH_DIALOG_URL = 'https://www.facebook.com/v19.0/dialog/oauth';
 const FACEBOOK_OAUTH_CALLBACK_URL = 'https://us-central1-pshop-music.cloudfunctions.net/facebookOAuthCallback';
@@ -80,6 +80,7 @@ async function handle(req, res, helpers) {
 
   if (path === '/v1/facebook/oauth/start' && req.method === 'POST') {
     if (!isAdmin) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin được khởi động kết nối Facebook.');
+    if (!await isFacebookSuperAdmin(auth.uid)) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Super Admin được khởi động kết nối Facebook.');
     const state = require('crypto').randomUUID();
     await admin.database().ref('facebookOAuthState/' + state).set({ uid: auth.uid, createdAt: admin.database.ServerValue.TIMESTAMP });
     const appId = await getFacebookAppId();
@@ -137,6 +138,7 @@ async function handle(req, res, helpers) {
   // vụ (cần Founder tự OAuth) — KHÔNG tự thực thi.
   if (path === '/v1/facebook/repair' && req.method === 'POST') {
     if (!isAdmin) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin được Repair Facebook.');
+    if (!await isFacebookSuperAdmin(auth.uid)) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Super Admin được Repair Facebook.');
     const connSnap = await admin.database().ref('facebookConnection').once('value');
     const conn = connSnap.val() || {};
     if (conn.status !== 'connected' && conn.status !== 'token_expiring') {

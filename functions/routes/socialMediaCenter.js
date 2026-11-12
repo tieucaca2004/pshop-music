@@ -24,13 +24,17 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  */
 const admin = require('firebase-admin');
 const listResource = require('../shared/listResource');
+const { isFacebookSuperAdmin } = require('../shared/facebookSuperAdmin');
 
 const DRAFTS_NODE = 'aiDrafts';
 const FUNCTIONS_BASE = 'https://us-central1-pshop-music.cloudfunctions.net';
 const RELEVANT_MODULES = ['facebook-post-generator', 'banner-generator', 'blog-writer', 'product-description-writer'];
 
-function canPublish(auth) {
-  return auth.ok && (auth.role === 'admin' || auth.role === 'editor');
+// Chỉ Super Admin được publish Facebook. Trước đây kiểm `role === 'admin' || 'editor'`
+// — nhưng 23/23 bản ghi roles/ đều 'admin' nên KHÔNG giới hạn được ai.
+async function canPublish(auth) {
+  if (!auth || !auth.ok) return false;
+  return await isFacebookSuperAdmin(auth.uid);
 }
 
 function absolutizeLink(link) {
@@ -61,7 +65,7 @@ async function handle(req, res, helpers) {
   const path = req.__pshPath;
   if (path.indexOf('/v1/social-media-center/') !== 0) return null;
 
-  if (!canPublish(auth)) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Admin/Editor được dùng Social Media Center.');
+  if (!await canPublish(auth)) return sendError(res, 'PERMISSION_DENIED', 'Chỉ Super Admin được dùng Social Media Center.');
 
   if (path === '/v1/social-media-center/drafts' && req.method === 'GET') {
     const all = await listResource.getAll(DRAFTS_NODE);

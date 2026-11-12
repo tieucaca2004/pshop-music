@@ -459,8 +459,24 @@ exports.facebookOAuthCallback = onRequest({ secrets: [FACEBOOK_APP_SECRET] }, as
     if (!stateData || !stateData.uid) {
       throw new Error('Phiên kết nối không hợp lệ hoặc đã hết hạn — vui lòng thử Kết nối lại.');
     }
+    // State chỉ sống tối đa 10 phút kể từ lúc tạo (createdAt do
+    // routes/facebook.js ghi bằng ServerValue.TIMESTAMP). Hết hạn → xoá luôn
+    // rồi từ chối, không để state cũ dùng lại được.
+    const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+    if (!stateData.createdAt || (Date.now() - stateData.createdAt) > OAUTH_STATE_TTL_MS) {
+      await stateRef.remove();
+      throw new Error('Phiên kết nối đã hết hạn — vui lòng thử Kết nối lại.');
+    }
     await stateRef.remove(); // dùng 1 lần, xoá ngay sau khi xác nhận
     const uid = stateData.uid;
+
+    // Chỉ Super Admin được hoàn tất OAuth. Kiểm TRƯỚC mọi lần ghi token
+    // (facebookPendingPages/facebookPageTokens/facebookUserToken bên dưới),
+    // vì cả 3 node đều server-only và facebookUserToken là TOÀN CỤC — một tài
+    // khoản admin thường hoàn tất OAuth sẽ ghi đè token của cả platform.
+    if (!await isFacebookSuperAdmin(uid)) {
+      throw new Error('Chỉ Super Admin được hoàn tất kết nối Facebook.');
+    }
 
     const appId = await getFacebookAppId();
     const mockMode = !appId;
@@ -533,6 +549,8 @@ exports.facebookSelectPage = onRequest({ cors: true }, async (req, res) => {
     return;
   }
 
+  if (!await requireFacebookSuperAdmin(check, res)) return;
+
   const { pageId } = req.body || {};
   if (!pageId) {
     res.status(400).json({ error: 'Thiếu "pageId".' });
@@ -600,6 +618,8 @@ exports.facebookPublish = onRequest({ cors: true }, async (req, res) => {
     return;
   }
 
+  if (!await requireFacebookSuperAdmin(check, res)) return;
+
   const { message, imageUrls } = req.body || {};
   if (!message) {
     res.status(400).json({ error: 'Thiếu nội dung bài đăng ("message").' });
@@ -665,6 +685,8 @@ exports.facebookRefreshToken = onRequest({ secrets: [FACEBOOK_APP_SECRET], cors:
     return;
   }
 
+  if (!await requireFacebookSuperAdmin(check, res)) return;
+
   try {
     const userTokenSnap = await admin.database().ref('facebookUserToken').once('value');
     const userTokenRecord = userTokenSnap.val();
@@ -707,10 +729,33 @@ exports.facebookRefreshToken = onRequest({ secrets: [FACEBOOK_APP_SECRET], cors:
     await admin.database().ref('facebookUserToken').set({
       accessToken: freshUserToken, obtainedAt: Date.now(), expiresAt, isMock: mockMode, obtainedBy: check.uid
     });
-    await admin.database().ref('facebookActiveToken').update({
-      accessToken: matchingPage.access_token, obtainedAt: Date.now(), expiresAt
+    // SYNC-FIX (A): logic tính patch đã tách sang shared/fbConnectionPatch.js
+    // (hàm THUẦN, test được bằng node --test, xem tests/fbConnectionPatch.test.js).
+    // Lý do: facebookRefreshToken trước đây chỉ update accessToken/expiresAt của
+    // facebookActiveToken và CHỈ update tokenExpiresAt của facebookConnection →
+    // Admin (đọc facebookConnection.status) hiện "Đã kết nối" trong khi
+    // facebookPublish (đọc facebookActiveToken.pageId/accessToken) báo "Chưa
+    // kết nối". Hai nguồn sự thật lệch nhau.
+    const activePatch = buildActiveTokenPatch({
+      active, matchingPage, expiresAt, mockMode
     });
-    await admin.database().ref('facebookConnection').update({ tokenExpiresAt: expiresAt });
+    if (!activePatch.ok) {
+      throw new Error('Không dựng được patch facebookActiveToken (' + activePatch.code + ') — vui lòng "Kết nối lại".');
+    }
+    await admin.database().ref('facebookActiveToken').update(activePatch.patch);
+
+    // Đọc lại để xác nhận dữ liệu THỰC SỰ đã ghi, rồi mới quyết định có được
+    // báo 'connected' hay không. Không bao giờ báo connected khi thiếu dữ liệu.
+    const activeAfterSnap = await admin.database().ref('facebookActiveToken').once('value');
+    const connPatch = buildConnectionPatch({
+      activeAfter: activeAfterSnap.val(),
+      expiresAt,
+      mockMode
+    });
+    if (!connPatch.ok) {
+      throw new Error('Làm mới token xong nhưng facebookActiveToken vẫn thiếu accessToken/pageId — vui lòng "Kết nối lại".');
+    }
+    await admin.database().ref('facebookConnection').update(connPatch.patch);
 
     res.json({ success: true, tokenExpiresAt: expiresAt });
   } catch (err) {
@@ -828,6 +873,11 @@ const { validateSchema } = require('./shared/validation');
 const { checkAndIncrement } = require('./shared/rateLimit');
 const { ALLOWED_ORIGINS } = require('./shared/corsConfig');
 const auditLog = require('./shared/auditLog');
+const { buildActiveTokenPatch, buildConnectionPatch } = require('./shared/fbConnectionPatch');
+// Chặn thao tác Facebook nhạy cảm: chỉ Super Admin (superAdmins/{uid} +
+// role === 'super_admin'). Lý do: validateRequest() chỉ kiểm roles/{uid}
+// TỒN TẠI, mà hiện 23/23 bản ghi roles/ đều 'admin' (1 Founder + 22 test).
+const { requireFacebookSuperAdmin, isFacebookSuperAdmin } = require('./shared/facebookSuperAdmin');
 const { sendWebhook, WEBHOOK_SIGNING_SECRET } = require('./shared/webhook');
 const { createJob, getJob, updateJobStatus, updateWorkflowState, appendExecutionLog, getWorkflowConfig } = require('./shared/asyncJob');
 const { onValueCreated } = require('firebase-functions/v2/database');
@@ -1131,9 +1181,6 @@ exports.aiGenerateWorker = onValueCreated({ ref: '/apiAsyncJobs/{jobId}', region
     // ở đây để tránh RTDB trigger tự retry (xem chú thích đầu function).
   }
 });
-
-
-
 
 
 

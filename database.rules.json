@@ -198,12 +198,12 @@
     },
     "facebookConnection": {
       ".read": "auth != null && root.child('roles').child(auth.uid).exists()",
-      ".write": "auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin'"
+      ".write": "auth != null && root.child('superAdmins').child(auth.uid).exists() && root.child('superAdmins').child(auth.uid).child('role').val() === 'super_admin'"
     },
     "facebookOAuthState": {
       "$state": {
         ".read": false,
-        ".write": "auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin' && newData.child('uid').val() === auth.uid",
+        ".write": "auth != null && root.child('superAdmins').child(auth.uid).exists() && root.child('superAdmins').child(auth.uid).child('role').val() === 'super_admin' && newData.child('uid').val() === auth.uid",
         ".validate": "newData.hasChildren(['uid', 'createdAt'])"
       }
     },
@@ -227,7 +227,7 @@
     },
     "facebookAppConfig": {
       ".read": "auth != null && root.child('roles').child(auth.uid).exists()",
-      ".write": "auth != null && root.child('roles').child(auth.uid).child('role').val() === 'admin'"
+      ".write": "auth != null && root.child('superAdmins').child(auth.uid).exists() && root.child('superAdmins').child(auth.uid).child('role').val() === 'super_admin'"
     },
     "$other": {
       ".read": false,
