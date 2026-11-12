@@ -1,0 +1,328 @@
+/* ============================================================
+   founder-polish.css — Sprint A.4.1 Extension Styles
+   Skeleton loaders, version banner, error/retry, sort/pagination
+   ============================================================ */
+
+/* ─── Version Banner ─────────────────────────────────────── */
+.founder-version-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  padding: 0.2rem 0.6rem;
+  background: var(--bg);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.founder-version-banner .version-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.founder-version-banner .version-dot.prod {
+  background: var(--success);
+}
+
+.founder-version-banner .version-dot.dev {
+  background: var(--warning);
+}
+
+.founder-version-banner .version-dot.error {
+  background: var(--danger);
+}
+
+/* ─── Skeleton Loaders ───────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f2 25%, #e5e5ea 50%, #f0f0f2 75%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-sm);
+  color: transparent !important;
+  user-select: none;
+  pointer-events: none;
+}
+
+.skeleton-text {
+  display: inline-block;
+  height: 1em;
+  width: 100%;
+  max-width: 200px;
+  vertical-align: middle;
+}
+
+.skeleton-block {
+  display: block;
+  height: 60px;
+  width: 100%;
+}
+
+.skeleton-card {
+  height: 100px;
+  border-radius: var(--radius);
+}
+
+.skeleton-row {
+  height: 48px;
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.skeleton-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.skeleton-badge {
+  width: 60px;
+  height: 20px;
+  border-radius: 12px;
+  display: inline-block;
+}
+
+@keyframes skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─── Skeleton Grid ──────────────────────────────────────── */
+.skeleton-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.skeleton-stats-grid .skeleton {
+  height: 100px;
+}
+
+/* ─── Error State ────────────────────────────────────────── */
+.error-container {
+  text-align: center;
+  padding: 3rem 2rem;
+  background: var(--surface);
+  border: 1px solid var(--danger-bg);
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+}
+
+.error-container .error-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.error-container .error-title {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--danger);
+  margin-bottom: 0.25rem;
+}
+
+.error-container .error-desc {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+}
+
+.error-container .error-tech {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  background: var(--bg);
+  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1rem;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+  word-break: break-all;
+  font-family: monospace;
+}
+
+/* ─── Retry Button ───────────────────────────────────────── */
+.btn-retry {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  transition: background .15s;
+}
+
+.btn-retry:hover {
+  background: var(--primary-hover);
+}
+
+.btn-retry:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Refresh Button ─────────────────────────────────────── */
+.btn-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  transition: all .15s;
+}
+
+.btn-refresh:hover {
+  background: var(--bg);
+  color: var(--text);
+  border-color: var(--text-tertiary);
+}
+
+.btn-refresh.spinning .refresh-icon {
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Sort Indicator ─────────────────────────────────────── */
+.sort-header {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.sort-header:hover {
+  color: var(--primary);
+}
+
+.sort-header .sort-arrow {
+  display: inline-block;
+  margin-left: 0.25rem;
+  font-size: 0.7rem;
+  opacity: 0.4;
+}
+
+.sort-header .sort-arrow.active {
+  opacity: 1;
+  color: var(--primary);
+}
+
+/* ─── Pagination ─────────────────────────────────────────── */
+.pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0 0;
+  border-top: 1px solid var(--border-light);
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pagination-info {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.pagination-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 0.4rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-family: inherit;
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  transition: all .15s;
+}
+
+.pagination-btn:hover {
+  background: var(--bg);
+  border-color: var(--text-tertiary);
+}
+
+.pagination-btn.active {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.pagination-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.pagination-size-select {
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.775rem;
+  font-family: inherit;
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin-left: 0.5rem;
+}
+
+/* ─── Page-specific: skeleton table ──────────────────────── */
+.skeleton-table {
+  width: 100%;
+}
+
+.skeleton-table .skeleton-row:last-child {
+  margin-bottom: 0;
+}
+
+/* ─── Loading text fallback for slow connections ─────────── */
+.loading-progress {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 0.25rem;
+}
+
+/* ─── Responsive ─────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .skeleton-stats-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+
+  .pagination-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 480px) {
+  .founder-version-banner {
+    display: none;
+  }
+}
