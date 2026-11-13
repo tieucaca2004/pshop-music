@@ -14,6 +14,7 @@ const { resolveBusinessId, checkBusinessRole } = require("../shared/apiAdapter")
  */
 const admin = require('firebase-admin');
 const { verifyAuth, requireBusiness, requireRole } = require('../shared/auth');
+const eventBus = require('../shared/eventBus');
 
 const ROLE_READ = ['super_admin', 'business_admin', 'business_editor', 'business_viewer'];
 const ROLE_MANAGE = ['super_admin', 'business_admin'];
@@ -43,6 +44,9 @@ async function autoNotify(businessId, data) {
   };
 
   await ref.set(notification);
+  // PHASE D: nối Notification → Event Bus (workflow notification.created → webhook/Telegram/OpenClaw).
+  try { await eventBus.emit('notification.created', { businessId, id: ref.key, type: notification.type, title: notification.title, message: notification.message, priority: notification.priority, broadcast: notification.broadcast }); }
+  catch (err) { /* emit lỗi không chặn luồng tạo notification */ }
   return notification;
 }
 
