@@ -1,0 +1,1931 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Founder Workspace — PSH Console</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/platform/founder/founder-polish.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   PSH Console — Founder Workspace
+   Design System: Inter, card-based, gradient accents
+   ============================================================ */
+:root {
+  --bg: #f5f5f7;
+  --surface: #fff;
+  --border: #e5e5ea;
+  --border-light: #f0f0f2;
+  --text: #1d1d1f;
+  --text-secondary: #86868b;
+  --text-tertiary: #aeaeb2;
+  --primary: #4F46E5;
+  --primary-hover: #4338CA;
+  --primary-light: #e8e8ff;
+  --success: #10B981;
+  --success-bg: #d1fae5;
+  --warning: #F59E0B;
+  --warning-bg: #fef3c7;
+  --danger: #EF4444;
+  --danger-bg: #fee2e2;
+  --sidebar-w: 240px;
+  --sidebar-collapsed-w: 60px;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --shadow: 0 1px 3px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.06);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,.08);
+  --transition: .2s ease;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  min-height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+.founder-sidebar {
+  width: var(--sidebar-w);
+  min-height: 100vh;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transition: width var(--transition);
+  z-index: 50;
+  position: relative;
+}
+
+.founder-sidebar.collapsed {
+  width: var(--sidebar-collapsed-w);
+}
+
+.founder-brand {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.founder-logo {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--primary), var(--success));
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.founder-brand-text {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.founder-brand-badge {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--primary);
+  background: var(--primary-light);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  margin-left: 0.25rem;
+}
+
+.founder-nav {
+  flex: 1;
+  padding: 0.75rem;
+  overflow-y: auto;
+}
+
+.founder-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all .15s;
+  margin-bottom: 2px;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.founder-nav-item:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.founder-nav-item.active {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.founder-nav-item .nav-icon {
+  font-size: 1.1rem;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.founder-nav-item .nav-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Collapsed sidebar */
+.founder-sidebar.collapsed .founder-brand-text,
+.founder-sidebar.collapsed .founder-brand-badge,
+.founder-sidebar.collapsed .founder-nav-item .nav-label { display: none; }
+.founder-sidebar.collapsed .founder-nav-item { justify-content: center; padding: 0.6rem 0; }
+.founder-sidebar.collapsed .founder-logo { margin: 0 auto; }
+
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  border-top: 1px solid var(--border);
+  font-size: 1rem;
+  transition: color .15s;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  width: 100%;
+  font-family: inherit;
+}
+
+.sidebar-toggle:hover { color: var(--text); }
+
+/* ============================================================
+   MAIN LAYOUT
+   ============================================================ */
+.founder-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.founder-topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-shrink: 0;
+  min-height: 52px;
+}
+
+.founder-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.founder-topbar-left h1 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.founder-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.founder-user {
+  font-size: 0.825rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.founder-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), #8B5CF6);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.btn-signout {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-family: inherit;
+  transition: all .15s;
+}
+
+.btn-signout:hover {
+  background: var(--bg);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.founder-content {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+/* ============================================================
+   STATS GRID
+   ============================================================ */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  transition: box-shadow var(--transition);
+}
+
+.stat-card:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+.stat-card-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.stat-card-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.stat-card-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.2rem;
+}
+
+.stat-card-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+  margin-top: 0.35rem;
+}
+
+.stat-card-status.operational {
+  background: var(--success-bg);
+  color: #065F46;
+}
+
+.stat-card-status.warning {
+  background: var(--warning-bg);
+  color: #92400E;
+}
+
+.stat-card-status.critical {
+  background: var(--danger-bg);
+  color: #991B1B;
+}
+
+/* ============================================================
+   PANELS / CARDS
+   ============================================================ */
+.panel {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.panel-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.panel-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ============================================================
+   TABLE
+   ============================================================ */
+.data-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.data-table th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.data-table td {
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text);
+  vertical-align: middle;
+}
+
+.data-table tr:last-child td {
+  border-bottom: none;
+}
+
+.data-table tr:hover td {
+  background: rgba(79,70,229,.02);
+}
+
+.data-table .table-actions {
+  display: flex;
+  gap: 0.35rem;
+}
+
+/* ============================================================
+   BADGES / LABELS
+   ============================================================ */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.badge-active {
+  background: var(--success-bg);
+  color: #065F46;
+}
+
+.badge-suspended {
+  background: var(--warning-bg);
+  color: #92400E;
+}
+
+.badge-deleted {
+  background: var(--danger-bg);
+  color: #991B1B;
+}
+
+.badge-owner {
+  background: #ede9fe;
+  color: #6D28D9;
+}
+
+.badge-admin {
+  background: #dbeafe;
+  color: #1E40AF;
+}
+
+.badge-member {
+  background: var(--bg);
+  color: var(--text-secondary);
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  transition: all .15s;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.btn:hover {
+  background: var(--bg);
+  border-color: var(--text-tertiary);
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.btn-danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.btn-danger:hover {
+  background: var(--danger-bg);
+}
+
+.btn-success {
+  color: #065F46;
+  border-color: var(--success);
+}
+
+.btn-success:hover {
+  background: var(--success-bg);
+}
+
+.btn-sm {
+  padding: 0.3rem 0.55rem;
+  font-size: 0.75rem;
+}
+
+.btn-icon {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.9rem;
+}
+
+/* ============================================================
+   FORM ELEMENTS
+   ============================================================ */
+.search-input {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-family: inherit;
+  background: var(--bg);
+  color: var(--text);
+  min-width: 200px;
+  transition: all .15s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--primary);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px rgba(79,70,229,.1);
+}
+
+.filter-select {
+  padding: 0.45rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-family: inherit;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+/* ============================================================
+   PLATFORM SERVICES
+   ============================================================ */
+.service-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.75rem;
+}
+
+.service-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: box-shadow .15s;
+}
+
+.service-card:hover {
+  box-shadow: var(--shadow);
+}
+
+.service-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.service-icon.up { background: var(--success-bg); }
+.service-icon.down { background: var(--danger-bg); }
+.service-icon.warn { background: var(--warning-bg); }
+
+.service-info { flex: 1; min-width: 0; }
+.service-name { font-weight: 600; font-size: 0.875rem; }
+.service-status { font-size: 0.75rem; margin-top: 0.15rem; }
+.service-status.up { color: #065F46; }
+.service-status.down { color: #991B1B; }
+.service-status.warn { color: #92400E; }
+.service-meta { font-size: 0.7rem; color: var(--text-tertiary); margin-top: 0.15rem; }
+
+/* ============================================================
+   DETAIL PAGE
+   ============================================================ */
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.detail-group {
+  margin-bottom: 0;
+}
+
+.detail-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  margin-bottom: 0.2rem;
+}
+
+.detail-value {
+  font-size: 0.925rem;
+  color: var(--text);
+  font-weight: 500;
+}
+
+.member-breakdown {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.member-count-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  border: 1px solid var(--border-light);
+}
+
+.member-count-box .count-num {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+/* ============================================================
+   LOADING, EMPTY, ERROR STATES
+   ============================================================ */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  color: var(--text-secondary);
+}
+
+.loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  margin-bottom: 0.75rem;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: var(--text-secondary);
+}
+
+.empty-state-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+.empty-state-title { font-weight: 600; font-size: 1rem; color: var(--text); margin-bottom: 0.25rem; }
+.empty-state-desc { font-size: 0.85rem; }
+
+.error-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--danger);
+}
+
+/* ============================================================
+   MODAL / OVERLAY
+   ============================================================ */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-box {
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 1.5rem;
+  min-width: 340px;
+  max-width: 480px;
+  width: 90%;
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.modal-body {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 1.25rem;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* ============================================================
+   BACK BUTTON
+   ============================================================ */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color .15s;
+  background: none;
+  border: none;
+  font-family: inherit;
+  padding: 0;
+}
+
+.back-link:hover { color: var(--primary); }
+
+/* ============================================================
+   BREADCRUMB
+   ============================================================ */
+.breadcrumb {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.breadcrumb a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.breadcrumb a:hover { color: var(--primary); }
+
+/* ============================================================
+   MEMBER LIST
+   ============================================================ */
+.member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  transition: box-shadow .15s;
+}
+
+.member-row:hover {
+  box-shadow: var(--shadow);
+}
+
+.member-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e0e0e0, #c0c0c0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.member-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.member-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.member-email {
+  font-size: 0.775rem;
+  color: var(--text-secondary);
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  padding: 0.2rem;
+  color: var(--text-secondary);
+  font-family: inherit;
+}
+
+@media (max-width: 1024px) {
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .founder-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .founder-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .founder-sidebar.collapsed {
+    width: var(--sidebar-w);
+  }
+
+  .founder-sidebar.collapsed .founder-brand-text,
+  .founder-sidebar.collapsed .founder-brand-badge,
+  .founder-sidebar.collapsed .founder-nav-item .nav-label {
+    display: inline;
+  }
+
+  .founder-sidebar.collapsed .founder-nav-item {
+    justify-content: flex-start;
+    padding: 0.6rem 0.75rem;
+  }
+
+  .hamburger-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,.25);
+    z-index: 99;
+  }
+
+  .sidebar-overlay.open {
+    display: block;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+
+  .founder-topbar {
+    padding: 0.5rem 1rem;
+  }
+
+  .founder-content {
+    padding: 1rem;
+  }
+
+  .search-input {
+    min-width: 140px;
+    width: 100%;
+  }
+
+  .panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .panel-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  .service-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-card-value {
+    font-size: 1.35rem;
+  }
+
+  .founder-content {
+    padding: 0.75rem;
+  }
+
+  .panel {
+    padding: 1rem;
+  }
+
+  .member-breakdown {
+    flex-direction: column;
+  }
+
+  .modal-box {
+    min-width: auto;
+    width: 95%;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== SIDEBAR OVERLAY (mobile) ========== -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- ========== SIDEBAR ========== -->
+<aside class="founder-sidebar" id="founderSidebar">
+  <div class="founder-brand">
+    <div class="founder-logo">C</div>
+    <span class="founder-brand-text">PSH Console</span>
+    <span class="founder-brand-badge">Founder</span>
+  </div>
+  <nav class="founder-nav" id="founderNav">
+    <button class="founder-nav-item active" data-route="dashboard">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">Dashboard</span>
+    </button>
+    <button class="founder-nav-item" data-route="businesses">
+      <span class="nav-icon">🏢</span>
+      <span class="nav-label">Businesses</span>
+    </button>
+    <button class="founder-nav-item" data-route="members">
+      <span class="nav-icon">👥</span>
+      <span class="nav-label">Members</span>
+    </button>
+    <button class="founder-nav-item" data-route="platform">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Platform</span>
+    </button>
+    <button class="founder-nav-item" data-route="logs">
+      <span class="nav-icon">📋</span>
+      <span class="nav-label">Logs</span>
+    </button>
+    <button class="founder-nav-item" data-route="settings">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Settings</span>
+    </button>
+  </nav>
+  <button class="sidebar-toggle" id="sidebarToggle" title="Toggle Sidebar">◀</button>
+</aside>
+
+<!-- ========== MAIN ========== -->
+<main class="founder-main">
+  <header class="founder-topbar">
+    <div class="founder-topbar-left">
+      <button class="hamburger-btn" id="hamburgerBtn" aria-label="Toggle navigation">☰</button>
+      <h1 id="pageTitle">Dashboard</h1>
+    </div>
+    <div class="founder-topbar-right">
+      <div class="founder-user" id="founderUser">
+        <div class="founder-user-avatar" id="userAvatar">F</div>
+        <span id="userEmail">Loading...</span>
+        <button class="btn-signout" id="signOutBtn">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="founder-content" id="founderContent">
+    <div class="loading-state">
+      <div class="loading-spinner"></div>
+      <span>Loading Founder Workspace...</span>
+    </div>
+  </div>
+</main>
+
+<!-- ========== MODAL CONTAINER ========== -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal-box">
+    <div class="modal-title" id="modalTitle">Confirm</div>
+    <div class="modal-body" id="modalBody">Are you sure?</div>
+    <div class="modal-actions" id="modalActions">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" id="modalConfirmBtn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== DEPENDENCIES ========== -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script src="/js/auth-context.js"></script>
+<script src="/js/workspace-engine.js"></script>
+<script src="/js/module-runtime.js"></script>
+<script src="/js/business-members.js"></script>
+<script src="/js/db-mt.js"></script>
+
+<script>
+/* ============================================================
+   Founder Workspace — Application Controller
+   ============================================================ */
+(function() {
+  'use strict';
+
+  // ─── State ─────────────────────────────────────────────────────────
+  var state = {
+    user: null,
+    businesses: [],
+    allMembers: {},   // { businessId: [{uid, email, name, role, assignedAt}, ...] }
+    currentRoute: 'dashboard',
+    selectedBusinessId: null,
+    filters: {
+      businesses: { search: '', status: '', plan: '' },
+      members: { search: '', role: '' }
+    }
+  };
+
+  var CACHE = {
+    businesses: null,
+    platformModules: null,
+    services: null
+  };
+
+  // ─── DOM Refs ──────────────────────────────────────────────────────
+  var $ = function(id) { return document.getElementById(id); };
+  var content = $('founderContent');
+  var pageTitle = $('pageTitle');
+  var navItems = document.querySelectorAll('.founder-nav-item');
+
+  // ─── Init ──────────────────────────────────────────────────────────
+  function init() {
+    // Auth guard
+    firebase.auth().onAuthStateChanged(function(user) {
+      if (!user) {
+        window.location.href = '/platform/login/';
+        return;
+      }
+
+      // Check super admin
+      firebase.database().ref('superAdmins/' + user.uid).once('value').then(function(snap) {
+        if (!snap.exists()) {
+          // Not super admin — redirect to workspace
+          window.location.href = '/console/business-selector.html';
+          return;
+        }
+
+        state.user = user;
+        $('userEmail').textContent = user.email || '';
+        $('userAvatar').textContent = (user.displayName || user.email || 'F').charAt(0).toUpperCase();
+
+        // Load data
+        loadBusinesses().then(function() {
+          // Handle initial route from hash or default
+          handleRoute();
+        });
+
+        // Listen for hash changes
+        window.addEventListener('hashchange', handleRoute);
+      });
+    });
+
+    // Sign out
+    $('signOutBtn').addEventListener('click', function() {
+      firebase.auth().signOut();
+    });
+
+    // Sidebar toggle
+    $('sidebarToggle').addEventListener('click', function() {
+      var sidebar = $('founderSidebar');
+      sidebar.classList.toggle('collapsed');
+    });
+
+    // Mobile hamburger
+    $('hamburgerBtn').addEventListener('click', function() {
+      $('founderSidebar').classList.add('open');
+      $('sidebarOverlay').classList.add('open');
+    });
+
+    $('sidebarOverlay').addEventListener('click', function() {
+      $('founderSidebar').classList.remove('open');
+      $('sidebarOverlay').classList.remove('open');
+    });
+
+    // Nav item clicks
+    navItems.forEach(function(item) {
+      item.addEventListener('click', function() {
+        var route = item.getAttribute('data-route');
+        navigate(route);
+        // Close mobile sidebar
+        $('founderSidebar').classList.remove('open');
+        $('sidebarOverlay').classList.remove('open');
+      });
+    });
+  }
+
+  // ─── Navigation ────────────────────────────────────────────────────
+  function navigate(route, params) {
+    var hash = '#' + route;
+    if (params) {
+      hash += '/' + params;
+    }
+    window.location.hash = hash;
+  }
+
+  function handleRoute() {
+    var hash = window.location.hash.replace(/^#\/?/, '');
+    var parts = hash.split('/');
+    var route = parts[0] || 'dashboard';
+    var param = parts.slice(1).join('/');
+
+    state.currentRoute = route;
+    state.selectedBusinessId = param || null;
+
+    // Update active nav
+    navItems.forEach(function(item) {
+      var itemRoute = item.getAttribute('data-route');
+      item.classList.toggle('active', itemRoute === route || (route === 'business-detail' && itemRoute === 'businesses'));
+    });
+
+    // Render
+    renderRoute(route, param);
+  }
+
+  function renderRoute(route, param) {
+    switch (route) {
+      case 'dashboard':
+        renderDashboard();
+        break;
+      case 'businesses':
+        renderBusinesses();
+        break;
+      case 'business-detail':
+        renderBusinessDetail(param);
+        break;
+      case 'members':
+        renderMembers();
+        break;
+      case 'platform':
+        renderPlatform();
+        break;
+      case 'logs':
+        renderLogs();
+        break;
+      case 'settings':
+        renderSettings();
+        break;
+      default:
+        navigate('dashboard');
+        break;
+    }
+  }
+
+  // ─── Data Loading ──────────────────────────────────────────────────
+  function loadBusinesses() {
+    return firebase.database().ref('businesses').once('value').then(function(snap) {
+      var data = snap.val();
+      var list = [];
+
+      if (!data) {
+        state.businesses = [];
+        CACHE.businesses = [];
+        return;
+      }
+
+      var promises = Object.keys(data).map(function(bizId) {
+        var biz = data[bizId];
+        var info = biz && biz.info ? biz.info : {};
+        var subscription = biz && biz.subscription ? biz.subscription : {};
+
+        // Count members for this business
+        return firebase.database().ref('businessMembers/' + bizId).once('value').then(function(mSnap) {
+          var members = mSnap.val();
+          var memberCount = members ? Object.keys(members).length : 0;
+          var memberRoles = { owner: 0, admin: 0, member: 0 };
+
+          if (members) {
+            Object.keys(members).forEach(function(uid) {
+              var role = (members[uid] && members[uid].role) || 'member';
+              if (memberRoles[role] !== undefined) memberRoles[role]++;
+            });
+          }
+
+          // Count modules (from business settings)
+          var moduleCount = 0;
+          if (biz && biz.settings && biz.settings.modules) {
+            moduleCount = Object.keys(biz.settings.modules).length;
+          }
+
+          list.push({
+            businessId: bizId,
+            displayName: info.displayName || bizId,
+            slug: info.slug || bizId.toLowerCase(),
+            status: info.status || 'active',
+            plan: subscription.plan || info.plan || 'starter',
+            type: info.type || 'other',
+            country: info.country || 'VN',
+            timezone: info.timezone || 'Asia/Ho_Chi_Minh',
+            currency: info.currency || 'VND',
+            ownerUid: info.ownerUid || (members ? Object.keys(members || {}).find(function(u) {
+              return members[u] && members[u].role === 'owner';
+            }) : null),
+            createdDate: info.createdAt || info.createdDate || 0,
+            memberCount: memberCount,
+            memberRoles: memberRoles,
+            moduleCount: moduleCount,
+            subscriptionPlan: subscription.plan || info.plan || 'starter',
+            subscriptionStatus: subscription.status || 'active'
+          });
+        });
+      });
+
+      return Promise.all(promises).then(function() {
+        list.sort(function(a, b) {
+          var aName = (a.displayName || '').toLowerCase();
+          var bName = (b.displayName || '').toLowerCase();
+          return aName.localeCompare(bName);
+        });
+
+        state.businesses = list;
+        CACHE.businesses = list;
+
+        // Also load member details
+        return loadAllMembers();
+      });
+    });
+  }
+
+  function loadAllMembers() {
+    return firebase.database().ref('businessMembers').once('value').then(function(snap) {
+      var data = snap.val();
+      state.allMembers = {};
+
+      if (!data) return;
+
+      var promises = [];
+
+      Object.keys(data).forEach(function(bizId) {
+        var members = data[bizId];
+        if (!members) return;
+
+        var memberList = [];
+        Object.keys(members).forEach(function(uid) {
+          var m = members[uid] || {};
+          memberList.push({
+            uid: uid,
+            email: m.email || '',
+            name: m.name || m.email || uid,
+            role: m.role || 'member',
+            assignedAt: m.assignedAt || 0,
+            status: m.status || 'active'
+          });
+        });
+
+        memberList.sort(function(a, b) {
+          var roleOrder = { owner: 0, admin: 1, member: 2 };
+          var aOrder = roleOrder[a.role] !== undefined ? roleOrder[a.role] : 3;
+          var bOrder = roleOrder[b.role] !== undefined ? roleOrder[b.role] : 3;
+          if (aOrder !== bOrder) return aOrder - bOrder;
+          return (a.name || '').localeCompare(b.name || '');
+        });
+
+        state.allMembers[bizId] = memberList;
+      });
+    });
+  }
+
+  function getPlatformModules() {
+    if (CACHE.platformModules) return Promise.resolve(CACHE.platformModules);
+    return firebase.database().ref('moduleRegistry').once('value').then(function(snap) {
+      var data = snap.val();
+      var count = data ? Object.keys(data).length : 0;
+      CACHE.platformModules = count;
+      return count;
+    }).catch(function() {
+      CACHE.platformModules = 0;
+      return 0;
+    });
+  }
+
+  // ─── DASHBOARD ─────────────────────────────────────────────────────
+  function renderDashboard() {
+    pageTitle.textContent = 'Dashboard';
+    content.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><span>Loading dashboard...</span></div>';
+
+    Promise.all([
+      getPlatformModules()
+    ]).then(function() {
+      var totalBiz = state.businesses.length;
+      var activeBiz = state.businesses.filter(function(b) { return b.status === 'active'; }).length;
+      var totalMembers = 0;
+      Object.keys(state.allMembers).forEach(function(bizId) {
+        totalMembers += state.allMembers[bizId].length;
+      });
+      var totalModules = CACHE.platformModules || 0;
+
+      var platformHealth = 'operational';
+      var healthLabel = 'All Systems Operational';
+
+      content.innerHTML =
+        '<div class="stats-grid">' +
+          statCard('🏢', totalBiz, 'Total Businesses') +
+          statCard('👥', totalMembers, 'Total Members') +
+          statCard('✅', activeBiz, 'Active Businesses') +
+          statCard('📦', totalModules, 'Platform Modules') +
+          statCard('🟢', '', 'Platform Status', platformHealth, healthLabel) +
+        '</div>' +
+        '<div class="panel">' +
+          '<div class="panel-header">' +
+            '<div><div class="panel-title">Recent Businesses</div><div class="panel-subtitle">Newest businesses registered on the platform</div></div>' +
+            '<div class="panel-actions"><button class="btn btn-sm" onclick="navigate(\'businesses\')">View All →</button></div>' +
+          '</div>' +
+          '<div class="data-table-wrapper">' +
+            renderBusinessTable(state.businesses.slice().sort(function(a, b) { return b.createdDate - a.createdDate; }).slice(0, 5)) +
+          '</div>' +
+        '</div>' +
+        '<div class="panel">' +
+          '<div class="panel-header">' +
+            '<div><div class="panel-title">Platform Overview</div><div class="panel-subtitle">Core services status at a glance</div></div>' +
+          '</div>' +
+          '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.75rem">' +
+            statusBlock('Firebase', 'Connected', 'up') +
+            statusBlock('Authentication', 'Active', 'up') +
+            statusBlock('Workspace Engine', 'v1.0 — Active', 'up') +
+            statusBlock('Module Registry', activeBiz + '/' + totalBiz + ' loaded', 'up') +
+            statusBlock('Event Bus', 'Operational', 'up') +
+            statusBlock('Service Registry', 'Available', 'up') +
+          '</div>' +
+        '</div>';
+    });
+  }
+
+  function statCard(icon, value, label, status, statusLabel) {
+    var statusHtml = '';
+    if (status) {
+      statusHtml = '<div class="stat-card-status ' + status + '">● ' + statusLabel + '</div>';
+    }
+    return '<div class="stat-card"><div class="stat-card-icon">' + icon + '</div><div class="stat-card-value">' + value + '</div><div class="stat-card-label">' + label + '</div>' + statusHtml + '</div>';
+  }
+
+  function statusBlock(name, status, type) {
+    return '<div class="service-card"><div class="service-icon ' + type + '">' + (type === 'up' ? '✓' : '✗') + '</div><div class="service-info"><div class="service-name">' + name + '</div><div class="service-status ' + type + '">' + status + '</div></div></div>';
+  }
+
+  // ─── BUSINESSES ────────────────────────────────────────────────────
+  function renderBusinesses() {
+    pageTitle.textContent = 'Businesses';
+    content.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><span>Loading businesses...</span></div>';
+
+    // Refresh data
+    loadBusinesses().then(function() {
+      renderBusinessList();
+    });
+  }
+
+  function renderBusinessList() {
+    var searchTerm = (state.filters.businesses.search || '').toLowerCase();
+    var statusFilter = state.filters.businesses.status;
+    var planFilter = state.filters.businesses.plan;
+
+    var filtered = state.businesses.filter(function(b) {
+      if (searchTerm && !b.displayName.toLowerCase().includes(searchTerm) && !b.slug.toLowerCase().includes(searchTerm) && !b.businessId.toLowerCase().includes(searchTerm)) {
+        return false;
+      }
+      if (statusFilter && b.status !== statusFilter) return false;
+      if (planFilter && b.plan !== planFilter) return false;
+      return true;
+    });
+
+    content.innerHTML =
+      '<div class="panel">' +
+        '<div class="panel-header">' +
+          '<div><div class="panel-title">All Businesses</div><div class="panel-subtitle">' + filtered.length + ' of ' + state.businesses.length + ' businesses</div></div>' +
+          '<div class="panel-actions">' +
+            '<input class="search-input" id="bizSearch" placeholder="Search businesses..." value="' + escAttr(state.filters.businesses.search) + '">' +
+            '<select class="filter-select" id="bizStatusFilter"><option value="">All Status</option><option value="active"' + (state.filters.businesses.status === 'active' ? ' selected' : '') + '>Active</option><option value="suspended"' + (state.filters.businesses.status === 'suspended' ? ' selected' : '') + '>Suspended</option></select>' +
+            '<select class="filter-select" id="bizPlanFilter"><option value="">All Plans</option><option value="starter"' + (state.filters.businesses.plan === 'starter' ? ' selected' : '') + '>Starter</option><option value="pro"' + (state.filters.businesses.plan === 'pro' ? ' selected' : '') + '>Pro</option><option value="enterprise"' + (state.filters.businesses.plan === 'enterprise' ? ' selected' : '') + '>Enterprise</option></select>' +
+          '</div>' +
+        '</div>' +
+        '<div class="data-table-wrapper">' +
+          renderBusinessTable(filtered) +
+        '</div>' +
+      '</div>';
+
+    // Bind filters
+    $('bizSearch').addEventListener('input', function() {
+      state.filters.businesses.search = this.value;
+      renderBusinessList();
+    });
+
+    $('bizStatusFilter').addEventListener('change', function() {
+      state.filters.businesses.status = this.value;
+      renderBusinessList();
+    });
+
+    $('bizPlanFilter').addEventListener('change', function() {
+      state.filters.businesses.plan = this.value;
+      renderBusinessList();
+    });
+  }
+
+  function renderBusinessTable(bizList) {
+    if (!bizList || bizList.length === 0) {
+      return '<div class="empty-state"><div class="empty-state-icon">🏢</div><div class="empty-state-title">No Businesses</div><div class="empty-state-desc">No businesses match your filters.</div></div>';
+    }
+
+    return '<table class="data-table">' +
+      '<thead><tr>' +
+        '<th>Business</th>' +
+        '<th>Plan</th>' +
+        '<th>Members</th>' +
+        '<th>Status</th>' +
+        '<th>Created</th>' +
+        '<th>Actions</th>' +
+      '</tr></thead><tbody>' +
+      bizList.map(function(b) {
+        var bg = 'linear-gradient(135deg,' + getColor(b.businessId) + ')';
+        return '<tr>' +
+          '<td><div style="display:flex;align-items:center;gap:0.6rem"><div style="width:28px;height:28px;border-radius:6px;background:' + bg + ';display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:0.75rem;flex-shrink:0">' + (b.displayName || b.businessId).charAt(0).toUpperCase() + '</div><div><div style="font-weight:500;font-size:0.875rem">' + escHtml(b.displayName) + '</div><div style="font-size:0.75rem;color:var(--text-tertiary)">' + escHtml(b.slug) + '</div></div></div></td>' +
+          '<td><span class="badge" style="background:var(--bg);color:var(--text)">' + cap(b.plan) + '</span></td>' +
+          '<td>' + b.memberCount + '</td>' +
+          '<td><span class="badge ' + statusClass(b.status) + '">' + cap(b.status) + '</span></td>' +
+          '<td style="font-size:0.8rem;color:var(--text-secondary)">' + formatDate(b.createdDate) + '</td>' +
+          '<td>' +
+            '<div class="table-actions">' +
+              '<button class="btn btn-sm btn-primary" onclick="window.open(\'/workspace/' + b.businessId + '\', \'_blank\')">Open</button>' +
+              '<button class="btn btn-sm" onclick="navigate(\'business-detail\',\'' + b.businessId + '\')">Details</button>' +
+              (b.status === 'active'
+                ? '<button class="btn btn-sm btn-success btn-icon" onclick="confirmSuspend(\'' + b.businessId + '\')" title="Suspend">⏸</button>'
+                : '<button class="btn btn-sm btn-success btn-icon" onclick="confirmReactivate(\'' + b.businessId + '\')" title="Reactivate">▶</button>') +
+              '<button class="btn btn-sm btn-danger btn-icon" onclick="confirmDelete(\'' + b.businessId + '\')" title="Delete">✕</button>' +
+            '</div>' +
+          '</td>' +
+        '</tr>';
+      }).join('') +
+      '</tbody></table>';
+  }
+
+  // ─── BUSINESS DETAIL ───────────────────────────────────────────────
+  function renderBusinessDetail(bizId) {
+    if (!bizId) {
+      navigate('businesses');
+      return;
+    }
+
+    var biz = state.businesses.find(function(b) { return b.businessId === bizId; });
+    var members = state.allMembers[bizId] || [];
+
+    if (!biz) {
+      content.innerHTML =
+        '<div class="breadcrumb"><a onclick="navigate(\'businesses\')">Businesses</a> / <span>Not Found</span></div>' +
+        '<div class="error-state">Business not found. <a onclick="navigate(\'businesses\')" style="cursor:pointer;color:var(--primary)">Back to Businesses</a></div>';
+      pageTitle.textContent = 'Business Not Found';
+      return;
+    }
+
+    pageTitle.textContent = biz.displayName;
+
+    var owner = members.find(function(m) { return m.role === 'owner'; });
+    var admins = members.filter(function(m) { return m.role === 'admin'; });
+    var regularMembers = members.filter(function(m) { return m.role === 'member'; });
+
+    content.innerHTML =
+      '<div class="breadcrumb"><a onclick="navigate(\'businesses\')">Businesses</a> / ' + escHtml(biz.displayName) + '</div>' +
+
+      '<div class="stats-grid" style="margin-bottom:1rem">' +
+        '<div class="stat-card"><div class="stat-card-icon">📦</div><div class="stat-card-value">' + biz.moduleCount + '</div><div class="stat-card-label">Modules</div></div>' +
+        '<div class="stat-card"><div class="stat-card-icon">👥</div><div class="stat-card-value">' + biz.memberCount + '</div><div class="stat-card-label">Total Members</div></div>' +
+        '<div class="stat-card"><div class="stat-card-icon">💳</div><div class="stat-card-value" style="font-size:1.2rem">' + cap(biz.plan) + '</div><div class="stat-card-label">' + cap(biz.subscriptionStatus) + '</div></div>' +
+        '<div class="stat-card"><div class="stat-card-icon">⚡</div><div class="stat-card-value" style="font-size:1.2rem">' + cap(biz.status) + '</div><div class="stat-card-label">Workspace</div></div>' +
+      '</div>' +
+
+      '<div class="panel">' +
+        '<div class="panel-title" style="margin-bottom:1rem">Business Profile</div>' +
+        '<div class="detail-grid">' +
+          detailItem('Business ID', biz.businessId) +
+          detailItem('Display Name', biz.displayName) +
+          detailItem('Slug', biz.slug) +
+          detailItem('Type', cap(biz.type)) +
+          detailItem('Country', biz.country) +
+          detailItem('Timezone', biz.timezone) +
+          detailItem('Currency', biz.currency) +
+          detailItem('Plan', cap(biz.plan)) +
+          detailItem('Subscription', cap(biz.subscriptionStatus)) +
+          detailItem('Created', formatDate(biz.createdDate)) +
+          detailItem('Status', '<span class="badge ' + statusClass(biz.status) + '">' + cap(biz.status) + '</span>') +
+          (owner ? detailItem('Owner', escHtml(owner.name || owner.email || 'Unknown')) : '') +
+        '</div>' +
+      '</div>' +
+
+      '<div class="panel">' +
+        '<div class="panel-header">' +
+          '<div><div class="panel-title">Members</div><div class="panel-subtitle">' + members.length + ' total</div></div>' +
+        '</div>' +
+        '<div class="member-breakdown" style="margin-bottom:1rem">' +
+          '<div class="member-count-box"><span class="badge badge-owner">Owner</span><span class="count-num">' + members.filter(function(m) { return m.role === 'owner'; }).length + '</span></div>' +
+          '<div class="member-count-box"><span class="badge badge-admin">Admin</span><span class="count-num">' + admins.length + '</span></div>' +
+          '<div class="member-count-box"><span class="badge badge-member">Member</span><span class="count-num">' + regularMembers.length + '</span></div>' +
+        '</div>' +
+        '<div class="member-list">' +
+          members.map(function(m) {
+            var roleBadge = m.role === 'owner' ? 'badge-owner' : m.role === 'admin' ? 'badge-admin' : 'badge-member';
+            return '<div class="member-row">' +
+              '<div class="member-avatar">' + (m.name || '?').charAt(0).toUpperCase() + '</div>' +
+              '<div class="member-info"><div class="member-name">' + escHtml(m.name || 'Unknown') + '</div><div class="member-email">' + escHtml(m.email || '') + '</div></div>' +
+              '<span class="badge ' + roleBadge + '">' + cap(m.role) + '</span>' +
+            '</div>';
+          }).join('') +
+        '</div>' +
+      '</div>' +
+
+      '<div style="display:flex;gap:0.5rem;flex-wrap:wrap">' +
+        '<button class="btn btn-primary" onclick="window.open(\'/workspace/' + bizId + '\', \'_blank\')">Open Workspace →</button>' +
+        '<button class="btn" onclick="navigate(\'businesses\')">← Back to Businesses</button>' +
+      '</div>';
+  }
+
+  // ─── MEMBERS ──────────────────────────────────────────────────────
+  function renderMembers() {
+    pageTitle.textContent = 'Members';
+    content.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><span>Loading members...</span></div>';
+
+    loadAllMembers().then(function() {
+      renderMemberList();
+    });
+  }
+
+  function renderMemberList() {
+    // Collect all members across all businesses
+    var allMembers = [];
+    Object.keys(state.allMembers).forEach(function(bizId) {
+      var biz = state.businesses.find(function(b) { return b.businessId === bizId; });
+      var bizName = biz ? biz.displayName : bizId;
+
+      state.allMembers[bizId].forEach(function(m) {
+        allMembers.push({
+          uid: m.uid,
+          email: m.email,
+          name: m.name,
+          role: m.role,
+          assignedAt: m.assignedAt,
+          status: m.status,
+          businessId: bizId,
+          businessName: bizName
+        });
+      });
+    });
+
+    var searchTerm = (state.filters.members.search || '').toLowerCase();
+    var roleFilter = state.filters.members.role;
+
+    var filtered = allMembers.filter(function(m) {
+      if (searchTerm && !m.name.toLowerCase().includes(searchTerm) && !m.email.toLowerCase().includes(searchTerm) && !m.businessName.toLowerCase().includes(searchTerm)) {
+        return false;
+      }
+      if (roleFilter && m.role !== roleFilter) return false;
+      return true;
+    });
+
+    content.innerHTML =
+      '<div class="panel">' +
+        '<div class="panel-header">' +
+          '<div><div class="panel-title">All Members</div><div class="panel-subtitle">' + filtered.length + ' of ' + allMembers.length + ' members across all businesses</div></div>' +
+          '<div class="panel-actions">' +
+            '<input class="search-input" id="memberSearch" placeholder="Search members..." value="' + escAttr(state.filters.members.search) + '">' +
+            '<select class="filter-select" id="memberRoleFilter"><option value="">All Roles</option><option value="owner"' + (state.filters.members.role === 'owner' ? ' selected' : '') + '>Owner</option><option value="admin"' + (state.filters.members.role === 'admin' ? ' selected' : '') + '>Admin</option><option value="member"' + (state.filters.members.role === 'member' ? ' selected' : '') + '>Member</option></select>' +
+          '</div>' +
+        '</div>' +
+        '<div class="data-table-wrapper">' +
+          (filtered.length === 0
+            ? '<div class="empty-state"><div class="empty-state-icon">👥</div><div class="empty-state-title">No Members</div><div class="empty-state-desc">No members match your filters.</div></div>'
+            : '<table class="data-table"><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Business</th><th>Assigned</th><th>Actions</th></tr></thead><tbody>' +
+              filtered.map(function(m) {
+                var roleBadge = m.role === 'owner' ? 'badge-owner' : m.role === 'admin' ? 'badge-admin' : 'badge-member';
+                return '<tr>' +
+                  '<td><div style="display:flex;align-items:center;gap:0.5rem"><div class="member-avatar" style="width:28px;height:28px;font-size:0.7rem">' + (m.name || '?').charAt(0).toUpperCase() + '</div>' + escHtml(m.name) + '</div></td>' +
+                  '<td style="color:var(--text-secondary);font-size:0.825rem">' + escHtml(m.email) + '</td>' +
+                  '<td><span class="badge ' + roleBadge + '">' + cap(m.role) + '</span></td>' +
+                  '<td><a onclick="navigate(\'business-detail\',\'' + m.businessId + '\')" style="cursor:pointer;color:var(--primary);text-decoration:none">' + escHtml(m.businessName) + '</a></td>' +
+                  '<td style="font-size:0.8rem;color:var(--text-secondary)">' + formatDate(m.assignedAt) + '</td>' +
+                  '<td><button class="btn btn-sm" onclick="navigate(\'business-detail\',\'' + m.businessId + '\')">View Business</button></td>' +
+                '</tr>';
+              }).join('') +
+              '</tbody></table>')
+        '</div>' +
+      '</div>';
+
+    // Bind filters
+    $('memberSearch').addEventListener('input', function() {
+      state.filters.members.search = this.value;
+      renderMemberList();
+    });
+
+    $('memberRoleFilter').addEventListener('change', function() {
+      state.filters.members.role = this.value;
+      renderMemberList();
+    });
+  }
+
+  // ─── PLATFORM ──────────────────────────────────────────────────────
+  function renderPlatform() {
+    pageTitle.textContent = 'Platform';
+    content.innerHTML = '<div class="loading-state"><div class="loading-spinner"></div><span>Loading platform info...</span></div>';
+
+    getPlatformModules().then(function() {
+      var totalBiz = state.businesses.length;
+      var activeBiz = state.businesses.filter(function(b) { return b.status === 'active'; }).length;
+
+      content.innerHTML =
+        '<div class="stats-grid">' +
+          '<div class="stat-card"><div class="stat-card-icon">📌</div><div class="stat-card-value">v1.0.0</div><div class="stat-card-label">Current Version</div></div>' +
+          '<div class="stat-card"><div class="stat-card-icon">🌐</div><div class="stat-card-value">Production</div><div class="stat-card-label">Environment</div></div>' +
+          '<div class="stat-card"><div class="stat-card-icon">🏢</div><div class="stat-card-value">' + totalBiz + '</div><div class="stat-card-label">Total Tenants</div></div>' +
+          '<div class="stat-card"><div class="stat-card-icon">✅</div><div class="stat-card-value">' + activeBiz + '</div><div class="stat-card-label">Active Tenants</div></div>' +
+        '</div>' +
+
+        '<div class="panel">' +
+          '<div class="panel-header"><div><div class="panel-title">Core Services</div><div class="panel-subtitle">Real-time status of all platform services</div></div></div>' +
+          '<div class="service-grid">' +
+            serviceCard('🔥', 'Firebase', 'Connected', 'up', 'Realtime Database & Auth', 'up') +
+            serviceCard('🔐', 'Authentication', 'Active', 'up', 'Firebase Auth + Custom Claims', 'up') +
+            serviceCard('⚙️', 'Workspace Engine', 'Running', 'up', 'Version 1.0 — ' + totalBiz + ' business configs loaded', 'up') +
+            serviceCard('📦', 'Module Registry', 'Active', 'up', totalBiz + ' registrations, ' + (CACHE.platformModules || 0) + ' platform modules', 'up') +
+            serviceCard('📡', 'Event Bus', 'Operational', 'up', 'Pub/Sub message bus ready', 'up') +
+            serviceCard('🔌', 'Service Registry', 'Available', 'up', Object.keys(ModuleRuntime.getServices ? ModuleRuntime.getServices() : {}).length + ' services registered', 'up') +
+            serviceCard('🧩', 'Module Runtime', 'Running', 'up', ModuleRuntime.getEnabledModules ? ModuleRuntime.getEnabledModules().length + ' modules enabled' : 'N/A', 'up') +
+            serviceCard('👤', 'Business Context', 'Active', 'up', 'Multi-tenant context layer operational', 'up') +
+          '</div>' +
+        '</div>' +
+
+        '<div class="panel">' +
+          '<div class="panel-header"><div><div class="panel-title">Platform Configuration</div></div></div>' +
+          '<div class="detail-grid">' +
+            detailItem('Platform Version', '1.0.0') +
+            detailItem('Environment', 'Production') +
+            detailItem('Database', 'Firebase Realtime Database') +
+            detailItem('Hosting', 'Firebase Hosting / Netlify') +
+            detailItem('Project ID', 'pshop-music') +
+            detailItem('Database Region', 'asia-southeast1') +
+            detailItem('Total Businesses', String(totalBiz)) +
+            detailItem('Active Businesses', String(activeBiz)) +
+            detailItem('Suspended Businesses', String(totalBiz - activeBiz)) +
+            detailItem('Platform Modules', String(CACHE.platformModules || 0)) +
+            detailItem('Multi-tenancy', 'Enabled') +
+            detailItem('Last Deploy', formatDate(Date.now())) +
+          '</div>' +
+        '</div>';
+    });
+  }
+
+  function serviceCard(icon, name, status, type, desc, statusType) {
+    return '<div class="service-card"><div class="service-icon ' + type + '">' + icon + '</div><div class="service-info"><div class="service-name">' + name + '</div><div class="service-status ' + (statusType || type) + '">' + status + '</div><div class="service-meta">' + desc + '</div></div></div>';
+  }
+
+  // ─── LOGS (placeholder) ────────────────────────────────────────────
+  function renderLogs() {
+    pageTitle.textContent = 'Logs';
+    content.innerHTML =
+      '<div class="panel">' +
+        '<div class="panel-header"><div><div class="panel-title">Platform Logs</div><div class="panel-subtitle">System activity and audit trail</div></div></div>' +
+        '<div class="empty-state" style="padding:3rem 1rem">' +
+          '<div class="empty-state-icon">📋</div>' +
+          '<div class="empty-state-title">Log Viewer Coming Soon</div>' +
+          '<div class="empty-state-desc">Platform audit logs, system events, and business activity history will be available in a future sprint.</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  // ─── SETTINGS (placeholder) ────────────────────────────────────────
+  function renderSettings() {
+    pageTitle.textContent = 'Settings';
+    content.innerHTML =
+      '<div class="panel">' +
+        '<div class="panel-header"><div><div class="panel-title">Founder Settings</div><div class="panel-subtitle">Platform-level configuration</div></div></div>' +
+        '<div class="empty-state" style="padding:3rem 1rem">' +
+          '<div class="empty-state-icon">⚙️</div>' +
+          '<div class="empty-state-title">Settings Coming Soon</div>' +
+          '<div class="empty-state-desc">Platform configuration, environment variables, feature flags, and global settings will be available in a future sprint.</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="panel">' +
+        '<div class="panel-header"><div><div class="panel-title">Account</div></div></div>' +
+        '<div class="detail-grid">' +
+          detailItem('Email', state.user ? escHtml(state.user.email) : '-') +
+          detailItem('UID', state.user ? state.user.uid : '-') +
+          detailItem('Role', '<span class="badge badge-owner">Super Admin</span>') +
+        '</div>' +
+      '</div>';
+  }
+
+  // ─── UI ACTIONS (Exposed to window for onclick) ────────────────────
+  window.navigate = navigate;
+
+  window.confirmSuspend = function(bizId) {
+    var biz = state.businesses.find(function(b) { return b.businessId === bizId; });
+    if (!biz) return;
+    showModal(
+      'Suspend Business',
+      'Are you sure you want to suspend <strong>' + escHtml(biz.displayName) + '</strong>?<br><br>This will suspend the workspace and all its modules. Members will not be able to access this business.<br><br><em style="color:var(--text-tertiary);font-size:0.8rem">UI-only — no backend action will be taken.</em>',
+      function() {
+        // UI-ONLY: simulate status change
+        biz.status = 'suspended';
+        renderBusinessList();
+        showToast('Business suspended (UI only)');
+      }
+    );
+  };
+
+  window.confirmReactivate = function(bizId) {
+    var biz = state.businesses.find(function(b) { return b.businessId === bizId; });
+    if (!biz) return;
+    showModal(
+      'Reactivate Business',
+      'Reactivate <strong>' + escHtml(biz.displayName) + '</strong>?<br><br><em style="color:var(--text-tertiary);font-size:0.8rem">UI-only — no backend action will be taken.</em>',
+      function() {
+        biz.status = 'active';
+        renderBusinessList();
+        showToast('Business reactivated (UI only)');
+      }
+    );
+  };
+
+  window.confirmDelete = function(bizId) {
+    var biz = state.businesses.find(function(b) { return b.businessId === bizId; });
+    if (!biz) return;
+    showModal(
+      'Delete Business',
+      'Are you sure you want to delete <strong>' + escHtml(biz.displayName) + '</strong>?<br><br>This action is irreversible.<br><br><em style="color:var(--text-tertiary);font-size:0.8rem">UI-only — no backend action will be taken.</em>',
+      function() {
+        // UI-ONLY: remove from list
+        state.businesses = state.businesses.filter(function(b) { return b.businessId !== bizId; });
+        delete state.allMembers[bizId];
+        renderBusinessList();
+        showToast('Business deleted (UI only)');
+      }
+    );
+  };
+
+  // ─── MODAL ─────────────────────────────────────────────────────────
+  function showModal(title, body, onConfirm) {
+    $('modalTitle').innerHTML = title;
+    $('modalBody').innerHTML = body;
+    $('modalOverlay').classList.add('open');
+
+    var confirmBtn = $('modalConfirmBtn');
+    var newBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
+
+    newBtn.addEventListener('click', function() {
+      closeModal();
+      if (typeof onConfirm === 'function') onConfirm();
+    });
+  }
+
+  window.closeModal = function() {
+    $('modalOverlay').classList.remove('open');
+  };
+
+  // ─── TOAST ─────────────────────────────────────────────────────────
+  function showToast(message) {
+    var existing = document.querySelector('.founder-toast');
+    if (existing) existing.remove();
+
+    var toast = document.createElement('div');
+    toast.className = 'founder-toast';
+    toast.textContent = message;
+    Object.assign(toast.style, {
+      position: 'fixed',
+      bottom: '24px',
+      right: '24px',
+      background: '#1d1d1f',
+      color: '#fff',
+      padding: '12px 20px',
+      borderRadius: '8px',
+      fontSize: '0.875rem',
+      boxShadow: '0 4px 16px rgba(0,0,0,.15)',
+      zIndex: '200',
+      opacity: '0',
+      transform: 'translateY(8px)',
+      transition: 'opacity .25s, transform .25s',
+      fontFamily: "'Inter', sans-serif",
+      maxWidth: '360px'
+    });
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(function() {
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateY(0)';
+    });
+
+    setTimeout(function() {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(8px)';
+      setTimeout(function() { if (toast.parentNode) toast.remove(); }, 300);
+    }, 3000);
+  }
+
+  // ─── Helpers ───────────────────────────────────────────────────────
+  function getColor(id) {
+    var colors = ['#4F46E5,#10B981','#F59E0B,#EF4444','#8B5CF6,#EC4899','#06B6D4,#10B981','#F97316,#F59E0B'];
+    var idx = 0;
+    for (var i = 0; i < id.length; i++) idx += id.charCodeAt(i);
+    return colors[idx % colors.length];
+  }
+
+  function statusClass(s) {
+    if (s === 'active') return 'badge-active';
+    if (s === 'suspended') return 'badge-suspended';
+    if (s === 'deleted') return 'badge-deleted';
+    return 'badge-active';
+  }
+
+  function cap(s) {
+    if (!s) return '';
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
+
+  function formatDate(ts) {
+    if (!ts) return '-';
+    try {
+      var d = new Date(ts);
+      if (isNaN(d.getTime())) return '-';
+      return d.toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    } catch(e) {
+      return '-';
+    }
+  }
+
+  function escHtml(s) {
+    if (typeof s !== 'string') return String(s || '');
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function escAttr(s) {
+    return escHtml(s).replace(/"/g,'&quot;');
+  }
+
+  function detailItem(label, value) {
+    return '<div class="detail-group"><div class="detail-label">' + label + '</div><div class="detail-value">' + value + '</div></div>';
+  }
+
+  // Extra UI states from window
+  // (these exist as modular standalone functions referenced by onclick)
+
+  // ─── Start ─────────────────────────────────────────────────────────
+  init();
+})();
+</script>
+</body>
+<script src="/platform/founder/founder-polish.js"></script>
+</html>

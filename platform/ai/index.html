@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>AI Workspace — PSH Console</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   PSH Console — AI Workspace
+   Design System: Inter, card-based, gradient accents
+   ============================================================ */
+:root {
+  --bg: #f5f5f7;
+  --surface: #fff;
+  --border: #e5e5ea;
+  --border-light: #f0f0f2;
+  --text: #1d1d1f;
+  --text-secondary: #86868b;
+  --text-tertiary: #aeaeb2;
+  --primary: #4F46E5;
+  --primary-hover: #4338CA;
+  --primary-light: #e8e8ff;
+  --ai-gradient: linear-gradient(135deg, #4F46E5, #8B5CF6);
+  --success: #10B981;
+  --success-bg: #d1fae5;
+  --warning: #F59E0B;
+  --warning-bg: #fef3c7;
+  --danger: #EF4444;
+  --danger-bg: #fee2e2;
+  --sidebar-w: 240px;
+  --sidebar-collapsed-w: 60px;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
+  --shadow: 0 1px 3px rgba(0,0,0,.04), 0 1px 2px rgba(0,0,0,.06);
+  --shadow-lg: 0 4px 16px rgba(0,0,0,.08);
+  --transition: .2s ease;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  min-height: 100vh;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ============================================================
+   SIDEBAR (AI)
+   ============================================================ */
+.ai-sidebar {
+  width: var(--sidebar-w);
+  min-height: 100vh;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transition: width var(--transition);
+  z-index: 50;
+  position: relative;
+}
+
+.ai-sidebar.collapsed {
+  width: var(--sidebar-collapsed-w);
+}
+
+.ai-brand {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.ai-logo {
+  width: 32px;
+  height: 32px;
+  background: var(--ai-gradient);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.ai-brand-text {
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.ai-brand-badge {
+  font-size: 0.6rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8B5CF6;
+  background: #ede9fe;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  margin-left: 0.25rem;
+}
+
+.ai-nav {
+  flex: 1;
+  padding: 0.75rem;
+  overflow-y: auto;
+}
+
+.ai-nav-section {
+  margin-bottom: 0.5rem;
+}
+
+.ai-nav-category {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.5rem 0.75rem 0.25rem;
+}
+
+.ai-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all .15s;
+  margin-bottom: 1px;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+
+.ai-nav-item:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.ai-nav-item.active {
+  background: #ede9fe;
+  color: #6D28D9;
+  font-weight: 600;
+}
+
+.ai-nav-item .nav-icon {
+  font-size: 1.05rem;
+  width: 24px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.ai-nav-item .nav-label {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Collapsed sidebar */
+.ai-sidebar.collapsed .ai-brand-text,
+.ai-sidebar.collapsed .ai-brand-badge,
+.ai-sidebar.collapsed .ai-nav-item .nav-label,
+.ai-sidebar.collapsed .ai-nav-category { display: none; }
+.ai-sidebar.collapsed .ai-nav-item { justify-content: center; padding: 0.55rem 0; }
+.ai-sidebar.collapsed .ai-logo { margin: 0 auto; }
+
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  border-top: 1px solid var(--border);
+  font-size: 1rem;
+  transition: color .15s;
+  background: none;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  width: 100%;
+  font-family: inherit;
+}
+
+.sidebar-toggle:hover { color: var(--text); }
+
+/* ============================================================
+   MAIN LAYOUT
+   ============================================================ */
+.ai-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.ai-topbar {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-shrink: 0;
+  min-height: 52px;
+}
+
+.ai-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ai-topbar-left h1 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ai-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.ai-user {
+  font-size: 0.825rem;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ai-user-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--ai-gradient);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.btn-signout {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-family: inherit;
+  transition: all .15s;
+}
+
+.btn-signout:hover {
+  background: var(--bg);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.ai-content {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+/* ============================================================
+   BREADCRUMB
+   ============================================================ */
+.breadcrumb {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.breadcrumb a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.breadcrumb a:hover { color: var(--primary); }
+
+/* ============================================================
+   AI DASHBOARD GRID
+   ============================================================ */
+.ai-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.ai-stat-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  transition: all .2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--ai-gradient);
+  opacity: 0.6;
+}
+
+.ai-stat-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-1px);
+}
+
+.ai-stat-card-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.ai-stat-card-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.ai-stat-card-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 0.2rem;
+}
+
+/* ============================================================
+   PANELS
+   ============================================================ */
+.panel {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  border: 1px solid var(--border);
+  margin-bottom: 1rem;
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.panel-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.panel-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* ============================================================
+   PLACEHOLDER SECTIONS
+   ============================================================ */
+.ai-section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.ai-section-card {
+  text-align: center;
+  padding: 2rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all .2s;
+}
+
+.ai-section-card:hover {
+  border-color: #8B5CF6;
+  box-shadow: 0 4px 12px rgba(139,92,246,.1);
+}
+
+.ai-section-card .section-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.ai-section-card .section-name {
+  font-weight: 600;
+  font-size: 0.925rem;
+  color: var(--text);
+  margin-bottom: 0.25rem;
+}
+
+.ai-section-card .section-desc {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* ============================================================
+   PLACEHOLDER PAGE
+   ============================================================ */
+.placeholder-hero {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.placeholder-hero .hero-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.placeholder-hero .hero-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+
+.placeholder-hero .hero-desc {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  max-width: 480px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+.feature-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.feature-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+
+.feature-card-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.feature-card-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.feature-card-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.feature-card-desc {
+  font-size: 0.775rem;
+  color: var(--text-secondary);
+  margin-top: 0.15rem;
+}
+
+/* ============================================================
+   LOADING / EMPTY / ERROR STATES
+   ============================================================ */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  color: var(--text-secondary);
+}
+
+.loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  margin-bottom: 0.75rem;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: var(--text-secondary);
+}
+
+.empty-state-icon { font-size: 2.5rem; margin-bottom: 0.75rem; }
+.empty-state-title { font-weight: 600; font-size: 1rem; color: var(--text); margin-bottom: 0.25rem; }
+.empty-state-desc { font-size: 0.85rem; }
+
+.error-state {
+  text-align: center;
+  padding: 2rem;
+  color: var(--danger);
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  transition: all .15s;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.btn:hover {
+  background: var(--bg);
+  border-color: var(--text-tertiary);
+}
+
+.btn-primary {
+  background: var(--ai-gradient);
+  color: #fff;
+  border: none;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  padding: 0.2rem;
+  color: var(--text-secondary);
+  font-family: inherit;
+}
+
+@media (max-width: 768px) {
+  .ai-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .ai-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .ai-sidebar.collapsed {
+    width: var(--sidebar-w);
+  }
+
+  .ai-sidebar.collapsed .ai-brand-text,
+  .ai-sidebar.collapsed .ai-brand-badge,
+  .ai-sidebar.collapsed .ai-nav-item .nav-label,
+  .ai-sidebar.collapsed .ai-nav-category {
+    display: inline;
+  }
+
+  .ai-sidebar.collapsed .ai-nav-item {
+    justify-content: flex-start;
+    padding: 0.55rem 0.75rem;
+  }
+
+  .hamburger-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,.25);
+    z-index: 99;
+  }
+
+  .sidebar-overlay.open {
+    display: block;
+  }
+
+  .ai-stats-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+
+  .ai-topbar {
+    padding: 0.5rem 1rem;
+  }
+
+  .ai-content {
+    padding: 1rem;
+  }
+
+  .feature-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .ai-stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .ai-stat-card {
+    padding: 1rem;
+  }
+
+  .ai-stat-card-value {
+    font-size: 1.25rem;
+  }
+
+  .ai-content {
+    padding: 0.75rem;
+  }
+
+  .panel {
+    padding: 1rem;
+  }
+
+  .placeholder-hero {
+    padding: 2rem 1rem;
+  }
+
+  .placeholder-hero .hero-icon {
+    font-size: 3rem;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ========== SIDEBAR OVERLAY (mobile) ========== -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- ========== SIDEBAR ========== -->
+<aside class="ai-sidebar" id="aiSidebar">
+  <div class="ai-brand">
+    <div class="ai-logo">AI</div>
+    <span class="ai-brand-text">AI Workspace</span>
+    <span class="ai-brand-badge">Platform</span>
+  </div>
+  <nav class="ai-nav" id="aiNav">
+    <div class="ai-nav-section">
+      <div class="ai-nav-category">AI Tools</div>
+      <button class="ai-nav-item active" data-route="dashboard">
+        <span class="nav-icon">📊</span>
+        <span class="nav-label">Dashboard</span>
+      </button>
+      <button class="ai-nav-item" data-route="chat">
+        <span class="nav-icon">💬</span>
+        <span class="nav-label">AI Chat</span>
+      </button>
+      <button class="ai-nav-item" data-route="prompts">
+        <span class="nav-icon">📝</span>
+        <span class="nav-label">Prompt Library</span>
+      </button>
+      <button class="ai-nav-item" data-route="knowledge">
+        <span class="nav-icon">📚</span>
+        <span class="nav-label">Knowledge Base</span>
+      </button>
+    </div>
+    <div class="ai-nav-section">
+      <div class="ai-nav-category">Intelligence</div>
+      <button class="ai-nav-item" data-route="agents">
+        <span class="nav-icon">🤖</span>
+        <span class="nav-label">Agents</span>
+      </button>
+      <button class="ai-nav-item" data-route="tools">
+        <span class="nav-icon">🔧</span>
+        <span class="nav-label">Tools</span>
+      </button>
+      <button class="ai-nav-item" data-route="memory">
+        <span class="nav-icon">🧠</span>
+        <span class="nav-label">Memory</span>
+      </button>
+    </div>
+    <div class="ai-nav-section">
+      <div class="ai-nav-category">Configuration</div>
+      <button class="ai-nav-item" data-route="providers">
+        <span class="nav-icon">🔌</span>
+        <span class="nav-label">Providers</span>
+      </button>
+    </div>
+  </nav>
+  <button class="sidebar-toggle" id="sidebarToggle" title="Toggle Sidebar">◀</button>
+</aside>
+
+<!-- ========== MAIN ========== -->
+<main class="ai-main">
+  <header class="ai-topbar">
+    <div class="ai-topbar-left">
+      <button class="hamburger-btn" id="hamburgerBtn" aria-label="Toggle navigation">☰</button>
+      <h1 id="pageTitle">AI Workspace</h1>
+    </div>
+    <div class="ai-topbar-right">
+      <div class="ai-user">
+        <div class="ai-user-avatar" id="userAvatar">AI</div>
+        <span id="userEmail">Loading...</span>
+        <button class="btn-signout" id="signOutBtn">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="ai-content" id="aiContent">
+    <div class="loading-state">
+      <div class="loading-spinner"></div>
+      <span>Loading AI Workspace...</span>
+    </div>
+  </div>
+</main>
+
+<!-- ========== DEPENDENCIES ========== -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script src="/js/workspace-engine.js"></script>
+<script src="/js/module-runtime.js"></script>
+
+<script>
+/* ============================================================
+   AI Workspace — Application Controller
+   ============================================================
+   Platform AI capability — shell only, no generation, no providers.
+   Reuses Workspace Engine and Module Registry for dynamic registration.
+   ============================================================ */
+(function() {
+  'use strict';
+
+  // ─── Register AI Platform Modules (extension point) ──────
+  var AI_MODULES = [
+    {id:'ai-dashboard',name:'AI Dashboard',icon:'🤖',route:'/platform/ai/?section=dashboard',permission:'viewer',category:'ai',order:1},
+    {id:'ai-chat',name:'AI Chat',icon:'💬',route:'/platform/ai/?section=chat',permission:'editor',category:'ai',order:2},
+    {id:'ai-prompts',name:'Prompt Library',icon:'📝',route:'/platform/ai/?section=prompts',permission:'editor',category:'ai',order:3},
+    {id:'ai-knowledge',name:'Knowledge Base',icon:'📚',route:'/platform/ai/?section=knowledge',permission:'editor',category:'ai',order:4},
+    {id:'ai-agents',name:'Agents',icon:'🤖',route:'/platform/ai/?section=agents',permission:'admin',category:'ai',order:5},
+    {id:'ai-tools',name:'Tools',icon:'🔧',route:'/platform/ai/?section=tools',permission:'admin',category:'ai',order:6},
+    {id:'ai-memory',name:'Memory',icon:'🧠',route:'/platform/ai/?section=memory',permission:'admin',category:'ai',order:7},
+    {id:'ai-providers',name:'Providers',icon:'🔌',route:'/platform/ai/?section=providers',permission:'admin',category:'ai',order:8}
+  ];
+
+  // Register via extension point — does NOT modify workspace-engine.js
+  (function registerModules() {
+    AI_MODULES.forEach(function(mod) {
+      if (typeof WorkspaceEngine !== 'undefined') {
+        WorkspaceEngine.registerModule(mod);
+      }
+    });
+    WorkspaceEngine.setFeatureFlag('ai_workspace', true, 'platform');
+  })();
+
+  // ─── State ───────────────────────────────────────────────
+  var state = {
+    user: null,
+    currentRoute: 'dashboard'
+  };
+
+  // ─── DOM Refs ────────────────────────────────────────────
+  var $ = function(id) { return document.getElementById(id); };
+  var content = $('aiContent');
+  var pageTitle = $('pageTitle');
+  var navItems = document.querySelectorAll('.ai-nav-item');
+
+  // ─── Init ────────────────────────────────────────────────
+  function init() {
+    firebase.auth().onAuthStateChanged(function(user) {
+      if (!user) {
+        window.location.href = '/platform/login/';
+        return;
+      }
+
+      state.user = user;
+      $('userEmail').textContent = user.email || '';
+      $('userAvatar').textContent = (user.displayName || user.email || 'AI').charAt(0).toUpperCase();
+
+      // Handle route
+      handleRoute();
+      window.addEventListener('hashchange', handleRoute);
+    });
+
+    // Sign out
+    $('signOutBtn').addEventListener('click', function() {
+      firebase.auth().signOut();
+    });
+
+    // Sidebar toggle
+    $('sidebarToggle').addEventListener('click', function() {
+      $('aiSidebar').classList.toggle('collapsed');
+    });
+
+    // Mobile hamburger
+    $('hamburgerBtn').addEventListener('click', function() {
+      $('aiSidebar').classList.add('open');
+      $('sidebarOverlay').classList.add('open');
+    });
+
+    $('sidebarOverlay').addEventListener('click', function() {
+      $('aiSidebar').classList.remove('open');
+      $('sidebarOverlay').classList.remove('open');
+    });
+
+    // Nav item clicks
+    navItems.forEach(function(item) {
+      item.addEventListener('click', function() {
+        var route = item.getAttribute('data-route');
+        navigate(route);
+        $('aiSidebar').classList.remove('open');
+        $('sidebarOverlay').classList.remove('open');
+      });
+    });
+  }
+
+  // ─── Navigation ──────────────────────────────────────────
+  function navigate(route) {
+    window.location.hash = '#' + route;
+  }
+
+  function handleRoute() {
+    var hash = window.location.hash.replace(/^#\/?/, '');
+    var route = hash || 'dashboard';
+
+    state.currentRoute = route;
+
+    // Update active nav
+    navItems.forEach(function(item) {
+      item.classList.toggle('active', item.getAttribute('data-route') === route);
+    });
+
+    renderRoute(route);
+  }
+
+  function renderRoute(route) {
+    switch (route) {
+      case 'dashboard': renderDashboard(); break;
+      case 'chat': renderPlaceholder('AI Chat', '💬', 'AI Chat will provide real-time conversations with AI assistants. Users will be able to chat with platform AI, ask questions, and get intelligent responses.'); break;
+      case 'prompts': renderPlaceholder('Prompt Library', '📝', 'The Prompt Library will store and manage reusable AI prompts. Create, edit, organize, and share prompt templates across your business.'); break;
+      case 'knowledge': renderPlaceholder('Knowledge Base', '📚', 'The Knowledge Base will index business documents, FAQs, and reference materials. AI will use this knowledge to provide context-aware responses.'); break;
+      case 'agents': renderPlaceholder('Agents', '🤖', 'Agents will manage automated AI workflows. Configure autonomous agents that can perform tasks, process data, and interact with business systems.'); break;
+      case 'tools': renderPlaceholder('Tools', '🔧', 'Tools will provide AI-powered utilities: content generation, data analysis, image processing, translation, and more.'); break;
+      case 'memory': renderPlaceholder('Memory', '🧠', 'Memory will store conversation context and business knowledge across sessions. AI will learn from past interactions.'); break;
+      case 'providers': renderPlaceholder('Providers', '🔌', 'Providers will manage AI service connections. Configure OpenAI, Anthropic, Gemini, and other LLM providers with API keys and model preferences.'); break;
+      default:
+        navigate('dashboard');
+        break;
+    }
+  }
+
+  // ─── DASHBOARD ───────────────────────────────────────────
+  function renderDashboard() {
+    pageTitle.textContent = 'AI Workspace';
+    content.innerHTML =
+      '<div class="breadcrumb">AI Workspace / Dashboard</div>' +
+
+      '<div class="ai-stats-grid">' +
+        aiStatCard('🔌', '0', 'Available Providers') +
+        aiStatCard('🤖', '0', 'Installed Agents') +
+        aiStatCard('📝', '0', 'Prompt Library') +
+        aiStatCard('📚', '0', 'Knowledge Collections') +
+        aiStatCard('💬', '0', 'Active Conversations') +
+      '</div>' +
+
+      '<div class="panel">' +
+        '<div class="panel-header">' +
+          '<div><div class="panel-title">AI Platform Status</div><div class="panel-subtitle">Capabilities will be enabled in future Sprints</div></div>' +
+        '</div>' +
+        '<div class="ai-section-grid">' +
+          aiSectionCard('💬', 'AI Chat', 'Conversational AI') +
+          aiSectionCard('📝', 'Prompt Library', 'Reusable templates') +
+          aiSectionCard('📚', 'Knowledge Base', 'Business intelligence') +
+          aiSectionCard('🤖', 'Agents', 'Automated workflows') +
+          aiSectionCard('🔧', 'Tools', 'AI utilities') +
+          aiSectionCard('🧠', 'Memory', 'Context retention') +
+          aiSectionCard('🔌', 'Providers', 'LLM connections') +
+        '</div>' +
+      '</div>' +
+
+      '<div class="panel">' +
+        '<div class="panel-header">' +
+          '<div><div class="panel-title">Getting Started</div><div class="panel-subtitle">Steps to enable AI capabilities</div></div>' +
+        '</div>' +
+        '<div class="feature-list">' +
+          featureCard('🔌', 'Configure Providers', 'Add API keys for OpenAI, Anthropic, or Gemini in the Providers section.') +
+          featureCard('📝', 'Create Prompts', 'Build a library of reusable prompt templates for common business tasks.') +
+          featureCard('📚', 'Build Knowledge', 'Upload business documents and training materials to the Knowledge Base.') +
+          featureCard('🤖', 'Deploy Agents', 'Configure AI agents to automate workflows and business processes.') +
+        '</div>' +
+      '</div>';
+  }
+
+  // ─── PLACEHOLDER PAGE ─────────────────────────────────────
+  function renderPlaceholder(name, icon, desc) {
+    pageTitle.textContent = name;
+
+    var features = getFeatures(name);
+
+    content.innerHTML =
+      '<div class="breadcrumb"><a onclick="navigate(\'dashboard\')">AI Workspace</a> / ' + name + '</div>' +
+
+      '<div class="placeholder-hero">' +
+        '<div class="hero-icon">' + icon + '</div>' +
+        '<div class="hero-title">' + name + '</div>' +
+        '<div class="hero-desc">' + desc + '</div>' +
+      '</div>' +
+
+      (features.length > 0
+        ? '<div class="panel">' +
+            '<div class="panel-header"><div><div class="panel-title">Coming Features</div></div></div>' +
+            '<div class="feature-list">' +
+              features.map(function(f) {
+                return featureCard(f.icon, f.title, f.desc);
+              }).join('') +
+            '</div>' +
+          '</div>'
+        : '') +
+
+      '<div class="panel">' +
+        '<div class="panel-header"><div><div class="panel-title">Status</div><div class="panel-subtitle">This section will be available in a future Sprint</div></div></div>' +
+        '<div class="empty-state">' +
+          '<div class="empty-state-icon">🚧</div>' +
+          '<div class="empty-state-title">Under Construction</div>' +
+          '<div class="empty-state-desc">' + name + ' is planned for a future Sprint. Check back after AI Workspace Integration.</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  function getFeatures(section) {
+    var features = {
+      'AI Chat': [
+        {icon:'💬',title:'Chat Interface',desc:'Real-time conversation with AI assistants.'},
+        {icon:'📜',title:'Conversation History',desc:'Browse and search past conversations.'},
+        {icon:'🔗',title:'Context Linking',desc:'Reference business data in conversations.'}
+      ],
+      'Prompt Library': [
+        {icon:'📝',title:'Prompt Templates',desc:'Create and manage reusable prompt templates.'},
+        {icon:'🏷️',title:'Categories',desc:'Organize prompts by use case and business function.'},
+        {icon:'⭐',title:'Favorites',desc:'Save frequently used prompts for quick access.'}
+      ],
+      'Knowledge Base': [
+        {icon:'📄',title:'Document Upload',desc:'Upload PDFs, text files, and documents.'},
+        {icon:'🔍',title:'Semantic Search',desc:'Search across all knowledge collections.'},
+        {icon:'📊',title:'Collections',desc:'Organize knowledge into logical collections.'}
+      ],
+      'Agents': [
+        {icon:'⚙️',title:'Agent Configuration',desc:'Define agent behavior and capabilities.'},
+        {icon:'📋',title:'Task Assignment',desc:'Assign automated tasks to AI agents.'},
+        {icon:'📈',title:'Performance',desc:'Monitor agent efficiency and accuracy.'}
+      ],
+      'Tools': [
+        {icon:'✍️',title:'Content Generation',desc:'Generate product descriptions, blog posts, and marketing copy.'},
+        {icon:'📊',title:'Data Analysis',desc:'Analyze business data with AI-powered insights.'},
+        {icon:'🖼️',title:'Image Processing',desc:'Generate and edit images with AI.'}
+      ],
+      'Memory': [
+        {icon:'🧠',title:'Conversation Memory',desc:'AI remembers context across sessions.'},
+        {icon:'📁',title:'Business Context',desc:'Store business-specific knowledge and preferences.'},
+        {icon:'🔄',title:'Sync',desc:'Synchronize memory across all AI services.'}
+      ],
+      'Providers': [
+        {icon:'🔑',title:'API Key Management',desc:'Securely store and manage LLM provider keys.'},
+        {icon:'📊',title:'Usage Tracking',desc:'Monitor API usage, costs, and rate limits.'},
+        {icon:'🔄',title:'Provider Switching',desc:'Switch between providers with zero downtime.'}
+      ]
+    };
+    return features[section] || [];
+  }
+
+  // ─── Helpers ──────────────────────────────────────────────
+  function aiStatCard(icon, value, label) {
+    return '<div class="ai-stat-card"><div class="ai-stat-card-icon">' + icon + '</div><div class="ai-stat-card-value">' + value + '</div><div class="ai-stat-card-label">' + label + '</div></div>';
+  }
+
+  function aiSectionCard(icon, name, desc) {
+    return '<div class="ai-section-card" onclick="navigate(\'' + name.toLowerCase().replace(/ /g, '') + '\')">' +
+      '<div class="section-icon">' + icon + '</div>' +
+      '<div class="section-name">' + name + '</div>' +
+      '<div class="section-desc">' + desc + '</div>' +
+    '</div>';
+  }
+
+  function featureCard(icon, title, desc) {
+    return '<div class="feature-card"><div class="feature-card-icon">' + icon + '</div><div class="feature-card-info"><div class="feature-card-title">' + title + '</div><div class="feature-card-desc">' + desc + '</div></div></div>';
+  }
+
+  window.navigate = navigate;
+
+  // ─── Start ───────────────────────────────────────────────
+  init();
+})();
+</script>
+</body>
+</html>

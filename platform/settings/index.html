@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Platform Settings — PSH Console</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f5f5f7;--surface:#fff;--border:#e5e5ea;--border-light:#f0f0f2;--text:#1d1d1f;--text-secondary:#86868b;--text-tertiary:#aeaeb2;--primary:#4F46E5;--primary-hover:#4338CA;--primary-light:#e8e8ff;--settings-gradient:linear-gradient(135deg,#F59E0B,#EF4444);--success:#10B981;--success-bg:#d1fae5;--warning:#F59E0B;--warning-bg:#fef3c7;--danger:#EF4444;--danger-bg:#fee2e2;--sidebar-w:240px;--sidebar-collapsed-w:60px;--radius:10px;--radius-sm:6px;--shadow-lg:0 4px 16px rgba(0,0,0,.08);--transition:.2s ease}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:16px;-webkit-font-smoothing:antialiased}
+body{font-family:'Inter',sans-serif;color:var(--text);background:var(--bg);min-height:100vh;display:flex;overflow:hidden}
+/* Sidebar */
+.settings-sidebar{width:var(--sidebar-w);min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0;transition:width var(--transition);z-index:50;position:relative}
+.settings-sidebar.collapsed{width:var(--sidebar-collapsed-w)}
+.settings-brand{padding:1rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:0.75rem;flex-shrink:0}
+.settings-logo{width:32px;height:32px;background:var(--settings-gradient);border-radius:8px;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:0.85rem;flex-shrink:0}
+.settings-brand-text{font-weight:600;font-size:1rem;color:var(--text);white-space:nowrap;overflow:hidden}
+.settings-brand-badge{font-size:0.6rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#D97706;background:#fef3c7;padding:0.15rem 0.4rem;border-radius:4px;margin-left:0.25rem}
+.settings-nav{flex:1;padding:0.75rem;overflow-y:auto}
+.settings-nav-section{margin-bottom:0.5rem}
+.settings-nav-category{font-size:0.7rem;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.06em;padding:0.5rem 0.75rem 0.25rem}
+.settings-nav-item{display:flex;align-items:center;gap:0.75rem;padding:0.55rem 0.75rem;border-radius:var(--radius-sm);color:var(--text-secondary);font-size:0.85rem;font-weight:500;cursor:pointer;transition:all .15s;margin-bottom:1px;border:none;background:none;width:100%;text-align:left;font-family:inherit}
+.settings-nav-item:hover{background:var(--bg);color:var(--text)}
+.settings-nav-item.active{background:#fef3c7;color:#D97706;font-weight:600}
+.settings-nav-item .nav-icon{font-size:1.05rem;width:24px;text-align:center;flex-shrink:0}
+.settings-nav-item .nav-label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.settings-sidebar.collapsed .settings-brand-text,.settings-sidebar.collapsed .settings-brand-badge,.settings-sidebar.collapsed .settings-nav-item .nav-label,.settings-sidebar.collapsed .settings-nav-category{display:none}
+.settings-sidebar.collapsed .settings-nav-item{justify-content:center;padding:0.55rem 0}
+.settings-sidebar.collapsed .settings-logo{margin:0 auto}
+.sidebar-toggle{display:flex;align-items:center;justify-content:center;padding:0.6rem;cursor:pointer;color:var(--text-tertiary);border-top:1px solid var(--border);font-size:1rem;transition:color .15s;background:none;border-left:none;border-right:none;border-bottom:none;width:100%;font-family:inherit}
+.sidebar-toggle:hover{color:var(--text)}
+/* Main */
+.settings-main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.settings-topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0.6rem 1.5rem;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-shrink:0;min-height:52px}
+.settings-topbar-left{display:flex;align-items:center;gap:0.75rem}
+.settings-topbar-left h1{font-size:1.1rem;font-weight:600;color:var(--text)}
+.settings-topbar-right{display:flex;align-items:center;gap:0.75rem}
+.settings-user{font-size:0.825rem;color:var(--text-secondary);display:flex;align-items:center;gap:0.5rem}
+.settings-user-avatar{width:28px;height:28px;border-radius:50%;background:var(--settings-gradient);color:#fff;display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:600;flex-shrink:0}
+.btn-signout{background:none;border:1px solid var(--border);border-radius:var(--radius-sm);padding:0.3rem 0.6rem;cursor:pointer;font-size:0.8rem;color:var(--text-secondary);font-family:inherit;transition:all .15s}
+.btn-signout:hover{background:var(--bg);color:var(--danger);border-color:var(--danger)}
+.settings-content{flex:1;padding:1.5rem;overflow-y:auto;background:var(--bg)}
+.breadcrumb{font-size:0.8rem;color:var(--text-secondary);margin-bottom:1rem;display:flex;align-items:center;gap:0.35rem}
+.breadcrumb a{color:var(--text-secondary);text-decoration:none;cursor:pointer}
+.breadcrumb a:hover{color:var(--primary)}
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:1.5rem}
+.stat-card{background:var(--surface);border-radius:var(--radius);padding:1.25rem;border:1px solid var(--border)}
+.stat-card-icon{font-size:1.3rem;margin-bottom:0.4rem}
+.stat-card-value{font-size:1.5rem;font-weight:700;line-height:1.2}
+.stat-card-label{font-size:0.8rem;color:var(--text-secondary);margin-top:0.15rem}
+/* Panels */
+.panel{background:var(--surface);border-radius:var(--radius);padding:1.5rem;border:1px solid var(--border);margin-bottom:1rem}
+.panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem}
+.panel-title{font-size:1rem;font-weight:600}
+.panel-subtitle{font-size:0.8rem;color:var(--text-secondary)}
+/* Section cards */
+.section-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:0.75rem}
+.section-card{text-align:center;padding:1.75rem 1rem;background:var(--surface);border:1px solid var(--border-light);border-radius:var(--radius);cursor:pointer;transition:all .2s}
+.section-card:hover{border-color:#F59E0B;box-shadow:0 4px 12px rgba(245,158,11,.1)}
+.section-card .section-icon{font-size:2rem;margin-bottom:0.5rem}
+.section-card .section-name{font-weight:600;font-size:0.875rem;color:var(--text);margin-bottom:0.2rem}
+.section-card .section-desc{font-size:0.75rem;color:var(--text-secondary)}
+/* Placeholder */
+.placeholder-hero{text-align:center;padding:4rem 2rem}
+.placeholder-hero .hero-icon{font-size:4rem;margin-bottom:1rem}
+.placeholder-hero .hero-title{font-size:1.25rem;font-weight:600;color:var(--text);margin-bottom:0.5rem}
+.placeholder-hero .hero-desc{font-size:0.9rem;color:var(--text-secondary);max-width:480px;margin:0 auto;line-height:1.5}
+.feature-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:0.75rem;margin-top:1.5rem}
+.feature-card{display:flex;align-items:flex-start;gap:0.75rem;padding:1rem;border:1px solid var(--border-light);border-radius:var(--radius-sm);background:var(--bg)}
+.feature-card-icon{font-size:1.2rem;flex-shrink:0}
+.feature-card-info{flex:1;min-width:0}
+.feature-card-title{font-size:0.85rem;font-weight:600;color:var(--text)}
+.feature-card-desc{font-size:0.775rem;color:var(--text-secondary);margin-top:0.15rem}
+/* States */
+.loading-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4rem 2rem;color:var(--text-secondary)}
+.loading-spinner{width:28px;height:28px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .6s linear infinite;margin-bottom:0.75rem}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty-state{text-align:center;padding:3rem 2rem;color:var(--text-secondary)}
+.empty-state-icon{font-size:2.5rem;margin-bottom:0.75rem}
+.empty-state-title{font-weight:600;font-size:1rem;color:var(--text);margin-bottom:0.25rem}
+.empty-state-desc{font-size:0.85rem}
+/* Settings-specific */
+.setting-row{display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0;border-bottom:1px solid var(--border-light)}
+.setting-row:last-child{border-bottom:none}
+.setting-row-label{font-size:0.875rem;font-weight:500}
+.setting-row-value{font-size:0.8rem;color:var(--text-secondary)}
+.setting-row-badge{font-size:0.7rem;background:var(--primary-light);color:var(--primary);padding:0.15rem 0.5rem;border-radius:4px}
+/* Theme preview */
+.theme-swatch{display:inline-block;width:24px;height:24px;border-radius:6px;border:1px solid var(--border);margin-right:0.5rem}
+.theme-swatches{display:flex;gap:0.5rem;align-items:center}
+/* Responsive */
+.hamburger-btn{display:none;background:none;border:none;font-size:1.3rem;cursor:pointer;padding:0.2rem;color:var(--text-secondary);font-family:inherit}
+@media(max-width:768px){
+.settings-sidebar{position:fixed;left:0;top:0;bottom:0;z-index:100;transform:translateX(-100%);transition:transform .25s ease;box-shadow:var(--shadow-lg)}
+.settings-sidebar.open{transform:translateX(0)}
+.settings-sidebar.collapsed{width:var(--sidebar-w)}
+.settings-sidebar.collapsed .settings-brand-text,.settings-sidebar.collapsed .settings-brand-badge,.settings-sidebar.collapsed .settings-nav-item .nav-label,.settings-sidebar.collapsed .settings-nav-category{display:inline}
+.settings-sidebar.collapsed .settings-nav-item{justify-content:flex-start;padding:0.55rem 0.75rem}
+.hamburger-btn{display:inline-flex}
+.sidebar-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.25);z-index:99}
+.sidebar-overlay.open{display:block}
+.stats-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}
+.settings-topbar{padding:0.5rem 1rem}
+.settings-content{padding:1rem}
+.feature-list{grid-template-columns:1fr}
+}
+@media(max-width:480px){
+.stats-grid{grid-template-columns:1fr 1fr}
+.stat-card{padding:1rem}
+.stat-card-value{font-size:1.25rem}
+.settings-content{padding:0.75rem}
+.panel{padding:1rem}
+.placeholder-hero{padding:2rem 1rem}
+.placeholder-hero .hero-icon{font-size:3rem}
+}
+</style>
+</head>
+<body>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<aside class="settings-sidebar" id="settingsSidebar">
+<div class="settings-brand"><div class="settings-logo">S</div><span class="settings-brand-text">Platform Settings</span><span class="settings-brand-badge">Config</span></div>
+<nav class="settings-nav" id="settingsNav">
+<div class="settings-nav-section">
+<div class="settings-nav-category">Platform</div>
+<button class="settings-nav-item active" data-route="dashboard"><span class="nav-icon">📊</span><span class="nav-label">Dashboard</span></button>
+<button class="settings-nav-item" data-route="general"><span class="nav-icon">⚙️</span><span class="nav-label">General</span></button>
+<button class="settings-nav-item" data-route="branding"><span class="nav-icon">🎨</span><span class="nav-label">Branding</span></button>
+<button class="settings-nav-item" data-route="environment"><span class="nav-icon">🌐</span><span class="nav-label">Environment</span></button>
+</div>
+<div class="settings-nav-section">
+<div class="settings-nav-category">Configuration</div>
+<button class="settings-nav-item" data-route="features"><span class="nav-icon">🚩</span><span class="nav-label">Feature Flags</span></button>
+<button class="settings-nav-item" data-route="theme"><span class="nav-icon">🖌️</span><span class="nav-label">Theme</span></button>
+<button class="settings-nav-item" data-route="security"><span class="nav-icon">🔒</span><span class="nav-label">Security</span></button>
+</div>
+<div class="settings-nav-section">
+<div class="settings-nav-category">System</div>
+<button class="settings-nav-item" data-route="maintenance"><span class="nav-icon">🔧</span><span class="nav-label">Maintenance</span></button>
+<button class="settings-nav-item" data-route="about"><span class="nav-icon">📌</span><span class="nav-label">About</span></button>
+</div>
+</nav>
+<button class="sidebar-toggle" id="sidebarToggle" title="Toggle Sidebar">◀</button>
+</aside>
+<main class="settings-main">
+<header class="settings-topbar">
+<div class="settings-topbar-left"><button class="hamburger-btn" id="hamburgerBtn" aria-label="Toggle navigation">☰</button><h1 id="pageTitle">Platform Settings</h1></div>
+<div class="settings-topbar-right"><div class="settings-user"><div class="settings-user-avatar" id="userAvatar">S</div><span id="userEmail">Loading...</span><button class="btn-signout" id="signOutBtn">Sign Out</button></div></div>
+</header>
+<div class="settings-content" id="settingsContent"><div class="loading-state"><div class="loading-spinner"></div><span>Loading Platform Settings...</span></div></div>
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="/js/firebase-config.js"></script>
+<script src="/js/workspace-engine.js"></script>
+<script src="/js/module-runtime.js"></script>
+
+<script>
+(function(){
+'use strict';
+
+// ─── Register Settings Modules (extension point) ───
+var SETTINGS_MODULES=[
+{id:'settings-dashboard',name:'Settings Dashboard',icon:'📊',route:'/platform/settings/?section=dashboard',permission:'admin',category:'settings',order:1},
+{id:'settings-general',name:'General',icon:'⚙️',route:'/platform/settings/?section=general',permission:'admin',category:'settings',order:2},
+{id:'settings-branding',name:'Branding',icon:'🎨',route:'/platform/settings/?section=branding',permission:'admin',category:'settings',order:3},
+{id:'settings-environment',name:'Environment',icon:'🌐',route:'/platform/settings/?section=environment',permission:'admin',category:'settings',order:4},
+{id:'settings-features',name:'Feature Flags',icon:'🚩',route:'/platform/settings/?section=features',permission:'admin',category:'settings',order:5},
+{id:'settings-theme',name:'Theme',icon:'🖌️',route:'/platform/settings/?section=theme',permission:'admin',category:'settings',order:6},
+{id:'settings-security',name:'Security',icon:'🔒',route:'/platform/settings/?section=security',permission:'admin',category:'settings',order:7},
+{id:'settings-maintenance',name:'Maintenance',icon:'🔧',route:'/platform/settings/?section=maintenance',permission:'admin',category:'settings',order:8},
+{id:'settings-about',name:'About',icon:'📌',route:'/platform/settings/?section=about',permission:'viewer',category:'settings',order:9}
+];
+
+(function(){SETTINGS_MODULES.forEach(function(m){if(typeof WorkspaceEngine!=='undefined')WorkspaceEngine.registerModule(m)});WorkspaceEngine.setFeatureFlag('settings_workspace',true,'platform')})();
+
+var state={user:null,currentRoute:'dashboard'};
+var $=function(id){return document.getElementById(id)};
+var content=$('settingsContent');
+var pageTitle=$('pageTitle');
+var navItems=document.querySelectorAll('.settings-nav-item');
+
+function init(){
+firebase.auth().onAuthStateChanged(function(u){
+if(!u){window.location.href='/platform/login/';return}
+state.user=u;
+$('userEmail').textContent=u.email||'';
+$('userAvatar').textContent=(u.displayName||u.email||'S').charAt(0).toUpperCase();
+handleRoute();
+window.addEventListener('hashchange',handleRoute);
+});
+$('signOutBtn').addEventListener('click',function(){firebase.auth().signOut()});
+$('sidebarToggle').addEventListener('click',function(){$('settingsSidebar').classList.toggle('collapsed')});
+$('hamburgerBtn').addEventListener('click',function(){$('settingsSidebar').classList.add('open');$('sidebarOverlay').classList.add('open')});
+$('sidebarOverlay').addEventListener('click',function(){$('settingsSidebar').classList.remove('open');$('sidebarOverlay').classList.remove('open')});
+navItems.forEach(function(i){i.addEventListener('click',function(){var r=i.getAttribute('data-route');navigate(r);$('settingsSidebar').classList.remove('open');$('sidebarOverlay').classList.remove('open')})});
+}
+
+function navigate(route){window.location.hash='#'+route}
+window.navigate=navigate;
+
+function handleRoute(){
+var hash=window.location.hash.replace(/^#\/?/,'');
+var route=hash||'dashboard';
+state.currentRoute=route;
+navItems.forEach(function(i){i.classList.toggle('active',i.getAttribute('data-route')===route)});
+renderRoute(route);
+}
+
+function renderRoute(r){
+switch(r){
+case'dashboard':renderDashboard();break;
+case'general':renderPlaceholder('General','⚙️','Configure general platform settings including platform name, timezone, date format, and default language preferences.');break;
+case'branding':renderPlaceholder('Branding','🎨','Manage platform branding: logo, favicon, colors, fonts, and custom CSS. All settings affect the PSH Console appearance.');break;
+case'environment':renderPlaceholder('Environment','🌐','View and configure platform environment settings including API endpoints, service URLs, and deployment configuration.');break;
+case'features':renderPlaceholder('Feature Flags','🚩','Enable or disable platform features. Control which capabilities are available to businesses and users across the platform.');break;
+case'theme':renderPlaceholder('Theme','🖌️','Customize the platform theme: color scheme, dark mode, spacing, and component styling. Preview changes in real-time.');break;
+case'security':renderPlaceholder('Security','🔒','Configure platform security: authentication methods, session timeouts, password policies, and access control settings.');break;
+case'maintenance':renderPlaceholder('Maintenance','🔧','Platform maintenance tools: cache management, system updates, database optimization, and scheduled maintenance notifications.');break;
+case'about':renderPlaceholder('About','📌','Platform information: version, build number, license, credits, and release notes.');break;
+default:navigate('dashboard');break;
+}
+}
+
+function renderDashboard(){
+pageTitle.textContent='Platform Settings';
+content.innerHTML=
+'<div class="breadcrumb">Platform Settings / Dashboard</div>'+
+'<div class="stats-grid">'+
+statCard('🏷️','PSH Console','Platform Name')+
+statCard('📌','v1.0.0','Current Version')+
+statCard('🌐','Production','Environment')+
+statCard('🚩','5','Active Feature Flags')+
+statCard('🟢','Operational','Platform Status')+
+'</div>'+
+
+'<div class="panel">'+
+'<div class="panel-header"><div><div class="panel-title">Settings Sections</div><div class="panel-subtitle">Configure every aspect of the PSH Platform</div></div></div>'+
+'<div class="section-grid">'+
+sectionCard('⚙️','General','Platform configuration')+
+sectionCard('🎨','Branding','Visual identity')+
+sectionCard('🌐','Environment','Deployment settings')+
+sectionCard('🚩','Feature Flags','Capability toggles')+
+sectionCard('🖌️','Theme','Appearance')+
+sectionCard('🔒','Security','Access control')+
+sectionCard('🔧','Maintenance','System tools')+
+sectionCard('📌','About','Version info')+
+'</div>'+
+'</div>'+
+
+'<div class="panel">'+
+'<div class="panel-header"><div><div class="panel-title">Current Configuration</div><div class="panel-subtitle">Platform settings at a glance (read-only)</div></div></div>'+
+settingRow('Platform Name','PSH Console')+
+settingRow('Platform Version','1.0.0')+
+settingRow('Environment','Production')+
+settingRow('Database','Firebase Realtime Database')+
+settingRow('Authentication','Firebase Auth')+
+settingRow('Hosting','Netlify / Firebase Hosting')+
+settingRow('Default Language','Vietnamese (vi)')+
+settingRow('Multi-tenancy','Enabled')+
+settingRow('Feature Flags','5 active')+
+settingRow('Last Deploy','2026-07-26')+
+'</div>'+
+
+'<div class="panel">'+
+'<div class="panel-header"><div><div class="panel-title">Getting Started</div><div class="panel-subtitle">Steps to configure the platform</div></div></div>'+
+'<div class="feature-list">'+
+featureCard('📝','Set Platform Name','Configure the platform display name and description in General settings.')+
+featureCard('🎨','Customize Branding','Upload logo, set primary colors, and configure the platform favicon.')+
+featureCard('🚩','Manage Features','Enable or disable platform features through the Feature Flags section.')+
+featureCard('🔒','Configure Security','Set authentication policies, session rules, and access controls.')+
+'</div>'+
+'</div>';
+}
+
+function renderPlaceholder(name,icon,desc){
+pageTitle.textContent=name;
+var features=getFeatures(name);
+content.innerHTML=
+'<div class="breadcrumb"><a onclick="navigate(\'dashboard\')">Platform Settings</a> / '+name+'</div>'+
+'<div class="placeholder-hero"><div class="hero-icon">'+icon+'</div><div class="hero-title">'+name+'</div><div class="hero-desc">'+desc+'</div></div>'+
+(features.length>0?'<div class="panel"><div class="panel-header"><div><div class="panel-title">Coming Features</div></div></div><div class="feature-list">'+features.map(function(f){return featureCard(f.icon,f.title,f.desc)}).join('')+'</div></div>':'')+
+'<div class="panel"><div class="panel-header"><div><div class="panel-title">Status</div><div class="panel-subtitle">This section will be available in a future Sprint</div></div></div><div class="empty-state"><div class="empty-state-icon">🚧</div><div class="empty-state-title">Under Construction</div><div class="empty-state-desc">'+name+' configuration will be available after Platform Settings Integration.</div></div></div>';
+}
+
+function getFeatures(s){
+var map={
+General:[{icon:'📝',title:'Platform Name',desc:'Configure the display name and description of the PSH Platform.'},{icon:'🌍',title:'Timezone',desc:'Set the default timezone for the platform and all businesses.'},{icon:'🔤',title:'Language',desc:'Choose the default language and supported locales.'}],
+Branding:[{icon:'🖼️',title:'Logo Upload',desc:'Upload platform logo in light and dark variants.'},{icon:'🎨',title:'Color Scheme',desc:'Define primary, secondary, and accent colors.'},{icon:'📝',title:'Custom CSS',desc:'Add custom stylesheets for advanced branding.'}],
+Environment:[{icon:'🔗',title:'API Endpoints',desc:'Configure base URLs for platform services.'},{icon:'🔑',title:'API Keys',desc:'Manage service-level API keys and secrets.'},{icon:'📡',title:'Service URLs',desc:'Set URLs for Firebase, hosting, and external services.'}],
+'Feature Flags':[{icon:'🚩',title:'Toggle Features',desc:'Enable or disable platform features with a single switch.'},{icon:'🏢',title:'Per-business Override',desc:'Override feature flags for specific businesses.'},{icon:'📋',title:'Flag Audit',desc:'View which features are enabled across the platform.'}],
+Theme:[{icon:'🌙',title:'Dark Mode',desc:'Toggle between light and dark themes.'},{icon:'📐',title:'Layout Density',desc:'Choose between compact, default, and comfortable spacing.'},{icon:'🎨',title:'Accent Colors',desc:'Customize accent colors for interactive elements.'}],
+Security:[{icon:'🔐',title:'Authentication',desc:'Configure sign-in methods and providers.'},{icon:'⏰',title:'Session Timeout',desc:'Set idle session timeout limits.'},{icon:'🔑',title:'Password Policy',desc:'Define password complexity requirements.'}],
+Maintenance:[{icon:'🗑️',title:'Cache Clear',desc:'Clear platform caches and temporary data.'},{icon:'📊',title:'System Health',desc:'View system performance and health metrics.'},{icon:'🔄',title:'Updates',desc:'Manage platform updates and release cycles.'}],
+About:[{icon:'📌',title:'Version',desc:'Current platform version and build information.'},{icon:'📃',title:'License',desc:'Platform license information and third-party credits.'},{icon:'📋',title:'Release Notes',desc:'View version history and release notes.'}]
+};
+return map[s]||[];
+}
+
+function statCard(icon,value,label){return'<div class="stat-card"><div class="stat-card-icon">'+icon+'</div><div class="stat-card-value">'+value+'</div><div class="stat-card-label">'+label+'</div></div>'}
+function sectionCard(icon,name,desc){return'<div class="section-card" onclick="navigate(\''+name.toLowerCase()+')\')"><div class="section-icon">'+icon+'</div><div class="section-name">'+name+'</div><div class="section-desc">'+desc+'</div></div>'}
+function featureCard(icon,title,desc){return'<div class="feature-card"><div class="feature-card-icon">'+icon+'</div><div class="feature-card-info"><div class="feature-card-title">'+title+'</div><div class="feature-card-desc">'+desc+'</div></div></div>'}
+function settingRow(label,value){return'<div class="setting-row"><span class="setting-row-label">'+label+'</span><span class="setting-row-value">'+value+'</span></div>'}
+
+init();
+})();
+</script>
+</body>
+</html>
